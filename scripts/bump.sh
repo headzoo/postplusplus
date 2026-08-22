@@ -76,6 +76,7 @@ fi
 git add package.json
 git commit -m "Bumps to version ${TAG}"
 git tag "$TAG"
+git push
 git push --tags
 
-echo "Bumped ${CURRENT} -> ${NEW} (${TYPE}) and pushed tag ${TAG}"
+echo "Bumped ${CURRENT} -> ${NEW} (${TYPE}) and pushed commit + tag ${TAG}"
