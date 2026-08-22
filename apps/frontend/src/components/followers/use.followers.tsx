@@ -853,6 +853,45 @@ export const applyListMembershipToFollowerPage = (
   };
 };
 
+export const applyImportedMemberToFollowerPage = (
+  page: FollowerPage | undefined,
+  imported: {
+    externalId?: string;
+    name?: string | null;
+    username?: string | null;
+    picture?: string | null;
+    profileUrl?: string | null;
+  },
+  listId: string
+): FollowerPage | undefined => {
+  if (!page || !imported.externalId) {
+    return page;
+  }
+  if (page.items.some((item) => item.id === imported.externalId)) {
+    return applyListMembershipToFollowerPage(
+      page,
+      imported.externalId,
+      listId,
+      true
+    );
+  }
+  const name = imported.name || imported.username || imported.externalId;
+  return {
+    ...page,
+    items: [
+      {
+        id: imported.externalId,
+        name,
+        ...(imported.username ? { username: imported.username } : {}),
+        ...(imported.picture ? { picture: imported.picture } : {}),
+        ...(imported.profileUrl ? { profileUrl: imported.profileUrl } : {}),
+        listIds: [listId],
+      },
+      ...page.items,
+    ],
+  };
+};
+
 export const applyTriageIgnoreToFollowerPage = (
   page: FollowerPage | undefined,
   externalId: string,
@@ -1002,22 +1041,17 @@ export const useFollowerListMutations = (integrationId?: string) => {
       }
       const imported = (await response.json()) as {
         externalId?: string;
+        name?: string | null;
+        username?: string | null;
+        picture?: string | null;
+        profileUrl?: string | null;
       };
-      const externalId = imported?.externalId;
-      if (externalId) {
-        await mutateCache(
-          (key) => isFollowerListCacheKey(integrationId, key),
-          (page: FollowerPage | undefined) =>
-            applyListMembershipToFollowerPage(page, externalId, listId, true),
-          { revalidate: true }
-        );
-      } else {
-        await mutateCache(
-          (key) => isFollowerListCacheKey(integrationId, key),
-          undefined,
-          { revalidate: true }
-        );
-      }
+      await mutateCache(
+        (key) => isFollowerListCacheKey(integrationId, key),
+        (page: FollowerPage | undefined) =>
+          applyImportedMemberToFollowerPage(page, imported, listId),
+        { revalidate: true }
+      );
       return imported;
     },
     [fetch, integrationId, mutateCache]

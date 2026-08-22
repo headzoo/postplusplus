@@ -4,6 +4,7 @@
 
 import {
   applyListMembershipToFollowerPage,
+  applyImportedMemberToFollowerPage,
   applyIgnoreToFollowerPage,
   applyRelationshipSnapshotToFollowerPage,
   applyTriageIgnoreToFollowerPage,
@@ -214,6 +215,38 @@ describe('follower list cache updates', () => {
       items: [
         { id: 'follower-1', name: 'Alex', listIds: [] },
         { id: 'follower-2', name: 'Sam' },
+      ],
+      hasMore: false,
+    });
+  });
+
+  it('inserts an imported profile onto the current list page', () => {
+    const page = {
+      items: [{ id: 'follower-1', name: 'Alex', listIds: ['list-1'] }],
+      hasMore: false,
+    };
+
+    expect(
+      applyImportedMemberToFollowerPage(
+        page,
+        {
+          externalId: '42',
+          name: 'Harbor',
+          username: 'HarborClient',
+          profileUrl: 'https://x.com/HarborClient',
+        },
+        'list-1'
+      )
+    ).toEqual({
+      items: [
+        {
+          id: '42',
+          name: 'Harbor',
+          username: 'HarborClient',
+          profileUrl: 'https://x.com/HarborClient',
+          listIds: ['list-1'],
+        },
+        { id: 'follower-1', name: 'Alex', listIds: ['list-1'] },
       ],
       hasMore: false,
     });

@@ -1208,7 +1208,7 @@ export class ChannelInteractionRepository {
             is: {
               organizationId: query.organizationId,
               integrationId: query.integrationId,
-              membershipState: ChannelAudienceMembership.FOLLOWER,
+              ...this.followerMembershipFilter(query.listId),
               ...this.audienceSearchFilter(query.search),
               ...this.triageFilter(query.triage),
               ...this.listMembershipFilter(query.listId),
@@ -2561,7 +2561,6 @@ export class ChannelInteractionRepository {
               where: {
                 organizationId,
                 integrationId,
-                membershipState: ChannelAudienceMembership.FOLLOWER,
                 ignoredAt: null,
                 ...this.listMembershipFilter(list.id),
               },
@@ -3094,7 +3093,7 @@ export class ChannelInteractionRepository {
         where: {
           organizationId: query.organizationId,
           integrationId: query.integrationId,
-          membershipState: ChannelAudienceMembership.FOLLOWER,
+          ...this.followerMembershipFilter(query.listId),
           ...this.audienceListFilters(
             this.audienceSearchFilter(query.search),
             this.triageFilter(query.triage),
@@ -3131,7 +3130,7 @@ export class ChannelInteractionRepository {
         where: {
           organizationId: query.organizationId,
           integrationId: query.integrationId,
-          membershipState: ChannelAudienceMembership.FOLLOWER,
+          ...this.followerMembershipFilter(query.listId),
           ...this.audienceListFilters(
             this.audienceSearchFilter(query.search),
             this.triageFilter(query.triage),
@@ -3183,6 +3182,7 @@ export class ChannelInteractionRepository {
             this.audienceSearchFilter(query.search),
             this.ignoredVisibilityFilter(query.ignoredVisibility),
             this.leadFitVisibilityFilter(),
+            this.excludeActiveListMembershipFilter(),
             this.leadBridgeKeyset(query.cursor, query.direction)
           ),
         },
@@ -3239,7 +3239,7 @@ export class ChannelInteractionRepository {
         where: {
           organizationId: query.organizationId,
           integrationId: query.integrationId,
-          membershipState: ChannelAudienceMembership.FOLLOWER,
+          ...this.followerMembershipFilter(query.listId),
           ...this.audienceListFilters(
             this.audienceSearchFilter(query.search),
             this.triageFilter(query.triage),
@@ -3310,7 +3310,7 @@ export class ChannelInteractionRepository {
         where: {
           organizationId: query.organizationId,
           integrationId: query.integrationId,
-          membershipState: ChannelAudienceMembership.FOLLOWER,
+          ...this.followerMembershipFilter(query.listId),
           ...this.audienceListFilters(
             this.audienceSearchFilter(query.search),
             this.triageFilter(query.triage),
@@ -3352,7 +3352,7 @@ export class ChannelInteractionRepository {
         where: {
           organizationId: query.organizationId,
           integrationId: query.integrationId,
-          membershipState: ChannelAudienceMembership.FOLLOWER,
+          ...this.followerMembershipFilter(query.listId),
           ...this.audienceListFilters(
             this.audienceSearchFilter(query.search),
             this.triageFilter(query.triage),
@@ -3423,7 +3423,7 @@ export class ChannelInteractionRepository {
             userId: query.userId,
             audienceMember: {
               is: {
-                membershipState: ChannelAudienceMembership.FOLLOWER,
+                ...this.followerMembershipFilter(query.listId),
                 ...this.audienceSearchFilter(query.search),
                 ...this.triageFilter(query.triage),
                 ...this.listMembershipFilter(query.listId),
@@ -3458,7 +3458,7 @@ export class ChannelInteractionRepository {
           where: {
             organizationId: query.organizationId,
             integrationId: query.integrationId,
-            membershipState: ChannelAudienceMembership.FOLLOWER,
+            ...this.followerMembershipFilter(query.listId),
             personalGrades: { none: { userId: query.userId } },
             ...this.audienceListFilters(
               this.audienceSearchFilter(query.search),
@@ -3499,7 +3499,7 @@ export class ChannelInteractionRepository {
         where: {
           organizationId: query.organizationId,
           integrationId: query.integrationId,
-          membershipState: ChannelAudienceMembership.FOLLOWER,
+          ...this.followerMembershipFilter(query.listId),
           ...this.audienceListFilters(
             this.audienceSearchFilter(query.search),
             this.triageFilter(query.triage),
@@ -3706,7 +3706,10 @@ export class ChannelInteractionRepository {
         ],
         ignoredAt: null,
         triageIgnores: { none: this.activeTriageIgnoreWhere('lead') },
-        AND: [this.leadFitVisibilityFilter()],
+        AND: [
+          this.leadFitVisibilityFilter(),
+          this.excludeActiveListMembershipFilter(),
+        ],
       };
     }
     if (category === 'ignored') {
@@ -3741,6 +3744,32 @@ export class ChannelInteractionRepository {
         },
       },
     };
+  }
+
+  /**
+   * Leads assigned to any active custom list leave the Leads triage inbox.
+   * Membership on soft-deleted lists does not count.
+   */
+  private excludeActiveListMembershipFilter(): Prisma.ChannelAudienceMemberWhereInput {
+    return {
+      listMemberships: {
+        none: { list: { deletedAt: null } },
+      },
+    };
+  }
+
+  /**
+   * Custom lists can include manually imported profiles that are not (yet)
+   * known followers, so skip the FOLLOWER membership requirement when a list
+   * filter is active.
+   */
+  private followerMembershipFilter(
+    listId?: string
+  ): Prisma.ChannelAudienceMemberWhereInput {
+    if (listId) {
+      return {};
+    }
+    return { membershipState: ChannelAudienceMembership.FOLLOWER };
   }
 
   private ignoredVisibilityFilter(

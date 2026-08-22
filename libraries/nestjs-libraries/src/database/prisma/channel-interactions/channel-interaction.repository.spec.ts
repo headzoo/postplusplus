@@ -15,6 +15,12 @@ const leadFitVisibility = {
   ],
 };
 
+const excludeActiveListMembership = {
+  listMemberships: {
+    none: { list: { deletedAt: null } },
+  },
+};
+
 const event = (overrides: Record<string, any> = {}) => ({
   providerEventKey: 'event-1',
   kind: ChannelInteractionKind.LIKE,
@@ -257,7 +263,6 @@ describe('ChannelInteractionRepository', () => {
       where: expect.objectContaining({
         organizationId: 'org',
         integrationId: 'integration',
-        membershipState: ChannelAudienceMembership.FOLLOWER,
         ignoredAt: null,
         listMemberships: {
           some: { listId: 'list-1', list: { deletedAt: null } },
@@ -285,6 +290,7 @@ describe('ChannelInteractionRepository', () => {
             OR: expect.any(Array),
           }),
         },
+        AND: [leadFitVisibility, excludeActiveListMembership],
       }),
     });
     expect(tx.channelAudienceMember.count).toHaveBeenCalledWith({
@@ -1776,7 +1782,11 @@ describe('ChannelInteractionRepository', () => {
               OR: expect.any(Array),
             }),
           },
-          AND: [{ ignoredAt: null }, leadFitVisibility],
+          AND: [
+            { ignoredAt: null },
+            leadFitVisibility,
+            excludeActiveListMembership,
+          ],
         },
         orderBy: [
           { leadFitScore: { sort: 'desc', nulls: 'last' } },
@@ -1787,6 +1797,37 @@ describe('ChannelInteractionRepository', () => {
         take: 3,
       })
     );
+  });
+
+  it('excludes leads that belong to any active custom list from the leads triage', async () => {
+    const { repository, audienceMemberFindMany } = createHarness();
+    audienceMemberFindMany.mockResolvedValue([]);
+
+    await repository.getAudienceLeads({
+      organizationId: 'org',
+      integrationId: 'integration',
+      userId: 'user-a',
+      direction: 'desc',
+      limit: 24,
+    });
+
+    expect(audienceMemberFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          AND: expect.arrayContaining([excludeActiveListMembership]),
+        }),
+      })
+    );
+  });
+
+  it('does not treat soft-deleted list membership as leaving the leads triage', async () => {
+    const { repository } = createHarness();
+
+    expect((repository as any).excludeActiveListMembershipFilter()).toEqual({
+      listMemberships: {
+        none: { list: { deletedAt: null } },
+      },
+    });
   });
 
   it('caps new lead bridges per warm source while refreshing existing ones', async () => {
@@ -1911,6 +1952,7 @@ describe('ChannelInteractionRepository', () => {
               ],
             },
             { ignoredAt: null },
+            excludeActiveListMembership,
           ]),
         },
       })
@@ -2692,6 +2734,9 @@ describe('ChannelInteractionRepository', () => {
           ]),
         }),
       })
+    );
+    expect(audienceMemberFindMany.mock.calls[0][0].where).not.toHaveProperty(
+      'membershipState'
     );
   });
 

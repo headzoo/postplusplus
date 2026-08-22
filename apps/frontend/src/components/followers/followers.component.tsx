@@ -1652,6 +1652,15 @@ export const FollowersComponent: FC = () => {
                       return;
                     }
                     await addMember(list.id, follower.id);
+                    if (audience === 'lead') {
+                      await mutateFollowers(
+                        (page) =>
+                          applyIgnoreToFollowerPage(page, follower.id, {
+                            removeFromPage: true,
+                          }),
+                        { revalidate: false }
+                      );
+                    }
                   }}
                   onToggleIgnored={async (ignored) => {
                     if (ignored) {
