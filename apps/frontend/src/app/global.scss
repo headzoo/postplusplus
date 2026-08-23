@@ -721,10 +721,37 @@ html[dir='rtl'] [dir='ltr'] {
 .agent {
   .copilotKitInputContainer {
     padding: 0 24px !important;
+    background: transparent !important;
   }
 
   .copilotKitInput {
     width: 100% !important;
+
+    > textarea {
+      font-size: 16px !important;
+    }
+  }
+
+  &.agent--empty {
+    .copilotKitChat {
+      justify-content: flex-start;
+      height: auto !important;
+    }
+
+    .copilotKitMessages {
+      flex: 0 0 auto;
+      overflow: hidden;
+      min-height: 0;
+      height: 0;
+      padding: 0 !important;
+    }
+
+    .copilotKitInputContainer {
+      max-width: 720px;
+      width: 100%;
+      margin: 0 auto;
+      padding-top: 0 !important;
+    }
   }
 }
 .rm-bg .b2 {

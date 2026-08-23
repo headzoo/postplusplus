@@ -1,12 +1,28 @@
-import React, { useMemo, useRef, useState } from 'react';
-import { useCopilotContext, useCopilotReadable } from '@copilotkit/react-core';
+import React, {
+  ChangeEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { useCopilotContext } from '@copilotkit/react-core';
 import AutoResizingTextarea from '@gitroom/frontend/components/agents/agent.textarea';
 import { useChatContext } from '@copilotkit/react-ui';
 import { InputProps } from '@copilotkit/react-ui/dist/components/chat/props';
 import { useAgentSkills } from '@gitroom/frontend/components/agents/use.agent.skills';
 import { AgentSkillMetadata } from '@gitroom/frontend/components/context-documents/context-document.types';
+import { MediaPortal } from '@gitroom/frontend/components/agents/agent';
+import { PlusIcon } from '@gitroom/frontend/components/ui/icons';
+import { useClickAway } from '@uidotdev/usehooks';
+import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
+import { useToaster } from '@gitroom/react/toaster/toaster';
+import { useT } from '@gitroom/react/translation/get.transation.service.client';
+import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
+import clsx from 'clsx';
 
 const MAX_NEWLINES = 6;
+const MAX_UPLOAD_SIZE = 1024 * 1024 * 1024; // 1 GB
 
 const getSlashQuery = (
   text: string,
@@ -46,17 +62,48 @@ export const Input = ({
   onUpload,
   hideStopButton = false,
   onChange,
-}: InputProps & { onChange: (value: string) => void }) => {
+  media,
+  onMediaChange,
+}: InputProps & {
+  onChange: (value: string) => void;
+  media?: { path: string; id: string }[];
+  onMediaChange?: (media: { path: string; id: string }[]) => void;
+}) => {
   const context = useChatContext();
   const copilotContext = useCopilotContext();
   const showPoweredBy = !copilotContext.copilotApiConfig?.publicApiKey;
+  const fetch = useFetch();
+  const toaster = useToaster();
+  const t = useT();
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const attachTriggerRef = useRef<(() => void) | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isComposing, setIsComposing] = useState(false);
   const [suggestionsOpen, setSuggestionsOpen] = useState(true);
   const [activeSuggestion, setActiveSuggestion] = useState(0);
+  const [attachMenuOpen, setAttachMenuOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const attachMenuRef = useClickAway<HTMLDivElement>(() =>
+    setAttachMenuOpen(false)
+  );
   const { data: skills = [], error: skillsError, isLoading: skillsLoading } =
     useAgentSkills();
+
+  useEffect(() => {
+    if (!attachMenuOpen) {
+      return;
+    }
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setAttachMenuOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [attachMenuOpen]);
 
   const handleDivClick = (event: React.MouseEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement;
@@ -106,6 +153,77 @@ export const Input = ({
 
     textareaRef.current?.focus();
   };
+
+  const selectFromMedia = useCallback(() => {
+    setAttachMenuOpen(false);
+    attachTriggerRef.current?.();
+  }, []);
+
+  const uploadFromComputer = useCallback(() => {
+    setAttachMenuOpen(false);
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleFilesSelected = useCallback(
+    async (event: ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(event.target.files || []);
+      event.target.value = '';
+
+      if (!files.length || !onMediaChange) {
+        return;
+      }
+
+      const totalSize = files.reduce((acc, file) => acc + file.size, 0);
+      if (totalSize > MAX_UPLOAD_SIZE) {
+        toaster.show(
+          t(
+            'upload_size_limit_exceeded',
+            'Upload size limit exceeded. Maximum 1 GB per upload session.'
+          ),
+          'warning'
+        );
+        return;
+      }
+
+      setIsUploading(true);
+      try {
+        const uploaded: { id: string; path: string }[] = [];
+        for (const file of files) {
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('preventSave', 'true');
+          const response = await fetch('/media/upload-simple', {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (!response.ok) {
+            throw new Error('upload failed');
+          }
+
+          const data = await response.json();
+          if (!data?.path) {
+            throw new Error('upload failed');
+          }
+
+          uploaded.push({ id: makeId(10), path: data.path });
+        }
+
+        onMediaChange([...(media || []), ...uploaded]);
+      } catch {
+        toaster.show(
+          t(
+            'agent_attach_upload_error',
+            'Failed to upload file. Please try again.'
+          ),
+          'warning'
+        );
+      } finally {
+        setIsUploading(false);
+      }
+    },
+    [fetch, media, onMediaChange, t, toaster]
+  );
 
   const isInProgress = inProgress;
   const buttonIcon =
@@ -186,6 +304,15 @@ export const Input = ({
             })}
           </div>
         )}
+        {onMediaChange && (
+          <MediaPortal
+            value={text}
+            media={media || []}
+            setMedia={(event) => onMediaChange(event.target.value || [])}
+            hideToolbar
+            attachTriggerRef={attachTriggerRef}
+          />
+        )}
         <AutoResizingTextarea
           ref={textareaRef}
           placeholder={context.labels.placeholder}
@@ -248,6 +375,68 @@ export const Input = ({
           }}
         />
         <div className="copilotKitInputControls">
+          {onMediaChange && (
+            <div className="relative" ref={attachMenuRef}>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,video/mp4"
+                multiple
+                className="hidden"
+                data-testid="agent-attach-file-input"
+                onChange={handleFilesSelected}
+              />
+              <button
+                type="button"
+                aria-label="Insert media"
+                aria-expanded={attachMenuOpen}
+                aria-haspopup="menu"
+                data-testid="agent-attach-media"
+                disabled={isUploading}
+                onClick={() => setAttachMenuOpen((current) => !current)}
+                className="copilotKitInputControlButton"
+              >
+                {isUploading ? (
+                  <div
+                    className="animate-spin h-[16px] w-[16px] border-2 border-current border-t-transparent rounded-full"
+                    aria-hidden="true"
+                  />
+                ) : (
+                  <PlusIcon />
+                )}
+              </button>
+              <div
+                role="menu"
+                aria-label={t('attach_media', 'Attach media')}
+                data-testid="agent-attach-menu"
+                className={clsx(
+                  'absolute bottom-full start-0 mb-[8px] min-w-[200px] rounded-[8px] border border-newBorder bg-newBgColorInner p-[6px] shadow-lg z-10',
+                  attachMenuOpen ? 'flex flex-col' : 'hidden'
+                )}
+              >
+                <button
+                  type="button"
+                  role="menuitem"
+                  data-testid="agent-attach-upload"
+                  disabled={isUploading}
+                  onClick={uploadFromComputer}
+                  className="w-full rounded-[6px] px-[10px] py-[8px] text-left text-[13px] text-textColor hover:bg-newBgColor disabled:opacity-60"
+                >
+                  {t('upload_from_computer', 'Upload from computer')}
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  data-testid="agent-attach-select-media"
+                  disabled={isUploading}
+                  onClick={selectFromMedia}
+                  className="w-full rounded-[6px] px-[10px] py-[8px] text-left text-[13px] text-textColor hover:bg-newBgColor disabled:opacity-60"
+                >
+                  {t('select_from_media', 'Select from media')}
+                </button>
+              </div>
+            </div>
+          )}
           {onUpload && (
             <button onClick={onUpload} className="copilotKitInputControlButton">
               {context.icons.uploadIcon}

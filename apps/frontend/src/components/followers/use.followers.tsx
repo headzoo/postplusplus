@@ -631,12 +631,68 @@ export const useFollowerNoteMutations = (
   return { createNote, updateNote, deleteNote };
 };
 
+export type FollowerMyGradeUpdate = {
+  myGrade: number | null;
+  adjustedGrade: number | null;
+};
+
+export const applyMyGradeToFollowerPage = (
+  page: FollowerPage | undefined,
+  externalId: string,
+  update: FollowerMyGradeUpdate
+): FollowerPage | undefined => {
+  if (!page) {
+    return page;
+  }
+  return {
+    ...page,
+    items: page.items.map((item) =>
+      item.id !== externalId
+        ? item
+        : {
+          ...item,
+          myGrade: update.myGrade,
+          adjustedGrade: update.adjustedGrade,
+        }
+    ),
+  };
+};
+
+export const applyMyGradeToFollowerDetail = (
+  detail: FollowerMemberDetail | undefined,
+  update: FollowerMyGradeUpdate
+): FollowerMemberDetail | undefined => {
+  if (!detail) {
+    return detail;
+  }
+  const current = detail.relationship.current;
+  return {
+    ...detail,
+    myGrade: update.myGrade,
+    follower: {
+      ...detail.follower,
+      myGrade: update.myGrade,
+      adjustedGrade: update.adjustedGrade,
+    },
+    relationship: {
+      ...detail.relationship,
+      current: current
+        ? {
+          ...current,
+          adjustedGrade: update.adjustedGrade,
+        }
+        : current,
+    },
+  };
+};
+
 export const useFollowerGradeMutation = (
   integrationId: string,
   externalId: string,
   revalidateDetail: () => Promise<FollowerMemberDetail | undefined>
 ) => {
   const fetch = useFetch();
+  const { mutate: mutateCache } = useSWRConfig();
 
   const updateGrade = useCallback(
     async (grade: number) => {
@@ -650,9 +706,27 @@ export const useFollowerGradeMutation = (
       if (!response.ok) {
         throw new Error('Failed to update personal grade');
       }
+      const update = (await response.json()) as FollowerMyGradeUpdate;
+      const detailKey = buildFollowerDetailUrl(integrationId, { externalId });
+      await Promise.all([
+        detailKey
+          ? mutateCache(
+            detailKey,
+            (detail: FollowerMemberDetail | undefined) =>
+              applyMyGradeToFollowerDetail(detail, update),
+            { revalidate: false }
+          )
+          : Promise.resolve(),
+        mutateCache(
+          (key) => isFollowerListCacheKey(integrationId, key),
+          (page: FollowerPage | undefined) =>
+            applyMyGradeToFollowerPage(page, externalId, update),
+          { revalidate: true }
+        ),
+      ]);
       await revalidateDetail();
     },
-    [externalId, fetch, integrationId, revalidateDetail]
+    [externalId, fetch, integrationId, mutateCache, revalidateDetail]
   );
 
   return { updateGrade };
@@ -1013,6 +1087,30 @@ export const useFollowerListMutations = (integrationId?: string) => {
     [fetch, integrationId, mutateCache]
   );
 
+  const deleteList = useCallback(
+    async (listId: string) => {
+      if (!integrationId) {
+        throw new Error('Channel is required');
+      }
+      const response = await fetch(
+        `/followers/${integrationId}/lists/${listId}`,
+        {
+          method: 'DELETE',
+        }
+      );
+      if (!response.ok) {
+        throw new Error('Failed to delete follower list');
+      }
+      await mutateCache(
+        followerListsKey(integrationId),
+        (current: FollowerList[] | undefined) =>
+          (current ?? []).filter((item) => item.id !== listId),
+        { revalidate: true }
+      );
+    },
+    [fetch, integrationId, mutateCache]
+  );
+
   const addMember = useCallback(
     async (listId: string, externalId: string) => {
       if (!integrationId) {
@@ -1200,6 +1298,7 @@ export const useFollowerListMutations = (integrationId?: string) => {
 
   return {
     createList,
+    deleteList,
     addMember,
     importMemberFromUrl,
     removeMember,

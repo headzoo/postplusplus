@@ -1,5 +1,7 @@
 import {
   AuthTokenDetails,
+  ChannelAnalyticsCaptureRequest,
+  ChannelAnalyticsCapturePage,
   Follower,
   FollowerPage,
   FollowerQuery,
@@ -12,6 +14,7 @@ import {
   PostResponse,
   PublishedPostEditInput,
   SocialProvider,
+  paginateDailyAnalyticsCapture,
 } from '@gitroom/nestjs-libraries/integrations/social/social.integrations.interface';
 import { API_ORDER_FOLLOWER_SORTS } from '@gitroom/nestjs-libraries/integrations/social/follower.sorts';
 import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
@@ -23,10 +26,13 @@ import {
 import { getSsrfSafeDispatcher } from '@gitroom/nestjs-libraries/dtos/webhooks/ssrf.safe.dispatcher';
 import { timer } from '@gitroom/helpers/utils/timer';
 import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import { Integration } from '@prisma/client';
 import { number, string } from 'yup';
 import FormDataUpload from 'form-data';
 import { PassThrough, Readable } from 'stream';
+
+dayjs.extend(utc);
 
 // Travels through the workflow history between postPending, checkPostStatus
 // and finalizePost - keep it small JSON (the instance url, media ids and the
@@ -43,6 +49,10 @@ export class MastodonProvider extends SocialAbstract implements SocialProvider {
   override maxConcurrentJob = 5; // Mastodon instances typically have generous limits
   identifier = 'mastodon';
   name = 'Mastodon';
+  analyticsSnapshot = {
+    capture: (request: ChannelAnalyticsCaptureRequest) =>
+      this.captureAnalyticsSnapshot(request),
+  };
   isBetweenSteps = false;
   scopes = ['write:statuses', 'profile', 'write:media'];
   editor = 'normal' as const;
@@ -65,6 +75,47 @@ export class MastodonProvider extends SocialAbstract implements SocialProvider {
     } catch {
       return undefined;
     }
+  }
+
+  private async captureAnalyticsSnapshot(
+    request: ChannelAnalyticsCaptureRequest
+  ): Promise<ChannelAnalyticsCapturePage> {
+    const day = dayjs.utc(request.snapshotAt).format('YYYY-MM-DD');
+    const points: Array<{
+      metricKey: string;
+      label: string;
+      valueMode: 'latest';
+      value: number;
+      day: string;
+    }> = [];
+    try {
+      const instance = this.resolveMastodonInstanceUrl(request.integration);
+      const url = new URL(
+        `/api/v1/accounts/${encodeURIComponent(request.integration.internalId)}`,
+        instance
+      );
+      const response = await this.fetch(url.toString(), {
+        headers: { Authorization: `Bearer ${request.accessToken}` },
+      });
+      const account = await response.json();
+      const followers = Number(account?.followers_count);
+      if (Number.isFinite(followers) && followers >= 0) {
+        points.push({
+          metricKey: 'followers',
+          label: 'Followers',
+          valueMode: 'latest',
+          value: followers,
+          day,
+        });
+      }
+    } catch {
+      // Leave points empty when the account lookup fails.
+    }
+    return paginateDailyAnalyticsCapture(
+      request,
+      { fromDay: day, toDay: day },
+      points
+    );
   }
 
   private decodeFollowerCursor(cursor?: string) {
@@ -238,10 +289,10 @@ export class MastodonProvider extends SocialAbstract implements SocialProvider {
           : {}),
         ...(account.note
           ? {
-              bio: String(account.note)
-                .replace(/<[^>]*>/g, '')
-                .trim(),
-            }
+            bio: String(account.note)
+              .replace(/<[^>]*>/g, '')
+              .trim(),
+          }
           : {}),
         ...(Number.isFinite(Number(account.followers_count))
           ? { followersCount: Number(account.followers_count) }

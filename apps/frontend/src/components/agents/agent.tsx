@@ -14,7 +14,6 @@ import clsx from 'clsx';
 import useSWR from 'swr';
 import { SVGLine } from '@gitroom/frontend/components/launches/launches.component';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
-import { useWaitForClass } from '@gitroom/helpers/utils/use.wait.for.class';
 import { MultiMediaComponent } from '@gitroom/frontend/components/media/media.component';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -31,6 +30,7 @@ import {
   IntegrationListItem,
   useIntegrationList,
 } from '@gitroom/frontend/components/launches/helpers/use.integration.list';
+import useCookie from 'react-use-cookie';
 
 export interface AgentSelectionState {
   properties: Integrations[];
@@ -172,12 +172,18 @@ export const MediaPortal: FC<{
       }[];
     };
   }) => void;
-}> = ({ media, setMedia, value }) => {
-  const waitForClass = useWaitForClass('copilotKitMessages');
+  hideToolbar?: boolean;
+  attachTriggerRef?: React.MutableRefObject<(() => void) | null>;
+}> = ({ media, setMedia, value, hideToolbar, attachTriggerRef }) => {
   const t = useT();
-  if (!waitForClass) return null;
   return (
-    <div className="pl-[14px] pr-[24px] whitespace-nowrap editor rm-bg">
+    <div
+      className={
+        hideToolbar
+          ? 'w-full editor rm-bg'
+          : 'pl-[14px] pr-[24px] whitespace-nowrap editor rm-bg'
+      }
+    >
       <MultiMediaComponent
         allData={[{ content: value }]}
         text={value}
@@ -189,6 +195,8 @@ export const MediaPortal: FC<{
         onChange={setMedia}
         onOpen={() => { }}
         onClose={() => { }}
+        hideToolbar={hideToolbar}
+        attachTriggerRef={attachTriggerRef}
       />
     </div>
   );
@@ -213,6 +221,11 @@ export const AgentList: FC<{
       error: pipelinesError,
       isLoading: pipelinesLoading,
     } = usePipelineList();
+
+    const activePipelines = useMemo(
+      () => (pipelines || []).filter((pipeline) => pipeline.active),
+      [pipelines]
+    );
 
     const pipelinesLabel = t('pipelines', 'Pipelines');
 
@@ -272,17 +285,14 @@ export const AgentList: FC<{
 
               {!pipelinesLoading &&
                 !pipelinesError &&
-                !pipelines?.length && (
+                !activePipelines.length && (
                   <div className="text-[13px] opacity-60 group-[.sidebar]:hidden">
-                    {t('no_pipelines_yet', 'No Pipelines yet')}
+                    {t('no_active_pipelines', 'No active Pipelines')}
                   </div>
                 )}
 
-              {(pipelines || []).map((pipeline) => {
+              {activePipelines.map((pipeline) => {
                 const isSelected = selectedPipeline?.id === pipeline.id;
-                const statusLabel = pipeline.active
-                  ? t('active', 'Active')
-                  : t('paused', 'Paused');
 
                 return (
                   <div
@@ -294,38 +304,26 @@ export const AgentList: FC<{
                     onClick={() => onSelectPipeline(pipeline)}
                     onKeyDown={handlePipelineKeyDown(pipeline)}
                     className={clsx(
-                      'flex gap-[12px] items-center group/pipeline justify-center hover:bg-boxHover rounded-e-[8px] hover:opacity-100 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-btnPrimary',
+                      'relative flex gap-[12px] items-center group/pipeline justify-center hover:bg-boxHover rounded-e-[8px] hover:opacity-100 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-btnPrimary',
                       !isSelected && 'opacity-20'
                     )}
                   >
-                    <div className="relative flex justify-center items-center gap-[6px] min-w-[36px]">
-                      <div className="h-full w-[4px] -ms-[12px] rounded-s-[3px] opacity-0 group-hover/pipeline:opacity-100 transition-opacity">
-                        <SVGLine />
-                      </div>
-                      <div
-                        className="w-[12px] h-[12px] rounded-full shrink-0 border border-newBorder"
-                        style={{ backgroundColor: pipeline.color }}
-                        aria-hidden="true"
-                      />
-                      <div className="group-[.sidebar]:flex hidden">
-                        <PipelineChannels channels={pipeline.channels} compact />
-                      </div>
+                    <div className="absolute start-0 top-0 bottom-0 w-[4px] -ms-[12px] rounded-s-[3px] opacity-0 group-hover/pipeline:opacity-100 transition-opacity">
+                      <SVGLine />
+                    </div>
+                    <div className="group-[.sidebar]:flex hidden">
+                      <PipelineChannels channels={pipeline.channels} compact />
                     </div>
                     <div className="flex-1 min-w-0 flex flex-col gap-[4px] group-[.sidebar]:hidden">
                       <div className="flex items-center gap-[8px] min-w-0">
                         <span className="flex-1 whitespace-nowrap text-ellipsis overflow-hidden">
                           {pipeline.name}
                         </span>
-                        <span
-                          className={clsx(
-                            'text-[10px] px-[6px] py-[1px] rounded-full border shrink-0',
-                            pipeline.active
-                              ? 'border-green-500/40 text-green-500'
-                              : 'border-newBorder opacity-70'
-                          )}
-                        >
-                          {statusLabel}
-                        </span>
+                        <div
+                          className="w-[12px] h-[12px] rounded-full shrink-0 border border-newBorder"
+                          style={{ backgroundColor: pipeline.color }}
+                          aria-hidden="true"
+                        />
                       </div>
                       <PipelineChannels channels={pipeline.channels} compact />
                     </div>
@@ -374,22 +372,26 @@ export const Agent: FC<{ children: ReactNode }> = ({ children }) => {
         onToggleIntegration={handleToggleIntegration}
         onSelectPipeline={handleSelectPipeline}
       />
+      <Threads mobileOpen={threadsOpen} onClose={() => setThreadsOpen(false)} />
       <div className="bg-newBgColorInner flex flex-1 min-w-0 relative">
         <button
           type="button"
           onClick={() => setThreadsOpen(true)}
-          className="hidden mobile:flex absolute top-[12px] end-[12px] z-[120] h-[32px] px-[10px] text-[12px] rounded-[8px] bg-btnSimple text-btnText border border-newBorder"
+          className="hidden mobile:flex absolute top-[12px] start-[12px] z-[120] h-[32px] px-[10px] text-[12px] rounded-[8px] bg-btnSimple text-btnText border border-newBorder"
         >
           Threads
         </button>
         {children}
       </div>
-      <Threads mobileOpen={threadsOpen} onClose={() => setThreadsOpen(false)} />
     </PropertiesContext.Provider>
   );
 };
 
-const ThreadsPanelContent: FC<{ onNavigate?: () => void }> = ({ onNavigate }) => {
+const ThreadsPanelContent: FC<{
+  onNavigate?: () => void;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
+}> = ({ onNavigate, collapsed = false, onToggleCollapse }) => {
   const fetch = useFetch();
   const t = useT();
   const threads = useCallback(async () => {
@@ -400,12 +402,27 @@ const ThreadsPanelContent: FC<{ onNavigate?: () => void }> = ({ onNavigate }) =>
   const { data } = useSWR('threads', threads);
 
   return (
-    <div className="absolute top-0 start-0 w-full h-full p-[20px] overflow-auto scrollbar scrollbar-thumb-fifth scrollbar-track-newBgColor">
-      <div className="mb-[15px] justify-center flex group-[.sidebar]:pb-[15px]">
+    <div
+      className={clsx(
+        'absolute top-0 start-0 w-full h-full flex flex-col gap-[15px]',
+        collapsed ? 'px-[15px] py-[20px]' : 'p-[20px]'
+      )}
+    >      <div
+      className={clsx(
+        'justify-center flex shrink-0',
+        collapsed && 'mx-auto w-[44px]'
+      )}
+    >
         <Link
           href={`/agents`}
           onClick={onNavigate}
-          className="text-white whitespace-nowrap flex-1 pt-[12px] pb-[14px] ps-[16px] pe-[20px] group-[.sidebar]:p-0 min-h-[44px] max-h-[44px] rounded-md bg-btnPrimary flex justify-center items-center gap-[5px] outline-none"
+          aria-label={t('start_a_new_chat', 'Start a new chat')}
+          className={clsx(
+            'text-white whitespace-nowrap rounded-md bg-btnPrimary flex justify-center items-center gap-[5px] outline-none',
+            collapsed
+              ? 'w-[44px] h-[44px] p-0'
+              : 'flex-1 pt-[12px] pb-[14px] ps-[16px] pe-[20px] min-h-[44px] max-h-[44px]'
+          )}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -423,26 +440,57 @@ const ThreadsPanelContent: FC<{ onNavigate?: () => void }> = ({ onNavigate }) =>
               strokeLinejoin="round"
             />
           </svg>
-          <div className="flex-1 text-start text-[16px] group-[.sidebar]:hidden">
-            {t('start_a_new_chat', 'Start a new chat')}
-          </div>
+          {!collapsed && (
+            <div className="flex-1 text-start text-[16px]">
+              {t('start_a_new_chat', 'Start a new chat')}
+            </div>
+          )}
         </Link>
       </div>
-      <div className="flex flex-col gap-[1px]">
-        {data?.threads?.map((p: any) => (
-          <Link
+      {!collapsed && (
+        <div className="flex flex-col gap-[1px] flex-1 min-h-0 overflow-auto scrollbar scrollbar-thumb-fifth scrollbar-track-newBgColor">
+          {data?.threads?.map((p: any) => (
+            <Link
+              className={clsx(
+                'overflow-ellipsis overflow-hidden whitespace-nowrap hover:bg-newBgColor px-[10px] py-[6px] rounded-[10px] cursor-pointer',
+                p.id === id && 'bg-newBgColor'
+              )}
+              href={`/agents/${p.id}`}
+              onClick={onNavigate}
+              key={p.id}
+            >
+              {p.title}
+            </Link>
+          ))}
+        </div>
+      )}
+      {onToggleCollapse && (
+        <div className="mt-auto shrink-0 flex items-center">
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            aria-label={
+              collapsed
+                ? t('expand_threads', 'Expand threads')
+                : t('collapse_threads', 'Collapse threads')
+            }
             className={clsx(
-              'overflow-ellipsis overflow-hidden whitespace-nowrap hover:bg-newBgColor px-[10px] py-[6px] rounded-[10px] cursor-pointer',
-              p.id === id && 'bg-newBgColor'
+              'text-btnText bg-btnSimple rounded-[6px] w-[24px] h-[24px] flex items-center justify-center cursor-pointer select-none',
+              collapsed ? 'mx-auto rotate-[180deg]' : 'ms-auto'
             )}
-            href={`/agents/${p.id}`}
-            onClick={onNavigate}
-            key={p.id}
           >
-            {p.title}
-          </Link>
-        ))}
-      </div>
+            <svg width="7" height="13" viewBox="0 0 7 13" fill="none">
+              <path
+                d="M6 11.5L1 6.5L6 1.5"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+        </div>
+      )}
     </div>
   );
 };
@@ -451,6 +499,12 @@ const Threads: FC<{ mobileOpen: boolean; onClose: () => void }> = ({
   mobileOpen,
   onClose,
 }) => {
+  const [collapseThreads, setCollapseThreads] = useCookie(
+    'collapseThreads',
+    '0'
+  );
+  const collapsed = collapseThreads === '1';
+
   useEffect(() => {
     if (!mobileOpen) {
       return;
@@ -474,8 +528,18 @@ const Threads: FC<{ mobileOpen: boolean; onClose: () => void }> = ({
 
   return (
     <>
-      <div className="trz bg-newBgColorInner hidden mobile:hidden md:flex flex-col gap-[15px] transition-all relative w-[260px] shrink-0">
-        <ThreadsPanelContent />
+      <div
+        className={clsx(
+          'trz bg-newBgColorInner hidden mobile:hidden md:flex flex-col gap-[15px] transition-all relative shrink-0',
+          collapsed ? 'group sidebar w-[74px]' : 'w-[260px]'
+        )}
+      >
+        <ThreadsPanelContent
+          collapsed={collapsed}
+          onToggleCollapse={() =>
+            setCollapseThreads(collapsed ? '0' : '1')
+          }
+        />
       </div>
       {mobileOpen && (
         <div className="hidden mobile:block fixed inset-0 z-[560]">
@@ -485,7 +549,7 @@ const Threads: FC<{ mobileOpen: boolean; onClose: () => void }> = ({
             onClick={onClose}
             className="absolute inset-0 bg-primary/80 transition-opacity duration-200 opacity-100"
           />
-          <aside className="absolute top-0 end-0 h-full w-[260px] bg-newBgColorInner transition-transform duration-200 ease-out translate-x-0">
+          <aside className="absolute top-0 start-0 h-full w-[260px] bg-newBgColorInner transition-transform duration-200 ease-out translate-x-0">
             <ThreadsPanelContent onNavigate={onClose} />
           </aside>
         </div>

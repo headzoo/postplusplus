@@ -1,5 +1,7 @@
 import {
   AuthTokenDetails,
+  ChannelAnalyticsCaptureRequest,
+  ChannelAnalyticsCapturePage,
   Follower,
   FollowerPage,
   FollowerQuery,
@@ -7,9 +9,11 @@ import {
   PostDetails,
   PostResponse,
   SocialProvider,
+  paginateDailyAnalyticsCapture,
 } from '@gitroom/nestjs-libraries/integrations/social/social.integrations.interface';
 import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
 import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import { SocialAbstract } from '@gitroom/nestjs-libraries/integrations/social.abstract';
 import { createHash, randomBytes } from 'crypto';
 import FormDataNew from 'form-data';
@@ -17,10 +21,16 @@ import mime from 'mime-types';
 import { Integration } from '@prisma/client';
 import { hasExtension } from '@gitroom/helpers/utils/has.extension';
 
+dayjs.extend(utc);
+
 export class VkProvider extends SocialAbstract implements SocialProvider {
   override maxConcurrentJob = 2; // VK has moderate API limits
   identifier = 'vk';
   name = 'VK';
+  analyticsSnapshot = {
+    capture: (request: ChannelAnalyticsCaptureRequest) =>
+      this.captureAnalyticsSnapshot(request),
+  };
   isBetweenSteps = false;
   scopes = [
     'vkid.personal_info',
@@ -76,6 +86,46 @@ export class VkProvider extends SocialAbstract implements SocialProvider {
     }
   }
 
+  private async captureAnalyticsSnapshot(
+    request: ChannelAnalyticsCaptureRequest
+  ): Promise<ChannelAnalyticsCapturePage> {
+    const day = dayjs.utc(request.snapshotAt).format('YYYY-MM-DD');
+    const points: Array<{
+      metricKey: string;
+      label: string;
+      valueMode: 'latest';
+      value: number;
+      day: string;
+    }> = [];
+    try {
+      const url = new URL('https://api.vk.com/method/users.getFollowers');
+      url.search = new URLSearchParams({
+        user_id: request.integration.internalId,
+        offset: '0',
+        count: '1',
+        access_token: request.accessToken,
+        v: '5.251',
+      }).toString();
+      const { response } = await (await this.fetch(url.toString())).json();
+      if (Number.isSafeInteger(response?.count) && response.count >= 0) {
+        points.push({
+          metricKey: 'followers',
+          label: 'Followers',
+          valueMode: 'latest',
+          value: response.count,
+          day,
+        });
+      }
+    } catch {
+      // Leave points empty when the total lookup fails.
+    }
+    return paginateDailyAnalyticsCapture(
+      request,
+      { fromDay: day, toDay: day },
+      points
+    );
+  }
+
   async followers(
     integration: Integration,
     accessToken: string,
@@ -110,10 +160,10 @@ export class VkProvider extends SocialAbstract implements SocialProvider {
           : {}),
         ...(account.screen_name
           ? {
-              profileUrl: `https://vk.com/${encodeURIComponent(
-                account.screen_name
-              )}`,
-            }
+            profileUrl: `https://vk.com/${encodeURIComponent(
+              account.screen_name
+            )}`,
+          }
           : {}),
         ...(account.status ? { bio: account.status } : {}),
         ...(Number.isFinite(Number(account.counters?.followers))
@@ -164,15 +214,15 @@ export class VkProvider extends SocialAbstract implements SocialProvider {
           : {}),
         ...(account.screen_name
           ? {
-              profileUrl: `https://vk.com/${encodeURIComponent(
-                account.screen_name
-              )}`,
-            }
+            profileUrl: `https://vk.com/${encodeURIComponent(
+              account.screen_name
+            )}`,
+          }
           : {
-              profileUrl: `https://vk.com/id${encodeURIComponent(
-                String(account.id)
-              )}`,
-            }),
+            profileUrl: `https://vk.com/id${encodeURIComponent(
+              String(account.id)
+            )}`,
+          }),
         ...(account.status ? { bio: account.status } : {}),
         ...(Number.isFinite(Number(account.counters?.followers))
           ? { followersCount: Number(account.counters.followers) }
@@ -288,10 +338,9 @@ export class VkProvider extends SocialAbstract implements SocialProvider {
         `&code_challenge_method=S256` +
         `&code_challenge=${challenge}` +
         `&redirect_uri=${encodeURIComponent(
-          `${
-            process?.env.FRONTEND_URL?.indexOf('https') == -1
-              ? `https://redirectmeto.com/${process?.env.FRONTEND_URL}`
-              : `${process?.env.FRONTEND_URL}`
+          `${process?.env.FRONTEND_URL?.indexOf('https') == -1
+            ? `https://redirectmeto.com/${process?.env.FRONTEND_URL}`
+            : `${process?.env.FRONTEND_URL}`
           }/integrations/social/vk`
         )}` +
         `&state=${state}` +
@@ -316,10 +365,9 @@ export class VkProvider extends SocialAbstract implements SocialProvider {
     formData.append('code', code);
     formData.append(
       'redirect_uri',
-      `${
-        process?.env.FRONTEND_URL?.indexOf('https') == -1
-          ? `https://redirectmeto.com/${process?.env.FRONTEND_URL}`
-          : `${process?.env.FRONTEND_URL}`
+      `${process?.env.FRONTEND_URL?.indexOf('https') == -1
+        ? `https://redirectmeto.com/${process?.env.FRONTEND_URL}`
+        : `${process?.env.FRONTEND_URL}`
       }/integrations/social/vk`
     );
 

@@ -17,7 +17,7 @@ jest.mock('next/link', () => ({
 }));
 
 jest.mock('next/navigation', () => ({
-  useParams: () => ({ id: 'new' }),
+  useParams: () => ({}),
   usePathname: () => '/agents',
   useRouter: () => ({ push: jest.fn() }),
 }));
@@ -28,6 +28,10 @@ jest.mock('@gitroom/frontend/components/media/media.component', () => ({
 
 jest.mock('@gitroom/helpers/utils/use.wait.for.class', () => ({
   useWaitForClass: () => false,
+}));
+
+jest.mock('react-hotkeys-hook', () => ({
+  useHotkeys: jest.fn(),
 }));
 
 import React from 'react';
@@ -275,14 +279,30 @@ describe('AgentList pipeline sidebar', () => {
     expect(screen.getByRole('radiogroup', { name: 'Pipelines' })).toBeTruthy();
 
     const radios = screen.getAllByRole('radio');
-    expect(radios).toHaveLength(3);
+    expect(radios).toHaveLength(2);
     radios.forEach((radio) => {
       expect(radio.getAttribute('aria-checked')).toBe('false');
     });
 
     expect(screen.getByText('Pipeline A')).toBeTruthy();
-    expect(screen.getByText('Pipeline Paused')).toBeTruthy();
-    expect(screen.getAllByText('Paused').length).toBeGreaterThan(0);
+    expect(screen.getByText('Pipeline B')).toBeTruthy();
+    expect(screen.queryByText('Pipeline Paused')).toBeNull();
+    expect(screen.queryByText('Active')).toBeNull();
+    expect(screen.queryByText('Paused')).toBeNull();
+  });
+
+  it('does not render paused pipelines', () => {
+    render(
+      <AgentList
+        selectedIntegrations={[]}
+        selectedPipeline={null}
+        onToggleIntegration={jest.fn()}
+        onSelectPipeline={jest.fn()}
+      />
+    );
+
+    expect(screen.queryByText('Pipeline Paused')).toBeNull();
+    expect(screen.getAllByRole('radio')).toHaveLength(2);
   });
 
   it('marks the selected pipeline radio and invokes selection callback', () => {

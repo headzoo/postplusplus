@@ -1,22 +1,33 @@
 import {
   AuthTokenDetails,
+  ChannelAnalyticsCaptureRequest,
+  ChannelAnalyticsCapturePage,
   Follower,
   FollowerQuery,
   FollowerSort,
   PostDetails,
   PostResponse,
   SocialProvider,
+  paginateDailyAnalyticsCapture,
 } from '@gitroom/nestjs-libraries/integrations/social/social.integrations.interface';
 import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
 import { SocialAbstract } from '@gitroom/nestjs-libraries/integrations/social.abstract';
 import { Integration } from '@prisma/client';
 import { TwitchDto } from '@gitroom/nestjs-libraries/dtos/posts/providers-settings/twitch.dto';
 import { timer } from '@gitroom/helpers/utils/timer';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
 
 export class TwitchProvider extends SocialAbstract implements SocialProvider {
   override maxConcurrentJob = 1;
   identifier = 'twitch';
   name = 'Twitch';
+  analyticsSnapshot = {
+    capture: (request: ChannelAnalyticsCaptureRequest) =>
+      this.captureAnalyticsSnapshot(request),
+  };
   isBetweenSteps = false;
   editor = 'normal' as const;
   scopes = [
@@ -43,6 +54,49 @@ export class TwitchProvider extends SocialAbstract implements SocialProvider {
     return integration.profile
       ? `https://www.twitch.tv/${encodeURIComponent(integration.profile)}`
       : undefined;
+  }
+
+  private async captureAnalyticsSnapshot(
+    request: ChannelAnalyticsCaptureRequest
+  ): Promise<ChannelAnalyticsCapturePage> {
+    const day = dayjs.utc(request.snapshotAt).format('YYYY-MM-DD');
+    const points: Array<{
+      metricKey: string;
+      label: string;
+      valueMode: 'latest';
+      value: number;
+      day: string;
+    }> = [];
+    try {
+      const params = new URLSearchParams({
+        broadcaster_id: request.integration.internalId,
+        first: '1',
+      });
+      const response = await this.fetch(
+        `https://api.twitch.tv/helix/channels/followers?${params.toString()}`,
+        {
+          headers: this.twitchHeaders(request.accessToken),
+        },
+        this.identifier
+      );
+      const body = (await response.json()) as { total?: number };
+      if (Number.isSafeInteger(body.total) && (body.total as number) >= 0) {
+        points.push({
+          metricKey: 'followers',
+          label: 'Followers',
+          valueMode: 'latest',
+          value: body.total as number,
+          day,
+        });
+      }
+    } catch {
+      // Leave points empty when the total lookup fails.
+    }
+    return paginateDailyAnalyticsCapture(
+      request,
+      { fromDay: day, toDay: day },
+      points
+    );
   }
 
   async followers(
@@ -96,10 +150,10 @@ export class TwitchProvider extends SocialAbstract implements SocialProvider {
           ...(avatars.get(id) ? { picture: avatars.get(id) } : {}),
           ...(username
             ? {
-                profileUrl: `https://www.twitch.tv/${encodeURIComponent(
-                  username
-                )}`,
-              }
+              profileUrl: `https://www.twitch.tv/${encodeURIComponent(
+                username
+              )}`,
+            }
             : {}),
           ...(follower.followed_at ? { followedAt: follower.followed_at } : {}),
         };
@@ -156,10 +210,10 @@ export class TwitchProvider extends SocialAbstract implements SocialProvider {
         ...(user.profile_image_url ? { picture: user.profile_image_url } : {}),
         ...(username
           ? {
-              profileUrl: `https://www.twitch.tv/${encodeURIComponent(
-                username
-              )}`,
-            }
+            profileUrl: `https://www.twitch.tv/${encodeURIComponent(
+              username
+            )}`,
+          }
           : {}),
         ...(user.description ? { bio: user.description } : {}),
       };
@@ -264,11 +318,9 @@ export class TwitchProvider extends SocialAbstract implements SocialProvider {
     codeVerifier: string;
     refresh?: string;
   }) {
-    const redirectUri = `${
-      process.env.FRONTEND_URL
-    }/integrations/social/twitch${
-      params.refresh ? `?refresh=${params.refresh}` : ''
-    }`;
+    const redirectUri = `${process.env.FRONTEND_URL
+      }/integrations/social/twitch${params.refresh ? `?refresh=${params.refresh}` : ''
+      }`;
 
     const tokenResponse = await this.fetch(
       'https://id.twitch.tv/oauth2/token',
@@ -450,9 +502,8 @@ export class TwitchProvider extends SocialAbstract implements SocialProvider {
         {
           id: firstPost.id,
           postId: makeId(10), // Announcements don't return a message ID
-          releaseURL: `https://twitch.tv/${
-            integration.profile || integration.providerIdentifier
-          }`,
+          releaseURL: `https://twitch.tv/${integration.profile || integration.providerIdentifier
+            }`,
           status: result.success ? 'posted' : 'error',
         },
       ];
@@ -469,9 +520,8 @@ export class TwitchProvider extends SocialAbstract implements SocialProvider {
       {
         id: firstPost.id,
         postId: result.messageId,
-        releaseURL: `https://twitch.tv/${
-          integration.profile || integration.providerIdentifier
-        }`,
+        releaseURL: `https://twitch.tv/${integration.profile || integration.providerIdentifier
+          }`,
         status: result.isSent ? 'posted' : 'error',
       },
     ];
@@ -503,9 +553,8 @@ export class TwitchProvider extends SocialAbstract implements SocialProvider {
         {
           id: commentPost.id,
           postId: makeId(10),
-          releaseURL: `https://twitch.tv/${
-            integration.profile || integration.providerIdentifier
-          }`,
+          releaseURL: `https://twitch.tv/${integration.profile || integration.providerIdentifier
+            }`,
           status: result.success ? 'posted' : 'error',
         },
       ];
@@ -523,9 +572,8 @@ export class TwitchProvider extends SocialAbstract implements SocialProvider {
       {
         id: commentPost.id,
         postId: result.messageId,
-        releaseURL: `https://twitch.tv/${
-          integration.profile || integration.providerIdentifier
-        }`,
+        releaseURL: `https://twitch.tv/${integration.profile || integration.providerIdentifier
+          }`,
         status: result.isSent ? 'posted' : 'error',
       },
     ];

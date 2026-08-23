@@ -370,6 +370,38 @@ export class ChannelAnalyticsRepository {
     });
   }
 
+  /**
+   * Latest stored daily point per metric key (any day), not a Dashboard window.
+   */
+  async getLatestDailyPoints(
+    organizationId: string,
+    integrationId: string,
+    metricKeys: string[]
+  ) {
+    if (!metricKeys.length) {
+      return [];
+    }
+    const rows = await this._analytics.model.channelAnalyticsDailyPoint.findMany(
+      {
+        where: {
+          organizationId,
+          integrationId,
+          metricKey: { in: metricKeys },
+        },
+        orderBy: [{ metricKey: 'asc' }, { day: 'desc' }],
+      }
+    );
+    const latestByKey = new Map<string, (typeof rows)[number]>();
+    for (const row of rows) {
+      if (!latestByKey.has(row.metricKey)) {
+        latestByKey.set(row.metricKey, row);
+      }
+    }
+    return metricKeys
+      .map((key) => latestByKey.get(key))
+      .filter((row): row is (typeof rows)[number] => !!row);
+  }
+
   async getMetricDayContributors(
     organizationId: string,
     integrationId: string,

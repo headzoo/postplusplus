@@ -1,5 +1,5 @@
 jest.mock('@gitroom/nestjs-libraries/integrations/integration.manager', () => ({
-  IntegrationManager: class IntegrationManager {},
+  IntegrationManager: class IntegrationManager { },
   socialIntegrationList: [],
 }));
 
@@ -169,5 +169,129 @@ describe('IntegrationService dashboard analytics', () => {
       []
     );
     expect(getStoredAnalytics).not.toHaveBeenCalled();
+  });
+});
+
+describe('IntegrationService channel audience totals', () => {
+  const org = { id: 'org-a' } as any;
+  const social = {
+    id: 'social',
+    name: 'Social channel',
+    picture: null as string | null,
+    profile: 'channel',
+    providerIdentifier: 'supported',
+    disabled: false,
+    deletedAt: null,
+    type: 'social',
+    token: 'token',
+    tokenExpiration: new Date(Date.now() + 60_000),
+  };
+
+  const createService = (
+    integrations: any[],
+    providers: Record<string, any>,
+    analyticsMocks?: {
+      getLatestAccountAudienceTotal?: jest.Mock;
+      getSyncState?: jest.Mock;
+      isChannelUnavailable?: jest.Mock;
+    }
+  ) => {
+    const service = Object.create(IntegrationService.prototype) as IntegrationService;
+    (service as any)._integrationRepository = {
+      getIntegrationsList: jest.fn().mockResolvedValue(integrations),
+    };
+    (service as any)._integrationManager = {
+      getSocialIntegration: jest.fn((identifier: string) => providers[identifier]),
+    };
+    (service as any)._channelAnalyticsService = {
+      getLatestAccountAudienceTotal:
+        analyticsMocks?.getLatestAccountAudienceTotal ||
+        jest.fn().mockResolvedValue(null),
+      isChannelUnavailable:
+        analyticsMocks?.isChannelUnavailable ||
+        jest.fn().mockReturnValue(false),
+    };
+    (service as any)._channelAnalyticsRepository = {
+      getSyncState:
+        analyticsMocks?.getSyncState || jest.fn().mockResolvedValue(null),
+    };
+    return service;
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('returns snapshot totals for analytics channels including non-CRM providers', async () => {
+    const getLatestAccountAudienceTotal = jest.fn().mockResolvedValue({
+      value: 1500,
+      asOf: '2026-08-15',
+      metricKey: 'followers',
+      label: 'Followers',
+    });
+    const service = createService(
+      [social, { ...social, id: 'ig', providerIdentifier: 'instagram' }],
+      {
+        supported: { analyticsSnapshot: { capture: jest.fn() } },
+        instagram: { analyticsSnapshot: { capture: jest.fn() } },
+      },
+      { getLatestAccountAudienceTotal }
+    );
+
+    await expect(service.getChannelAudienceTotals(org)).resolves.toEqual([
+      expect.objectContaining({
+        channelId: 'social',
+        total: 1500,
+        asOf: '2026-08-15',
+        reason: null,
+      }),
+      expect.objectContaining({
+        channelId: 'ig',
+        total: 1500,
+        reason: null,
+      }),
+    ]);
+  });
+
+  it('marks unsupported and not_captured channels without inventing totals', async () => {
+    const getLatestAccountAudienceTotal = jest.fn().mockResolvedValue(null);
+    const service = createService(
+      [
+        social,
+        { ...social, id: 'plain', providerIdentifier: 'reddit' },
+      ],
+      {
+        supported: { analyticsSnapshot: { capture: jest.fn() } },
+        reddit: {},
+      },
+      { getLatestAccountAudienceTotal }
+    );
+
+    await expect(
+      service.getChannelAudienceTotals(org, ['social', 'plain'])
+    ).resolves.toEqual([
+      expect.objectContaining({
+        channelId: 'social',
+        total: null,
+        reason: 'not_captured',
+      }),
+      expect.objectContaining({
+        channelId: 'plain',
+        total: null,
+        reason: 'unsupported',
+      }),
+    ]);
+  });
+
+  it('rejects more than 50 channel ids', async () => {
+    const service = createService([social], {
+      supported: { analyticsSnapshot: { capture: jest.fn() } },
+    });
+    await expect(
+      service.getChannelAudienceTotals(
+        org,
+        Array.from({ length: 51 }, (_, index) => `id-${index}`)
+      )
+    ).rejects.toThrow('At most 50 channel ids are allowed');
   });
 });

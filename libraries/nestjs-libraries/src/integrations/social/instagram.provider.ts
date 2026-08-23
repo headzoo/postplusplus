@@ -31,8 +31,7 @@ import { hasExtension } from '@gitroom/helpers/utils/has.extension';
 )
 export class InstagramProvider
   extends SocialAbstract
-  implements SocialProvider
-{
+  implements SocialProvider {
   identifier = 'instagram';
   name = 'Instagram\n(Facebook Business)';
   analyticsSnapshot = {
@@ -118,9 +117,9 @@ export class InstagramProvider
     status: number
   ):
     | {
-        type: 'refresh-token' | 'bad-body' | 'retry';
-        value: string;
-      }
+      type: 'refresh-token' | 'bad-body' | 'retry';
+      value: string;
+    }
     | undefined {
     if (body.indexOf('An unknown error occurred') > -1) {
       return {
@@ -453,24 +452,23 @@ export class InstagramProvider
     const getAccessToken = await (
       await fetch(
         'https://graph.facebook.com/v20.0/oauth/access_token' +
-          `?client_id=${process.env.FACEBOOK_APP_ID}` +
-          `&redirect_uri=${encodeURIComponent(
-            `${process.env.FRONTEND_URL}/integrations/social/instagram${
-              params.refresh ? `?refresh=${params.refresh}` : ''
-            }`
-          )}` +
-          `&client_secret=${process.env.FACEBOOK_APP_SECRET}` +
-          `&code=${params.code}`
+        `?client_id=${process.env.FACEBOOK_APP_ID}` +
+        `&redirect_uri=${encodeURIComponent(
+          `${process.env.FRONTEND_URL}/integrations/social/instagram${params.refresh ? `?refresh=${params.refresh}` : ''
+          }`
+        )}` +
+        `&client_secret=${process.env.FACEBOOK_APP_SECRET}` +
+        `&code=${params.code}`
       )
     ).json();
 
     const { access_token, expires_in, ...all } = await (
       await fetch(
         'https://graph.facebook.com/v20.0/oauth/access_token' +
-          '?grant_type=fb_exchange_token' +
-          `&client_id=${process.env.FACEBOOK_APP_ID}` +
-          `&client_secret=${process.env.FACEBOOK_APP_SECRET}` +
-          `&fb_exchange_token=${getAccessToken.access_token}`
+        '?grant_type=fb_exchange_token' +
+        `&client_id=${process.env.FACEBOOK_APP_ID}` +
+        `&client_secret=${process.env.FACEBOOK_APP_SECRET}` +
+        `&fb_exchange_token=${getAccessToken.access_token}`
       )
     ).json();
 
@@ -686,55 +684,53 @@ export class InstagramProvider
           ? firstPost?.media?.length === 1
             ? isStory
               ? `video_url=${m.path}&media_type=STORIES`
-              : `video_url=${m.path}&media_type=REELS&thumb_offset=${
-                  m?.thumbnailTimestamp || 0
-                }`
+              : `video_url=${m.path}&media_type=REELS&thumb_offset=${m?.thumbnailTimestamp || 0
+              }`
             : isStory
-            ? `video_url=${m.path}&media_type=STORIES`
-            : `video_url=${m.path}&media_type=VIDEO&thumb_offset=${
-                m?.thumbnailTimestamp || 0
+              ? `video_url=${m.path}&media_type=STORIES`
+              : `video_url=${m.path}&media_type=VIDEO&thumb_offset=${m?.thumbnailTimestamp || 0
               }`
           : isStory
-          ? `image_url=${m.path}&media_type=STORIES`
-          : `image_url=${m.path}`;
+            ? `image_url=${m.path}&media_type=STORIES`
+            : `image_url=${m.path}`;
 
         const trialParams = isTrialReel
           ? `&trial_params=${encodeURIComponent(
-              JSON.stringify({
-                graduation_strategy:
-                  firstPost.settings.graduation_strategy || 'MANUAL',
-              })
-            )}`
+            JSON.stringify({
+              graduation_strategy:
+                firstPost.settings.graduation_strategy || 'MANUAL',
+            })
+          )}`
           : ``;
 
         const collaborators =
           firstPost?.settings?.collaborators?.length && !isStory
             ? `&collaborators=${JSON.stringify(
-                firstPost?.settings?.collaborators.map((p) => p.label)
-              )}`
+              firstPost?.settings?.collaborators.map((p) => p.label)
+            )}`
             : ``;
 
         // audio_configuration is only supported for Reels (single video, not a story)
         // and only with Facebook Login (not Instagram Login / graph.instagram.com)
         const audioConfiguration =
           firstPost?.settings?.audio?.id &&
-          type === 'graph.facebook.com' &&
-          !isStory &&
-          firstPost?.media?.length === 1 &&
-          hasExtension(m.path, 'mp4')
+            type === 'graph.facebook.com' &&
+            !isStory &&
+            firstPost?.media?.length === 1 &&
+            hasExtension(m.path, 'mp4')
             ? `&audio_configuration=${encodeURIComponent(
-                JSON.stringify({
-                  audio_id: firstPost.settings.audio.id,
-                  ...(typeof firstPost.settings.audio.audio_volume !==
+              JSON.stringify({
+                audio_id: firstPost.settings.audio.id,
+                ...(typeof firstPost.settings.audio.audio_volume !==
                   'undefined'
-                    ? { audio_volume: +firstPost.settings.audio.audio_volume }
-                    : {}),
-                  ...(typeof firstPost.settings.audio.video_volume !==
+                  ? { audio_volume: +firstPost.settings.audio.audio_volume }
+                  : {}),
+                ...(typeof firstPost.settings.audio.video_volume !==
                   'undefined'
-                    ? { video_volume: +firstPost.settings.audio.video_volume }
-                    : {}),
-                })
-              )}`
+                  ? { video_volume: +firstPost.settings.audio.video_volume }
+                  : {}),
+              })
+            )}`
             : ``;
 
         const { id: photoId } = await (
@@ -765,8 +761,8 @@ export class InstagramProvider
             isStory && medias.length > 1
               ? 'stories'
               : medias.length === 1
-              ? 'single'
-              : 'carousel',
+                ? 'single'
+                : 'carousel',
           containers: medias,
           message: firstPost?.message || '',
         },
@@ -886,11 +882,11 @@ export class InstagramProvider
         releaseURL: !lastMediaId
           ? `https://www.instagram.com/${integration.profile}`
           : await this.igPermalink(
-              lastMediaId,
-              checkToken,
-              pendingData.type,
-              integration
-            ),
+            lastMediaId,
+            checkToken,
+            pendingData.type,
+            integration
+          ),
       };
     }
 
@@ -1033,8 +1029,7 @@ export class InstagramProvider
     // Get the permalink from the parent post
     const { permalink } = await (
       await this.fetch(
-        `https://${type}/v20.0/${postId}?fields=permalink&access_token=${
-          userToken || accessToken
+        `https://${type}/v20.0/${postId}?fields=permalink&access_token=${userToken || accessToken
         }`
       )
     ).json();
@@ -1175,37 +1170,61 @@ export class InstagramProvider
     const daily = dailyBody?.data || [];
     const totals = totalsBody?.data || [];
 
+    const points = [
+      ...daily.flatMap((metric: any) =>
+        (metric.values || []).map((value: any) => ({
+          metricKey: metric.name,
+          label: this.setTitle(metric.name),
+          // Graph period=day follower_count is new followers that day, not the profile total.
+          valueMode: 'sum' as const,
+          value: Number(value.value),
+          day: dayjs.utc(value.end_time).format('YYYY-MM-DD'),
+        }))
+      ),
+      ...totals.flatMap((metric: any) =>
+        metric.total_value
+          ? [
+            {
+              metricKey: metric.name,
+              label: this.setTitle(metric.name),
+              valueMode: 'latest' as const,
+              value: Number(metric.total_value.value),
+              day: toDay.format('YYYY-MM-DD'),
+            },
+          ]
+          : []
+      ),
+    ];
+
+    try {
+      const profileResponse = await fetch(
+        `https://${type}/v21.0/${request.integration.internalId}?fields=followers_count&access_token=${accessToken}`
+      );
+      const profileBody = await profileResponse.json();
+      if (
+        profileResponse.ok &&
+        !profileBody?.error &&
+        typeof profileBody?.followers_count === 'number'
+      ) {
+        points.push({
+          metricKey: 'followers',
+          label: 'Followers',
+          valueMode: 'latest' as const,
+          value: profileBody.followers_count,
+          day: toDay.format('YYYY-MM-DD'),
+        });
+      }
+    } catch {
+      // Keep other metrics when the total follower lookup fails.
+    }
+
     return paginateDailyAnalyticsCapture(
       request,
       {
         fromDay: fromDay.format('YYYY-MM-DD'),
         toDay: toDay.format('YYYY-MM-DD'),
       },
-      [
-        ...daily.flatMap((metric: any) =>
-          (metric.values || []).map((value: any) => ({
-            metricKey: metric.name,
-            label: this.setTitle(metric.name),
-            valueMode:
-              metric.name === 'follower_count' ? ('latest' as const) : ('sum' as const),
-            value: Number(value.value),
-            day: dayjs.utc(value.end_time).format('YYYY-MM-DD'),
-          }))
-        ),
-        ...totals.flatMap((metric: any) =>
-          metric.total_value
-            ? [
-                {
-                  metricKey: metric.name,
-                  label: this.setTitle(metric.name),
-                  valueMode: 'latest' as const,
-                  value: Number(metric.total_value.value),
-                  day: toDay.format('YYYY-MM-DD'),
-                },
-              ]
-            : []
-        ),
-      ],
+      points
     );
   }
 
@@ -1246,8 +1265,7 @@ export class InstagramProvider
 
     const { audio } = await (
       await this.fetch(
-        `https://graph.facebook.com/v22.0/ig_audio?audio_type=${audioType}&user_id=${internalId}${
-          data?.q ? `&search_query=${encodeURIComponent(data.q)}` : ''
+        `https://graph.facebook.com/v22.0/ig_audio?audio_type=${audioType}&user_id=${internalId}${data?.q ? `&search_query=${encodeURIComponent(data.q)}` : ''
         }&access_token=${userToken || accessToken}`
       )
     ).json();

@@ -4137,6 +4137,126 @@ export class IntegrationService {
     );
   }
 
+  async getLatestAccountAudienceTotal(
+    org: Organization,
+    integrationId: string
+  ) {
+    return this._channelAnalyticsService.getLatestAccountAudienceTotal(
+      org.id,
+      integrationId
+    );
+  }
+
+  /**
+   * Platform follower/subscriber totals from analytics snapshots for one or
+   * many channels. Not limited to Followers-CRM-capable providers.
+   */
+  async getChannelAudienceTotals(
+    org: Organization,
+    channelIds?: string[]
+  ): Promise<
+    Array<{
+      channelId: string;
+      name: string;
+      platform: string;
+      total: number | null;
+      asOf: string | null;
+      label: string | null;
+      reason: 'unsupported' | 'not_captured' | 'unavailable' | null;
+    }>
+  > {
+    const MAX_CHANNEL_IDS = 50;
+    if (channelIds && channelIds.length > MAX_CHANNEL_IDS) {
+      throw new BadRequestException(
+        `At most ${MAX_CHANNEL_IDS} channel ids are allowed`
+      );
+    }
+    const integrations = await this._integrationRepository.getIntegrationsList(
+      org.id
+    );
+    const requested = channelIds?.length
+      ? new Set(channelIds)
+      : undefined;
+    const selected = integrations.filter((integration) => {
+      if (requested && !requested.has(integration.id)) {
+        return false;
+      }
+      return true;
+    });
+    if (requested) {
+      const found = new Set(selected.map((integration) => integration.id));
+      for (const id of requested) {
+        if (!found.has(id)) {
+          throw new NotFoundException('Integration not found');
+        }
+      }
+    }
+    const limit = pLimit(5);
+    return Promise.all(
+      selected.map((integration) =>
+        limit(async () => {
+          const base = {
+            channelId: integration.id,
+            name: integration.name,
+            platform: integration.providerIdentifier,
+            total: null as number | null,
+            asOf: null as string | null,
+            label: null as string | null,
+          };
+
+          if (
+            integration.disabled ||
+            integration.deletedAt ||
+            integration.type !== 'social'
+          ) {
+            return { ...base, reason: 'unavailable' as const };
+          }
+
+          let provider: SocialProvider;
+          try {
+            provider = this._integrationManager.getSocialIntegration(
+              integration.providerIdentifier
+            );
+          } catch {
+            return { ...base, reason: 'unsupported' as const };
+          }
+
+          if (!provider?.analyticsSnapshot) {
+            return { ...base, reason: 'unsupported' as const };
+          }
+
+          const syncState = await this._channelAnalyticsRepository.getSyncState(
+            org.id,
+            integration.id
+          );
+          if (this._channelAnalyticsService.isChannelUnavailable(syncState)) {
+            return { ...base, reason: 'unavailable' as const };
+          }
+
+          try {
+            const total =
+              await this._channelAnalyticsService.getLatestAccountAudienceTotal(
+                org.id,
+                integration.id
+              );
+            if (!total) {
+              return { ...base, reason: 'not_captured' as const };
+            }
+            return {
+              ...base,
+              total: total.value,
+              asOf: total.asOf,
+              label: total.label,
+              reason: null,
+            };
+          } catch {
+            return { ...base, reason: 'unavailable' as const };
+          }
+        })
+      )
+    );
+  }
+
   async getDashboardAnalytics(
     org: Organization,
     date: 7 | 30 | 90,

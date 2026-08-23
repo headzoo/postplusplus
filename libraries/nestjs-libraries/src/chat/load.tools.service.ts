@@ -175,6 +175,7 @@ export class LoadToolsService {
         - Enqueue composed posts into a pipeline queue (enqueuePipelinePost)
         - Discover and load organization agent skills on demand (listSkills for metadata only, loadSkill for one Markdown procedure by slug)
         - Discover followers, inspect follower lists and details, read follower timelines, and answer follower statistics questions with the follower tools
+        - Report platform follower/subscriber totals with summarizeChannelFollowerTotals (preferred for “how many followers?”); use summarizeFollowerAudience for one Followers-CRM channel’s CRM mix plus snapshot/list total
         - Manage custom follower lists (addFollowerListMember, removeFollowerListMembers), ignore/unignore people, and dismiss triage or Lead badges (ignoreFollowerTriage)
         - MCP follower tools have actorless personal-grade limits; follower write tools require the in-app UI user and are unavailable without that actor; only make claims supported by returned, authorized data
 
@@ -208,6 +209,11 @@ export class LoadToolsService {
         - For lead dismiss (ignoreFollowerTriage with triage=lead), require at least one reason and confirm those reasons with the user.
         - After any successful follower write (list add/remove, ignore/unignore, triage dismiss), call the frontend action refreshFollowerPage with the same channelId so the in-app followers view updates.
         - When batching removeFollowerListMembers with onlyFollowing: true, call refreshFollowerPage once after all batches complete.
+      - Follower and audience totals:
+        - For “how many followers do I have?” (one or many channels), call summarizeChannelFollowerTotals. Totals come from analytics snapshots (asOf date); they are not Followers CRM list sizes.
+        - Never sum hot_lead, lead, quiet, or other CRM categories to invent a follower total.
+        - If total is null, explain the reason (unsupported, not_captured — suggest Collect analytics or wait for the hourly job, or unavailable). Do not ask the user to paste a profile follower count.
+        - Use summarizeFollowerAudience only for a Followers-capable channel when the user wants CRM category/list mix; still report total from total/totalSource/totalAsOf, not categories.
       ${renderSelectedPipelineGuidance(selectedPipeline)}
       ${renderFollowerPageGuidance(followerPage)}
       - Organization agent skills (listSkills / loadSkill):

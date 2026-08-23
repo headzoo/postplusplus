@@ -4,7 +4,7 @@ The Dashboard is your home screen for channel performance. Open it by clicking t
 
 ## What the Dashboard shows
 
-After you pick a channel in the **Channels** sidebar, the main area shows stat cards for that channel: totals, trends, and charts over the selected time range. Metrics depend on what the platform provides, so the cards you see can differ by channel.
+After you pick a channel in the **Channels** sidebar, the main area shows stat cards for that channel: totals, trends, and charts over the selected time range. Metrics depend on what the platform provides, so the cards you see can differ by channel. When available, a **Followers** (or **Subscribers**) card is the platform account total from analytics snapshots—not the count of people in the [Followers](/help/followers) CRM workspace.
 
 ## Connect and pick a channel
 
@@ -42,12 +42,12 @@ Click a bar on a chart to open that metric for that date. You’ll leave the ove
 
 ## Channel problems
 
-| Message | What it usually means |
-| --- | --- |
-| **No analytics data for this period** | Nothing recorded for this range yet—try collecting or a wider range. |
-| **Analytics not supported** | This provider doesn’t expose analytics in Post++. |
-| **Reconnect or refresh this channel to view analytics** | OAuth or credentials need attention. |
-| **Channel disabled** | The channel is turned off; enable it from the channel menu if you want stats again. |
+| Message                                                 | What it usually means                                                               |
+| ------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| **No analytics data for this period**                   | Nothing recorded for this range yet—try collecting or a wider range.                |
+| **Analytics not supported**                             | This provider doesn’t expose analytics in Post++.                                   |
+| **Reconnect or refresh this channel to view analytics** | OAuth or credentials need attention.                                                |
+| **Channel disabled**                                    | The channel is turned off; enable it from the channel menu if you want stats again. |
 
 ## Related: create a post
 

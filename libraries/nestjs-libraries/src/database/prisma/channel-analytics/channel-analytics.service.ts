@@ -32,6 +32,22 @@ const MAX_TEXT_LENGTH = 256;
 const CAPTURE_COOLDOWN_SECONDS = 60 * 60;
 const CAPTURE_PRIORITY_AT = new Date(0);
 
+/** Canonical account audience totals (platform follower/subscriber count). */
+export const ACCOUNT_AUDIENCE_TOTAL_METRIC_KEYS = [
+  'followers',
+  'subscribers',
+] as const;
+
+export type AccountAudienceTotalMetricKey =
+  (typeof ACCOUNT_AUDIENCE_TOTAL_METRIC_KEYS)[number];
+
+export type AccountAudienceTotal = {
+  value: number;
+  asOf: string;
+  metricKey: AccountAudienceTotalMetricKey;
+  label: string;
+};
+
 export type RequestCaptureResult = {
   status: 'queued' | 'already_queued';
   message: string;
@@ -235,6 +251,51 @@ export class ChannelAnalyticsService {
       now
     );
     return window.metrics.map((metric) => this.formatStoredMetric(metric));
+  }
+
+  /**
+   * Latest platform follower/subscriber total for a channel, ignoring the
+   * Dashboard 7/30/90 window. Prefers `followers` over `subscribers`.
+   */
+  async getLatestAccountAudienceTotal(
+    organizationId: string,
+    integrationId: string
+  ): Promise<AccountAudienceTotal | null> {
+    const integration = await this._repository.findOwnedIntegration(
+      organizationId,
+      integrationId
+    );
+    if (!integration) {
+      throw new NotFoundException('Invalid integration');
+    }
+    if (integration.type !== 'social') {
+      return null;
+    }
+    const rows = await this._repository.getLatestDailyPoints(
+      organizationId,
+      integrationId,
+      [...ACCOUNT_AUDIENCE_TOTAL_METRIC_KEYS]
+    );
+    const byKey = new Map(
+      rows.map((row) => [row.metricKey, row] as const)
+    );
+    for (const metricKey of ACCOUNT_AUDIENCE_TOTAL_METRIC_KEYS) {
+      const row = byKey.get(metricKey);
+      if (!row) {
+        continue;
+      }
+      const value = row.value.toNumber();
+      if (!Number.isFinite(value) || value < 0) {
+        continue;
+      }
+      return {
+        value,
+        asOf: row.day.toISOString().slice(0, 10),
+        metricKey,
+        label: row.label,
+      };
+    }
+    return null;
   }
 
   async getMetricDayAnalytics(

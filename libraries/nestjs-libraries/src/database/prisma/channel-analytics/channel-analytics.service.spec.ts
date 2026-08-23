@@ -26,6 +26,8 @@ describe('ChannelAnalyticsService', () => {
     finalizePostLifetimeCapture: jest.fn(),
     recordFailure: jest.fn(),
     getDailyPoints: jest.fn().mockResolvedValue([]),
+    getLatestDailyPoints: jest.fn().mockResolvedValue([]),
+    findOwnedIntegration: jest.fn().mockResolvedValue({ id: 'integration', type: 'social' }),
     getSyncState: jest.fn().mockResolvedValue(null),
   });
 
@@ -308,6 +310,74 @@ describe('ChannelAnalyticsService', () => {
       ]
     );
     expect(repository.persistDailyPage).not.toHaveBeenCalled();
+  });
+
+  it('returns the latest followers point ignoring the dashboard window', async () => {
+    const repository = createRepository();
+    repository.getLatestDailyPoints.mockResolvedValue([
+      {
+        metricKey: 'followers',
+        label: 'Followers',
+        day: new Date('2026-07-01T00:00:00.000Z'),
+        value: decimal(1500),
+      },
+    ]);
+
+    await expect(
+      createService(repository).getLatestAccountAudienceTotal('org', 'integration')
+    ).resolves.toEqual({
+      value: 1500,
+      asOf: '2026-07-01',
+      metricKey: 'followers',
+      label: 'Followers',
+    });
+    expect(repository.getLatestDailyPoints).toHaveBeenCalledWith('org', 'integration', [
+      'followers',
+      'subscribers',
+    ]);
+  });
+
+  it('prefers followers over subscribers when both are present', async () => {
+    const repository = createRepository();
+    repository.getLatestDailyPoints.mockResolvedValue([
+      {
+        metricKey: 'followers',
+        label: 'Followers',
+        day: new Date('2026-08-01T00:00:00.000Z'),
+        value: decimal(10),
+      },
+      {
+        metricKey: 'subscribers',
+        label: 'Subscribers',
+        day: new Date('2026-08-10T00:00:00.000Z'),
+        value: decimal(99),
+      },
+    ]);
+
+    await expect(
+      createService(repository).getLatestAccountAudienceTotal('org', 'integration')
+    ).resolves.toMatchObject({ metricKey: 'followers', value: 10 });
+  });
+
+  it('falls back to subscribers when followers is missing', async () => {
+    const repository = createRepository();
+    repository.getLatestDailyPoints.mockResolvedValue([
+      {
+        metricKey: 'subscribers',
+        label: 'Subscribers',
+        day: new Date('2026-08-10T00:00:00.000Z'),
+        value: decimal(4242),
+      },
+    ]);
+
+    await expect(
+      createService(repository).getLatestAccountAudienceTotal('org', 'integration')
+    ).resolves.toEqual({
+      value: 4242,
+      asOf: '2026-08-10',
+      metricKey: 'subscribers',
+      label: 'Subscribers',
+    });
   });
 
 });

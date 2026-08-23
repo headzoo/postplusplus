@@ -16,7 +16,10 @@ import { FollowerDetailModal } from '@gitroom/frontend/components/followers/foll
 import { FollowerListCreateModal } from '@gitroom/frontend/components/followers/follower.list.create.modal';
 import { FollowerListAddModal } from '@gitroom/frontend/components/followers/follower.list.add.modal';
 import { useCopilotFollowerPageProperties } from '@gitroom/frontend/components/followers/use.copilot.follower.page';
-import { useModals } from '@gitroom/frontend/components/layout/new-modal';
+import {
+  useDecisionModal,
+  useModals,
+} from '@gitroom/frontend/components/layout/new-modal';
 import { PlusIcon } from '@gitroom/frontend/components/ui/icons';
 import {
   ChannelMenu,
@@ -73,57 +76,147 @@ const FOLLOWER_VIEW_BY_SLUG: Record<
   bots: { isBot: true },
 };
 
-const TRIAGE_FILTER_OPTIONS: {
+type FollowerFilterColor = 'neutral' | 'sky' | 'teal' | 'red' | 'indigo';
+
+type FollowerFilterOption = {
   slug?: string;
   value?: FollowerTriageFilter;
-  audience?: 'lead' | 'cultivate';
+  audience?: 'lead' | 'cultivate' | 'ignored';
+  isBot?: true;
   key: string;
   defaultLabel: string;
-}[] = [
-    { key: 'followers_triage_filter_all', defaultLabel: 'All' },
-    {
-      slug: 'engaged',
-      value: 'engaged_not_yet',
-      key: 'followers_triage_filter_engaged_not_yet',
-      defaultLabel: 'Engaged',
-    },
-    {
-      slug: 'hot',
-      value: 'hot_lead',
-      key: 'followers_triage_hot_lead',
-      defaultLabel: 'Hot',
-    },
-    {
-      slug: 'mutual',
-      value: 'mutual',
-      key: 'followers_triage_mutual',
-      defaultLabel: 'Mutual',
-    },
-    {
-      slug: 'cultivate',
-      audience: 'cultivate' as const,
-      key: 'followers_audience_cultivate',
-      defaultLabel: 'Cultivate',
-    },
-    {
-      slug: 'costly',
-      value: 'over_invested',
-      key: 'followers_triage_over_invested',
-      defaultLabel: 'Costly',
-    },
-    {
-      slug: 'quiet',
-      value: 'quiet',
-      key: 'followers_triage_quiet',
-      defaultLabel: 'Quiet',
-    },
-    {
-      slug: 'leads',
-      audience: 'lead' as const,
-      key: 'followers_audience_leads',
-      defaultLabel: 'Leads',
-    },
-  ];
+};
+
+type FollowerFilterGroup = {
+  id: string;
+  color: FollowerFilterColor;
+  labelKey: string;
+  defaultLabel: string;
+  items: FollowerFilterOption[];
+};
+
+const FOLLOWER_FILTER_GROUPS: FollowerFilterGroup[] = [
+  {
+    id: 'all',
+    color: 'neutral',
+    labelKey: 'followers_filter_group_all',
+    defaultLabel: 'All',
+    items: [{ key: 'followers_triage_filter_all', defaultLabel: 'All' }],
+  },
+  {
+    id: 'opportunities',
+    color: 'sky',
+    labelKey: 'followers_filter_group_opportunities',
+    defaultLabel: 'Opportunities',
+    items: [
+      {
+        slug: 'leads',
+        audience: 'lead',
+        key: 'followers_audience_leads',
+        defaultLabel: 'Leads',
+      },
+      {
+        slug: 'hot',
+        value: 'hot_lead',
+        key: 'followers_triage_hot_lead',
+        defaultLabel: 'Hot',
+      },
+      {
+        slug: 'engaged',
+        value: 'engaged_not_yet',
+        key: 'followers_triage_filter_engaged_not_yet',
+        defaultLabel: 'Engaged',
+      },
+    ],
+  },
+  {
+    id: 'relationships',
+    color: 'teal',
+    labelKey: 'followers_filter_group_relationships',
+    defaultLabel: 'Relationships',
+    items: [
+      {
+        slug: 'cultivate',
+        audience: 'cultivate',
+        key: 'followers_audience_cultivate',
+        defaultLabel: 'Cultivate',
+      },
+      {
+        slug: 'mutual',
+        value: 'mutual',
+        key: 'followers_triage_mutual',
+        defaultLabel: 'Mutual',
+      },
+      {
+        slug: 'quiet',
+        value: 'quiet',
+        key: 'followers_triage_quiet',
+        defaultLabel: 'Quiet',
+      },
+    ],
+  },
+  {
+    id: 'exclusions',
+    color: 'red',
+    labelKey: 'followers_filter_group_exclusions',
+    defaultLabel: 'Exclusions',
+    items: [
+      {
+        slug: 'costly',
+        value: 'over_invested',
+        key: 'followers_triage_over_invested',
+        defaultLabel: 'Costly',
+      },
+      {
+        slug: 'bots',
+        isBot: true,
+        key: 'followers_bot_filter',
+        defaultLabel: 'Bots',
+      },
+      {
+        slug: 'ignored',
+        audience: 'ignored',
+        key: 'followers_ignored_list',
+        defaultLabel: 'Ignored',
+      },
+    ],
+  },
+];
+
+const TRIAGE_FILTER_OPTIONS: FollowerFilterOption[] =
+  FOLLOWER_FILTER_GROUPS.flatMap((group) => group.items);
+
+const FILTER_CHIP_BASE =
+  'rounded-[8px] border px-[10px] py-[6px] text-[13px] transition-colors bg-newBgColorInner';
+
+const getFilterChipClasses = (
+  color: FollowerFilterColor,
+  isSelected: boolean
+) => {
+  if (color === 'neutral') {
+    return isSelected
+      ? 'border-newTableText bg-newTableHeader text-newTextColor'
+      : 'border-newBorder text-textItemBlur hover:bg-newTableHeader hover:text-newTextColor';
+  }
+  if (color === 'sky') {
+    return isSelected
+      ? 'border-sky-500 bg-sky-500/10 text-sky-400'
+      : 'border-sky-500/40 text-textItemBlur hover:border-sky-500/60 hover:text-sky-400';
+  }
+  if (color === 'teal') {
+    return isSelected
+      ? 'border-teal-500 bg-teal-500/10 text-teal-400'
+      : 'border-teal-500/40 text-textItemBlur hover:border-teal-500/60 hover:text-teal-400';
+  }
+  if (color === 'red') {
+    return isSelected
+      ? 'border-red-400 bg-red-400/10 text-red-400'
+      : 'border-red-400/40 text-textItemBlur hover:border-red-400/60 hover:text-red-400';
+  }
+  return isSelected
+    ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400'
+    : 'border-indigo-500/40 text-textItemBlur hover:border-indigo-500/60 hover:text-indigo-400';
+};
 
 const TRIAGE_DEFAULT_SORTS: Partial<
   Record<
@@ -453,6 +546,7 @@ export const FollowersComponent: FC = () => {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const modal = useModals();
+  const decision = useDecisionModal();
   const [historyPath, setHistoryPath] = useState(pathname || '/followers');
   const followerPath = useMemo(
     () => parseFollowerPath(historyPath || '/followers'),
@@ -798,6 +892,7 @@ export const FollowersComponent: FC = () => {
   const { data: followerLists = [] } = useFollowerLists(selectedIntegrationId);
   const {
     createList,
+    deleteList,
     addMember,
     importMemberFromUrl,
     removeMember,
@@ -1063,6 +1158,49 @@ export const FollowersComponent: FC = () => {
       ),
     });
   }, [activeList?.name, importMemberFromUrl, modal, t, urlListId]);
+
+  const removeSelectedList = useCallback(async () => {
+    if (!urlListId) {
+      return;
+    }
+    const listName = activeList?.name;
+    const approved = await decision.open({
+      title: t('followers_list_remove_title', 'Remove this list?'),
+      description: listName
+        ? t(
+          'followers_list_remove_description_named',
+          '"{{name}}" will be deleted. People in it stay as followers.',
+          { name: listName }
+        )
+        : t(
+          'followers_list_remove_description',
+          'This list will be deleted. People in it stay as followers.'
+        ),
+      approveLabel: t('yes', 'Yes'),
+      cancelLabel: t('cancel', 'Cancel'),
+    });
+    if (!approved) {
+      return;
+    }
+    await deleteList(urlListId);
+    router.push(
+      buildFollowersPageHref({
+        search: trimmedSearch || undefined,
+        sort: querySort,
+        direction: querySort ? queryDirection : undefined,
+      })
+    );
+  }, [
+    activeList?.name,
+    decision,
+    deleteList,
+    queryDirection,
+    querySort,
+    router,
+    t,
+    trimmedSearch,
+    urlListId,
+  ]);
 
   if (isLoadingChannels || isLoadingIntegrations) {
     return (
@@ -1483,114 +1621,101 @@ export const FollowersComponent: FC = () => {
         )}
 
         <div
-          className="flex flex-wrap gap-[8px]"
+          className="flex flex-wrap items-center gap-x-[16px] gap-y-[8px]"
           role="group"
           aria-label={t('followers_triage_filter_group', 'Triage filter')}
+          data-testid="followers-filter-bar"
         >
-          {TRIAGE_FILTER_OPTIONS.map((option) => {
-            const isSelected = urlListId || urlIsBot
-              ? false
-              : option.audience
-                ? audience === option.audience
-                : !audience && triage === option.value;
-            return (
-              <Link
-                key={option.key}
-                href={buildFollowersPageHref({
-                  slug: option.slug,
-                  search: trimmedSearch || undefined,
-                  sort: querySort,
-                  direction: querySort ? queryDirection : undefined,
-                })}
-                scroll={false}
-                className={clsx(
-                  'rounded-[8px] border px-[10px] py-[6px] text-[13px] transition-colors',
-                  isSelected
-                    ? 'border-newTableText bg-newTableHeader text-newTextColor'
-                    : 'border-newBorder bg-newBgColorInner text-textItemBlur hover:bg-newTableHeader hover:text-newTextColor'
-                )}
-                aria-pressed={isSelected}
-                aria-current={isSelected ? 'page' : undefined}
-              >
-                {t(option.key, option.defaultLabel)}
-              </Link>
-            );
-          })}
-          <Link
-            href={buildFollowersPageHref({
-              slug: urlIsBot ? undefined : 'bots',
-              search: trimmedSearch || undefined,
-              sort: querySort,
-              direction: querySort ? queryDirection : undefined,
+          {FOLLOWER_FILTER_GROUPS.map((group) => (
+            <div
+              key={group.id}
+              className="flex flex-wrap gap-[8px]"
+              role="group"
+              aria-label={t(group.labelKey, group.defaultLabel)}
+              data-filter-group={group.id}
+            >
+              {group.items.map((option) => {
+                const isSelected = option.isBot
+                  ? urlIsBot
+                  : urlListId || urlIsBot
+                    ? false
+                    : option.audience
+                      ? audience === option.audience
+                      : !audience && triage === option.value;
+                const hrefSlug = option.isBot
+                  ? urlIsBot
+                    ? undefined
+                    : 'bots'
+                  : option.slug;
+                return (
+                  <Link
+                    key={option.key}
+                    href={buildFollowersPageHref({
+                      slug: hrefSlug,
+                      search: trimmedSearch || undefined,
+                      sort: querySort,
+                      direction: querySort ? queryDirection : undefined,
+                    })}
+                    scroll={false}
+                    className={clsx(
+                      FILTER_CHIP_BASE,
+                      getFilterChipClasses(group.color, isSelected)
+                    )}
+                    aria-pressed={isSelected}
+                    aria-current={isSelected ? 'page' : undefined}
+                  >
+                    {t(option.key, option.defaultLabel)}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
+          <div
+            className="flex flex-wrap gap-[8px]"
+            role="group"
+            aria-label={t('followers_filter_group_lists', 'Custom lists')}
+            data-filter-group="lists"
+          >
+            {followerLists.map((list) => {
+              const isSelected = urlListId === list.id;
+              return (
+                <Link
+                  key={list.id}
+                  href={buildFollowersPageHref({
+                    search: trimmedSearch || undefined,
+                    sort: querySort,
+                    direction: querySort ? queryDirection : undefined,
+                    listId: list.id,
+                  })}
+                  scroll={false}
+                  className={clsx(
+                    FILTER_CHIP_BASE,
+                    getFilterChipClasses('indigo', isSelected)
+                  )}
+                  aria-pressed={isSelected}
+                  aria-current={isSelected ? 'page' : undefined}
+                >
+                  {list.name}
+                </Link>
+              );
             })}
-            scroll={false}
-            className={clsx(
-              'rounded-[8px] border px-[10px] py-[6px] text-[13px] transition-colors',
-              urlIsBot
-                ? 'border-newTableText bg-newTableHeader text-newTextColor'
-                : 'border-newBorder bg-newBgColorInner text-textItemBlur hover:bg-newTableHeader hover:text-newTextColor'
-            )}
-            aria-pressed={urlIsBot}
-            aria-current={urlIsBot ? 'page' : undefined}
-          >
-            {t('followers_bot_filter', 'Bots')}
-          </Link>
-          <Link
-            href={buildFollowersPageHref({
-              slug: 'ignored',
-              search: trimmedSearch || undefined,
-              sort: querySort,
-              direction: querySort ? queryDirection : undefined,
-            })}
-            scroll={false}
-            className={clsx(
-              'rounded-[8px] border border-dashed px-[10px] py-[6px] text-[13px] transition-colors',
-              !urlListId && audience === 'ignored'
-                ? 'border-newTableText bg-newTableHeader text-newTextColor'
-                : 'border-newBorder bg-newBgColorInner text-textItemBlur hover:bg-newTableHeader hover:text-newTextColor'
-            )}
-            aria-pressed={!urlListId && audience === 'ignored'}
-            aria-current={!urlListId && audience === 'ignored' ? 'page' : undefined}
-          >
-            {t('followers_ignored_list', 'Ignored')}
-          </Link>
-          {followerLists.map((list) => {
-            const isSelected = urlListId === list.id;
-            return (
-              <Link
-                key={list.id}
-                href={buildFollowersPageHref({
-                  search: trimmedSearch || undefined,
-                  sort: querySort,
-                  direction: querySort ? queryDirection : undefined,
-                  listId: list.id,
-                })}
-                scroll={false}
-                className={clsx(
-                  'rounded-[8px] border px-[10px] py-[6px] text-[13px] transition-colors',
-                  isSelected
-                    ? 'border-newTableText bg-newTableHeader text-newTextColor'
-                    : 'border-newBorder bg-newBgColorInner text-textItemBlur hover:bg-newTableHeader hover:text-newTextColor'
-                )}
-                aria-pressed={isSelected}
-                aria-current={isSelected ? 'page' : undefined}
-              >
-                {list.name}
-              </Link>
-            );
-          })}
-          <button
-            type="button"
-            onClick={openCreateListModal}
-            className="inline-flex items-center justify-center rounded-[8px] border border-newBorder bg-newBgColorInner px-[10px] py-[6px] text-[13px] text-textItemBlur hover:bg-newTableHeader hover:text-newTextColor"
-            aria-label={t('followers_create_list', 'Create list')}
-          >
-            <PlusIcon size={14} />
-          </button>
+            <button
+              type="button"
+              onClick={openCreateListModal}
+              className={clsx(
+                'inline-flex items-center justify-center',
+                FILTER_CHIP_BASE,
+                getFilterChipClasses('indigo', false)
+              )}
+              aria-label={t('followers_create_list', 'Create list')}
+            >
+              <PlusIcon size={14} />
+            </button>
+          </div>
         </div>
 
         {urlListId && (
-          <div>
+          <div className="flex items-center gap-[8px]">
             <button
               type="button"
               onClick={openAddToListModal}
@@ -1598,6 +1723,13 @@ export const FollowersComponent: FC = () => {
             >
               <PlusIcon size={14} />
               {t('followers_list_add_button', 'Add')}
+            </button>
+            <button
+              type="button"
+              onClick={removeSelectedList}
+              className="inline-flex items-center gap-[6px] rounded-[8px] border border-newBorder bg-newBgColorInner px-[10px] py-[6px] text-[13px] text-textItemBlur hover:bg-newTableHeader hover:text-newTextColor"
+            >
+              {t('followers_list_remove_button', 'Remove')}
             </button>
           </div>
         )}

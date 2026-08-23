@@ -54,6 +54,9 @@ jest.mock('@gitroom/nestjs-libraries/chat/tools/tool.list', () => {
     FollowerStatisticsTool,
   } = require('@gitroom/nestjs-libraries/chat/tools/follower.statistics.tool');
   const {
+    ChannelFollowerTotalsTool,
+  } = require('@gitroom/nestjs-libraries/chat/tools/channel.follower.totals.tool');
+  const {
     FollowerListRemoveMembersTool,
   } = require('@gitroom/nestjs-libraries/chat/tools/follower.list.remove.members.tool');
   const {
@@ -77,6 +80,7 @@ jest.mock('@gitroom/nestjs-libraries/chat/tools/tool.list', () => {
       FollowerTimelineTool,
       FollowerListsTool,
       FollowerStatisticsTool,
+      ChannelFollowerTotalsTool,
       FollowerListRemoveMembersTool,
       FollowerListAddMemberTool,
       FollowerIgnoreTool,
@@ -102,6 +106,7 @@ import { FollowerDetailTool } from '@gitroom/nestjs-libraries/chat/tools/followe
 import { FollowerTimelineTool } from '@gitroom/nestjs-libraries/chat/tools/follower.timeline.tool';
 import { FollowerListsTool } from '@gitroom/nestjs-libraries/chat/tools/follower.lists.tool';
 import { FollowerStatisticsTool } from '@gitroom/nestjs-libraries/chat/tools/follower.statistics.tool';
+import { ChannelFollowerTotalsTool } from '@gitroom/nestjs-libraries/chat/tools/channel.follower.totals.tool';
 import { FollowerListRemoveMembersTool } from '@gitroom/nestjs-libraries/chat/tools/follower.list.remove.members.tool';
 import { FollowerListAddMemberTool } from '@gitroom/nestjs-libraries/chat/tools/follower.list.add.member.tool';
 import { FollowerIgnoreTool } from '@gitroom/nestjs-libraries/chat/tools/follower.ignore.tool';
@@ -125,6 +130,7 @@ const FOLLOWER_READ_TOOL_NAMES = [
   'getFollowerTimeline',
   'listFollowerLists',
   'summarizeFollowerAudience',
+  'summarizeChannelFollowerTotals',
 ] as const;
 
 const FOLLOWER_WRITE_TOOL_NAMES = [
@@ -147,6 +153,7 @@ const FOLLOWER_READ_TOOL_CLASSES = [
   FollowerTimelineTool,
   FollowerListsTool,
   FollowerStatisticsTool,
+  ChannelFollowerTotalsTool,
 ];
 
 const FOLLOWER_WRITE_TOOL_CLASSES = [
@@ -206,6 +213,8 @@ describe('follower tools cross-surface contracts', () => {
     getFollowerMemberTimeline: jest.fn(),
     listFollowerLists: jest.fn(),
     getStoredFollowerAudienceCounts: jest.fn(),
+    getLatestAccountAudienceTotal: jest.fn().mockResolvedValue(null),
+    getChannelAudienceTotals: jest.fn(),
     removeFollowerListMembers: jest.fn(),
     addFollowerListMember: jest.fn(),
     ignoreFollowerMember: jest.fn(),
@@ -535,6 +544,8 @@ describe('follower tools cross-surface contracts', () => {
       const result = await tool.execute!({ channelId }, createUiContext());
 
       expect(result.output.total).toBe(10);
+      expect(result.output.totalSource).toBe('list');
+      expect(result.output.totalAsOf).toBeNull();
       expect(result.output.categories.quiet).toBe(3);
       expect(result.output.categories.lead).toBe(2);
       expect(result.output.categories.mutual).toBe(4);
@@ -549,6 +560,73 @@ describe('follower tools cross-surface contracts', () => {
         channelId
       );
       expect(integrationService.getFollowers).toHaveBeenCalledTimes(1);
+    });
+
+    it('prefers analytics snapshot total when list page has no total', async () => {
+      integrationService.getFollowers.mockResolvedValue({
+        items: [],
+        hasMore: false,
+      });
+      integrationService.getLatestAccountAudienceTotal.mockResolvedValue({
+        value: 1500,
+        asOf: '2026-08-15',
+        metricKey: 'followers',
+        label: 'Followers',
+      });
+
+      const tool = new FollowerStatisticsTool(
+        integrationService as unknown as IntegrationService
+      ).run();
+      const result = await tool.execute!({ channelId }, createUiContext());
+
+      expect(result.output.total).toBe(1500);
+      expect(result.output.totalAsOf).toBe('2026-08-15');
+      expect(result.output.totalSource).toBe('snapshot');
+      expect(result.output.categories.quiet).toBe(3);
+    });
+
+    it('summarizes channel follower totals from analytics snapshots', async () => {
+      integrationService.getChannelAudienceTotals.mockResolvedValue([
+        {
+          channelId,
+          name: 'Acme',
+          platform: 'x',
+          total: 1500,
+          asOf: '2026-08-15',
+          label: 'Followers',
+          reason: null,
+        },
+        {
+          channelId: 'ig-1',
+          name: 'IG',
+          platform: 'instagram',
+          total: null,
+          asOf: null,
+          label: null,
+          reason: 'not_captured',
+        },
+      ]);
+
+      const tool = new ChannelFollowerTotalsTool(
+        integrationService as unknown as IntegrationService
+      ).run();
+      const result = await tool.execute!(
+        { channelIds: [channelId, 'ig-1'] },
+        createUiContext()
+      );
+
+      expect(integrationService.getChannelAudienceTotals).toHaveBeenCalledWith(
+        { id: organizationId },
+        [channelId, 'ig-1']
+      );
+      expect(result.output).toEqual([
+        expect.objectContaining({ channelId, total: 1500, asOf: '2026-08-15' }),
+        expect.objectContaining({
+          channelId: 'ig-1',
+          total: null,
+          reason: 'not_captured',
+        }),
+      ]);
     });
 
     it('lists named follower lists for a channel', async () => {

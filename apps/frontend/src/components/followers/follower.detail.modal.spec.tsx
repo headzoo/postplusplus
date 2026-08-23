@@ -56,6 +56,11 @@ const decisionOpen = jest.fn().mockResolvedValue(true);
 
 jest.mock('@gitroom/frontend/components/layout/new-modal', () => ({
   useDecisionModal: () => ({ open: decisionOpen }),
+  useModals: () => ({
+    openModal: jest.fn(),
+    closeAll: jest.fn(),
+    closeById: jest.fn(),
+  }),
 }));
 
 jest.mock('@gitroom/frontend/components/ui/custom.scroll.area', () => ({
@@ -212,6 +217,15 @@ describe('FollowerDetailModal', () => {
             author: { id: 'user-2', name: 'Sam' },
             createdAt: '2026-02-02T12:00:00.000Z',
             updatedAt: '2026-02-02T12:00:00.000Z',
+          }),
+        };
+      }
+      if (typeof url === 'string' && url.includes('/member/my-grade')) {
+        return {
+          ok: true,
+          json: async () => ({
+            myGrade: 4.5,
+            adjustedGrade: 4.5,
           }),
         };
       }
@@ -503,6 +517,16 @@ describe('FollowerDetailModal', () => {
         })
       );
       expect(mutate).toHaveBeenCalled();
+      expect(mutateCache).toHaveBeenCalledWith(
+        '/followers/channel-1/member?externalId=follower-1',
+        expect.any(Function),
+        { revalidate: false }
+      );
+      expect(mutateCache).toHaveBeenCalledWith(
+        expect.any(Function),
+        expect.any(Function),
+        { revalidate: true }
+      );
     });
   });
 

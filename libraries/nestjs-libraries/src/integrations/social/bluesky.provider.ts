@@ -1,5 +1,7 @@
 import {
   AuthTokenDetails,
+  ChannelAnalyticsCaptureRequest,
+  ChannelAnalyticsCapturePage,
   ChannelNoticeCategory,
   ChannelNoticeStatus,
   Follower,
@@ -17,6 +19,7 @@ import {
   PostRulesRemovePostResult,
   PostRulesRepostResult,
   PostRulesAddPlugReplyResult,
+  paginateDailyAnalyticsCapture,
 } from '@gitroom/nestjs-libraries/integrations/social/social.integrations.interface';
 import { API_ORDER_FOLLOWER_SORTS } from '@gitroom/nestjs-libraries/integrations/social/follower.sorts';
 import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
@@ -35,6 +38,7 @@ import {
   BlobRef,
 } from '@atproto/api';
 import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import { Integration } from '@prisma/client';
 import { AuthService } from '@gitroom/helpers/auth/auth.service';
 import { isSafePublicHttpsUrl } from '@gitroom/nestjs-libraries/dtos/webhooks/webhook.url.validator';
@@ -48,6 +52,8 @@ import { timer } from '@gitroom/helpers/utils/timer';
 import { stripHtmlValidation } from '@gitroom/helpers/utils/strip.html.validation';
 import { Rules } from '@gitroom/nestjs-libraries/chat/rules.description.decorator';
 import { hasExtension } from '@gitroom/helpers/utils/has.extension';
+
+dayjs.extend(utc);
 
 async function reduceImageBySize(url: string, maxSizeKB = 976) {
   try {
@@ -268,6 +274,10 @@ export class BlueskyProvider extends SocialAbstract implements SocialProvider {
   override maxConcurrentJob = 2; // Bluesky has moderate rate limits
   identifier = 'bluesky';
   name = 'Bluesky';
+  analyticsSnapshot = {
+    capture: (request: ChannelAnalyticsCaptureRequest) =>
+      this.captureAnalyticsSnapshot(request),
+  };
   toolTip =
     'We don’t currently support two-factor authentication. If it’s enabled on Bluesky, you’ll need to disable it.';
   isBetweenSteps = false;
@@ -312,6 +322,41 @@ export class BlueskyProvider extends SocialAbstract implements SocialProvider {
     return integration.profile
       ? `https://bsky.app/profile/${encodeURIComponent(integration.profile)}`
       : undefined;
+  }
+
+  private async captureAnalyticsSnapshot(
+    request: ChannelAnalyticsCaptureRequest
+  ): Promise<ChannelAnalyticsCapturePage> {
+    const day = dayjs.utc(request.snapshotAt).format('YYYY-MM-DD');
+    const points: Array<{
+      metricKey: string;
+      label: string;
+      valueMode: 'latest';
+      value: number;
+      day: string;
+    }> = [];
+    try {
+      const agent = await this.getAgent(request.integration);
+      const { data: profile } = await agent.getProfile({
+        actor: request.integration.internalId,
+      });
+      if (typeof profile?.followersCount === 'number') {
+        points.push({
+          metricKey: 'followers',
+          label: 'Followers',
+          valueMode: 'latest',
+          value: profile.followersCount,
+          day,
+        });
+      }
+    } catch {
+      // Leave points empty when the profile lookup fails.
+    }
+    return paginateDailyAnalyticsCapture(
+      request,
+      { fromDay: day, toDay: day },
+      points
+    );
   }
 
   async followers(

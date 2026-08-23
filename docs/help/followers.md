@@ -1,6 +1,6 @@
 # Followers
 
-Followers is your audience and relationship workspace. Open it from **Followers** in the main navigation. Use it to browse people who engage with a channel, triage who needs attention, keep notes and lists, and spot leads.
+Followers is your audience and relationship workspace. Open it from **Followers** in the main navigation. Use it to browse people who engage with a channel, triage who needs attention, keep notes and lists, and spot leads. It is **not** the same as the platform follower/subscriber total on the [Dashboard](/help/dashboard)—CRM categories and lists can include non-followers and are incomplete relative to the full account audience.
 
 ## What Followers is for
 
@@ -31,18 +31,18 @@ Empty search: **No followers match this search**.
 
 Use the chips above the grid:
 
-| Filter | Meaning |
-| --- | --- |
-| **All** | Everyone in the current view |
-| **Engaged** | They engaged; the channel hasn’t reciprocated much |
-| **Hot** | Their effort exceeds the channel’s |
-| **Mutual** | Effort is balanced |
-| **Costly** | The channel’s effort exceeds theirs |
-| **Quiet** | Little activity either way |
-| **Cultivate** | Warm relationship that needs outbound attention |
-| **Leads** | Interacting non-followers (and warm-network prospects) |
-| **Bots** | Likely automated accounts |
-| **Ignored** | People you’ve hidden from other views |
+| Filter        | Meaning                                                |
+| ------------- | ------------------------------------------------------ |
+| **All**       | Everyone in the current view                           |
+| **Engaged**   | They engaged; the channel hasn’t reciprocated much     |
+| **Hot**       | Their effort exceeds the channel’s                     |
+| **Mutual**    | Effort is balanced                                     |
+| **Costly**    | The channel’s effort exceeds theirs                    |
+| **Quiet**     | Little activity either way                             |
+| **Cultivate** | Warm relationship that needs outbound attention        |
+| **Leads**     | Interacting non-followers (and warm-network prospects) |
+| **Bots**      | Likely automated accounts                              |
+| **Ignored**   | People you’ve hidden from other views                  |
 
 **Hot** defaults sort to **Net effort gap**; **Engaged** defaults to **Their effort**. Empty triage: **No followers match this triage filter**.
 

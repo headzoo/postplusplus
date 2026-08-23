@@ -1,5 +1,7 @@
 import {
   AuthTokenDetails,
+  ChannelAnalyticsCaptureRequest,
+  ChannelAnalyticsCapturePage,
   Follower,
   FollowerPage,
   FollowerQuery,
@@ -7,9 +9,11 @@ import {
   PostDetails,
   PostResponse,
   SocialProvider,
+  paginateDailyAnalyticsCapture,
 } from '@gitroom/nestjs-libraries/integrations/social/social.integrations.interface';
 import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
 import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import {
   SocialAbstract,
   ValidityMedia,
@@ -19,6 +23,8 @@ import { Integration } from '@prisma/client';
 import { FarcasterDto } from '@gitroom/nestjs-libraries/dtos/posts/providers-settings/farcaster.dto';
 import { Tool } from '@gitroom/nestjs-libraries/integrations/tool.decorator';
 import { Rules } from '@gitroom/nestjs-libraries/chat/rules.description.decorator';
+
+dayjs.extend(utc);
 
 const client = new NeynarAPIClient({
   apiKey: process.env.NEYNAR_SECRET_KEY || '00000000-000-0000-000-000000000000',
@@ -32,6 +38,10 @@ export class FarcasterProvider
   implements SocialProvider {
   identifier = 'wrapcast';
   name = 'Farcaster';
+  analyticsSnapshot = {
+    capture: (request: ChannelAnalyticsCaptureRequest) =>
+      this.captureAnalyticsSnapshot(request),
+  };
   followerSorts: FollowerSort[] = [
     {
       key: 'recent',
@@ -57,6 +67,45 @@ export class FarcasterProvider
     return 800;
   }
   dto = FarcasterDto;
+
+  private async captureAnalyticsSnapshot(
+    request: ChannelAnalyticsCaptureRequest
+  ): Promise<ChannelAnalyticsCapturePage> {
+    const day = dayjs.utc(request.snapshotAt).format('YYYY-MM-DD');
+    const points: Array<{
+      metricKey: string;
+      label: string;
+      valueMode: 'latest';
+      value: number;
+      day: string;
+    }> = [];
+    try {
+      const fid = Number(request.integration.internalId);
+      if (!Number.isSafeInteger(fid) || fid < 1) {
+        throw new Error('Farcaster integration has an invalid FID');
+      }
+      const response = await client.fetchBulkUsers({ fids: [fid] });
+      const user = response.users?.[0] as
+        | { follower_count?: number }
+        | undefined;
+      if (typeof user?.follower_count === 'number' && user.follower_count >= 0) {
+        points.push({
+          metricKey: 'followers',
+          label: 'Followers',
+          valueMode: 'latest',
+          value: user.follower_count,
+          day,
+        });
+      }
+    } catch {
+      // Leave points empty when the profile lookup fails.
+    }
+    return paginateDailyAnalyticsCapture(
+      request,
+      { fromDay: day, toDay: day },
+      points
+    );
+  }
 
   async followers(
     integration: Integration,
@@ -145,10 +194,10 @@ export class FarcasterProvider
         ...(isHttpUrl(user.pfp_url) ? { picture: user.pfp_url } : {}),
         ...(user.username
           ? {
-              profileUrl: `https://warpcast.com/${encodeURIComponent(
-                user.username
-              )}`,
-            }
+            profileUrl: `https://warpcast.com/${encodeURIComponent(
+              user.username
+            )}`,
+          }
           : {}),
         ...(user.profile?.bio?.text ? { bio: user.profile.bio.text } : {}),
         ...(user.follower_count !== undefined

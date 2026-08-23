@@ -10,15 +10,18 @@ In the chat titled **Your Assistant**, you describe what you need. The agent can
 
 ## Start a chat
 
-Opening Agent lands you on a new conversation. You’ll see a welcome message explaining that you can:
+Opening Agent lands you on a new conversation at `/agents`. You’ll see a centered composer with **How can I help?** Type a message and send—the composer then stays at the bottom of the chat as the conversation grows.
+
+From a new chat you can:
 
 - Schedule one or many posts to multiple channels
 - Generate pictures and videos
+- Ask how many followers or subscribers a channel has (from analytics snapshots, with an as-of date—not the size of the Followers CRM list)
 - Pick channels from the left menu
-- Reopen past conversations from the right menu
+- Reopen past conversations from the threads list (beside channels)
 - Use Post++ as an MCP server (see [Settings → Developers](/help/settings#developers-and-approved-apps))
 
-Type in the composer and send. Use stop if a reply is still streaming.
+Use stop if a reply is still streaming.
 
 ## Choose channels or a Pipeline
 
@@ -39,7 +42,12 @@ If you have no Pipelines yet, you’ll see **No Pipelines yet**. Load errors sho
 
 ## Attachments
 
-Use **Attachments** above the input to pick images or videos from your [Media](/help/media) library. Attached media is sent with your message so the agent can use it.
+Use the **+** button inside the composer to open an attach menu:
+
+- **Upload from computer** — pick a file from your device. It is attached directly to the chat and is **not** saved to your [Media](/help/media) library.
+- **Select from media** — pick images or videos from your Media library.
+
+Attached media is sent with your message so the agent can use it.
 
 ## Skills (slash commands)
 
@@ -57,11 +65,11 @@ When the agent is ready to place content on channels, it can open the standard *
 
 ## Threads
 
-Open **Threads** (right panel, or the **Threads** button on mobile) to resume a past chat at `/agents/{id}`. Use **Start a new chat** to begin a fresh conversation.
+Open **Threads** (panel beside channels, or the **Threads** button on mobile) to resume a past chat at `/agents/{id}`. Use **Start a new chat** to begin a fresh conversation at `/agents`. On desktop, collapse the Threads panel with the control at the bottom—when collapsed, only a **+** button remains to start a new chat.
 
 ## Use Agent outside Post++
 
-You can connect Post++ as an MCP server from other tools (Cursor, Claude, and similar). Set that up under [Settings → Developers](/help/settings#developers-and-approved-apps) (API key, MCP client configuration). The welcome message points to **Settings >> Public API**.
+You can connect Post++ as an MCP server from other tools (Cursor, Claude, and similar). Set that up under [Settings → Developers](/help/settings#developers-and-approved-apps) (API key, MCP client configuration). See **Settings → Public API** for MCP and Public API details.
 
 ## Troubleshooting
 

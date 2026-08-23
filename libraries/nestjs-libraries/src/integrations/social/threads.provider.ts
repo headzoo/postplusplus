@@ -809,31 +809,55 @@ export class ThreadsProvider extends SocialAbstract implements SocialProvider {
       throw new Error('Threads analytics request failed');
     }
     const data = body?.data || [];
+    const points = data.flatMap((metric: any) =>
+      metric.total_value
+        ? [
+          {
+            metricKey: metric.name,
+            label: capitalize(metric.name),
+            valueMode: 'latest' as const,
+            value: Number(metric.total_value.value),
+            day: toDay.format('YYYY-MM-DD'),
+          },
+        ]
+        : (metric.values || []).map((value: any) => ({
+          metricKey: metric.name,
+          label: capitalize(metric.name),
+          valueMode: 'sum' as const,
+          value: Number(value.value),
+          day: dayjs.utc(value.end_time).format('YYYY-MM-DD'),
+        }))
+    );
+
+    try {
+      const profileResponse = await fetch(
+        `https://graph.threads.net/v1.0/${request.integration.internalId}?fields=followers_count&access_token=${request.accessToken}`
+      );
+      const profileBody = await profileResponse.json();
+      if (
+        profileResponse.ok &&
+        !profileBody?.error &&
+        typeof profileBody?.followers_count === 'number'
+      ) {
+        points.push({
+          metricKey: 'followers',
+          label: 'Followers',
+          valueMode: 'latest' as const,
+          value: profileBody.followers_count,
+          day: toDay.format('YYYY-MM-DD'),
+        });
+      }
+    } catch {
+      // Keep other metrics when the total follower lookup fails.
+    }
+
     return paginateDailyAnalyticsCapture(
       request,
       {
         fromDay: fromDay.format('YYYY-MM-DD'),
         toDay: toDay.format('YYYY-MM-DD'),
       },
-      data.flatMap((metric: any) =>
-        metric.total_value
-          ? [
-            {
-              metricKey: metric.name,
-              label: capitalize(metric.name),
-              valueMode: 'latest' as const,
-              value: Number(metric.total_value.value),
-              day: toDay.format('YYYY-MM-DD'),
-            },
-          ]
-          : (metric.values || []).map((value: any) => ({
-            metricKey: metric.name,
-            label: capitalize(metric.name),
-            valueMode: 'sum' as const,
-            value: Number(value.value),
-            day: dayjs.utc(value.end_time).format('YYYY-MM-DD'),
-          }))
-      )
+      points
     );
   }
 

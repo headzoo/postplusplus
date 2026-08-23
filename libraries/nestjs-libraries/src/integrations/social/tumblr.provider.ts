@@ -1,11 +1,14 @@
 import {
   AuthTokenDetails,
+  ChannelAnalyticsCaptureRequest,
+  ChannelAnalyticsCapturePage,
   Follower,
   FollowerQuery,
   FollowerSort,
   PostDetails,
   PostResponse,
   SocialProvider,
+  paginateDailyAnalyticsCapture,
 } from '@gitroom/nestjs-libraries/integrations/social/social.integrations.interface';
 import { API_ORDER_FOLLOWER_SORTS } from '@gitroom/nestjs-libraries/integrations/social/follower.sorts';
 import {
@@ -19,6 +22,10 @@ import { Integration } from '@prisma/client';
 import FormDataUpload from 'form-data';
 import { lookup } from 'mime-types';
 import { hasExtension } from '@gitroom/helpers/utils/has.extension';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
 
 const TUMBLR_API_URL = 'https://api.tumblr.com/v2';
 const TUMBLR_USER_AGENT = 'Postiz/1.0 (+https://postiz.com)';
@@ -102,6 +109,10 @@ export class TumblrProvider extends SocialAbstract implements SocialProvider {
   override maxConcurrentJob = 3;
   identifier = 'tumblr';
   name = 'Tumblr';
+  analyticsSnapshot = {
+    capture: (request: ChannelAnalyticsCaptureRequest) =>
+      this.captureAnalyticsSnapshot(request),
+  };
   isBetweenSteps = true;
   scopes = ['basic', 'write', 'offline_access'];
   editor = 'normal' as const;
@@ -120,6 +131,54 @@ export class TumblrProvider extends SocialAbstract implements SocialProvider {
     return integration.profile.startsWith('http')
       ? integration.profile
       : `https://${encodeURIComponent(integration.profile)}.tumblr.com/`;
+  }
+
+  private async captureAnalyticsSnapshot(
+    request: ChannelAnalyticsCaptureRequest
+  ): Promise<ChannelAnalyticsCapturePage> {
+    const day = dayjs.utc(request.snapshotAt).format('YYYY-MM-DD');
+    const points: Array<{
+      metricKey: string;
+      label: string;
+      valueMode: 'latest';
+      value: number;
+      day: string;
+    }> = [];
+    try {
+      const params = new URLSearchParams({ limit: '1', offset: '0' });
+      const response = await this.fetch(
+        `${TUMBLR_API_URL}/blog/${encodeURIComponent(
+          request.integration.internalId
+        )}/followers?${params.toString()}`,
+        {
+          headers: {
+            Authorization: `Bearer ${request.accessToken}`,
+            'User-Agent': TUMBLR_USER_AGENT,
+          },
+        },
+        this.identifier
+      );
+      const body = (await response.json()) as {
+        response?: { total_users?: number };
+      };
+      const total = body.response?.total_users;
+      if (Number.isSafeInteger(total) && (total as number) >= 0) {
+        points.push({
+          metricKey: 'followers',
+          label: 'Followers',
+          valueMode: 'latest',
+          value: total as number,
+          day,
+        });
+      }
+    } catch {
+      // Leave points empty when the total lookup fails.
+    }
+    return paginateDailyAnalyticsCapture(
+      request,
+      { fromDay: day, toDay: day },
+      points
+    );
   }
 
   async followers(

@@ -1,6 +1,6 @@
 # Followers
 
-Followers is your audience and relationship workspace. Open it from **Followers** in the main navigation. Use it to browse people who engage with a channel, triage who needs attention, keep notes and lists, and spot leads.
+Followers is your audience and relationship workspace. Open it from **Followers** in the main navigation. Use it to browse people who engage with a channel, triage who needs attention, keep notes and lists, and spot leads. It is **not** the same as the platform follower/subscriber total on the [Dashboard](/help/dashboard)—CRM categories and lists can include non-followers and are incomplete relative to the full account audience.
 
 ## What Followers is for
 

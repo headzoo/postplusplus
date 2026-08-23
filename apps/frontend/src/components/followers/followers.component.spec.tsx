@@ -19,11 +19,13 @@ import {
 
 const openModal = jest.fn();
 const closeById = jest.fn();
+const decisionOpen = jest.fn();
 const replace = jest.fn();
 const push = jest.fn();
 const useFollowersMock = jest.fn();
 const useCopilotReadableMock = jest.fn();
 const importMemberFromUrlMock = jest.fn();
+const deleteListMock = jest.fn();
 let mockPathname = '/followers';
 let mockSearchParams = new URLSearchParams();
 let followersPage = {
@@ -109,6 +111,7 @@ jest.mock('@gitroom/frontend/components/layout/new-modal', () => ({
     closeAll: jest.fn(),
     closeById,
   }),
+  useDecisionModal: () => ({ open: decisionOpen }),
 }));
 
 jest.mock('@gitroom/frontend/components/layout/loading', () => ({
@@ -231,6 +234,7 @@ jest.mock('@gitroom/frontend/components/followers/use.followers', () => {
     }),
     useFollowerListMutations: () => ({
       createList: jest.fn(),
+      deleteList: deleteListMock,
       addMember: jest.fn(),
       importMemberFromUrl: importMemberFromUrlMock,
       removeMember: jest.fn(),
@@ -373,6 +377,10 @@ describe('FollowersComponent', () => {
     useFollowersMock.mockReset();
     useCopilotReadableMock.mockReset();
     importMemberFromUrlMock.mockReset();
+    deleteListMock.mockReset();
+    deleteListMock.mockResolvedValue(undefined);
+    decisionOpen.mockReset();
+    decisionOpen.mockResolvedValue(false);
     mockPathname = '/followers';
     mockSearchParams = new URLSearchParams();
     deepLinkIsIgnored = false;
@@ -408,6 +416,34 @@ describe('FollowersComponent', () => {
 
     expect(allChip.getAttribute('aria-pressed')).toBe('true');
     expect(hotLeadChip.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('groups filter chips with per-group outline colors', () => {
+    render(<FollowersComponent />);
+
+    const filterBar = screen.getByTestId('followers-filter-bar');
+    const groups = filterBar.querySelectorAll('[data-filter-group]');
+    expect(groups).toHaveLength(5);
+    expect(
+      Array.from(groups).map((group) => group.getAttribute('data-filter-group'))
+    ).toEqual(['all', 'opportunities', 'relationships', 'exclusions', 'lists']);
+
+    const hotChip = screen.getByRole('link', { name: 'Hot' });
+    const costlyChip = screen.getByRole('link', { name: 'Costly' });
+    const vipChip = screen.getByRole('link', { name: 'VIP' });
+
+    expect(hotChip.className).toContain('border-sky-500/40');
+    expect(costlyChip.className).toContain('border-red-400/40');
+    expect(vipChip.className).toContain('border-indigo-500/40');
+    expect(
+      screen.getByRole('group', { name: 'Opportunities' }).contains(hotChip)
+    ).toBe(true);
+    expect(
+      screen.getByRole('group', { name: 'Exclusions' }).contains(costlyChip)
+    ).toBe(true);
+    expect(
+      screen.getByRole('group', { name: 'Custom lists' }).contains(vipChip)
+    ).toBe(true);
   });
 
   it('publishes bounded effective follower list context', () => {
@@ -702,6 +738,53 @@ describe('FollowersComponent', () => {
   it('hides the Add button when no custom list is selected', () => {
     render(<FollowersComponent />);
     expect(screen.queryByRole('button', { name: 'Add' })).toBeNull();
+  });
+
+  it('shows a Remove button for custom lists and hides it otherwise', () => {
+    mockSearchParams = new URLSearchParams('listId=list-1');
+    const { unmount } = render(<FollowersComponent />);
+    expect(screen.getByRole('button', { name: 'Remove' })).toBeTruthy();
+    unmount();
+
+    mockSearchParams = new URLSearchParams();
+    render(<FollowersComponent />);
+    expect(screen.queryByRole('button', { name: 'Remove' })).toBeNull();
+  });
+
+  it('prompts before deleting a custom list and navigates away on confirm', async () => {
+    mockSearchParams = new URLSearchParams('listId=list-1&search=alex');
+    decisionOpen.mockResolvedValue(true);
+
+    render(<FollowersComponent />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
+    });
+
+    expect(decisionOpen).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Remove this list?',
+        approveLabel: 'Yes',
+        cancelLabel: 'Cancel',
+      })
+    );
+    expect(deleteListMock).toHaveBeenCalledWith('list-1');
+    expect(push).toHaveBeenCalledWith('/followers?search=alex');
+  });
+
+  it('does not delete a custom list when the prompt is cancelled', async () => {
+    mockSearchParams = new URLSearchParams('listId=list-1');
+    decisionOpen.mockResolvedValue(false);
+
+    render(<FollowersComponent />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
+    });
+
+    expect(decisionOpen).toHaveBeenCalled();
+    expect(deleteListMock).not.toHaveBeenCalled();
+    expect(push).not.toHaveBeenCalled();
   });
 
   it('shows a triage-specific empty state when a filter has no matches', () => {

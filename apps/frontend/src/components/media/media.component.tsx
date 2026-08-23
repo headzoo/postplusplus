@@ -718,6 +718,8 @@ export const MultiMediaComponent: FC<{
   onClose?: () => void;
   toolBar?: React.ReactNode;
   information?: React.ReactNode;
+  hideToolbar?: boolean;
+  attachTriggerRef?: React.MutableRefObject<(() => void) | null>;
   onChange: (event: {
     target: {
       name: string;
@@ -741,6 +743,8 @@ export const MultiMediaComponent: FC<{
     toolBar,
     information,
     mediaNotAvailable,
+    hideToolbar,
+    attachTriggerRef,
   } = props;
   const user = useUser();
   const modals = useModals();
@@ -794,6 +798,16 @@ export const MultiMediaComponent: FC<{
       ),
     });
   }, [changeMedia, t]);
+
+  useEffect(() => {
+    if (!attachTriggerRef) {
+      return;
+    }
+    attachTriggerRef.current = showModal;
+    return () => {
+      attachTriggerRef.current = null;
+    };
+  }, [attachTriggerRef, showModal]);
 
   const clearMedia = useCallback(
     (topIndex: number) => () => {
@@ -882,49 +896,51 @@ export const MultiMediaComponent: FC<{
             </ReactSortable>
           )}
         </div>
-        <div className="flex gap-[8px] px-[12px] border-t border-newColColor w-full b1 text-textColor">
-          {!mediaNotAvailable && (
-            <div className="flex py-[10px] b2 items-center gap-[4px]">
-              <div
-                onClick={showModal}
-                className="cursor-pointer h-[30px] rounded-[6px] justify-center items-center flex bg-newColColor px-[8px]"
-              >
-                <div className="flex gap-[8px] items-center">
-                  <div>
-                    <InsertMediaIcon />
-                  </div>
-                  <div className="text-[10px] font-[600] maxMedia:hidden block">
-                    {t('insert_media', 'Insert Media')}
+        {!hideToolbar && (
+          <div className="flex gap-[8px] px-[12px] border-t border-newColColor w-full b1 text-textColor">
+            {!mediaNotAvailable && (
+              <div className="flex py-[10px] b2 items-center gap-[4px]">
+                <div
+                  onClick={showModal}
+                  className="cursor-pointer h-[30px] rounded-[6px] justify-center items-center flex bg-newColColor px-[8px]"
+                >
+                  <div className="flex gap-[8px] items-center">
+                    <div>
+                      <InsertMediaIcon />
+                    </div>
+                    <div className="text-[10px] font-[600] maxMedia:hidden block">
+                      {t('insert_media', 'Insert Media')}
+                    </div>
                   </div>
                 </div>
+
+                <ThirdPartyMedia allData={allData} onChange={changeMedia} />
+
+                {!!user?.tier?.ai && (
+                  <>
+                    <AiImage value={text} onChange={changeMedia} />
+                    <AiVideo value={text} onChange={changeMedia} />
+                  </>
+                )}
               </div>
-
-              <ThirdPartyMedia allData={allData} onChange={changeMedia} />
-
-              {!!user?.tier?.ai && (
-                <>
-                  <AiImage value={text} onChange={changeMedia} />
-                  <AiVideo value={text} onChange={changeMedia} />
-                </>
-              )}
-            </div>
-          )}
-          {!mediaNotAvailable && (
-            <div className="text-newColColor h-full flex items-center">
-              <VerticalDividerIcon />
-            </div>
-          )}
-          {!!toolBar && (
-            <div className="flex py-[10px] b2 items-center gap-[4px]">
-              {toolBar}
-            </div>
-          )}
-          {information && (
-            <div className="flex-1 justify-end flex py-[10px] b2 items-center gap-[4px]">
-              {information}
-            </div>
-          )}
-        </div>
+            )}
+            {!mediaNotAvailable && (
+              <div className="text-newColColor h-full flex items-center">
+                <VerticalDividerIcon />
+              </div>
+            )}
+            {!!toolBar && (
+              <div className="flex py-[10px] b2 items-center gap-[4px]">
+                {toolBar}
+              </div>
+            )}
+            {information && (
+              <div className="flex-1 justify-end flex py-[10px] b2 items-center gap-[4px]">
+                {information}
+              </div>
+            )}
+          </div>
+        )}
       </div>
       <div className="text-[12px] text-red-400">{error}</div>
     </>

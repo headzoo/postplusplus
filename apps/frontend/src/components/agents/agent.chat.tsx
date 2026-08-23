@@ -23,7 +23,6 @@ import {
 } from '@copilotkit/react-core';
 import {
   buildAgentTransportMetadata,
-  MediaPortal,
   mapSelectedPipelineContext,
   PropertiesContext,
   stripAgentTransportMetadata,
@@ -45,15 +44,17 @@ import { ExistingDataContextProvider } from '@gitroom/frontend/components/launch
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { hasExtension } from '@gitroom/helpers/utils/has.extension';
 
+const isNewAgentChat = (id?: string) => !id || id === 'new';
+
 export const AgentChat: FC = () => {
   const { backendUrl } = useVariables();
   const params = useParams<{ id: string }>();
   const { properties, selectedPipeline } = useContext(PropertiesContext);
-  const t = useT();
+  const isNew = isNewAgentChat(params?.id);
 
   return (
     <CopilotKit
-      {...(params.id === 'new' ? {} : { threadId: params.id })}
+      {...(isNew ? {} : { threadId: params.id })}
       credentials="include"
       runtimeUrl={backendUrl + '/copilot/agent'}
       showDevConsole={false}
@@ -64,42 +65,61 @@ export const AgentChat: FC = () => {
       }}
     >
       <Hooks />
-      <LoadMessages id={params.id} />
+      <LoadMessages id={params?.id} />
+      <AgentChatShell isNew={isNew} />
+    </CopilotKit>
+  );
+};
+
+const AgentChatShell: FC<{ isNew: boolean }> = ({ isNew }) => {
+  const t = useT();
+  const { messages } = useCopilotMessagesContext();
+  const showEmptyState = isNew && messages.length === 0;
+
+  return (
+    <div
+      style={
+        {
+          '--copilot-kit-primary-color': 'var(--new-btn-text)',
+          '--copilot-kit-background-color': 'var(--new-bg-color)',
+        } as CopilotKitCSSProperties
+      }
+      className={`trz agent bg-newBgColorInner flex flex-col gap-[15px] transition-all flex-1 items-center relative${showEmptyState ? ' agent--empty' : ''
+        }`}
+    >
       <div
-        style={
-          {
-            '--copilot-kit-primary-color': 'var(--new-btn-text)',
-            '--copilot-kit-background-color': 'var(--new-bg-color)',
-          } as CopilotKitCSSProperties
-        }
-        className="trz agent bg-newBgColorInner flex flex-col gap-[15px] transition-all flex-1 items-center relative"
+        className={`absolute left-0 w-full h-full pb-[20px]${showEmptyState
+            ? ' flex flex-col items-center justify-center'
+            : ''
+          }`}
       >
-        <div className="absolute left-0 w-full h-full pb-[20px]">
+        {showEmptyState && (
+          <div className="agent-empty-heading pointer-events-none z-[1] flex shrink-0 justify-center px-[24px] mb-[16px]">
+            <h2 className="text-[28px] md:text-[32px] font-[600] text-center text-textColor">
+              {t('how_can_i_help', 'How can I help?')}
+            </h2>
+          </div>
+        )}
+        <div
+          className={
+            showEmptyState ? 'w-full max-w-[720px] px-[24px]' : 'h-full w-full'
+          }
+        >
           <CopilotChat
-            className="w-full h-full"
+            className={showEmptyState ? 'w-full' : 'w-full h-full'}
             labels={{
               title: t('your_assistant', 'Your Assistant'),
-              initial: t('agent_welcome_message', `Hello, I am your Post Plus Plus agent 🙌🏻.
-              
-I can schedule a post or multiple posts to multiple channels and generate pictures and videos.
-
-You can select the channels you want to use from the left menu.
-
-You can see your previous conversations from the right menu.
-
-You can also use me as an MCP Server, check Settings >> Public API
-`),
             }}
             UserMessage={Message}
             Input={NewInput}
           />
         </div>
       </div>
-    </CopilotKit>
+    </div>
   );
 };
 
-const LoadMessages: FC<{ id: string }> = ({ id }) => {
+const LoadMessages: FC<{ id?: string }> = ({ id }) => {
   const { messages, setMessages } = useCopilotMessagesContext();
   const fetch = useFetch();
   const currentId = useRef<string | null>(null);
@@ -125,14 +145,15 @@ const LoadMessages: FC<{ id: string }> = ({ id }) => {
   }, []);
 
   useEffect(() => {
-    currentId.current = id;
-    if (id === 'new') {
-      loaded.current = { id, messages: [] };
+    const resolvedId = id || 'new';
+    currentId.current = resolvedId;
+    if (isNewAgentChat(id)) {
+      loaded.current = { id: resolvedId, messages: [] };
       setMessages([]);
       return;
     }
     loaded.current = null;
-    loadMessages(id);
+    loadMessages(id!);
   }, [id]);
 
   // CopilotKit resolves loadAgentState to an empty list for Mastra local agents
@@ -181,37 +202,32 @@ const NewInput: FC<InputProps> = (props) => {
   const [value, setValue] = useState('');
   const { properties, selectedPipeline } = useContext(PropertiesContext);
   return (
-    <>
-      <MediaPortal
-        value={value}
-        media={media}
-        setMedia={(e) => setMedia(e.target.value)}
-      />
-      <Input
-        {...props}
-        onChange={setValue}
-        onSend={(text) => {
-          const send = props.onSend(
-            text +
-            (media.length > 0
-              ? '\n[--Media--]' +
-              media
-                .map((m) =>
-                  hasExtension(m.path, 'mp4')
-                    ? `Video: ${m.path}`
-                    : `Image: ${m.path}`
-                )
-                .join('\n') +
-              '\n[--Media--]'
-              : '') +
-            buildAgentTransportMetadata(properties, selectedPipeline)
-          );
-          setValue('');
-          setMedia([]);
-          return send;
-        }}
-      />
-    </>
+    <Input
+      {...props}
+      media={media}
+      onMediaChange={setMedia}
+      onChange={setValue}
+      onSend={(text) => {
+        const send = props.onSend(
+          text +
+          (media.length > 0
+            ? '\n[--Media--]' +
+            media
+              .map((m) =>
+                hasExtension(m.path, 'mp4')
+                  ? `Video: ${m.path}`
+                  : `Image: ${m.path}`
+              )
+              .join('\n') +
+            '\n[--Media--]'
+            : '') +
+          buildAgentTransportMetadata(properties, selectedPipeline)
+        );
+        setValue('');
+        setMedia([]);
+        return send;
+      }}
+    />
   );
 };
 

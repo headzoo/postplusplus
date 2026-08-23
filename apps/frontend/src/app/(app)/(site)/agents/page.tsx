@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { redirect } from 'next/navigation';
+import { AgentChat } from '@gitroom/frontend/components/agents/agent.chat';
 
 export const metadata: Metadata = {
   title: 'Agent : Post++',
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default async function Page() {
-  return redirect('/agents/new');
+  return <AgentChat />;
 }

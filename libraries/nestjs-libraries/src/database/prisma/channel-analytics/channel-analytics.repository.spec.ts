@@ -868,4 +868,53 @@ describe('ChannelAnalyticsRepository', () => {
     expect(tx.channelAnalyticsSyncState.upsert).not.toHaveBeenCalled();
   });
 
+  it('returns the latest daily point per requested metric key', async () => {
+    const { repository, analytics } = createHarness();
+    analytics.channelAnalyticsDailyPoint.findMany.mockResolvedValue([
+      {
+        metricKey: 'followers',
+        day: new Date('2026-08-15T00:00:00Z'),
+        value: { toNumber: () => 1200 },
+        label: 'Followers',
+      },
+      {
+        metricKey: 'followers',
+        day: new Date('2026-08-01T00:00:00Z'),
+        value: { toNumber: () => 1000 },
+        label: 'Followers',
+      },
+      {
+        metricKey: 'subscribers',
+        day: new Date('2026-08-10T00:00:00Z'),
+        value: { toNumber: () => 50 },
+        label: 'Subscribers',
+      },
+    ]);
+
+    await expect(
+      repository.getLatestDailyPoints('org', 'integration', [
+        'followers',
+        'subscribers',
+      ])
+    ).resolves.toEqual([
+      expect.objectContaining({
+        metricKey: 'followers',
+        day: new Date('2026-08-15T00:00:00Z'),
+      }),
+      expect.objectContaining({
+        metricKey: 'subscribers',
+        day: new Date('2026-08-10T00:00:00Z'),
+      }),
+    ]);
+    expect(analytics.channelAnalyticsDailyPoint.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          organizationId: 'org',
+          integrationId: 'integration',
+          metricKey: { in: ['followers', 'subscribers'] },
+        },
+        orderBy: [{ metricKey: 'asc' }, { day: 'desc' }],
+      })
+    );
+  });
 });

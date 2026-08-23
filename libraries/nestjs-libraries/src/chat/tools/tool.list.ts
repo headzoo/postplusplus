@@ -19,6 +19,7 @@ import { FollowerDetailTool } from '@gitroom/nestjs-libraries/chat/tools/followe
 import { FollowerTimelineTool } from '@gitroom/nestjs-libraries/chat/tools/follower.timeline.tool';
 import { FollowerListsTool } from '@gitroom/nestjs-libraries/chat/tools/follower.lists.tool';
 import { FollowerStatisticsTool } from '@gitroom/nestjs-libraries/chat/tools/follower.statistics.tool';
+import { ChannelFollowerTotalsTool } from '@gitroom/nestjs-libraries/chat/tools/channel.follower.totals.tool';
 import { FollowerListRemoveMembersTool } from '@gitroom/nestjs-libraries/chat/tools/follower.list.remove.members.tool';
 import { FollowerListAddMemberTool } from '@gitroom/nestjs-libraries/chat/tools/follower.list.add.member.tool';
 import { FollowerIgnoreTool } from '@gitroom/nestjs-libraries/chat/tools/follower.ignore.tool';
@@ -37,6 +38,7 @@ export const toolList = [
   FollowerTimelineTool,
   FollowerListsTool,
   FollowerStatisticsTool,
+  ChannelFollowerTotalsTool,
   FollowerListRemoveMembersTool,
   FollowerListAddMemberTool,
   FollowerIgnoreTool,

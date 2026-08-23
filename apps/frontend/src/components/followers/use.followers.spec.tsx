@@ -6,6 +6,8 @@ import {
   applyListMembershipToFollowerPage,
   applyImportedMemberToFollowerPage,
   applyIgnoreToFollowerPage,
+  applyMyGradeToFollowerDetail,
+  applyMyGradeToFollowerPage,
   applyRelationshipSnapshotToFollowerPage,
   applyTriageIgnoreToFollowerPage,
   buildFollowerDetailHref,
@@ -238,6 +240,97 @@ describe('follower list cache updates', () => {
       ],
       hasMore: false,
     });
+  });
+
+  it('patches personal grade on the matching follower card', () => {
+    const page = {
+      items: [
+        { id: 'follower-1', name: 'Alex', myGrade: 2, adjustedGrade: 3 },
+        { id: 'follower-2', name: 'Sam', myGrade: null },
+      ],
+      hasMore: false,
+    };
+
+    expect(
+      applyMyGradeToFollowerPage(page, 'follower-1', {
+        myGrade: 4.5,
+        adjustedGrade: 4.5,
+      })
+    ).toEqual({
+      items: [
+        { id: 'follower-1', name: 'Alex', myGrade: 4.5, adjustedGrade: 4.5 },
+        { id: 'follower-2', name: 'Sam', myGrade: null },
+      ],
+      hasMore: false,
+    });
+  });
+
+  it('returns undefined when patching personal grade on a missing page', () => {
+    expect(
+      applyMyGradeToFollowerPage(undefined, 'follower-1', {
+        myGrade: 4.5,
+        adjustedGrade: 4.5,
+      })
+    ).toBeUndefined();
+  });
+
+  it('patches personal grade on follower detail', () => {
+    const detail = {
+      follower: { id: 'follower-1', name: 'Alex', myGrade: 2 },
+      notes: [],
+      interactions: [],
+      myGrade: 2,
+      relationship: {
+        windowDays: 30 as const,
+        cadenceDays: 3 as const,
+        formulaVersion: 2,
+        current: {
+          snapshotAt: '2026-02-01T00:00:00.000Z',
+          windowStartedAt: '2026-01-02T00:00:00.000Z',
+          effortScore: 10,
+          reciprocationScore: 5,
+          reciprocity: 0.5,
+          grade: 3.5,
+          adjustedGrade: 3.5,
+          effortStars: 2,
+          reciprocationStars: 1.5,
+          triage: null,
+          formulaVersion: 2,
+        },
+        history: [],
+      },
+    };
+
+    expect(
+      applyMyGradeToFollowerDetail(detail, {
+        myGrade: 4.5,
+        adjustedGrade: 4,
+      })
+    ).toEqual({
+      ...detail,
+      myGrade: 4.5,
+      follower: {
+        ...detail.follower,
+        myGrade: 4.5,
+        adjustedGrade: 4,
+      },
+      relationship: {
+        ...detail.relationship,
+        current: {
+          ...detail.relationship.current!,
+          adjustedGrade: 4,
+        },
+      },
+    });
+  });
+
+  it('returns undefined when patching personal grade on missing detail', () => {
+    expect(
+      applyMyGradeToFollowerDetail(undefined, {
+        myGrade: 4.5,
+        adjustedGrade: 4.5,
+      })
+    ).toBeUndefined();
   });
 
   it('adds and removes custom list membership on follower cards', () => {

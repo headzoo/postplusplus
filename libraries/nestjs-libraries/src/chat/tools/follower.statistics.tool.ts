@@ -16,14 +16,14 @@ const countFromPage = (page: { total?: number }) => page.total ?? null;
 
 @Injectable()
 export class FollowerStatisticsTool implements AgentToolInterface {
-  constructor(private _integrationService: IntegrationService) {}
+  constructor(private _integrationService: IntegrationService) { }
   name = 'summarizeFollowerAudience';
 
   run() {
     return createTool({
       id: this.name,
       description:
-        'Summarize one channel’s audience using bounded count probes. Totals are null when the channel cannot provide one. Category counts use stored audience data; the named-list breakdown includes at most 20 lists and reports truncation.',
+        'Summarize one Followers-CRM-capable channel: platform follower total (analytics snapshot preferred, else list API total), plus stored CRM category and named-list counts. Category counts are not a follower total and must not be summed. total is null when neither snapshot nor list API provides one. Named-list breakdown includes at most 20 lists and reports truncation.',
       inputSchema: z.object({
         channelId: z.string().min(1).max(64),
       }),
@@ -31,6 +31,8 @@ export class FollowerStatisticsTool implements AgentToolInterface {
       outputSchema: z.object({
         output: z.object({
           total: z.number().nullable(),
+          totalAsOf: z.string().nullable(),
+          totalSource: z.enum(['snapshot', 'list']).nullable(),
           categories: z.record(z.string(), z.number().nullable()),
           tracking: z.any().nullable(),
           lists: z.array(z.object({ id: z.string(), name: z.string(), total: z.number().nullable() })),
@@ -39,7 +41,7 @@ export class FollowerStatisticsTool implements AgentToolInterface {
       }),
       execute: async (inputData, context) => {
         const { organization, actor } = getFollowerToolContext(inputData, context);
-        const [all, stored] = await Promise.all([
+        const [all, stored, snapshot] = await Promise.all([
           this._integrationService.getFollowers(
             organization,
             actor,
@@ -50,11 +52,26 @@ export class FollowerStatisticsTool implements AgentToolInterface {
             organization,
             inputData.channelId
           ),
+          this._integrationService
+            .getLatestAccountAudienceTotal(organization, inputData.channelId)
+            .catch(() => null),
         ]);
+
+        const listTotal = countFromPage(all);
+        const total =
+          snapshot?.value ?? listTotal;
+        const totalSource =
+          snapshot != null
+            ? ('snapshot' as const)
+            : listTotal != null
+              ? ('list' as const)
+              : null;
 
         return {
           output: {
-            total: countFromPage(all),
+            total,
+            totalAsOf: snapshot?.asOf ?? null,
+            totalSource,
             categories: Object.fromEntries(
               [...FOLLOWER_TRIAGE_FILTERS, ...FOLLOWER_AUDIENCES].map(
                 (category) => [category, stored.categories[category] ?? null]
