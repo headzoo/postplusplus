@@ -59,7 +59,7 @@ export const featureScreenshots = [
   },
   {
     title: 'Context Documents',
-    route: '/context-documents',
+    route: '/context',
     file: 'context-documents.png',
     waitSelector: 'body',
   },

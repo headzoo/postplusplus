@@ -8,6 +8,7 @@ export interface PipelineScheduleSlot {
 export interface PipelineContextDocument {
   id: string;
   name: string;
+  description?: string | null;
   fileSize: number;
   updatedAt: string;
 }
@@ -104,7 +105,7 @@ export interface PipelineCalendarPost {
   integration: Integrations;
 }
 
-export interface DeletePipelineScheduleSlotPayload extends PipelineScheduleSlot {}
+export interface DeletePipelineScheduleSlotPayload extends PipelineScheduleSlot { }
 
 export interface DeletePipelineScheduleSlotResult {
   pipelineId: string;

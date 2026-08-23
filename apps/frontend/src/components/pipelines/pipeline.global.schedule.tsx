@@ -21,7 +21,23 @@ import { getTimezone } from '@gitroom/frontend/components/layout/set.timezone';
 import { useDecisionModal } from '@gitroom/frontend/components/layout/new-modal';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
+import { ChevronLeftIcon } from '@gitroom/frontend/components/ui/icons';
 import {
+  ChannelMenu,
+  ChannelsSidebar,
+} from '@gitroom/frontend/components/launches/channels.sidebar';
+import {
+  resolveChannelId,
+  setLastChannelId,
+} from '@gitroom/frontend/components/launches/helpers/last-channel';
+import {
+  IntegrationListItem,
+  useIntegrationList,
+} from '@gitroom/frontend/components/launches/helpers/use.integration.list';
+import {
+  filterPipelinesByChannel,
+  filterScheduleOccurrencesByChannel,
+  filterScheduleOccurrencesByPipeline,
   getPipelineScheduleWeek,
   getReadableForegroundColor,
   minuteOfDayToTime,
@@ -30,9 +46,12 @@ import {
   convertDisplayScheduleTargetToPipelineSlot,
   pipelineScheduleSlotsEqual,
 } from '@gitroom/frontend/components/pipelines/pipeline.utils';
+import { PipelineSidebarList } from '@gitroom/frontend/components/pipelines/pipeline.sidebar.list';
+import { usePipelineList } from '@gitroom/frontend/components/pipelines/use.pipeline.list';
 import {
   PipelineScheduleOccurrence,
   PipelineScheduleDragItem,
+  PipelineSummary,
 } from '@gitroom/frontend/components/pipelines/pipeline.types';
 import {
   pipelineGlobalScheduleKey,
@@ -41,10 +60,6 @@ import {
 import { useDeletePipelineScheduleSlot } from '@gitroom/frontend/components/pipelines/use.pipeline.schedule.slot.delete';
 import { useMovePipelineScheduleSlot } from '@gitroom/frontend/components/pipelines/use.pipeline.schedule.slot.move';
 import { useScrollToHour } from '@gitroom/frontend/components/launches/helpers/use.scroll.to.hour';
-import {
-  CollapseIcon,
-  ExpandIcon,
-} from '@gitroom/frontend/components/ui/icons';
 
 const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
 
@@ -227,12 +242,21 @@ export const PipelineGlobalSchedule: FC = () => {
   const router = useRouter();
   const decision = useDecisionModal();
   const toaster = useToaster();
+  const { data: integrations = [], isLoading: integrationsLoading } =
+    useIntegrationList();
+  const {
+    data: pipelines = [],
+    error: pipelinesError,
+    isLoading: pipelinesLoading,
+  } = usePipelineList();
+  const [selectedChannelId, setSelectedChannelId] = useState<string>();
+  const [selectedPipelineId, setSelectedPipelineId] = useState<string>();
+  const hasRestoredChannel = useRef(false);
   const [displayTimezone, setDisplayTimezone] = useState<string>();
   const [pendingOccurrenceIds, setPendingOccurrenceIds] = useState<Set<string>>(
     new Set()
   );
   const [scheduleError, setScheduleError] = useState('');
-  const [isCalendarExpanded, setIsCalendarExpanded] = useState(false);
 
   useEffect(() => {
     setDisplayTimezone(getTimezone());
@@ -253,34 +277,93 @@ export const PipelineGlobalSchedule: FC = () => {
   const deleteScheduleSlot = useDeletePipelineScheduleSlot(globalScheduleKey);
   const moveScheduleSlot = useMovePipelineScheduleSlot(globalScheduleKey);
 
+  useEffect(() => {
+    if (hasRestoredChannel.current || !integrations.length) {
+      return;
+    }
+    hasRestoredChannel.current = true;
+    const restored = resolveChannelId({
+      eligibleIds: integrations.map((integration) => integration.id),
+      currentId: undefined,
+    });
+    if (restored) {
+      setSelectedChannelId(restored);
+    }
+  }, [integrations]);
+
+  const handleChannelSelect = useCallback(
+    (integration: IntegrationListItem) => {
+      const nextId =
+        selectedChannelId === integration.id ? undefined : integration.id;
+      if (nextId) {
+        setLastChannelId(nextId);
+        setSelectedPipelineId(undefined);
+      }
+      setSelectedChannelId(nextId);
+    },
+    [selectedChannelId]
+  );
+
+  const handlePipelineSelect = useCallback(
+    (pipeline: PipelineSummary) => {
+      const nextId =
+        selectedPipelineId === pipeline.id ? undefined : pipeline.id;
+      if (nextId) {
+        setSelectedChannelId(undefined);
+      }
+      setSelectedPipelineId(nextId);
+    },
+    [selectedPipelineId]
+  );
+
+  const matchingPipelines = useMemo(
+    () => filterPipelinesByChannel(pipelines || [], selectedChannelId),
+    [pipelines, selectedChannelId]
+  );
+
+  const visibleOccurrences = useMemo(() => {
+    const occurrences = data || [];
+    if (selectedPipelineId) {
+      return filterScheduleOccurrencesByPipeline(
+        occurrences,
+        selectedPipelineId
+      );
+    }
+    return filterScheduleOccurrencesByChannel(
+      occurrences,
+      pipelines || [],
+      selectedChannelId
+    );
+  }, [data, pipelines, selectedChannelId, selectedPipelineId]);
+
   const occurrencesByCell = useMemo(() => {
     const cells = new Map<string, PipelineScheduleOccurrence[]>();
-    if (!data || !displayTimezone) {
+    if (!displayTimezone) {
       return cells;
     }
-    for (const occurrence of data) {
+    for (const occurrence of visibleOccurrences) {
       const localTime = dayjs(occurrence.scheduledFor).tz(displayTimezone);
       const key = `${localTime.format('YYYY-MM-DD')}:${localTime.hour()}:${localTime.minute() >= 30 ? 30 : 0
         }`;
       cells.set(key, [...(cells.get(key) || []), occurrence]);
     }
     return cells;
-  }, [data, displayTimezone]);
+  }, [displayTimezone, visibleOccurrences]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const earliestHour = useMemo(() => {
-    if (isLoading || !data?.length || !displayTimezone) {
+    if (isLoading || !visibleOccurrences.length || !displayTimezone) {
       return null;
     }
     let minHour: number | null = null;
-    for (const occurrence of data) {
+    for (const occurrence of visibleOccurrences) {
       const hour = dayjs(occurrence.scheduledFor).tz(displayTimezone).hour();
       if (minHour === null || hour < minHour) {
         minHour = hour;
       }
     }
     return minHour;
-  }, [data, displayTimezone, isLoading]);
+  }, [displayTimezone, isLoading, visibleOccurrences]);
   useScrollToHour(scrollRef, earliestHour, week?.startDate || '');
 
   const removeSlot = useCallback(
@@ -463,65 +546,51 @@ export const PipelineGlobalSchedule: FC = () => {
     ? dayjs().tz(displayTimezone).format('YYYY-MM-DD')
     : '';
 
-  const expandLabel = isCalendarExpanded
-    ? t('collapse_calendar', 'Collapse calendar')
-    : t('expand_calendar', 'Expand calendar');
+  if (integrationsLoading || pipelinesLoading) {
+    return (
+      <div className="bg-newBgColorInner p-[20px] flex flex-1 flex-col gap-[15px] transition-all items-center justify-center">
+        <LoadingComponent />
+      </div>
+    );
+  }
 
   return (
-    <DNDProvider>
-      <div
-        className={clsx(
-          'bg-newBgColorInner flex flex-1 flex-col min-h-0 min-w-0 text-textColor',
-          isCalendarExpanded ? 'p-0 overflow-hidden' : 'p-[20px] gap-[20px] overflow-y-auto overflow-x-hidden'
-        )}
+    <>
+      <ChannelsSidebar
+        integrationCount={integrations.length}
+        showAddProvider={false}
       >
-        {!isCalendarExpanded && (
+        {(collapsed) => (
           <>
-            <div className="flex flex-col gap-[12px]">
-              <Button
-                secondary
-                className="self-start"
-                onClick={() => router.push('/pipelines')}
-              >
-                {t('back_to_pipelines', 'Back to Pipelines')}
-              </Button>
-              <div className="flex flex-col gap-[6px]">
-                <h1 className="text-[24px] font-[600]">
-                  {t('pipeline_schedule', 'Pipeline Schedule')}
-                </h1>
-                <p className="max-w-[760px] text-[14px] opacity-70">
-                  {t(
-                    'pipeline_schedule_description',
-                    'Compare configured recurring Pipeline slots for this week. Times are shown in your selected timezone.'
-                  )}
-                </p>
-                <p className="text-[13px] opacity-70">
-                  {displayTimezone
-                    ? `${t(
-                      'display_timezone',
-                      'Display timezone'
-                    )}: ${displayTimezone}`
-                    : t('loading_timezone', 'Loading selected timezone…')}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-[12px] text-[13px]">
-              <span className="font-[500]">{t('legend', 'Legend')}:</span>
-              <span className="flex items-center gap-[6px]">
-                <span className="h-[12px] w-[12px] rounded-[3px] bg-gradient-to-r from-[#E80000] via-[#eb3825] to-[#00BA73]" />
-                {t(
-                  'pipeline_schedule_active_legend',
-                  'Active entries use Pipeline colors'
-                )}
-              </span>
-              <span className="flex items-center gap-[6px] opacity-60">
-                <span className="h-[12px] w-[12px] rounded-[3px] border border-newBorder bg-newBgColor" />
-                {t('paused', 'Paused')}
-              </span>
-            </div>
+            <ChannelMenu
+              collapsed={collapsed}
+              integrations={integrations}
+              selectedIds={selectedChannelId ? [selectedChannelId] : undefined}
+              onSelect={handleChannelSelect}
+            />
+            <PipelineSidebarList
+              collapsed={collapsed}
+              pipelines={pipelines}
+              selectedPipelineId={selectedPipelineId}
+              isLoading={pipelinesLoading}
+              error={pipelinesError}
+              onSelectPipeline={handlePipelineSelect}
+            />
           </>
         )}
+      </ChannelsSidebar>
+      <DNDProvider>
+      <div className="bg-newBgColorInner flex flex-1 flex-col min-h-0 min-w-0 gap-[12px] p-[20px] overflow-hidden text-textColor">
+        <Button
+          secondary
+          className="self-start"
+          onClick={() => router.push('/pipelines')}
+        >
+          <span className="inline-flex items-center gap-[4px]">
+            <ChevronLeftIcon size={16} />
+            {t('pipelines', 'Pipelines')}
+          </span>
+        </Button>
 
         {scheduleError && (
           <div className="rounded-[12px] border border-red-500/30 bg-newBgColor px-[16px] py-[12px] text-[14px] text-red-500">
@@ -540,7 +609,22 @@ export const PipelineGlobalSchedule: FC = () => {
               'Failed to load Pipeline schedules for this week. Please refresh and try again.'
             )}
           </div>
-        ) : !data?.length ? (
+        ) : selectedChannelId && !matchingPipelines.length ? (
+          <div className="rounded-[12px] border border-newBorder bg-newBgColor p-[32px] flex flex-col items-center justify-center gap-[12px] text-center">
+            <div className="text-[18px] font-[600]">
+              {t(
+                'no_pipelines_for_channel',
+                'No Pipelines for this channel'
+              )}
+            </div>
+            <div className="text-[14px] opacity-70 max-w-[520px]">
+              {t(
+                'no_pipelines_for_channel_description',
+                'None of your Pipelines include this channel. Select a different channel or click it again to show all Pipelines.'
+              )}
+            </div>
+          </div>
+        ) : !visibleOccurrences.length ? (
           <div className="rounded-[12px] border border-newBorder bg-newBgColor px-[16px] py-[32px] text-center text-[14px] opacity-70">
             {t(
               'pipeline_schedule_empty',
@@ -548,30 +632,10 @@ export const PipelineGlobalSchedule: FC = () => {
             )}
           </div>
         ) : (
-          <div
-            className={clsx(
-              'relative flex flex-col min-h-0',
-              isCalendarExpanded && 'flex-1'
-            )}
-          >
-            <button
-              type="button"
-              className="absolute end-[10px] top-[10px] z-40 text-textColor opacity-70 hover:opacity-100"
-              aria-label={expandLabel}
-              data-tooltip-id="tooltip"
-              data-tooltip-content={expandLabel}
-              onClick={() => setIsCalendarExpanded((value) => !value)}
-            >
-              {isCalendarExpanded ? <CollapseIcon /> : <ExpandIcon />}
-            </button>
+          <div className="relative flex flex-1 flex-col min-h-0">
             <div
               ref={scrollRef}
-              className={clsx(
-                'overflow-auto rounded-[10px] border border-newBorder bg-newBorder scrollbar scrollbar-thumb-newBorder scrollbar-track-newBgColor',
-                isCalendarExpanded
-                  ? 'flex-1 min-h-0'
-                  : 'max-h-[calc(100vh-280px)] min-h-[420px]'
-              )}
+              className="flex-1 min-h-0 overflow-auto rounded-[10px] border border-newBorder bg-newBorder scrollbar scrollbar-thumb-newBorder scrollbar-track-newBgColor"
             >
               <div className="grid min-w-[1004px] grid-cols-[80px_repeat(7,_minmax(132px,_1fr))] gap-px">
                 <div className="sticky start-0 top-0 z-30 h-[62px] bg-newTableHeader" />
@@ -660,5 +724,6 @@ export const PipelineGlobalSchedule: FC = () => {
         )}
       </div>
     </DNDProvider>
+    </>
   );
 };

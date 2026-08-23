@@ -11,8 +11,8 @@ const withHelpDir = async (files, callback) => {
   try {
     await Promise.all(
       Object.entries(files).map(([name, content]) =>
-        writeFile(path.join(helpDir, name), content),
-      ),
+        writeFile(path.join(helpDir, name), content)
+      )
     );
     await callback(helpDir);
   } finally {
@@ -32,16 +32,16 @@ test('buildHelpManifest extracts deterministic metadata and ordering', async () 
       assert.equal(manifest.generated, true);
       assert.deepEqual(
         manifest.pages.map((page) => page.slug),
-        ['alpha', 'zebra'],
+        ['alpha', 'zebra']
       );
       assert.deepEqual(manifest.pages[0].headings, [
         { level: 2, title: 'First section', anchor: 'first-section' },
       ]);
       assert.equal(manifest.pages[0].headingText, 'First section');
-      assert.equal(manifest.pages[0].excerpt, 'Alpha A first topic. First section');
+      assert.equal(manifest.pages[0].excerpt, 'A first topic. First section');
       assert.match(manifest.pages[0].markdown, /^# Alpha/m);
       assert.deepEqual(manifest, await buildHelpManifest({ helpDir }));
-    },
+    }
   );
 });
 
@@ -56,9 +56,9 @@ test('buildHelpManifest preserves duplicate heading anchor suffixes', async () =
 
       assert.deepEqual(
         manifest.pages[0].headings.map((heading) => heading.anchor),
-        ['scheduling', 'scheduling-1'],
+        ['scheduling', 'scheduling-1']
       );
-    },
+    }
   );
 });
 
@@ -93,33 +93,36 @@ test('buildHelpManifest ignores headings and links in backtick and tilde fences'
         { level: 2, title: 'Scheduling', anchor: 'scheduling' },
       ]);
       assert.equal(manifest.pages[0].headingText, 'Scheduling');
-    },
+    }
   );
 });
 
 test('buildHelpManifest validates cross-page and same-page help links', async () => {
   await withHelpDir(
     {
-      'calendar.md': '# Calendar\n\n## Scheduling\n\n[Guide](/help/guide#using-it)\n',
-      'guide.md': '# Guide\n\n## Using it\n\n[Calendar](/help/calendar#scheduling)\n',
+      'calendar.md':
+        '# Calendar\n\n## Scheduling\n\n[Guide](/help/guide#using-it)\n',
+      'guide.md':
+        '# Guide\n\n## Using it\n\n[Calendar](/help/calendar#scheduling)\n',
     },
     async (helpDir) => {
       await assert.doesNotReject(() => buildHelpManifest({ helpDir }));
-    },
+    }
   );
 });
 
 test('buildHelpManifest rejects missing help pages and fragments', async () => {
   await withHelpDir(
     {
-      'calendar.md': '# Calendar\n\n## Scheduling\n\n[Missing](/help/missing)\n',
+      'calendar.md':
+        '# Calendar\n\n## Scheduling\n\n[Missing](/help/missing)\n',
     },
     async (helpDir) => {
       await assert.rejects(
         () => buildHelpManifest({ helpDir }),
-        /calendar\.md: unresolved help link \/help\/missing/,
+        /calendar\.md: unresolved help link \/help\/missing/
       );
-    },
+    }
   );
 
   await withHelpDir(
@@ -129,9 +132,9 @@ test('buildHelpManifest rejects missing help pages and fragments', async () => {
     async (helpDir) => {
       await assert.rejects(
         () => buildHelpManifest({ helpDir }),
-        /calendar\.md: unresolved help anchor #missing/,
+        /calendar\.md: unresolved help anchor #missing/
       );
-    },
+    }
   );
 
   await withHelpDir(
@@ -142,8 +145,8 @@ test('buildHelpManifest rejects missing help pages and fragments', async () => {
     async (helpDir) => {
       await assert.rejects(
         () => buildHelpManifest({ helpDir }),
-        /calendar\.md: unresolved help anchor \/help\/calendar#missing/,
+        /calendar\.md: unresolved help anchor \/help\/calendar#missing/
       );
-    },
+    }
   );
 });

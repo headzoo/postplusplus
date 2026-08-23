@@ -96,6 +96,30 @@ export const formatPipelineSlot = (
   return dayjs(isoDate).tz(pipelineTimezone).format('ddd, MMM D YYYY · h:mm A z');
 };
 
+export const formatPipelineTimezoneLabel = (pipelineTimezone: string): string => {
+  const segment = pipelineTimezone.split('/').pop();
+  return segment?.replace(/_/g, ' ') ?? pipelineTimezone;
+};
+
+export const formatPipelineSlotShort = (
+  isoDate: string | undefined,
+  pipelineTimezone: string,
+  now = dayjs()
+): string => {
+  if (!isoDate) {
+    return '—';
+  }
+  const slot = dayjs(isoDate).tz(pipelineTimezone);
+  const localNow = now.tz(pipelineTimezone);
+  if (slot.isSame(localNow, 'week')) {
+    return slot.format('ddd h:mm A');
+  }
+  if (slot.year() === localNow.year()) {
+    return slot.format('MMM D · h:mm A');
+  }
+  return slot.format('MMM D, YYYY · h:mm A');
+};
+
 const formatLocalCalendarDate = (date: dayjs.Dayjs, daysToAdd = 0) =>
   dayjs
     .utc(date.format('YYYY-MM-DD'))
@@ -370,6 +394,35 @@ export const filterPipelinesByChannel = (
   return pipelines.filter((pipeline) =>
     pipeline.channels.some((channel) => channel.id === channelId)
   );
+};
+
+export const filterScheduleOccurrencesByChannel = (
+  occurrences: PipelineScheduleOccurrence[],
+  pipelines: PipelineSummary[],
+  channelId?: string
+): PipelineScheduleOccurrence[] => {
+  if (!channelId) {
+    return occurrences;
+  }
+
+  const pipelineIds = new Set(
+    filterPipelinesByChannel(pipelines, channelId).map((pipeline) => pipeline.id)
+  );
+
+  return occurrences.filter((occurrence) =>
+    pipelineIds.has(occurrence.pipelineId)
+  );
+};
+
+export const filterScheduleOccurrencesByPipeline = (
+  occurrences: PipelineScheduleOccurrence[],
+  pipelineId?: string
+): PipelineScheduleOccurrence[] => {
+  if (!pipelineId) {
+    return occurrences;
+  }
+
+  return occurrences.filter((occurrence) => occurrence.pipelineId === pipelineId);
 };
 
 export const loadPipelineGlobalSchedule = async (

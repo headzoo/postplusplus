@@ -20,6 +20,13 @@ const closeCurrent = jest.fn();
 jest.mock('@mantine/hooks', () => ({
   useClickOutside: () => React.createRef<HTMLDivElement>(),
 }));
+jest.mock('remark-gfm', () => jest.fn());
+jest.mock('react-markdown', () => ({
+  __esModule: true,
+  default: ({ children }: { children: string }) => (
+    <div data-testid="document-markdown-preview">{children}</div>
+  ),
+}));
 jest.mock('@gitroom/react/form/button', () => ({
   Button: ({ children, loading: _loading, secondary: _secondary, ...props }: any) => (
     <button {...props}>{children}</button>
@@ -79,6 +86,7 @@ jest.mock('./use.context-document.list', () => ({
         id: 'doc-1',
         organizationId: 'org-1',
         name: 'BRANDING.md',
+        description: 'Describes the channel branding. Colors, language, tone.',
         fileSize: 20,
         createdAt: '2026-01-01',
         updatedAt: '2026-01-01',
@@ -109,6 +117,7 @@ jest.mock('./use.context-document.content', () => ({
     data: {
       id: 'doc-1',
       name: 'BRANDING.md',
+      description: 'Describes the channel branding. Colors, language, tone.',
       content: '# Branding',
       fileSize: 10,
       updatedAt: '2026-01-01',
@@ -145,6 +154,16 @@ describe('ContextDocumentLibrary', () => {
     expect(screen.getByText(/cannot be invoked/i)).toBeTruthy();
   });
 
+  it('shows document descriptions on standard document cards', () => {
+    render(<ContextDocumentLibrary />);
+
+    expect(
+      screen.getByText(
+        'Describes the channel branding. Colors, language, tone.'
+      )
+    ).toBeTruthy();
+  });
+
   it('opens the editable document modal when a document card is clicked', () => {
     render(<ContextDocumentLibrary />);
 
@@ -153,6 +172,8 @@ describe('ContextDocumentLibrary', () => {
     expect(openModal).toHaveBeenCalledWith(
       expect.objectContaining({
         title: 'BRANDING.md',
+        top: 20,
+        height: 'calc(100dvh - 40px)',
       })
     );
   });
@@ -181,7 +202,7 @@ describe('ContextDocumentLibrary', () => {
   it('opens the new document modal from the create button', () => {
     render(<ContextDocumentLibrary />);
 
-    fireEvent.click(screen.getByText('+ New document'));
+    fireEvent.click(screen.getByText('Create'));
 
     expect(openModal).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -198,11 +219,11 @@ describe('ContextDocumentLibrary', () => {
     });
 
     render(<ContextDocumentLibrary />);
-    fireEvent.click(screen.getByText('+ New document'));
+    fireEvent.click(screen.getByText('Create'));
 
     const input = screen.getByLabelText('Filename');
     fireEvent.change(input, { target: { value: 'NOTES.md' } });
-    fireEvent.click(screen.getByText('Create'));
+    fireEvent.click(screen.getAllByText('Create').at(-1)!);
 
     await waitFor(() =>
       expect(createDocument).toHaveBeenCalledWith({
@@ -219,7 +240,33 @@ describe('ContextDocumentLibrary', () => {
     );
   });
 
-  it('saves edited document content from the editor modal', async () => {
+  it('saves edited document content and description from the editor modal', async () => {
+    openModal.mockImplementation(({ children }) => {
+      if (React.isValidElement(children)) {
+        render(children);
+      }
+    });
+
+    render(<ContextDocumentLibrary />);
+    fireEvent.click(screen.getByText('BRANDING.md'));
+
+    const description = await screen.findByLabelText('Description');
+    const editor = await screen.findByLabelText('Document content');
+    fireEvent.change(description, {
+      target: { value: 'Updated brand description' },
+    });
+    fireEvent.change(editor, { target: { value: '# Updated branding' } });
+    fireEvent.click(screen.getByText('Save'));
+
+    await waitFor(() =>
+      expect(updateDocument).toHaveBeenCalledWith('doc-1', '# Updated branding', {
+        documentName: 'BRANDING.md',
+        description: 'Updated brand description',
+      })
+    );
+  });
+
+  it('toggles between markdown edit and html preview', async () => {
     openModal.mockImplementation(({ children }) => {
       if (React.isValidElement(children)) {
         render(children);
@@ -230,16 +277,38 @@ describe('ContextDocumentLibrary', () => {
     fireEvent.click(screen.getByText('BRANDING.md'));
 
     const editor = await screen.findByLabelText('Document content');
-    fireEvent.change(editor, { target: { value: '# Updated branding' } });
-    fireEvent.click(screen.getByText('Save'));
+    expect(editor).toBeTruthy();
+    expect(screen.getByText('Preview')).toBeTruthy();
+    expect(screen.queryByLabelText('Document preview')).toBeNull();
 
-    await waitFor(() =>
-      expect(updateDocument).toHaveBeenCalledWith(
-        'doc-1',
-        '# Updated branding',
-        'BRANDING.md'
-      )
+    fireEvent.click(screen.getByText('Preview'));
+
+    expect(screen.queryByLabelText('Document content')).toBeNull();
+    expect(screen.getByLabelText('Document preview')).toBeTruthy();
+    expect(screen.getByTestId('document-markdown-preview').textContent).toBe(
+      '# Branding'
     );
+    expect(screen.getByText('Edit')).toBeTruthy();
+
+    fireEvent.click(screen.getByText('Edit'));
+
+    expect(screen.getByLabelText('Document content')).toBeTruthy();
+    expect(screen.queryByLabelText('Document preview')).toBeNull();
+    expect(screen.getByText('Preview')).toBeTruthy();
+  });
+
+  it('hides the description field for skill documents', async () => {
+    openModal.mockImplementation(({ children }) => {
+      if (React.isValidElement(children)) {
+        render(children);
+      }
+    });
+
+    render(<ContextDocumentLibrary />);
+    fireEvent.click(screen.getByText('campaign-review.skill.md'));
+
+    await screen.findByLabelText('Document content');
+    expect(screen.queryByLabelText('Description')).toBeNull();
   });
 
   it('confirms replacement and refreshes the library after a skill upload', async () => {

@@ -177,7 +177,7 @@ export default function RulesPage() {
 
         <div className="flex justify-between items-center gap-[12px] flex-wrap">
           <div className="flex items-center gap-[10px] flex-wrap">
-            <Button onClick={openCreate}>{t('create_rule', 'Create Rule')}</Button>
+            <Button onClick={openCreate}>{t('create', '+ Create')}</Button>
           </div>
         </div>
 
@@ -189,7 +189,7 @@ export default function RulesPage() {
             <div className="text-[14px] opacity-70 max-w-[520px]">
               {t('no_rules_description', RULES_EMPTY_STATE_CUTOVER_NOTE)}
             </div>
-            <Button onClick={openCreate}>{t('create_rule', 'Create Rule')}</Button>
+            <Button onClick={openCreate}>{t('create', '+ Create')}</Button>
           </div>
         ) : !visibleRules.length ? (
           <div className="rounded-[12px] border border-newBorder bg-newBgColor p-[32px] flex flex-col items-center justify-center gap-[12px] text-center">

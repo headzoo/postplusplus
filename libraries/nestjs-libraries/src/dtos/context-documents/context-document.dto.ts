@@ -1,9 +1,16 @@
-import { IsDefined, IsOptional, IsString } from 'class-validator';
+import {
+  IsDefined,
+  IsOptional,
+  IsString,
+  MaxLength,
+  ValidateIf,
+} from 'class-validator';
 
 export type ContextDocumentMetadataDto = {
   id: string;
   organizationId: string;
   name: string;
+  description?: string | null;
   fileSize: number;
   createdAt: Date;
   updatedAt: Date;
@@ -19,6 +26,7 @@ export type ContextDocumentMetadataDto = {
 export type ContextDocumentContentDto = {
   id: string;
   name: string;
+  description?: string | null;
   content: string;
   fileSize: number;
   updatedAt: Date;
@@ -53,10 +61,16 @@ export class CreateContextDocumentDto {
   content?: string;
 }
 
-export class UpdateContextDocumentContentDto {
+export class UpdateContextDocumentDto {
+  @IsOptional()
   @IsString()
-  @IsDefined()
-  content: string;
+  content?: string;
+
+  @ValidateIf((_, value) => value !== null && value !== undefined)
+  @IsString()
+  @MaxLength(500)
+  @IsOptional()
+  description?: string | null;
 }
 
 export class RenameContextDocumentDto {

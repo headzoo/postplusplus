@@ -9,6 +9,10 @@ import { Integrations } from '@gitroom/frontend/components/launches/calendar.con
 import {
   convertDisplayScheduleTargetToPipelineSlot,
   filterPipelinesByChannel,
+  filterScheduleOccurrencesByChannel,
+  filterScheduleOccurrencesByPipeline,
+  formatPipelineSlotShort,
+  formatPipelineTimezoneLabel,
   getContrastRatio,
   getPipelineScheduleWeek,
   getReadableForegroundColor,
@@ -336,6 +340,55 @@ describe('loadPipelineGlobalSchedule', () => {
   });
 });
 
+describe('formatPipelineTimezoneLabel', () => {
+  it('shortens IANA timezone identifiers to the city segment', () => {
+    expect(formatPipelineTimezoneLabel('America/New_York')).toBe('New York');
+    expect(formatPipelineTimezoneLabel('Europe/London')).toBe('London');
+  });
+
+  it('returns the original value when no segment is available', () => {
+    expect(formatPipelineTimezoneLabel('UTC')).toBe('UTC');
+  });
+});
+
+describe('formatPipelineSlotShort', () => {
+  const now = dayjs.tz('2026-08-23T12:00:00', NEW_YORK);
+
+  it('uses weekday and time for slots in the same week', () => {
+    expect(
+      formatPipelineSlotShort(
+        '2026-08-23T17:00:00.000Z',
+        NEW_YORK,
+        now
+      )
+    ).toBe('Sun 1:00 PM');
+  });
+
+  it('omits the year for slots later in the same year', () => {
+    expect(
+      formatPipelineSlotShort(
+        '2026-10-15T17:00:00.000Z',
+        NEW_YORK,
+        now
+      )
+    ).toBe('Oct 15 · 1:00 PM');
+  });
+
+  it('includes the year for slots in a different year', () => {
+    expect(
+      formatPipelineSlotShort(
+        '2027-01-10T17:00:00.000Z',
+        NEW_YORK,
+        now
+      )
+    ).toBe('Jan 10, 2027 · 12:00 PM');
+  });
+
+  it('returns an em dash when no slot is available', () => {
+    expect(formatPipelineSlotShort(undefined, NEW_YORK, now)).toBe('—');
+  });
+});
+
 describe('filterPipelinesByChannel', () => {
   const channel = (id: string): Integrations =>
     ({
@@ -386,5 +439,141 @@ describe('filterPipelinesByChannel', () => {
 
   it('returns an empty list when no pipeline includes the channel', () => {
     expect(filterPipelinesByChannel(pipelines, 'channel-missing')).toEqual([]);
+  });
+});
+
+describe('filterScheduleOccurrencesByChannel', () => {
+  const channel = (id: string): Integrations =>
+    ({
+      id,
+      name: id,
+      inBetweenSteps: false,
+      editor: 'normal',
+      display: id,
+      identifier: id,
+      type: 'social',
+      picture: '',
+      changeProfilePicture: false,
+      additionalSettings: '',
+      changeNickName: false,
+      time: [],
+    }) as Integrations;
+
+  const pipeline = (
+    id: string,
+    channelIds: string[]
+  ): PipelineSummary => ({
+    id,
+    name: id,
+    timezone: 'UTC',
+    color: '#3366ff',
+    active: true,
+    scheduleRevision: 1,
+    channels: channelIds.map((channelId) => channel(channelId)),
+    queueCount: 0,
+  });
+
+  const occurrence = (
+    id: string,
+    pipelineId: string
+  ): PipelineScheduleOccurrence => ({
+    id,
+    pipelineId,
+    pipelineName: pipelineId,
+    pipelineTimezone: 'UTC',
+    pipelineColor: '#3366ff',
+    active: true,
+    scheduleRevision: 1,
+    dayOfWeek: 1,
+    minuteOfDay: 540,
+    scheduledFor: '2025-03-10T14:00:00.000Z',
+  });
+
+  const pipelines = [
+    pipeline('pipeline-a', ['channel-a', 'channel-b']),
+    pipeline('pipeline-b', ['channel-c']),
+    pipeline('pipeline-c', ['channel-a']),
+  ];
+
+  const occurrences = [
+    occurrence('occ-a', 'pipeline-a'),
+    occurrence('occ-b', 'pipeline-b'),
+    occurrence('occ-c', 'pipeline-c'),
+  ];
+
+  it('returns every occurrence when no channel is selected', () => {
+    expect(filterScheduleOccurrencesByChannel(occurrences, pipelines)).toEqual(
+      occurrences
+    );
+    expect(
+      filterScheduleOccurrencesByChannel(occurrences, pipelines, undefined)
+    ).toEqual(occurrences);
+  });
+
+  it('keeps only occurrences from pipelines that include the channel', () => {
+    expect(
+      filterScheduleOccurrencesByChannel(
+        occurrences,
+        pipelines,
+        'channel-a'
+      ).map((item) => item.id)
+    ).toEqual(['occ-a', 'occ-c']);
+  });
+
+  it('returns an empty list when no pipeline includes the channel', () => {
+    expect(
+      filterScheduleOccurrencesByChannel(
+        occurrences,
+        pipelines,
+        'channel-missing'
+      )
+    ).toEqual([]);
+  });
+});
+
+describe('filterScheduleOccurrencesByPipeline', () => {
+  const occurrence = (
+    id: string,
+    pipelineId: string
+  ): PipelineScheduleOccurrence => ({
+    id,
+    pipelineId,
+    pipelineName: pipelineId,
+    pipelineTimezone: 'UTC',
+    pipelineColor: '#3366ff',
+    active: true,
+    scheduleRevision: 1,
+    dayOfWeek: 1,
+    minuteOfDay: 540,
+    scheduledFor: '2025-03-10T14:00:00.000Z',
+  });
+
+  const occurrences = [
+    occurrence('occ-a', 'pipeline-a'),
+    occurrence('occ-b', 'pipeline-b'),
+    occurrence('occ-c', 'pipeline-a'),
+  ];
+
+  it('returns every occurrence when no pipeline is selected', () => {
+    expect(filterScheduleOccurrencesByPipeline(occurrences)).toEqual(
+      occurrences
+    );
+    expect(
+      filterScheduleOccurrencesByPipeline(occurrences, undefined)
+    ).toEqual(occurrences);
+  });
+
+  it('keeps only occurrences for the selected pipeline', () => {
+    expect(
+      filterScheduleOccurrencesByPipeline(occurrences, 'pipeline-a').map(
+        (item) => item.id
+      )
+    ).toEqual(['occ-a', 'occ-c']);
+  });
+
+  it('returns an empty list when no occurrence matches the pipeline', () => {
+    expect(
+      filterScheduleOccurrencesByPipeline(occurrences, 'pipeline-missing')
+    ).toEqual([]);
   });
 });

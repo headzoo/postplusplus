@@ -4,10 +4,10 @@ import { validateSync } from 'class-validator';
 
 jest.mock(
   '@gitroom/nestjs-libraries/database/prisma/posts/posts.service',
-  () => ({ PostsService: class PostsService {} })
+  () => ({ PostsService: class PostsService { } })
 );
 jest.mock('@gitroom/nestjs-libraries/dtos/posts/create.post.dto', () => ({
-  CreatePostDto: class CreatePostDto {},
+  CreatePostDto: class CreatePostDto { },
 }));
 jest.mock('@gitroom/nestjs-libraries/integrations/integration.manager', () => ({
   socialIntegrationList: [
@@ -151,15 +151,15 @@ describe('Pipeline API boundaries', () => {
               content: 'must-not-leak',
             },
           },
-            {
-              contextDocument: {
-                id: 'legacy-skill',
-                name: 'campaign-review.skill.md',
-                fileSize: 4096,
-                updatedAt: new Date('2026-08-11T12:00:00.000Z'),
-                content: 'must-not-leak',
-              },
+          {
+            contextDocument: {
+              id: 'legacy-skill',
+              name: 'campaign-review.skill.md',
+              fileSize: 4096,
+              updatedAt: new Date('2026-08-11T12:00:00.000Z'),
+              content: 'must-not-leak',
             },
+          },
         ],
         queueItems: [
           {
@@ -223,12 +223,14 @@ describe('Pipeline API boundaries', () => {
       {
         id: 'doc-a',
         name: 'Audience notes',
+        description: null,
         fileSize: 1024,
         updatedAt: new Date('2026-08-09T12:00:00.000Z'),
       },
       {
         id: 'doc-b',
         name: 'Brand guide',
+        description: null,
         fileSize: 2048,
         updatedAt: new Date('2026-08-10T12:00:00.000Z'),
       },

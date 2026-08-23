@@ -7,13 +7,13 @@ import { checkAuth } from '@gitroom/nestjs-libraries/chat/auth.context';
 
 @Injectable()
 export class PipelinesListTool implements AgentToolInterface {
-  constructor(private _pipelineService: PipelineService) {}
+  constructor(private _pipelineService: PipelineService) { }
   name = 'listPipelines';
 
   run() {
     return createTool({
       id: 'listPipelines',
-      description: `This tool lists the organization's pipelines (content queues with weekly schedules). Each pipeline may include attached contextDocuments metadata (id, name, fileSize, updatedAt) only — use readPipelineContextDocument to load the Markdown content for one relevant attached document before drafting pipeline content. Use a pipeline id with listPostsByPipeline to inspect queued posts, or with enqueuePipelinePost to compose and enqueue new content for every channel on that pipeline.`,
+      description: `This tool lists the organization's pipelines (content queues with weekly schedules). Each pipeline may include attached contextDocuments metadata (id, name, description, fileSize, updatedAt) only — use readPipelineContextDocument to load the Markdown content for one relevant attached document before drafting pipeline content. Use a pipeline id with listPostsByPipeline to inspect queued posts, or with enqueuePipelinePost to compose and enqueue new content for every channel on that pipeline.`,
       inputSchema: z.object({}),
       mcp: {
         annotations: {
@@ -46,6 +46,7 @@ export class PipelinesListTool implements AgentToolInterface {
               z.object({
                 id: z.string(),
                 name: z.string(),
+                description: z.string().nullable().optional(),
                 fileSize: z.number(),
                 updatedAt: z.string(),
               })
@@ -86,11 +87,13 @@ export class PipelinesListTool implements AgentToolInterface {
               (document: {
                 id: string;
                 name: string;
+                description?: string | null;
                 fileSize: number;
                 updatedAt: Date | string;
               }) => ({
                 id: document.id,
                 name: document.name,
+                description: document.description ?? null,
                 fileSize: document.fileSize,
                 updatedAt: new Date(document.updatedAt).toISOString(),
               })

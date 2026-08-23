@@ -51,13 +51,13 @@ export const MobileSidebarDrawer: FC<{
       />
       <aside
         className={clsx(
-          'absolute top-0 start-0 z-[551] h-full w-[80px] bg-newBgColorInner rounded-e-[12px] shadow-lg transition-transform duration-200 ease-out flex flex-col',
+          'absolute top-0 start-0 z-[551] h-full w-[200px] bg-newBgColorInner rounded-e-[12px] shadow-lg transition-transform duration-200 ease-out flex flex-col',
           open
             ? 'translate-x-0 pointer-events-auto'
             : '-translate-x-full rtl:translate-x-full pointer-events-none'
         )}
       >
-        <div className="flex justify-center pt-[8px]">
+        <div className="flex justify-end px-[12px] pt-[8px]">
           <button
             type="button"
             aria-label="Close menu"
@@ -68,7 +68,7 @@ export const MobileSidebarDrawer: FC<{
           </button>
         </div>
         <div className="flex-1 overflow-y-auto pb-[12px]">
-          <SidebarNav onNavigate={onClose} />
+          <SidebarNav onNavigate={onClose} layout="drawer" />
         </div>
       </aside>
     </div>

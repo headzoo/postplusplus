@@ -2,6 +2,8 @@
 
 import {
   FC,
+  MouseEvent as ReactMouseEvent,
+  PointerEvent as ReactPointerEvent,
   RefObject,
   useCallback,
   useEffect,
@@ -18,6 +20,12 @@ import {
   readLocationHash,
   syncHelpUrl,
 } from './help.url';
+import {
+  clampHelpDrawerWidth,
+  getStoredHelpDrawerWidth,
+  HELP_DRAWER_MOBILE_MEDIA,
+  setStoredHelpDrawerWidth,
+} from './help.drawer.width';
 
 export const HelpDrawer: FC<{
   open: boolean;
@@ -29,11 +37,33 @@ export const HelpDrawer: FC<{
   const dialogRef = useRef<HTMLElement>(null);
   const hostHashRef = useRef<string | null>(null);
   const internalUrlRef = useRef<string | null>(null);
+  const panelWidthRef = useRef(getStoredHelpDrawerWidth());
+  const resizingRef = useRef(false);
   const [deepLink, setDeepLink] = useState<{
     slug: string | null;
     hash: string | null;
   }>({ slug: null, hash: null });
   const [initialized, setInitialized] = useState(false);
+  const [panelWidth, setPanelWidth] = useState(getStoredHelpDrawerWidth);
+  const [isMobileViewport, setIsMobileViewport] = useState(() => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+    return window.matchMedia(HELP_DRAWER_MOBILE_MEDIA).matches;
+  });
+  const [isResizing, setIsResizing] = useState(false);
+
+  useEffect(() => {
+    panelWidthRef.current = panelWidth;
+  }, [panelWidth]);
+
+  useEffect(() => {
+    const media = window.matchMedia(HELP_DRAWER_MOBILE_MEDIA);
+    const syncMobile = () => setIsMobileViewport(media.matches);
+    syncMobile();
+    media.addEventListener('change', syncMobile);
+    return () => media.removeEventListener('change', syncMobile);
+  }, []);
 
   const handleClose = useCallback(() => {
     internalUrlRef.current = clearHelpUrl(hostHashRef.current);
@@ -48,6 +78,79 @@ export const HelpDrawer: FC<{
 
     internalUrlRef.current = clearHelpUrl(hostHashRef.current);
   }, []);
+
+  const handleResizePointerDown = useCallback(
+    (
+      event:
+        | ReactPointerEvent<HTMLDivElement>
+        | ReactMouseEvent<HTMLDivElement>
+    ) => {
+      if (isMobileViewport || event.button !== 0 || resizingRef.current) {
+        return;
+      }
+
+      event.preventDefault();
+      const handle = event.currentTarget;
+      const startX = event.clientX;
+      const startWidth = panelWidthRef.current;
+      const isRtl = document.documentElement.dir === 'rtl';
+      const previousUserSelect = document.body.style.userSelect;
+      const pointerId =
+        'pointerId' in event && typeof event.pointerId === 'number'
+          ? event.pointerId
+          : undefined;
+
+      resizingRef.current = true;
+      setIsResizing(true);
+      document.body.style.userSelect = 'none';
+      if (pointerId !== undefined) {
+        try {
+          handle.setPointerCapture(pointerId);
+        } catch {
+          // jsdom and some browsers may not support pointer capture
+        }
+      }
+
+      const onMove = (moveEvent: PointerEvent | MouseEvent) => {
+        const delta = isRtl
+          ? moveEvent.clientX - startX
+          : startX - moveEvent.clientX;
+        const nextWidth = clampHelpDrawerWidth(startWidth + delta);
+        panelWidthRef.current = nextWidth;
+        setPanelWidth(nextWidth);
+      };
+
+      const onUp = (upEvent: PointerEvent | MouseEvent) => {
+        if (
+          pointerId !== undefined &&
+          'pointerId' in upEvent &&
+          upEvent.pointerId === pointerId
+        ) {
+          try {
+            handle.releasePointerCapture(pointerId);
+          } catch {
+            // ignore unsupported pointer capture
+          }
+        }
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', onUp);
+        document.removeEventListener('pointercancel', onUp);
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        document.body.style.userSelect = previousUserSelect;
+        resizingRef.current = false;
+        setIsResizing(false);
+        setStoredHelpDrawerWidth(panelWidthRef.current);
+      };
+
+      document.addEventListener('pointermove', onMove);
+      document.addEventListener('pointerup', onUp);
+      document.addEventListener('pointercancel', onUp);
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    },
+    [isMobileViewport]
+  );
 
   useEffect(() => {
     if (!open) {
@@ -179,13 +282,28 @@ export const HelpDrawer: FC<{
         role="dialog"
         aria-modal="true"
         aria-labelledby="help-drawer-title"
+        style={isMobileViewport ? undefined : { width: panelWidth }}
         className={clsx(
-          'absolute top-0 end-0 z-[561] flex h-full w-[35vw] min-w-[280px] max-w-[520px] flex-col bg-newBgColorInner text-base shadow-lg transition-transform duration-200 ease-out mobile:w-full mobile:min-w-0 mobile:max-w-none',
+          'absolute top-0 end-0 z-[561] flex h-full flex-col rounded-s-[12px] border-s border-newSep bg-newColColor text-base shadow-menu transition-transform duration-200 ease-out mobile:w-full mobile:min-w-0 mobile:max-w-none mobile:rounded-none',
+          isResizing && 'select-none',
           open
             ? 'translate-x-0 pointer-events-auto'
             : 'translate-x-full rtl:-translate-x-full pointer-events-none'
         )}
       >
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize help panel"
+          tabIndex={open && !isMobileViewport ? 0 : -1}
+          onPointerDown={handleResizePointerDown}
+          onMouseDown={handleResizePointerDown}
+          className={clsx(
+            'absolute start-0 top-0 z-[1] h-full w-[6px] -translate-x-1/2 cursor-col-resize touch-none mobile:hidden',
+            'bg-transparent hover:bg-newSep/60',
+            isResizing && 'bg-newSep/60'
+          )}
+        />
         <div className="flex items-center justify-between border-b border-newTableBorder px-4 py-3">
           <h2 id="help-drawer-title" className="text-base font-semibold text-textColor">
             Help

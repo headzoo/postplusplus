@@ -76,7 +76,7 @@ const FOLLOWER_VIEW_BY_SLUG: Record<
   bots: { isBot: true },
 };
 
-type FollowerFilterColor = 'neutral' | 'sky' | 'teal' | 'red' | 'indigo';
+type FollowerFilterColor = 'neutral' | 'orange' | 'teal' | 'amber' | 'indigo';
 
 type FollowerFilterOption = {
   slug?: string;
@@ -105,7 +105,7 @@ const FOLLOWER_FILTER_GROUPS: FollowerFilterGroup[] = [
   },
   {
     id: 'opportunities',
-    color: 'sky',
+    color: 'orange',
     labelKey: 'followers_filter_group_opportunities',
     defaultLabel: 'Opportunities',
     items: [
@@ -157,7 +157,7 @@ const FOLLOWER_FILTER_GROUPS: FollowerFilterGroup[] = [
   },
   {
     id: 'exclusions',
-    color: 'red',
+    color: 'amber',
     labelKey: 'followers_filter_group_exclusions',
     defaultLabel: 'Exclusions',
     items: [
@@ -198,20 +198,20 @@ const getFilterChipClasses = (
       ? 'border-newTableText bg-newTableHeader text-newTextColor'
       : 'border-newBorder text-textItemBlur hover:bg-newTableHeader hover:text-newTextColor';
   }
-  if (color === 'sky') {
+  if (color === 'orange') {
     return isSelected
-      ? 'border-sky-500 bg-sky-500/10 text-sky-400'
-      : 'border-sky-500/40 text-textItemBlur hover:border-sky-500/60 hover:text-sky-400';
+      ? 'border-orange-600 bg-orange-600/10 text-orange-400'
+      : 'border-orange-600/50 text-textItemBlur hover:border-orange-600/70 hover:text-orange-400';
   }
   if (color === 'teal') {
     return isSelected
       ? 'border-teal-500 bg-teal-500/10 text-teal-400'
       : 'border-teal-500/40 text-textItemBlur hover:border-teal-500/60 hover:text-teal-400';
   }
-  if (color === 'red') {
+  if (color === 'amber') {
     return isSelected
-      ? 'border-red-400 bg-red-400/10 text-red-400'
-      : 'border-red-400/40 text-textItemBlur hover:border-red-400/60 hover:text-red-400';
+      ? 'border-amber-400 bg-amber-400/10 text-amber-300'
+      : 'border-amber-400/50 text-textItemBlur hover:border-amber-400/70 hover:text-amber-300';
   }
   return isSelected
     ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400'
@@ -1491,27 +1491,17 @@ export const FollowersComponent: FC = () => {
       </ChannelsSidebar>
 
       <div className="bg-newBgColorInner flex-1 flex-col flex p-[20px] gap-[16px] min-w-0">
-        <div className="flex flex-col gap-[12px] md:flex-row md:items-center md:justify-between">
-          <div className="min-w-0">
-            <h2 className="text-[20px] font-[600] text-newTextColor truncate">
-              {selectedChannel?.name}
-            </h2>
-            {selectedChannel?.display && (
-              <p className="text-[14px] text-textItemBlur truncate">
-                {selectedChannel.display}
-              </p>
-            )}
-            {Number.isFinite(followersPage?.total) && (
-              <p className="text-[13px] text-textItemBlur">
-                {t('followers_total', '{{count}} total', {
-                  count: followersPage!.total!,
-                })}
-              </p>
-            )}
-          </div>
+        <div className="flex flex-col gap-[12px]">
+          {Number.isFinite(followersPage?.total) && (
+            <p className="text-[13px] text-textItemBlur">
+              {t('followers_total', '{{count}} total', {
+                count: followersPage!.total!,
+              })}
+            </p>
+          )}
 
-          <div className="flex flex-wrap items-end gap-[12px]">
-            <div className="min-w-[220px] flex-1">
+          <div className="flex flex-wrap items-end justify-start gap-[12px]">
+            <div className="w-[220px] max-w-full">
               <Input
                 label={t('followers_search', 'Search')}
                 name="followers-search"
@@ -1529,7 +1519,7 @@ export const FollowersComponent: FC = () => {
               />
             </div>
             {showSortSelector && (
-              <div className="min-w-[160px]">
+              <div className="w-[160px] max-w-full">
                 <Select
                   label={t('followers_sort_by', 'Sort by')}
                   name="followers-sort"
@@ -1547,7 +1537,7 @@ export const FollowersComponent: FC = () => {
               </div>
             )}
             {requiresWindow && (
-              <div className="min-w-[140px]">
+              <div className="w-[140px] max-w-full">
                 <Select
                   label={t('followers_time_window', 'Time window')}
                   name="followers-window"
@@ -1569,7 +1559,7 @@ export const FollowersComponent: FC = () => {
               </div>
             )}
             {showDirectionSelector && (
-              <div className="min-w-[140px]">
+              <div className="w-[140px] max-w-full">
                 <Select
                   label={t('followers_direction', 'Direction')}
                   name="followers-direction"
@@ -1592,7 +1582,7 @@ export const FollowersComponent: FC = () => {
                 </Select>
               </div>
             )}
-            <div className="min-w-[120px]">
+            <div className="w-[120px] max-w-full">
               <Select
                 label={t('followers_page_size', 'Per page')}
                 name="followers-limit"

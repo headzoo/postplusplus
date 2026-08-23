@@ -257,13 +257,6 @@ export const PipelineDetailView: FC<{ pipelineId: string }> = ({ pipelineId }) =
         </div>
       </div>
 
-      <PipelineContextDocumentsPanel
-        documents={data.contextDocuments}
-        onEdit={openEdit}
-      />
-
-      <PipelineAutopostPanel pipelineId={pipelineId} channels={data.channels} />
-
       <div className="rounded-[12px] border border-newBorder bg-newBgColor overflow-hidden">
         <div className="flex flex-col gap-[10px] border-b border-newBorder px-[20px] py-[14px] sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -311,6 +304,13 @@ export const PipelineDetailView: FC<{ pipelineId: string }> = ({ pipelineId }) =
       </div>
 
       <PipelineQueue pipeline={data} pipelines={pipelines || []} mutate={mutate} />
+
+      <PipelineContextDocumentsPanel
+        documents={data.contextDocuments}
+        onEdit={openEdit}
+      />
+
+      <PipelineAutopostPanel pipelineId={pipelineId} channels={data.channels} />
     </div>
   );
 };

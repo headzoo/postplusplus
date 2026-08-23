@@ -432,8 +432,8 @@ describe('FollowersComponent', () => {
     const costlyChip = screen.getByRole('link', { name: 'Costly' });
     const vipChip = screen.getByRole('link', { name: 'VIP' });
 
-    expect(hotChip.className).toContain('border-sky-500/40');
-    expect(costlyChip.className).toContain('border-red-400/40');
+    expect(hotChip.className).toContain('border-orange-600/50');
+    expect(costlyChip.className).toContain('border-amber-400/50');
     expect(vipChip.className).toContain('border-indigo-500/40');
     expect(
       screen.getByRole('group', { name: 'Opportunities' }).contains(hotChip)

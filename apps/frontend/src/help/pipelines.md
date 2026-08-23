@@ -87,4 +87,4 @@ That overview is different from each card’s **Schedule** button, which opens o
 
 ## Context documents
 
-Optional Markdown from [Docs](/help/docs) helps agents draft for this Pipeline. Assignments reference the library (not copies). Skills cannot be attached—deselect them before saving.
+Optional Markdown from [Context](/help/docs) helps agents draft for this Pipeline. Assignments reference the library (not copies). Skills cannot be attached—deselect them before saving.

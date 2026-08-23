@@ -51,13 +51,17 @@ Attached media is sent with your message so the agent can use it.
 
 ## Skills (slash commands)
 
-Type `/` to open **Agent skills**. Skills are procedures stored as Docs files named `{slug}.skill.md` (for example `campaign-review.skill.md` → `/campaign-review`).
+Type `/` to open **Agent skills**. Skills are procedures stored as Context files named `{slug}.skill.md` (for example `campaign-review.skill.md` → `/campaign-review`).
 
 - Pick a skill from the list, finish the prompt, and send.
 - **Large skill file** warns that the procedure may be truncated.
 - If skills fail to load: **Skills are unavailable. You can still enter a command manually.**
 
-Skills are for Agent slash commands—they are **not** attachable to Pipelines. Create and manage them under [Docs](/help/docs#agent-skills).
+Skills are for Agent slash commands—they are **not** attachable to Pipelines. Create and manage them under [Context](/help/docs#agent-skills).
+
+## Context documents
+
+Agents can discover organization [Context](/help/docs) documents (brand, tone, audience, and similar guidance) by scanning document names and descriptions, then reading only relevant files. Add a short **Description** when you edit a standard document so the agent can find it—for example when generating an image that should match your brand.
 
 ## Review and schedule generated posts
 
@@ -75,5 +79,5 @@ You can connect Post++ as an MCP server from other tools (Cursor, Claude, and si
 
 - **Agent missing from the menu** — On hosted Post++, free-tier accounts may not see primary nav items until the plan includes them.
 - **Pipeline selection disappeared** — Clicking a channel clears the Pipeline; pick the Pipeline again if you need its docs and channel set.
-- **Skills empty** — Create `{slug}.skill.md` files in Docs, or wait if you see **Loading skills…**. Reserved slug **followers** cannot be used as a skill.
+- **Skills empty** — Create `{slug}.skill.md` files in Context, or wait if you see **Loading skills…**. Reserved slug **followers** cannot be used as a skill.
 - **Confused with UGC** — **UGC** opens AgentMedia (external). Your chat assistant is only under **Agent**.

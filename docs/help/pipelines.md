@@ -8,13 +8,13 @@ Open **Pipelines** from the main navigation. This is different from scheduling e
 
 One Pipeline combines three pieces:
 
-| Piece | Where | Role |
-| --- | --- | --- |
+| Piece           | Where                                           | Role                                      |
+| --------------- | ----------------------------------------------- | ----------------------------------------- |
 | Recurring slots | **Weekly schedule** on the Pipeline detail page | Day/time windows in the Pipeline timezone |
-| Queued content | **Queue** | Ordered posts waiting for slots |
-| RSS → queue | **Pipeline autopost** | Feed watchers that enqueue new items |
+| Queued content  | **Queue**                                       | Ordered posts waiting for slots           |
+| RSS → queue     | **Pipeline autopost**                           | Feed watchers that enqueue new items      |
 
-In-app: *Schedule recurring posting slots for a fixed set of channels. Queue content without picking dates — the server projects the next available slot in the Pipeline timezone.*
+In-app: _Schedule recurring posting slots for a fixed set of channels. Queue content without picking dates — the server projects the next available slot in the Pipeline timezone._
 
 ## Create and edit a Pipeline
 
@@ -87,4 +87,4 @@ That overview is different from each card’s **Schedule** button, which opens o
 
 ## Context documents
 
-Optional Markdown from [Docs](/help/docs) helps agents draft for this Pipeline. Assignments reference the library (not copies). Skills cannot be attached—deselect them before saving.
+Optional Markdown from [Context](/help/docs) helps agents draft for this Pipeline. Assignments reference the library (not copies). Skills cannot be attached—deselect them before saving.

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { HelpCatalog } from './help.catalog';
 import { HelpMarkdown } from './help.markdown';
 import { HelpHistoryEntry } from './help.types';
 import { useHelpManifest } from './use.help.manifest';
@@ -178,51 +179,16 @@ export const HelpContent = ({
           </div>
         </div>
       ) : (
-        <div className="flex min-h-0 flex-1 flex-col p-4">
-          {staleSlugNotice && (
-            <p role="alert" className="mb-3 text-base text-textColor">
-              That help topic could not be found.
-            </p>
-          )}
-          <label htmlFor="help-search" className="mb-2 text-base font-semibold text-textColor">
-            Search help
-          </label>
-          <input
-            id="help-search"
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search topics"
-            className="mb-4 w-full rounded border border-newTableBorder bg-newBgColor px-3 py-2 text-base text-textColor"
-          />
-          {isLoading && <p className="text-base text-textColor">Loading help…</p>}
-          {error && (
-            <p role="alert" className="text-base text-textColor">
-              Help content could not be loaded. Please try again.
-            </p>
-          )}
-          {!isLoading && !error && topics.length === 0 && (
-            <p className="text-base text-textColor">No help topics found.</p>
-          )}
-          {!isLoading && !error && topics.length > 0 && (
-            <ul className="min-h-0 space-y-2 overflow-y-auto">
-              {topics.map((topic) => (
-                <li key={topic.slug}>
-                  <button
-                    type="button"
-                    className="w-full rounded border border-newTableBorder p-3 text-left hover:bg-newBgColor"
-                    onClick={() => pushArticle({ slug: topic.slug })}
-                  >
-                    <span className="block text-base font-semibold text-textColor">
-                      {topic.title}
-                    </span>
-                    <span className="mt-1 block text-sm text-gray-500">{topic.excerpt}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        <HelpCatalog
+          query={query}
+          onQueryChange={setQuery}
+          topics={topics}
+          isLoading={isLoading}
+          error={error}
+          staleSlugNotice={staleSlugNotice}
+          showFooterCta
+          onOpenTopic={(slug, hash) => pushArticle({ slug, hash })}
+        />
       )}
     </section>
   );

@@ -8,11 +8,9 @@ import React, {
   useMemo,
   useState,
   ReactNode,
-  KeyboardEvent,
 } from 'react';
 import clsx from 'clsx';
 import useSWR from 'swr';
-import { SVGLine } from '@gitroom/frontend/components/launches/launches.component';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { MultiMediaComponent } from '@gitroom/frontend/components/media/media.component';
 import Link from 'next/link';
@@ -21,7 +19,7 @@ import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { Integrations } from '@gitroom/frontend/components/launches/calendar.context';
 import { PipelineSummary } from '@gitroom/frontend/components/pipelines/pipeline.types';
 import { usePipelineList } from '@gitroom/frontend/components/pipelines/use.pipeline.list';
-import { PipelineChannels } from '@gitroom/frontend/components/pipelines/pipeline.channels';
+import { PipelineSidebarList } from '@gitroom/frontend/components/pipelines/pipeline.sidebar.list';
 import {
   ChannelMenu,
   ChannelsSidebar,
@@ -213,7 +211,6 @@ export const AgentList: FC<{
   onToggleIntegration,
   onSelectPipeline,
 }) => {
-    const t = useT();
     const { data: integrations = [] } = useIntegrationList();
 
     const {
@@ -221,23 +218,6 @@ export const AgentList: FC<{
       error: pipelinesError,
       isLoading: pipelinesLoading,
     } = usePipelineList();
-
-    const activePipelines = useMemo(
-      () => (pipelines || []).filter((pipeline) => pipeline.active),
-      [pipelines]
-    );
-
-    const pipelinesLabel = t('pipelines', 'Pipelines');
-
-    const handlePipelineKeyDown = useCallback(
-      (pipeline: PipelineSummary) => (event: KeyboardEvent<HTMLDivElement>) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          onSelectPipeline(pipeline);
-        }
-      },
-      [onSelectPipeline]
-    );
 
     const handleSelect = useCallback(
       (integration: IntegrationListItem) => {
@@ -259,78 +239,15 @@ export const AgentList: FC<{
               selectedIds={selectedIntegrations.map((integration) => integration.id)}
               onSelect={handleSelect}
             />
-            <div
-              className="pt-[20px] border-t border-newBorder flex flex-col gap-[15px]"
-              role="radiogroup"
-              aria-label={pipelinesLabel}
-            >
-              <h2 className="group-[.sidebar]:hidden text-[20px] font-[500]">
-                {pipelinesLabel}
-              </h2>
-
-              {pipelinesLoading && (
-                <div className="text-[13px] opacity-60 group-[.sidebar]:hidden">
-                  {t('loading', 'Loading...')}
-                </div>
-              )}
-
-              {pipelinesError && !pipelinesLoading && (
-                <div className="text-[13px] text-red-500 group-[.sidebar]:hidden">
-                  {t(
-                    'pipelines_load_error',
-                    'Failed to load Pipelines. Please refresh and try again.'
-                  )}
-                </div>
-              )}
-
-              {!pipelinesLoading &&
-                !pipelinesError &&
-                !activePipelines.length && (
-                  <div className="text-[13px] opacity-60 group-[.sidebar]:hidden">
-                    {t('no_active_pipelines', 'No active Pipelines')}
-                  </div>
-                )}
-
-              {activePipelines.map((pipeline) => {
-                const isSelected = selectedPipeline?.id === pipeline.id;
-
-                return (
-                  <div
-                    key={pipeline.id}
-                    role="radio"
-                    aria-checked={isSelected}
-                    tabIndex={0}
-                    title={pipeline.name}
-                    onClick={() => onSelectPipeline(pipeline)}
-                    onKeyDown={handlePipelineKeyDown(pipeline)}
-                    className={clsx(
-                      'relative flex gap-[12px] items-center group/pipeline justify-center hover:bg-boxHover rounded-e-[8px] hover:opacity-100 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-btnPrimary',
-                      !isSelected && 'opacity-20'
-                    )}
-                  >
-                    <div className="absolute start-0 top-0 bottom-0 w-[4px] -ms-[12px] rounded-s-[3px] opacity-0 group-hover/pipeline:opacity-100 transition-opacity">
-                      <SVGLine />
-                    </div>
-                    <div className="group-[.sidebar]:flex hidden">
-                      <PipelineChannels channels={pipeline.channels} compact />
-                    </div>
-                    <div className="flex-1 min-w-0 flex flex-col gap-[4px] group-[.sidebar]:hidden">
-                      <div className="flex items-center gap-[8px] min-w-0">
-                        <span className="flex-1 whitespace-nowrap text-ellipsis overflow-hidden">
-                          {pipeline.name}
-                        </span>
-                        <div
-                          className="w-[12px] h-[12px] rounded-full shrink-0 border border-newBorder"
-                          style={{ backgroundColor: pipeline.color }}
-                          aria-hidden="true"
-                        />
-                      </div>
-                      <PipelineChannels channels={pipeline.channels} compact />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <PipelineSidebarList
+              collapsed={collapsed}
+              pipelines={pipelines || []}
+              selectedPipelineId={selectedPipeline?.id}
+              isLoading={pipelinesLoading}
+              error={pipelinesError}
+              onSelectPipeline={onSelectPipeline}
+              activeOnly
+            />
           </>
         )}
       </ChannelsSidebar>

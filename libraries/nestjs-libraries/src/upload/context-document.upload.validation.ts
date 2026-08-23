@@ -113,6 +113,33 @@ export function validateContextDocumentNameForWrite(originalName: string): strin
   return name;
 }
 
+export const CONTEXT_DOCUMENT_DESCRIPTION_MAX_LENGTH = 500;
+
+export function validateContextDocumentDescription(
+  value: unknown
+): string | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  if (typeof value !== 'string') {
+    throw new BadRequestException('Document description must be a string.');
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  if (trimmed.length > CONTEXT_DOCUMENT_DESCRIPTION_MAX_LENGTH) {
+    throw new BadRequestException(
+      `Document description cannot exceed ${CONTEXT_DOCUMENT_DESCRIPTION_MAX_LENGTH} characters.`
+    );
+  }
+
+  return trimmed;
+}
+
 export function validateContextDocumentContent(
   content: string,
   options?: { allowEmpty?: boolean }

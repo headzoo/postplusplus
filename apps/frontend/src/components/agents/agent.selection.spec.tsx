@@ -48,6 +48,7 @@ import { PipelineSummary } from '@gitroom/frontend/components/pipelines/pipeline
 jest.mock('swr', () => ({
   __esModule: true,
   default: jest.fn(),
+  useSWRConfig: jest.fn(() => ({ mutate: jest.fn() })),
 }));
 
 jest.mock('@gitroom/helpers/utils/custom.fetch', () => ({

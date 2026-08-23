@@ -3,17 +3,20 @@
 import { FC, useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import clsx from 'clsx';
+import { useClickOutside } from '@mantine/hooks';
 import { Button } from '@gitroom/react/form/button';
 import { Slider } from '@gitroom/react/form/slider';
 import { useModals, useDecisionModal } from '@gitroom/frontend/components/layout/new-modal';
 import { LoadingComponent } from '@gitroom/frontend/components/layout/loading';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
+import { MoreIcon } from '@gitroom/frontend/components/ui/icons';
 import { PipelineChannels } from '@gitroom/frontend/components/pipelines/pipeline.channels';
 import { PipelineForm } from '@gitroom/frontend/components/pipelines/pipeline.form';
 import {
   filterPipelinesByChannel,
-  formatPipelineSlot,
+  formatPipelineSlotShort,
+  formatPipelineTimezoneLabel,
 } from '@gitroom/frontend/components/pipelines/pipeline.utils';
 import { usePipelineList } from '@gitroom/frontend/components/pipelines/use.pipeline.list';
 import { usePipelineDetail } from '@gitroom/frontend/components/pipelines/use.pipeline.detail';
@@ -30,6 +33,164 @@ import {
   IntegrationListItem,
   useIntegrationList,
 } from '@gitroom/frontend/components/launches/helpers/use.integration.list';
+
+const PIPELINE_PAUSED_RAIL_COLOR = '#616161';
+
+const pipelineMetaChipClass =
+  'inline-flex items-center gap-[6px] text-[12px] px-[8px] py-[3px] rounded-full border border-newBorder bg-newBgColorInner text-textItemBlur';
+
+const PipelineActionsMenu: FC<{
+  disabled?: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+}> = ({ disabled, onEdit, onDelete }) => {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  const ref = useClickOutside<HTMLDivElement>(() => setOpen(false));
+  const run = (action: () => void) => () => {
+    setOpen(false);
+    action();
+  };
+
+  return (
+    <div ref={ref} className="relative shrink-0">
+      <button
+        type="button"
+        disabled={disabled}
+        aria-label={t('pipeline_actions', 'Pipeline actions')}
+        onClick={() => setOpen((current) => !current)}
+        className="flex items-center justify-center w-[32px] h-[32px] rounded-[6px] text-menuDots hover:text-menuDotsHover hover:bg-newBgColor disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        <MoreIcon size={20} />
+      </button>
+      {open && (
+        <div className="z-[300] absolute end-0 top-full mt-[6px] min-w-[140px] bg-newBgColorInner p-[8px] menu-shadow flex flex-col rounded-[8px] border border-newBorder">
+          <button
+            type="button"
+            onClick={run(onEdit)}
+            className="px-[10px] py-[8px] text-[13px] rounded-[6px] text-start hover:bg-newBgColor"
+          >
+            {t('edit', 'Edit')}
+          </button>
+          <button
+            type="button"
+            onClick={run(onDelete)}
+            className="px-[10px] py-[8px] text-[13px] rounded-[6px] text-start hover:bg-newBgColor text-red-500"
+          >
+            {t('delete', 'Delete')}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const PipelineListCard: FC<{
+  pipeline: PipelineSummary;
+  pending: boolean;
+  onSchedule: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  onToggleActive: (value: 'on' | 'off') => void;
+}> = ({ pipeline, pending, onSchedule, onEdit, onDelete, onToggleActive }) => {
+  const t = useT();
+  const railColor = pipeline.active ? pipeline.color : PIPELINE_PAUSED_RAIL_COLOR;
+  const nextSlotLabel = pipeline.active
+    ? formatPipelineSlotShort(pipeline.nextSlot, pipeline.timezone)
+    : t('pipeline_paused', 'Paused');
+
+  return (
+    <article
+      className={clsx(
+        'relative flex flex-col rounded-[12px] border border-newTableBorder bg-newTableHeader',
+        'transition-all duration-200 hover:border-newTextColor/20',
+        pending && 'opacity-70 pointer-events-none'
+      )}
+    >
+      <div
+        className="absolute start-0 top-0 bottom-0 w-[4px] rounded-s-[12px]"
+        style={{ backgroundColor: railColor }}
+        aria-hidden="true"
+      />
+      <div className="flex flex-col gap-[12px] p-[16px] ps-[20px]">
+        <div className="flex flex-col gap-[12px] lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex flex-col gap-[10px] min-w-0 flex-1">
+            <div className="flex items-center gap-[8px] flex-wrap min-w-0">
+              <button
+                type="button"
+                onClick={onSchedule}
+                className="text-[18px] font-[600] truncate text-start cursor-pointer min-w-0"
+              >
+                {pipeline.name}
+              </button>
+              <div
+                className="w-[12px] h-[12px] rounded-full shrink-0 border border-newBorder"
+                style={{ backgroundColor: pipeline.color }}
+                aria-hidden="true"
+              />
+              <span
+                className={clsx(
+                  'inline-flex shrink-0 items-center text-[11px] font-[600] px-[8px] py-[2px] rounded-full',
+                  pipeline.active
+                    ? 'bg-green-500/15 text-green-400'
+                    : 'bg-newBgColor text-textItemBlur'
+                )}
+              >
+                {pipeline.active ? t('active', 'Active') : t('paused', 'Paused')}
+              </span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-[6px]">
+              <span
+                className={pipelineMetaChipClass}
+                title={pipeline.timezone}
+              >
+                {formatPipelineTimezoneLabel(pipeline.timezone)}
+              </span>
+              {pipeline.channels.length > 0 && (
+                <span className={clsx(pipelineMetaChipClass, 'py-[2px]')}>
+                  <PipelineChannels channels={pipeline.channels} stacked />
+                </span>
+              )}
+              <span className={pipelineMetaChipClass}>
+                <span className="font-[600] text-textColor">{pipeline.queueCount}</span>
+                {` ${t('queued', 'queued')}`}
+              </span>
+              <span
+                className={clsx(
+                  pipelineMetaChipClass,
+                  !pipeline.active && 'opacity-70'
+                )}
+              >
+                {nextSlotLabel}
+              </span>
+              {!!pipeline.contextDocuments?.length && (
+                <PipelineContextDocumentsPanel
+                  documents={pipeline.contextDocuments}
+                  compact
+                />
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-[8px] shrink-0">
+            <Button secondary onClick={onSchedule}>{t('schedule', 'Schedule')}</Button>
+            <Slider
+              value={pipeline.active ? 'on' : 'off'}
+              onChange={onToggleActive}
+              fill={true}
+            />
+            <PipelineActionsMenu
+              disabled={pending}
+              onEdit={onEdit}
+              onDelete={onDelete}
+            />
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+};
 
 const PipelineEditModal: FC<{
   pipelineId: string;
@@ -194,7 +355,7 @@ export const Pipelines: FC = () => {
 
         <div className="flex justify-between items-center gap-[12px] flex-wrap">
           <div className="flex items-center gap-[10px] flex-wrap">
-            <Button onClick={openCreate}>{t('create_pipeline', 'Create Pipeline')}</Button>
+            <Button onClick={openCreate}>{t('create', '+ Create')}</Button>
             <Button secondary onClick={() => router.push('/pipelines/schedule')}>
               {t('pipeline_schedule', 'Schedule')}
             </Button>
@@ -212,7 +373,7 @@ export const Pipelines: FC = () => {
                 'Create a Pipeline to define channels and timezone, then configure weekly posting times from its detail page.'
               )}
             </div>
-            <Button onClick={openCreate}>{t('create_pipeline', 'Create Pipeline')}</Button>
+            <Button onClick={openCreate}>{t('create', '+ Create')}</Button>
           </div>
         ) : !visiblePipelines.length ? (
           <div className="rounded-[12px] border border-newBorder bg-newBgColor p-[32px] flex flex-col items-center justify-center gap-[12px] text-center">
@@ -230,87 +391,17 @@ export const Pipelines: FC = () => {
             </div>
           </div>
         ) : (
-          <div className="flex flex-col gap-[12px]">
+          <div className="flex flex-col gap-[16px]">
             {visiblePipelines.map((pipeline) => (
-              <div
+              <PipelineListCard
                 key={pipeline.id}
-                className={clsx(
-                  'rounded-[12px] border border-newBorder bg-newBgColor overflow-hidden',
-                  pendingId === pipeline.id && 'opacity-70 pointer-events-none'
-                )}
-              >
-                <div className="px-[20px] py-[16px] border-b border-newBorder flex flex-col gap-[12px] lg:flex-row lg:items-center lg:justify-between">
-                  <div className="flex flex-col gap-[8px] min-w-0">
-                    <div className="flex items-center gap-[10px] flex-wrap">
-                      <div className="text-[18px] font-[600] truncate">{pipeline.name}</div>
-                      <span
-                        className={clsx(
-                          'text-[12px] px-[8px] py-[2px] rounded-full border',
-                          pipeline.active
-                            ? 'border-green-500/40 text-green-500'
-                            : 'border-newBorder opacity-70'
-                        )}
-                      >
-                        {pipeline.active
-                          ? t('active', 'Active')
-                          : t('paused', 'Paused')}
-                      </span>
-                    </div>
-                    <div className="text-[13px] opacity-70">
-                      {t('timezone', 'Timezone')}: {pipeline.timezone}
-                    </div>
-                    <PipelineContextDocumentsPanel
-                      documents={pipeline.contextDocuments}
-                      compact
-                    />
-                  </div>
-                  <div className="flex items-center gap-[10px] flex-wrap">
-                    <Button onClick={() => router.push(`/pipelines/${pipeline.id}`)}>
-                      {t('schedule', 'Schedule')}
-                    </Button>
-                    <Button secondary onClick={() => openEdit(pipeline)}>
-                      {t('edit', 'Edit')}
-                    </Button>
-                    <Button secondary onClick={confirmDelete(pipeline)}>
-                      {t('delete', 'Delete')}
-                    </Button>
-                    <div className="flex items-center gap-[8px] px-[8px]">
-                      <span className="text-[12px] opacity-70">
-                        {pipeline.active ? t('pause', 'Pause') : t('resume', 'Resume')}
-                      </span>
-                      <Slider
-                        value={pipeline.active ? 'on' : 'off'}
-                        onChange={toggleActive(pipeline)}
-                        fill={true}
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="px-[20px] py-[16px] grid grid-cols-1 md:grid-cols-3 gap-[16px]">
-                  <div className="flex flex-col gap-[6px]">
-                    <div className="text-[12px] uppercase opacity-60">
-                      {t('channels', 'Channels')}
-                    </div>
-                    <PipelineChannels channels={pipeline.channels} />
-                  </div>
-                  <div className="flex flex-col gap-[6px]">
-                    <div className="text-[12px] uppercase opacity-60">
-                      {t('queued', 'Queued')}
-                    </div>
-                    <div className="text-[16px] font-[600]">{pipeline.queueCount}</div>
-                  </div>
-                  <div className="flex flex-col gap-[6px]">
-                    <div className="text-[12px] uppercase opacity-60">
-                      {t('next_slot', 'Next slot')}
-                    </div>
-                    <div className="text-[14px]">
-                      {pipeline.active
-                        ? formatPipelineSlot(pipeline.nextSlot, pipeline.timezone)
-                        : t('pipeline_paused', 'Paused')}
-                    </div>
-                  </div>
-                </div>
-              </div>
+                pipeline={pipeline}
+                pending={pendingId === pipeline.id}
+                onSchedule={() => router.push(`/pipelines/${pipeline.id}`)}
+                onEdit={() => openEdit(pipeline)}
+                onDelete={confirmDelete(pipeline)}
+                onToggleActive={toggleActive(pipeline)}
+              />
             ))}
           </div>
         )}

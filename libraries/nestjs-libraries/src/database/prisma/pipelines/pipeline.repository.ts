@@ -16,11 +16,11 @@ import { parseSkillFilename } from '@gitroom/nestjs-libraries/upload/context-doc
 const QUEUE_POSITION_INCREMENT = 1024;
 const TRANSACTION_ATTEMPTS = 3;
 
-class PipelineQueueChangedError extends Error {}
-class PipelineScheduleRevisionChangedError extends Error {}
-class PipelineScheduleSourceChangedError extends Error {}
-class PipelineContextDocumentsChangedError extends Error {}
-class PipelineSkillContextDocumentsChangedError extends Error {}
+class PipelineQueueChangedError extends Error { }
+class PipelineScheduleRevisionChangedError extends Error { }
+class PipelineScheduleSourceChangedError extends Error { }
+class PipelineContextDocumentsChangedError extends Error { }
+class PipelineSkillContextDocumentsChangedError extends Error { }
 
 export const activePipelineIntegrationWhere = {
   deletedAt: null,
@@ -77,6 +77,7 @@ const pipelineContextDocumentInclude = {
     select: {
       id: true,
       name: true,
+      description: true,
       fileSize: true,
       updatedAt: true,
     },
@@ -92,7 +93,7 @@ export class PipelineRepository {
     private _queueItem: PrismaRepository<'pipelineQueueItem'>,
     private _contextDocument: PrismaRepository<'contextDocument'>,
     private _transaction: PrismaTransaction
-  ) {}
+  ) { }
 
   getPipelines(orgId: string) {
     return this._pipeline.model.pipeline.findMany({
@@ -209,12 +210,12 @@ export class PipelineRepository {
         },
         ...(body.contextDocumentIds?.length
           ? {
-              contextDocuments: {
-                create: body.contextDocumentIds.map((contextDocumentId) => ({
-                  contextDocumentId,
-                })),
-              },
-            }
+            contextDocuments: {
+              create: body.contextDocumentIds.map((contextDocumentId) => ({
+                contextDocumentId,
+              })),
+            },
+          }
           : {}),
       },
     });
@@ -279,23 +280,23 @@ export class PipelineRepository {
             ...(body.color !== undefined ? { color: body.color } : {}),
             ...(integrationsChanged
               ? {
-                  integrations: {
-                    deleteMany: {},
-                    create: body.integrations.map(({ id: integrationId }) => ({
-                      integrationId,
-                    })),
-                  },
-                }
+                integrations: {
+                  deleteMany: {},
+                  create: body.integrations.map(({ id: integrationId }) => ({
+                    integrationId,
+                  })),
+                },
+              }
               : {}),
             ...(documentsChanged
               ? {
-                  contextDocuments: {
-                    deleteMany: {},
-                    create: body.contextDocumentIds!.map((contextDocumentId) => ({
-                      contextDocumentId,
-                    })),
-                  },
-                }
+                contextDocuments: {
+                  deleteMany: {},
+                  create: body.contextDocumentIds!.map((contextDocumentId) => ({
+                    contextDocumentId,
+                  })),
+                },
+              }
               : {}),
           },
         });

@@ -8,9 +8,42 @@ import { Integrations } from '@gitroom/frontend/components/launches/calendar.con
 export const PipelineChannels: FC<{
   channels: Integrations[];
   compact?: boolean;
-}> = ({ channels, compact }) => {
+  stacked?: boolean;
+}> = ({ channels, compact, stacked }) => {
   if (!channels?.length) {
     return <span className="text-[13px] opacity-60">No channels</span>;
+  }
+
+  if (stacked) {
+    const visible = channels.slice(0, 5);
+    const overflow = channels.length - visible.length;
+
+    return (
+      <div className="flex items-center">
+        {visible.map((channel, index) => (
+          <div
+            key={channel.id}
+            className={clsx(
+              'relative rounded-full border-2 border-newTableHeader bg-newTableHeader',
+              index > 0 && '-ms-[8px]'
+            )}
+            style={{ zIndex: visible.length - index }}
+            title={channel.name}
+          >
+            <SafeImage
+              src={channel.picture}
+              alt={channel.name}
+              width={24}
+              height={24}
+              className="rounded-full"
+            />
+          </div>
+        ))}
+        {overflow > 0 && (
+          <span className="ms-[6px] text-[12px] text-textItemBlur">+{overflow}</span>
+        )}
+      </div>
+    );
   }
 
   return (

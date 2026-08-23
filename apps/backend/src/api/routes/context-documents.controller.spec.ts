@@ -9,7 +9,7 @@ describe('ContextDocumentsController', () => {
     listSkills: jest.fn(),
     getSkillBySlug: jest.fn(),
     getDocumentById: jest.fn(),
-    updateDocumentContent: jest.fn(),
+    updateDocument: jest.fn(),
     renameDocument: jest.fn(),
     deleteDocument: jest.fn(),
   };
@@ -37,9 +37,10 @@ describe('ContextDocumentsController', () => {
 
   it('delegates create, update, and rename to org-scoped services', async () => {
     service.createDocument.mockResolvedValue({ id: 'doc-1', name: 'NOTES.md' });
-    service.updateDocumentContent.mockResolvedValue({
+    service.updateDocument.mockResolvedValue({
       id: 'doc-1',
       name: 'NOTES.md',
+      description: 'Notes for agents',
     });
     service.renameDocument.mockResolvedValue({
       id: 'doc-1',
@@ -55,8 +56,13 @@ describe('ContextDocumentsController', () => {
     await expect(
       controller.updateDocument(organization, 'doc-1', {
         content: '# Notes',
+        description: 'Notes for agents',
       })
-    ).resolves.toEqual({ id: 'doc-1', name: 'NOTES.md' });
+    ).resolves.toEqual({
+      id: 'doc-1',
+      name: 'NOTES.md',
+      description: 'Notes for agents',
+    });
     await expect(
       controller.renameDocument(organization, 'doc-1', { name: 'VOICE.md' })
     ).resolves.toEqual({ id: 'doc-1', name: 'VOICE.md' });
@@ -65,11 +71,10 @@ describe('ContextDocumentsController', () => {
       name: 'NOTES.md',
       content: '',
     });
-    expect(service.updateDocumentContent).toHaveBeenCalledWith(
-      'org-1',
-      'doc-1',
-      '# Notes'
-    );
+    expect(service.updateDocument).toHaveBeenCalledWith('org-1', 'doc-1', {
+      content: '# Notes',
+      description: 'Notes for agents',
+    });
     expect(service.renameDocument).toHaveBeenCalledWith(
       'org-1',
       'doc-1',

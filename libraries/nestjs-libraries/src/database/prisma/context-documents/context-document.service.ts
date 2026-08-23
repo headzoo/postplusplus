@@ -11,6 +11,7 @@ import {
   CreateContextDocumentDto,
   SkillContentDto,
   SkillMetadataDto,
+  UpdateContextDocumentDto,
 } from '@gitroom/nestjs-libraries/dtos/context-documents/context-document.dto';
 import {
   buildSkillFilename,
@@ -19,6 +20,7 @@ import {
   isReservedAgentCommandSlug,
   parseSkillFilename,
   validateContextDocumentContent,
+  validateContextDocumentDescription,
   validateContextDocumentNameForWrite,
   validateContextDocumentUpload,
 } from '@gitroom/nestjs-libraries/upload/context-document.upload.validation';
@@ -35,6 +37,17 @@ export class ContextDocumentService {
   ): Promise<ContextDocumentMetadataDto[]> {
     const documents =
       await this._contextDocumentRepository.listMetadata(organizationId);
+
+    return documents.map((document) => this.toMetadata(document));
+  }
+
+  async listStandardDocuments(
+    organizationId: string
+  ): Promise<ContextDocumentMetadataDto[]> {
+    const documents =
+      await this._contextDocumentRepository.listStandardMetadata(
+        organizationId
+      );
 
     return documents.map((document) => this.toMetadata(document));
   }
@@ -128,11 +141,20 @@ export class ContextDocumentService {
     }
   }
 
-  async updateDocumentContent(
+  async updateDocument(
     organizationId: string,
     id: string,
-    content: string
+    dto: UpdateContextDocumentDto
   ): Promise<ContextDocumentMetadataDto> {
+    const hasContent = dto.content !== undefined;
+    const hasDescription = dto.description !== undefined;
+
+    if (!hasContent && !hasDescription) {
+      throw new BadRequestException(
+        'Provide content and/or description to update.'
+      );
+    }
+
     const existing = await this._contextDocumentRepository.findById(
       organizationId,
       id
@@ -141,18 +163,30 @@ export class ContextDocumentService {
       throw new NotFoundException('Context document not found.');
     }
 
-    const validated = validateContextDocumentContent(content, {
-      allowEmpty: true,
-    });
+    const data: {
+      content?: string;
+      fileSize?: number;
+      description?: string | null;
+    } = {};
+
+    if (hasContent) {
+      const validated = validateContextDocumentContent(dto.content!, {
+        allowEmpty: true,
+      });
+      data.content = validated.content;
+      data.fileSize = validated.fileSize;
+    }
+
+    if (hasDescription) {
+      data.description = validateContextDocumentDescription(dto.description);
+    }
 
     try {
-      const document =
-        await this._contextDocumentRepository.updateDocumentContent(
-          organizationId,
-          id,
-          validated.content,
-          validated.fileSize
-        );
+      const document = await this._contextDocumentRepository.updateDocument(
+        organizationId,
+        id,
+        data
+      );
       return this.toMetadata(document);
     } catch (error: any) {
       if (error?.code === 'P2025') {
@@ -160,6 +194,14 @@ export class ContextDocumentService {
       }
       throw error;
     }
+  }
+
+  async updateDocumentContent(
+    organizationId: string,
+    id: string,
+    content: string
+  ): Promise<ContextDocumentMetadataDto> {
+    return this.updateDocument(organizationId, id, { content });
   }
 
   async renameDocument(
@@ -339,7 +381,7 @@ export class ContextDocumentService {
       | 'fileSize'
       | 'createdAt'
       | 'updatedAt'
-    >
+    > & { description?: string | null }
   ): ContextDocumentMetadataDto {
     const warning = getContextDocumentLargeWarning(document.fileSize);
     const slug = parseSkillFilename(document.name);
@@ -348,6 +390,7 @@ export class ContextDocumentService {
       id: document.id,
       organizationId: document.organizationId,
       name: document.name,
+      description: document.description ?? null,
       fileSize: document.fileSize,
       createdAt: document.createdAt,
       updatedAt: document.updatedAt,
@@ -373,6 +416,7 @@ export class ContextDocumentService {
     return {
       id: document.id,
       name: document.name,
+      description: document.description ?? null,
       content: document.content,
       fileSize: document.fileSize,
       updatedAt: document.updatedAt,

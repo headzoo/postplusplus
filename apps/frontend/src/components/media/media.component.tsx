@@ -424,12 +424,26 @@ export const MediaBox: FC<{
     [onCreatePost]
   );
 
+  const user = useUser();
+
+  const onAiImageGenerated = useCallback(
+    async (media: { id: string; path: string }) => {
+      await mutate();
+      if (!standalone) {
+        setSelected((prev) => [...prev, media]);
+      }
+    },
+    [mutate, standalone]
+  );
+
+  const showAiButton = !!user?.tier?.ai && type !== 'video';
+
   const btn = useMemo(() => {
     return (
       <button
         disabled={loading}
         onClick={() => uploaderRef?.current?.click()}
-        className="relative cursor-pointer bg-btnSimple changeColor flex gap-[8px] h-[44px] px-[18px] justify-center items-center rounded-[8px]"
+        className="relative cursor-pointer bg-forth text-white flex gap-[8px] h-[44px] px-[18px] justify-center items-center rounded-[8px]"
       >
         {loading ? (
           <div className="absolute left-[50%] top-[50%] -translate-y-[50%] -translate-x-[50%]">
@@ -463,6 +477,13 @@ export const MediaBox: FC<{
             multiple={true}
           />
           {btn}
+          {showAiButton && (
+            <AiImage
+              value=""
+              onChange={onAiImageGenerated}
+              variant="action"
+            />
+          )}
           <div className="flex-1">
             <input
               type="text"
@@ -539,6 +560,13 @@ export const MediaBox: FC<{
                 </div>
                 <div className="forceChange flex gap-[8px]">
                   {btn}
+                  {showAiButton && (
+                    <AiImage
+                      value=""
+                      onChange={onAiImageGenerated}
+                      variant="action"
+                    />
+                  )}
                   <ThirdPartyMediaLibrary onImported={() => mutate()} />
                 </div>
               </>

@@ -1,10 +1,12 @@
 import { PrismaRepository } from '@gitroom/nestjs-libraries/database/prisma/prisma.service';
 import { Injectable } from '@nestjs/common';
+import { SKILL_FILENAME_SUFFIX } from '@gitroom/nestjs-libraries/upload/context-document.upload.validation';
 
 const metadataSelect = {
   id: true,
   organizationId: true,
   name: true,
+  description: true,
   fileSize: true,
   createdAt: true,
   updatedAt: true,
@@ -20,6 +22,21 @@ export class ContextDocumentRepository {
     return this._contextDocument.model.contextDocument.findMany({
       where: {
         organizationId,
+      },
+      select: metadataSelect,
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+    });
+  }
+
+  listStandardMetadata(organizationId: string) {
+    return this._contextDocument.model.contextDocument.findMany({
+      where: {
+        organizationId,
+        NOT: {
+          name: {
+            endsWith: SKILL_FILENAME_SUFFIX,
+          },
+        },
       },
       select: metadataSelect,
       orderBy: [{ name: 'asc' }, { id: 'asc' }],
@@ -105,22 +122,31 @@ export class ContextDocumentRepository {
     });
   }
 
-  updateDocumentContent(
+  updateDocument(
     organizationId: string,
     id: string,
-    content: string,
-    fileSize: number
+    data: {
+      content?: string;
+      fileSize?: number;
+      description?: string | null;
+    }
   ) {
     return this._contextDocument.model.contextDocument.update({
       where: {
         id,
         organizationId,
       },
-      data: {
-        content,
-        fileSize,
-      },
+      data,
     });
+  }
+
+  updateDocumentContent(
+    organizationId: string,
+    id: string,
+    content: string,
+    fileSize: number
+  ) {
+    return this.updateDocument(organizationId, id, { content, fileSize });
   }
 
   renameDocument(organizationId: string, id: string, name: string) {
@@ -209,6 +235,7 @@ export class ContextDocumentRepository {
       select: {
         id: true,
         name: true,
+        description: true,
         fileSize: true,
         updatedAt: true,
         content: true,

@@ -2,6 +2,7 @@
 
 import {
   ChangeEvent,
+  ComponentPropsWithoutRef,
   FC,
   useCallback,
   useEffect,
@@ -10,6 +11,8 @@ import {
   useState,
 } from 'react';
 import clsx from 'clsx';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useClickOutside } from '@mantine/hooks';
 import { Button } from '@gitroom/react/form/button';
 import { Input } from '@gitroom/react/form/input';
@@ -40,6 +43,32 @@ import { useContextDocumentDelete } from '@gitroom/frontend/components/context-d
 import { useContextDocumentCreate } from '@gitroom/frontend/components/context-documents/use.context-document.create';
 import { useContextDocumentUpdate } from '@gitroom/frontend/components/context-documents/use.context-document.update';
 import { useContextDocumentRename } from '@gitroom/frontend/components/context-documents/use.context-document.rename';
+import { PlusIcon } from '@gitroom/frontend/components/ui/icons';
+
+const isExternalMarkdownLink = (href: string) => {
+  try {
+    const url = new URL(href);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
+
+const documentPreviewHeading = (Tag: 'h2' | 'h3' | 'h4' | 'h5' | 'h6') => {
+  const Component = ({
+    children,
+    ...props
+  }: ComponentPropsWithoutRef<typeof Tag>) => (
+    <Tag
+      {...props}
+      className="mb-3 mt-6 scroll-mt-4 text-lg font-semibold text-textColor first:mt-0"
+    >
+      {children}
+    </Tag>
+  );
+
+  return Component;
+};
 
 const validateDocumentFilename = (
   rawName: string,
@@ -94,17 +123,23 @@ const ContextDocumentEditor: FC<{
     skillSlug
   );
   const [content, setContent] = useState('');
+  const [description, setDescription] = useState('');
   const [initialized, setInitialized] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
 
   useEffect(() => {
     if (data && !initialized) {
       setContent(data.content);
+      setDescription(data.description ?? '');
       setInitialized(true);
     }
   }, [data, initialized]);
 
-  const dirty = initialized && content !== (data?.content ?? '');
+  const dirty =
+    initialized &&
+    (content !== (data?.content ?? '') ||
+      description !== (data?.description ?? ''));
   const byteLength = useMemo(() => {
     if (typeof TextEncoder !== 'undefined') {
       return new TextEncoder().encode(content).length;
@@ -142,7 +177,10 @@ const ContextDocumentEditor: FC<{
 
     setSaving(true);
     try {
-      const updated = await updateDocument(documentId, content, documentName);
+      const updated = await updateDocument(documentId, content, {
+        documentName,
+        ...(skillSlug ? {} : { description }),
+      });
       toaster.show(
         t('context_document_saved_success', 'Document saved successfully.'),
         'success'
@@ -168,10 +206,12 @@ const ContextDocumentEditor: FC<{
     byteLength,
     content,
     decision,
+    description,
     documentId,
     documentName,
     modal,
     onSaved,
+    skillSlug,
     t,
     toaster,
     updateDocument,
@@ -215,15 +255,159 @@ const ContextDocumentEditor: FC<{
   }
 
   return (
-    <div className="flex flex-col gap-[12px]">
-      <textarea
-        value={content}
-        onChange={(event) => setContent(event.target.value)}
-        spellCheck={false}
-        className="w-full min-h-[420px] bg-input border border-tableBorder rounded-[8px] p-[12px] text-[14px] font-mono text-newTextColor outline-none resize-y focus:border-[#eb3825]"
-        aria-label={t('context_document_editor', 'Document content')}
-      />
-      <div className="flex items-center justify-between gap-[12px] flex-wrap">
+    <div className="flex flex-col gap-[12px] h-full min-h-0">
+      {!skillSlug && (
+        <div className="flex flex-col gap-[6px] shrink-0">
+          <label
+            htmlFor="context-document-description"
+            className="text-[13px] font-[600]"
+          >
+            {t('context_document_description_label', 'Description')}
+          </label>
+          <textarea
+            id="context-document-description"
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            maxLength={500}
+            rows={3}
+            spellCheck
+            placeholder={t(
+              'context_document_description_placeholder',
+              'What is this document for? Agents use this to decide when to read it.'
+            )}
+            className="w-full bg-input border border-tableBorder rounded-[8px] p-[12px] text-[14px] text-newTextColor outline-none resize-y focus:border-[#eb3825]"
+            aria-label={t('context_document_description_label', 'Description')}
+          />
+          <div className="text-[12px] opacity-60">
+            {t(
+              'context_document_description_hint',
+              'Optional. Up to 500 characters. Helps agents discover this document.'
+            )}
+          </div>
+        </div>
+      )}
+      {previewing ? (
+        <div
+          className="w-full flex-1 min-h-0 h-0 overflow-auto bg-input border border-tableBorder rounded-[8px] p-[12px] text-newTextColor"
+          aria-label={t('context_document_preview', 'Document preview')}
+        >
+          <article className="break-words text-base leading-7 text-textColor">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                h1: ({ children, ...props }) => (
+                  <h1
+                    {...props}
+                    className="mb-4 text-2xl font-bold text-textColor"
+                  >
+                    {children}
+                  </h1>
+                ),
+                h2: documentPreviewHeading('h2'),
+                h3: documentPreviewHeading('h3'),
+                h4: documentPreviewHeading('h4'),
+                h5: documentPreviewHeading('h5'),
+                h6: documentPreviewHeading('h6'),
+                p: ({ children, ...props }) => (
+                  <p {...props} className="mb-4">
+                    {children}
+                  </p>
+                ),
+                ul: ({ children, ...props }) => (
+                  <ul {...props} className="mb-4 list-disc space-y-1 pl-5">
+                    {children}
+                  </ul>
+                ),
+                ol: ({ children, ...props }) => (
+                  <ol {...props} className="mb-4 list-decimal space-y-1 pl-5">
+                    {children}
+                  </ol>
+                ),
+                table: ({ children, ...props }) => (
+                  <div className="mb-4 overflow-x-auto">
+                    <table
+                      {...props}
+                      className="w-full border-collapse text-left"
+                    >
+                      {children}
+                    </table>
+                  </div>
+                ),
+                th: ({ children, ...props }) => (
+                  <th
+                    {...props}
+                    className="border border-newTableBorder p-2 font-semibold"
+                  >
+                    {children}
+                  </th>
+                ),
+                td: ({ children, ...props }) => (
+                  <td
+                    {...props}
+                    className="border border-newTableBorder p-2 align-top"
+                  >
+                    {children}
+                  </td>
+                ),
+                blockquote: ({ children, ...props }) => (
+                  <blockquote
+                    {...props}
+                    className="mb-4 border-l-2 border-newTableBorder pl-3 text-gray-500"
+                  >
+                    {children}
+                  </blockquote>
+                ),
+                a: ({ children, href = '', ...props }) => {
+                  const external = isExternalMarkdownLink(href);
+
+                  return (
+                    <a
+                      {...props}
+                      href={href}
+                      className="text-blue-500 underline"
+                      {...(external
+                        ? { target: '_blank', rel: 'noopener noreferrer' }
+                        : {})}
+                    >
+                      {children}
+                    </a>
+                  );
+                },
+                img: ({ alt = '', ...props }) => (
+                  <img {...props} alt={alt} className="my-4 max-w-full rounded" />
+                ),
+                code: ({ children, ...props }) => (
+                  <code
+                    {...props}
+                    className="rounded bg-newBgColor px-1 py-0.5 font-mono text-sm"
+                  >
+                    {children}
+                  </code>
+                ),
+                pre: ({ children, ...props }) => (
+                  <pre
+                    {...props}
+                    className="mb-4 overflow-x-auto rounded bg-newBgColor p-3 font-mono text-sm"
+                  >
+                    {children}
+                  </pre>
+                ),
+              }}
+            >
+              {content}
+            </ReactMarkdown>
+          </article>
+        </div>
+      ) : (
+        <textarea
+          value={content}
+          onChange={(event) => setContent(event.target.value)}
+          spellCheck={false}
+          className="w-full flex-1 min-h-0 h-0 bg-input border border-tableBorder rounded-[8px] p-[12px] text-[14px] font-mono text-newTextColor outline-none resize-none focus:border-[#eb3825]"
+          aria-label={t('context_document_editor', 'Document content')}
+        />
+      )}
+      <div className="flex items-center justify-between gap-[12px] flex-wrap shrink-0">
         <div className="text-[12px] opacity-70">
           {formatContextDocumentSize(byteLength)} ({byteLength.toLocaleString()}{' '}
           bytes)
@@ -236,6 +420,16 @@ const ContextDocumentEditor: FC<{
         <div className="flex gap-[8px]">
           <Button secondary onClick={handleCancel} disabled={saving}>
             {t('cancel', 'Cancel')}
+          </Button>
+          <Button
+            secondary
+            className="w-[112px]"
+            onClick={() => setPreviewing((current) => !current)}
+            disabled={saving}
+          >
+            {previewing
+              ? t('edit', 'Edit')
+              : t('context_document_preview_button', 'Preview')}
           </Button>
           <Button onClick={handleSave} loading={saving} disabled={!dirty}>
             {t('save', 'Save')}
@@ -392,7 +586,7 @@ const ContextDocumentCard: FC<{
   return (
     <div
       className={clsx(
-        'rounded-[8px] border border-newBorder bg-newBgColorInner flex',
+        'rounded-[8px] border border-newTableBorder bg-newTableHeader flex',
         pending && 'opacity-70 pointer-events-none'
       )}
     >
@@ -428,6 +622,11 @@ const ContextDocumentCard: FC<{
             </span>
           )}
         </div>
+        {!skillSlug && document.description && (
+          <div className="text-[12px] opacity-70 line-clamp-2">
+            {document.description}
+          </div>
+        )}
         <div className="text-[12px] opacity-70">
           {t('size', 'Size')}: {formatContextDocumentSize(document.fileSize)} (
           {document.fileSize.toLocaleString()} bytes)
@@ -506,6 +705,8 @@ export const ContextDocumentLibrary: FC = () => {
         title: document.name,
         size: '840px',
         maxSize: '90vw',
+        top: 20,
+        height: 'calc(100dvh - 40px)',
         children: (
           <ContextDocumentEditor
             documentId={document.id}
@@ -743,7 +944,7 @@ export const ContextDocumentLibrary: FC = () => {
         <p className="text-[14px] opacity-70 max-w-[760px]">
           {t(
             'context_documents_description',
-            'Create or upload reusable Markdown files for your organization. Standard documents can be attached to Pipelines; {slug}.skill.md files are agent procedures invoked with /slug. Maximum file size is 256 KiB.'
+            'Create or upload reusable Markdown files for your organization. Add a short description so agents can discover relevant documents. Standard documents can be attached to Pipelines; {slug}.skill.md files are agent procedures invoked with /slug. Maximum file size is 256 KiB.'
           )}
         </p>
       </div>
@@ -757,9 +958,34 @@ export const ContextDocumentLibrary: FC = () => {
         </div>
       )}
 
-      <div className="flex items-center gap-[12px] flex-wrap">
+      <div className="flex items-center gap-[12px]">
+        <button
+          type="button"
+          onClick={openCreateModal}
+          className="relative cursor-pointer bg-forth text-white flex gap-[8px] h-[44px] px-[18px] justify-center items-center rounded-[8px]"
+        >
+          <PlusIcon size={14} />
+          <div>{t('create', 'Create')}</div>
+        </button>
+        <button
+          type="button"
+          disabled={uploading}
+          onClick={handleUploadClick}
+          className="relative cursor-pointer bg-btnSimple changeColor flex gap-[8px] h-[44px] px-[18px] justify-center items-center rounded-[8px] disabled:opacity-80 disabled:cursor-not-allowed"
+        >
+          {uploading ? (
+            <div className="absolute left-[50%] top-[50%] -translate-y-[50%] -translate-x-[50%]">
+              <div className="animate-spin h-[20px] w-[20px] border-4 border-white border-t-transparent rounded-full" />
+            </div>
+          ) : (
+            <PlusIcon size={14} />
+          )}
+          <div className={uploading ? 'invisible' : undefined}>
+            {t('context_document_upload', 'Upload')}
+          </div>
+        </button>
         {!!documents.length && (
-          <div className="flex-1 min-w-[220px]">
+          <div className="flex-1">
             <input
               type="text"
               value={search}
@@ -768,16 +994,10 @@ export const ContextDocumentLibrary: FC = () => {
                 'search_context_documents',
                 'Search documents by name'
               )}
-              className="w-full h-[40px] px-[12px] rounded-[8px] bg-newBgColor border border-newColColor text-[14px] outline-none focus:border-[#eb3825]"
+              className="w-full h-[44px] px-[14px] rounded-[8px] bg-newBgColorInner border border-newColColor text-[14px] outline-none focus:border-[#eb3825]"
             />
           </div>
         )}
-        <Button onClick={openCreateModal}>
-          {t('context_document_new', '+ New document')}
-        </Button>
-        <Button onClick={handleUploadClick} loading={uploading} secondary>
-          {t('context_document_upload', '+ Upload')}
-        </Button>
       </div>
 
       {!documents.length ? (
@@ -793,7 +1013,7 @@ export const ContextDocumentLibrary: FC = () => {
           </div>
           <div className="flex gap-[8px] flex-wrap justify-center">
             <Button onClick={openCreateModal}>
-              {t('context_document_new', '+ New document')}
+              {t('create', 'Create')}
             </Button>
             <Button onClick={handleUploadClick} loading={uploading} secondary>
               {t('context_document_upload', '+ Upload')}

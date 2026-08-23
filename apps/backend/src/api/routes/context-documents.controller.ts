@@ -19,7 +19,7 @@ import { CONTEXT_DOCUMENT_MAX_BYTES } from '@gitroom/nestjs-libraries/upload/con
 import {
   CreateContextDocumentDto,
   RenameContextDocumentDto,
-  UpdateContextDocumentContentDto,
+  UpdateContextDocumentDto,
 } from '@gitroom/nestjs-libraries/dtos/context-documents/context-document.dto';
 
 @ApiTags('Context Documents')
@@ -81,13 +81,9 @@ export class ContextDocumentsController {
   updateDocument(
     @GetOrgFromRequest() org: Organization,
     @Param('id') id: string,
-    @Body() body: UpdateContextDocumentContentDto
+    @Body() body: UpdateContextDocumentDto
   ) {
-    return this._contextDocumentService.updateDocumentContent(
-      org.id,
-      id,
-      body.content
-    );
+    return this._contextDocumentService.updateDocument(org.id, id, body);
   }
 
   @Put('/:id/rename')

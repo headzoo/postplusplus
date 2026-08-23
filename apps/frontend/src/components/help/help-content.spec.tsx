@@ -98,16 +98,67 @@ describe('HelpContent', () => {
     expect(screen.getByRole('button', { name: /Pipelines/ })).toBeTruthy();
 
     fireEvent.change(input, { target: { value: 'queue' } });
-    expect(screen.queryByRole('button', { name: /Calendar/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Calendar Plan/ })).toBeNull();
     expect(screen.getByRole('button', { name: /Pipelines/ })).toBeTruthy();
 
     fireEvent.change(input, { target: { value: 'scheduled' } });
     expect(screen.getByRole('button', { name: /Calendar/ })).toBeTruthy();
   });
 
+  it('opens FAQ rows into the mapped article and hash', () => {
+    const onEntryChange = jest.fn();
+    render(<HelpContent open onEntryChange={onEntryChange} />);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /How do I schedule a post\?/ })
+    );
+
+    expect(screen.getByRole('button', { name: 'Back' })).toBeTruthy();
+    expect(screen.getAllByText('Calendar').length).toBeGreaterThan(0);
+    expect(onEntryChange).toHaveBeenCalledWith({
+      slug: 'calendar',
+      hash: 'scheduling',
+    });
+  });
+
+  it('shows a Help center footer that opens /help in a new tab', () => {
+    render(<HelpContent open />);
+
+    const helpCenter = screen.getByRole('link', { name: /Help center/ });
+    expect(helpCenter.getAttribute('href')).toBe('/help');
+    expect(helpCenter.getAttribute('target')).toBe('_blank');
+    expect(helpCenter.getAttribute('rel')).toContain('noopener');
+  });
+
+  it('renders topic one-liners without repeating the title prefix', () => {
+    mockedManifest.mockReturnValue({
+      data: {
+        generated: true,
+        pages: [
+          {
+            slug: 'calendar',
+            title: 'Calendar',
+            headings: [{ level: 2, title: 'Scheduling', anchor: 'scheduling' }],
+            headingText: 'Scheduling',
+            excerpt: 'Plan scheduled posts across channels.',
+            markdown: '# Calendar\n\nPlan scheduled posts across channels.',
+          },
+        ],
+      },
+      error: undefined,
+      isLoading: false,
+    } as ReturnType<typeof useHelpManifest>);
+
+    render(<HelpContent open />);
+    expect(screen.getByText('Plan scheduled posts across channels.')).toBeTruthy();
+    expect(
+      screen.queryByText(/Calendar Plan scheduled posts across channels/)
+    ).toBeNull();
+  });
+
   it('keeps article navigation in panel history', () => {
     render(<HelpContent open />);
-    fireEvent.click(screen.getByRole('button', { name: /Calendar/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Calendar Plan/ }));
     fireEvent.click(screen.getByRole('link', { name: 'Pipeline help' }));
 
     expect(screen.getByText('Pipelines')).toBeTruthy();

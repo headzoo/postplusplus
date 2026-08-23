@@ -36,7 +36,7 @@ export class PipelineService {
     private _pipelineRepository: PipelineRepository,
     private _pipelineManager: PipelineManager,
     private _autopostService: AutopostService
-  ) {}
+  ) { }
 
   async getPipelines(orgId: string) {
     const pipelines = await this._pipelineRepository.getPipelines(orgId);
@@ -45,11 +45,11 @@ export class PipelineService {
       const queueCount = pipeline._count.queueItems;
       const enqueueSlots = pipeline.active
         ? getUpcomingPipelineSlots(
-            pipeline.scheduleSlots,
-            pipeline.timezone,
-            now,
-            queueCount + 1
-          )
+          pipeline.scheduleSlots,
+          pipeline.timezone,
+          now,
+          queueCount + 1
+        )
         : [];
       return {
         id: pipeline.id,
@@ -134,17 +134,17 @@ export class PipelineService {
             tags: (post.tags || []).map((tag: any) => ({ tag: tag.tag })),
             integration: post.integration
               ? {
-                  id: post.integration.id,
-                  providerIdentifier: post.integration.providerIdentifier,
-                  name: post.integration.name,
-                  picture: post.integration.picture,
-                  customer: post.integration.customer
-                    ? {
-                        id: post.integration.customer.id,
-                        name: post.integration.customer.name,
-                      }
-                    : undefined,
-                }
+                id: post.integration.id,
+                providerIdentifier: post.integration.providerIdentifier,
+                name: post.integration.name,
+                picture: post.integration.picture,
+                customer: post.integration.customer
+                  ? {
+                    id: post.integration.customer.id,
+                    name: post.integration.customer.name,
+                  }
+                  : undefined,
+              }
               : post.integration,
           }));
       });
@@ -523,6 +523,7 @@ export class PipelineService {
       contextDocument: {
         id: string;
         name: string;
+        description?: string | null;
         fileSize: number;
         updatedAt: Date;
       };
@@ -533,6 +534,7 @@ export class PipelineService {
       .map(({ contextDocument }) => ({
         id: contextDocument.id,
         name: contextDocument.name,
+        description: contextDocument.description ?? null,
         fileSize: contextDocument.fileSize,
         updatedAt: contextDocument.updatedAt,
       }))

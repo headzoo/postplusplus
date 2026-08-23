@@ -308,7 +308,7 @@ export const sidebar: DefaultTheme.SidebarItem[] =
         "link": "/help/dashboard"
       },
       {
-        "text": "Docs",
+        "text": "Context",
         "link": "/help/docs"
       },
       {

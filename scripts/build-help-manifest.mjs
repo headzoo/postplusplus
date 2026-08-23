@@ -14,6 +14,7 @@ const EXCERPT_MAX_LENGTH = 240;
 
 const toExcerpt = (markdown) => {
   const plainText = markdown
+    .replace(/^#(?!#)\s+.+$/m, ' ')
     .replace(/```[\s\S]*?```/g, ' ')
     .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
@@ -29,9 +30,9 @@ const toExcerpt = (markdown) => {
 };
 
 const getSingleH1 = (markdown, label) => {
-  const h1s = [...withoutFencedCodeBlocks(markdown).matchAll(/^#(?!#)\s+(.+)$/gm)].map((match) =>
-    normalizeHeadingText(match[1]),
-  );
+  const h1s = [
+    ...withoutFencedCodeBlocks(markdown).matchAll(/^#(?!#)\s+(.+)$/gm),
+  ].map((match) => normalizeHeadingText(match[1]));
 
   if (h1s.length !== 1) {
     throw new Error(`${label}: expected exactly one H1, found ${h1s.length}`);
@@ -47,11 +48,9 @@ const getSingleH1 = (markdown, label) => {
 const getMarkdownLinks = (markdown) =>
   [
     ...withoutFencedCodeBlocks(markdown).matchAll(
-      /(?<!!)\[[^\]]*\]\(([^)\s]+)(?:\s+["'][^"']*["'])?\)/g,
+      /(?<!!)\[[^\]]*\]\(([^)\s]+)(?:\s+["'][^"']*["'])?\)/g
     ),
-  ].map(
-    (match) => match[1],
-  );
+  ].map((match) => match[1]);
 
 const validateLinks = (pages) => {
   const errors = [];
@@ -69,9 +68,8 @@ const validateLinks = (pages) => {
       if (href.startsWith('#')) {
         anchor = href.slice(1);
       } else {
-        const match = /^\/help\/([a-z0-9]+(?:-[a-z0-9]+)*)(?:#([^/?#]+))?$/.exec(
-          href,
-        );
+        const match =
+          /^\/help\/([a-z0-9]+(?:-[a-z0-9]+)*)(?:#([^/?#]+))?$/.exec(href);
 
         if (!match) {
           errors.push(`${page.file}: unsupported help link ${href}`);
@@ -87,14 +85,21 @@ const validateLinks = (pages) => {
         }
       }
 
-      if (anchor && !targetPage.headings.some((heading) => heading.anchor === anchor)) {
+      if (
+        anchor &&
+        !targetPage.headings.some((heading) => heading.anchor === anchor)
+      ) {
         errors.push(`${page.file}: unresolved help anchor ${href}`);
       }
     }
   }
 
   if (errors.length > 0) {
-    throw new Error(`Unresolved help internal links:\n${errors.map((error) => `- ${error}`).join('\n')}`);
+    throw new Error(
+      `Unresolved help internal links:\n${errors
+        .map((error) => `- ${error}`)
+        .join('\n')}`
+    );
   }
 };
 
@@ -105,7 +110,8 @@ const validateLinks = (pages) => {
  * @returns {Promise<{ generated: true; pages: Array<{ slug: string; title: string; headings: Array<{ level: number; title: string; anchor: string }>; headingText: string; excerpt: string; markdown: string }> }>}
  */
 export const buildHelpManifest = async (options = {}) => {
-  const helpDir = options.helpDir ?? path.join(repoDir, 'apps/frontend/src/help');
+  const helpDir =
+    options.helpDir ?? path.join(repoDir, 'apps/frontend/src/help');
   const entries = await readdir(helpDir, { withFileTypes: true });
   const seenSlugs = new Set();
   const pages = [];
@@ -155,17 +161,14 @@ export const buildHelpManifest = async (options = {}) => {
 };
 
 export const writeHelpManifest = async (options = {}) => {
-  const helpDir = options.helpDir ?? path.join(repoDir, 'apps/frontend/src/help');
+  const helpDir =
+    options.helpDir ?? path.join(repoDir, 'apps/frontend/src/help');
   const outputPath =
     options.outputPath ?? path.join(helpDir, 'help-manifest.generated.json');
   const manifest = await buildHelpManifest({ helpDir });
 
   await mkdir(path.dirname(outputPath), { recursive: true });
-  await writeFile(
-    outputPath,
-    `${JSON.stringify(manifest, null, 2)}\n`,
-    'utf8',
-  );
+  await writeFile(outputPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
 
   return manifest;
 };

@@ -6,7 +6,7 @@ Rules are not the same as [Pipelines](/help/pipelines) (which queue and schedule
 
 ## What Rules are
 
-In-app: *Automate post lifecycle: remove underperforming content, repost successful posts, or add follow-up plugs based on engagement metrics.*
+In-app: _Automate post lifecycle: remove underperforming content, repost successful posts, or add follow-up plugs based on engagement metrics._
 
 You assign each Rule to channels and/or Pipelines. Metrics currently center on **Likes** and **Replies** (availability depends on the channel).
 
@@ -23,12 +23,12 @@ Empty list: **No Rules yet**. Channel filter empty: **No Rules for this channel*
 
 ## Choose an action
 
-| Action (form) | List label | What it does |
-| --- | --- | --- |
-| **Remove post** | Remove | Removes the post from the platform when conditions are met |
-| **Auto repost** | Auto Repost | Reposts when conditions are met |
-| **Auto plug** | Auto Plug | Posts a follow-up comment/thread; requires **Plug Content** |
-| **Send notification** | Notify | Sends an in-app notification; keeps checking until match or max evaluations |
+| Action (form)         | List label  | What it does                                                                |
+| --------------------- | ----------- | --------------------------------------------------------------------------- |
+| **Remove post**       | Remove      | Removes the post from the platform when conditions are met                  |
+| **Auto repost**       | Auto Repost | Reposts when conditions are met                                             |
+| **Auto plug**         | Auto Plug   | Posts a follow-up comment/thread; requires **Plug Content**                 |
+| **Send notification** | Notify      | Sends an in-app notification; keeps checking until match or max evaluations |
 
 ## Conditions and timing
 
@@ -56,8 +56,8 @@ For **Remove post** only, optional **Reschedule on Remove**:
 
 - Use the slider for **Enabled** / **Disabled**.
 - **Edit** reopens the same modal.
-- **Delete** is permanent. Confirm carefully: *Active scheduled actions will continue processing.*
+- **Delete** is permanent. Confirm carefully: _Active scheduled actions will continue processing._
 
 ## Migrating from Plugs
 
-Legacy Plugs were **not** migrated. Empty-state copy: *Create a Rule to automate post lifecycle based on engagement. Legacy Plugs were not migrated — recreate your rules and channel or Pipeline assignments here.*
+Legacy Plugs were **not** migrated. Empty-state copy: _Create a Rule to automate post lifecycle based on engagement. Legacy Plugs were not migrated — recreate your rules and channel or Pipeline assignments here._

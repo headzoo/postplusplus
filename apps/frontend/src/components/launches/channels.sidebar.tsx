@@ -148,7 +148,7 @@ export const ChannelsSidebar = ({
               'mobile:fixed mobile:z-[520] mobile:bottom-0',
               collapsed ? 'w-[100px]' : 'w-[260px]',
               mobileHidden &&
-                'mobile:-translate-x-full mobile:rtl:translate-x-full mobile:pointer-events-none'
+              'mobile:-translate-x-full mobile:rtl:translate-x-full mobile:pointer-events-none'
             )}
           >
             <div className="bg-newBgColorInner p-[20px] flex flex-col gap-[15px] h-full overflow-x-hidden overflow-y-auto scrollbar scrollbar-thumb-fifth scrollbar-track-newBgColor mobile:shadow-lg">
@@ -375,7 +375,7 @@ const ChannelMenuRow: FC<
           'data-tooltip-content': integration.name,
         })}
         className={clsx(
-          'flex gap-[12px] items-center bg-newBgColorInner hover:bg-boxHover group/profile transition-all rounded-e-[8px]',
+          'flex gap-[12px] items-center p-2 bg-newBgColorInner hover:bg-boxHover group/profile transition-all rounded-[8px]',
           (onSelect || integration.refreshNeeded) && 'cursor-pointer',
           isUnselected && 'opacity-20 hover:opacity-100',
           !showMenu && 'group-[.sidebar]:justify-center'
@@ -732,9 +732,9 @@ export const ChannelMenu: FC<ChannelMenuProps & { collapsed: boolean }> = ({
           (current || integrations).map((integration) =>
             integration.customer?.id === customerId
               ? {
-                  ...integration,
-                  customer: { ...integration.customer, name },
-                }
+                ...integration,
+                customer: { ...integration.customer, name },
+              }
               : integration
           ),
         { revalidate: true }

@@ -8,6 +8,7 @@ import {
   buildSkillFilename,
   normalizeContextDocumentName,
   parseSkillFilename,
+  validateContextDocumentDescription,
   validateContextDocumentUpload,
 } from '@gitroom/nestjs-libraries/upload/context-document.upload.validation';
 
@@ -17,12 +18,14 @@ describe('ContextDocumentService', () => {
 
   const createRepository = () => ({
     listMetadata: jest.fn(),
+    listStandardMetadata: jest.fn(),
     listSkillMetadata: jest.fn(),
     findById: jest.fn(),
     findByName: jest.fn(),
     findSkillByCanonicalName: jest.fn(),
     upsertDocument: jest.fn(),
     createDocument: jest.fn(),
+    updateDocument: jest.fn(),
     updateDocumentContent: jest.fn(),
     renameDocument: jest.fn(),
     deleteDocument: jest.fn(),
@@ -39,6 +42,7 @@ describe('ContextDocumentService', () => {
     id: 'doc-1',
     organizationId,
     name: 'BRANDING.md',
+    description: null as string | null,
     content: '# Branding\n\nUse this voice.',
     fileSize: 28,
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
@@ -113,6 +117,7 @@ describe('ContextDocumentService', () => {
         id: 'doc-1',
         organizationId,
         name: 'BRANDING.md',
+        description: null,
         fileSize: 28,
         createdAt: sampleDocument.createdAt,
         updatedAt: sampleDocument.updatedAt,
@@ -120,6 +125,84 @@ describe('ContextDocumentService', () => {
       },
     ]);
     expect(documents[0]).not.toHaveProperty('content');
+  });
+
+  it('lists standard documents without skills and includes descriptions', async () => {
+    const { repository, service } = createService();
+    repository.listStandardMetadata.mockResolvedValue([
+      {
+        ...sampleDocument,
+        description: 'Brand colors and tone',
+      },
+    ]);
+
+    const documents = await service.listStandardDocuments(organizationId);
+
+    expect(documents).toEqual([
+      expect.objectContaining({
+        id: 'doc-1',
+        name: 'BRANDING.md',
+        description: 'Brand colors and tone',
+      }),
+    ]);
+    expect(repository.listStandardMetadata).toHaveBeenCalledWith(
+      organizationId
+    );
+  });
+
+  it('updates content and description together', async () => {
+    const { repository, service } = createService();
+    repository.findById.mockResolvedValue(sampleDocument);
+    repository.updateDocument.mockResolvedValue({
+      ...sampleDocument,
+      content: '# Updated',
+      fileSize: 9,
+      description: 'Brand guidance',
+    });
+
+    const updated = await service.updateDocument(organizationId, 'doc-1', {
+      content: '# Updated',
+      description: '  Brand guidance  ',
+    });
+
+    expect(repository.updateDocument).toHaveBeenCalledWith(
+      organizationId,
+      'doc-1',
+      {
+        content: '# Updated',
+        fileSize: 9,
+        description: 'Brand guidance',
+      }
+    );
+    expect(updated.description).toBe('Brand guidance');
+  });
+
+  it('clears description when empty or null and validates length', async () => {
+    const { repository, service } = createService();
+    repository.findById.mockResolvedValue(sampleDocument);
+    repository.updateDocument.mockResolvedValue({
+      ...sampleDocument,
+      description: null,
+    });
+
+    await expect(
+      service.updateDocument(organizationId, 'doc-1', { description: '   ' })
+    ).resolves.toEqual(expect.objectContaining({ description: null }));
+    expect(repository.updateDocument).toHaveBeenCalledWith(
+      organizationId,
+      'doc-1',
+      { description: null }
+    );
+
+    expect(validateContextDocumentDescription(null)).toBeNull();
+    expect(validateContextDocumentDescription('  hello  ')).toBe('hello');
+    expect(() =>
+      validateContextDocumentDescription('x'.repeat(501))
+    ).toThrow(BadRequestException);
+
+    await expect(
+      service.updateDocument(organizationId, 'doc-1', {})
+    ).rejects.toThrow('Provide content and/or description to update.');
   });
 
   it('keeps invocable and reserved skills in the management catalog as metadata', async () => {
@@ -309,6 +392,7 @@ describe('ContextDocumentService', () => {
     ).resolves.toEqual({
       id: 'doc-1',
       name: 'BRANDING.md',
+      description: null,
       content: '# Branding\n\nUse this voice.',
       fileSize: 28,
       updatedAt: sampleDocument.updatedAt,
@@ -363,7 +447,7 @@ describe('ContextDocumentService', () => {
     const { repository, service } = createService();
     const nextContent = '# Updated branding';
     repository.findById.mockResolvedValue(sampleDocument);
-    repository.updateDocumentContent.mockResolvedValue({
+    repository.updateDocument.mockResolvedValue({
       ...sampleDocument,
       content: nextContent,
       fileSize: Buffer.byteLength(nextContent, 'utf8'),
@@ -380,11 +464,13 @@ describe('ContextDocumentService', () => {
       name: 'BRANDING.md',
       fileSize: Buffer.byteLength(nextContent, 'utf8'),
     });
-    expect(repository.updateDocumentContent).toHaveBeenCalledWith(
+    expect(repository.updateDocument).toHaveBeenCalledWith(
       organizationId,
       sampleDocument.id,
-      nextContent,
-      Buffer.byteLength(nextContent, 'utf8')
+      {
+        content: nextContent,
+        fileSize: Buffer.byteLength(nextContent, 'utf8'),
+      }
     );
   });
 

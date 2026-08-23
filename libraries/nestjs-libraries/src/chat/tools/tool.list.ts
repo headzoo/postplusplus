@@ -13,6 +13,8 @@ import { PipelinesListTool } from '@gitroom/nestjs-libraries/chat/tools/pipeline
 import { PipelinePostsListTool } from '@gitroom/nestjs-libraries/chat/tools/pipeline.posts.list.tool';
 import { PipelineEnqueuePostTool } from '@gitroom/nestjs-libraries/chat/tools/pipeline.enqueue.post.tool';
 import { PipelineContextDocumentReadTool } from '@gitroom/nestjs-libraries/chat/tools/pipeline.context-document.read.tool';
+import { ContextDocumentsListTool } from '@gitroom/nestjs-libraries/chat/tools/context-documents.list.tool';
+import { ContextDocumentReadTool } from '@gitroom/nestjs-libraries/chat/tools/context-documents.read.tool';
 import { FollowerChannelsTool } from '@gitroom/nestjs-libraries/chat/tools/follower.channels.tool';
 import { FollowersListTool } from '@gitroom/nestjs-libraries/chat/tools/followers.list.tool';
 import { FollowerDetailTool } from '@gitroom/nestjs-libraries/chat/tools/follower.detail.tool';
@@ -48,6 +50,8 @@ export const toolList = [
   PipelinePostsListTool,
   PipelineEnqueuePostTool,
   PipelineContextDocumentReadTool,
+  ContextDocumentsListTool,
+  ContextDocumentReadTool,
   AgentSkillsListTool,
   AgentSkillLoadTool,
   IntegrationValidationTool,

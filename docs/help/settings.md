@@ -63,7 +63,7 @@ Outbound HTTP notifications when something happens in Post++ (for example when p
 
 ### Auto Post
 
-RSS → social posting **outside** a Pipeline queue. *Autopost can automatically posts your RSS new items to social media.*
+RSS → social posting **outside** a Pipeline queue. _Autopost can automatically posts your RSS new items to social media._
 
 **Add an autopost**: Title, URL, sync last post, **Post on the next available slot** or **Post Immediately**, autogenerate content / picture, choose integrations, **Send Test** (**RSS valid!**), then **Save** and toggle **Active**.
 

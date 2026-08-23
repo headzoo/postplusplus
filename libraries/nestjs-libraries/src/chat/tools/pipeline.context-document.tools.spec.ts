@@ -1,7 +1,7 @@
 jest.mock(
   '@gitroom/nestjs-libraries/database/prisma/pipelines/pipeline.service',
   () => ({
-    PipelineService: class PipelineService {},
+    PipelineService: class PipelineService { },
   })
 );
 
@@ -25,6 +25,7 @@ describe('pipeline context document tools', () => {
     id: 'doc-1',
     organizationId,
     name: 'BRANDING.md',
+    description: null as string | null,
     content: '# Branding\n\nUse this voice.',
     fileSize: 28,
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
@@ -85,6 +86,7 @@ describe('pipeline context document tools', () => {
       ).resolves.toEqual({
         id: sampleDocument.id,
         name: sampleDocument.name,
+        description: null,
         content: sampleDocument.content,
         fileSize: sampleDocument.fileSize,
         updatedAt: sampleDocument.updatedAt,
@@ -198,6 +200,7 @@ describe('pipeline context document tools', () => {
             {
               id: sampleDocument.id,
               name: sampleDocument.name,
+              description: 'Brand colors and tone',
               fileSize: sampleDocument.fileSize,
               updatedAt,
             },
@@ -215,6 +218,7 @@ describe('pipeline context document tools', () => {
         {
           id: sampleDocument.id,
           name: sampleDocument.name,
+          description: 'Brand colors and tone',
           fileSize: sampleDocument.fileSize,
           updatedAt: updatedAt.toISOString(),
         },

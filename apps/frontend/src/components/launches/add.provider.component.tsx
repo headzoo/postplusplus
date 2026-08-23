@@ -45,12 +45,18 @@ export const AddProviderButton: FC<{
 
   return (
     <button
-      className="w-full text-btnText bg-btnSimple h-[44px] pt-[12px] pb-[14px] ps-[16px] pe-[20px] group-[.sidebar]:p-0 justify-center items-center flex rounded-[8px] gap-[8px] shrink-0"
+      className="w-full text-white bg-forth h-[44px] pt-[12px] pb-[14px] ps-[16px] pe-[20px] group-[.sidebar]:p-0 justify-center items-center flex rounded-[8px] gap-[8px] shrink-0"
       onClick={add}
     >
-      <PlusIcon size={20} className="shrink-0" />
+      <PlusIcon
+        size={20}
+        className="shrink-0 hidden group-[.sidebar]:block mobile:block"
+      />
       <div className="text-start text-[14px] group-[.sidebar]:hidden">
-        {t('add_channel', 'Add Channel')}
+        <span className="mobile:hidden">{t('plus_channel', '+ Channel')}</span>
+        <span className="hidden mobile:inline">
+          {t('add_channel', 'Add Channel')}
+        </span>
       </div>
     </button>
   );

@@ -28,7 +28,7 @@ const readPipelineContextDocumentInputSchema = z
 
 @Injectable()
 export class PipelineContextDocumentReadTool implements AgentToolInterface {
-  constructor(private _contextDocumentService: ContextDocumentService) {}
+  constructor(private _contextDocumentService: ContextDocumentService) { }
   name = 'readPipelineContextDocument';
 
   run() {
@@ -36,7 +36,7 @@ export class PipelineContextDocumentReadTool implements AgentToolInterface {
       id: 'readPipelineContextDocument',
       description: `
 This tool reads the Markdown content of one context document attached to a pipeline.
-Use listPipelines first to see attached document metadata (id, name, fileSize, updatedAt).
+Use listPipelines first to see attached document metadata (id, name, description, fileSize, updatedAt).
 Pass the pipeline id and exactly one of documentId or exact name for an attached document.
 Read only documents relevant to the user's requested pipeline content — do not read every attachment.
 `,

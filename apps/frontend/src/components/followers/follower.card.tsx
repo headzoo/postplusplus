@@ -48,12 +48,12 @@ const TRIAGE_LABELS: Record<
 };
 
 const TRIAGE_STYLES: Record<DismissibleTriage, string> = {
-  hot_lead: 'border-amber-500/40 text-amber-500',
+  hot_lead: 'border-orange-600/50 text-orange-500',
   engaged_not_yet: 'border-violet-500/40 text-violet-500',
   mutual: 'border-green-500/40 text-green-500',
-  over_invested: 'border-red-400/40 text-red-400',
+  over_invested: 'border-amber-400/50 text-amber-300',
   quiet: 'border-newTableBorder text-textItemBlur',
-  lead: 'border-sky-500/40 text-sky-500',
+  lead: 'border-orange-600/50 text-orange-500',
   cultivate: 'border-teal-500/40 text-teal-500',
 };
 
@@ -370,7 +370,7 @@ export const FollowerCard: FC<{
                 )}
                 {Number.isFinite(follower.leadFitScore) && (
                   <span
-                    className="inline-flex w-fit shrink-0 items-center rounded-full border border-sky-500/40 px-[8px] py-[2px] text-[11px] font-[600] text-sky-500"
+                    className="inline-flex w-fit shrink-0 items-center rounded-full border border-orange-600/50 px-[8px] py-[2px] text-[11px] font-[600] text-orange-500"
                     title={
                       follower.leadFitReason ||
                       t('followers_lead_fit_title', 'Lead fit score')

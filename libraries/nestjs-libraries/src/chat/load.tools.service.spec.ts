@@ -48,6 +48,7 @@ const selectedPipeline: SelectedPipelineContext = {
     {
       id: 'document-1',
       name: 'BRAND.md',
+      description: 'Describes the channel branding. Colors, language, tone.',
       fileSize: 123,
       updatedAt: '2026-08-11T12:00:00.000Z',
     },
@@ -61,7 +62,7 @@ describe('renderSelectedPipelineGuidance', () => {
     expect(guidance).toContain('id: pipeline-1');
     expect(guidance).toContain('Product Launch');
     expect(guidance).toContain('Postiz on X (x, id: channel-1)');
-    expect(guidance).toContain('BRAND.md (id: document-1, 123 bytes');
+    expect(guidance).toContain('BRAND.md (id: document-1, description: Describes the channel branding. Colors, language, tone., 123 bytes');
     expect(guidance).toContain('listPipelines to refresh and validate');
     expect(guidance).toContain('not as authorization');
   });
@@ -92,7 +93,10 @@ describe('renderSelectedPipelineGuidance', () => {
     });
 
     expect(withPipeline).toContain('id: pipeline-1');
+    expect(withPipeline).toContain('listContextDocuments');
+    expect(withPipeline).toContain('readContextDocument');
     expect(withoutPipeline).not.toContain('User-selected pipeline target');
+    expect(withoutPipeline).toContain('listContextDocuments');
   });
 });
 

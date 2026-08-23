@@ -5,6 +5,7 @@ export type ContextDocumentMetadata = {
   id: string;
   organizationId: string;
   name: string;
+  description?: string | null;
   fileSize: number;
   createdAt: string;
   updatedAt: string;
@@ -20,6 +21,7 @@ export type ContextDocumentMetadata = {
 export type ContextDocumentContent = {
   id: string;
   name: string;
+  description?: string | null;
   content: string;
   fileSize: number;
   updatedAt: string;

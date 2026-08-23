@@ -21,10 +21,19 @@ export const useContextDocumentUpdate = () => {
   const { mutate } = useSWRConfig();
 
   return useCallback(
-    async (id: string, content: string, documentName?: string) => {
+    async (
+      id: string,
+      content: string,
+      options?: { documentName?: string; description?: string | null }
+    ) => {
       const response = await fetch(`${CONTEXT_DOCUMENTS_KEY}/${id}`, {
         method: 'PUT',
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({
+          content,
+          ...(options && 'description' in options
+            ? { description: options.description ?? null }
+            : {}),
+        }),
       });
 
       if (!response.ok) {
@@ -34,7 +43,7 @@ export const useContextDocumentUpdate = () => {
       const updated = (await response.json()) as ContextDocumentMetadata;
       const skillSlug =
         updated.skill?.slug ||
-        getContextDocumentSkillSlug(documentName || updated.name);
+        getContextDocumentSkillSlug(options?.documentName || updated.name);
 
       await Promise.all([
         mutate(CONTEXT_DOCUMENTS_KEY),

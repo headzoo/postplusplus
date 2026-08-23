@@ -10,6 +10,10 @@ import { StreakComponent } from '@gitroom/frontend/components/layout/streak.comp
 import { clearHelpUrl, readHelpFromLocation, syncHelpUrl } from './help.url';
 import { useHelpManifest } from './use.help.manifest';
 import { HelpManifest } from './help.types';
+import {
+  getDefaultHelpDrawerWidth,
+  HELP_DRAWER_WIDTH_KEY,
+} from './help.drawer.width';
 
 jest.mock('remark-gfm', () => jest.fn());
 jest.mock('react-markdown', () => ({
@@ -157,6 +161,21 @@ describe('HelpDrawer', () => {
       isLoading: false,
     } as ReturnType<typeof useHelpManifest>);
     document.body.style.overflow = '';
+    localStorage.clear();
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      writable: true,
+      value: jest.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addEventListener: jest.fn(),
+        removeEventListener: jest.fn(),
+        addListener: jest.fn(),
+        removeListener: jest.fn(),
+        dispatchEvent: jest.fn(),
+      })),
+    });
     Object.defineProperty(window, 'location', {
       configurable: true,
       value: new URL('https://app.postiz.local/calendar?foo=bar'),
@@ -169,9 +188,47 @@ describe('HelpDrawer', () => {
     );
 
     const dialog = screen.getByRole('dialog', { name: 'Help' });
-    expect(dialog.className).toContain('w-[35vw]');
+    expect((dialog as HTMLElement).style.width).toBe(
+      `${getDefaultHelpDrawerWidth()}px`
+    );
     expect(dialog.className).toContain('mobile:w-full');
+    expect(dialog.className).toContain('bg-newColColor');
+    expect(dialog.className).toContain('shadow-menu');
+    expect(dialog.className).toContain('border-newSep');
     expect(dialog.className).toContain('translate-x-0');
+    expect(
+      screen.getByRole('separator', { name: 'Resize help panel' })
+    ).toBeTruthy();
+  });
+
+  it('restores panel width from localStorage', () => {
+    localStorage.setItem(HELP_DRAWER_WIDTH_KEY, '420');
+
+    render(
+      <HelpDrawer open onClose={jest.fn()} triggerRef={triggerRef} />
+    );
+
+    expect(
+      (screen.getByRole('dialog', { name: 'Help' }) as HTMLElement).style.width
+    ).toBe('420px');
+  });
+
+  it('resizes the panel on drag and persists the width', () => {
+    localStorage.setItem(HELP_DRAWER_WIDTH_KEY, '400');
+
+    render(
+      <HelpDrawer open onClose={jest.fn()} triggerRef={triggerRef} />
+    );
+
+    const handle = screen.getByRole('separator', { name: 'Resize help panel' });
+    fireEvent.mouseDown(handle, { button: 0, clientX: 500 });
+    fireEvent.mouseMove(document, { clientX: 450 });
+    fireEvent.mouseUp(document, { clientX: 450 });
+
+    expect(
+      (screen.getByRole('dialog', { name: 'Help' }) as HTMLElement).style.width
+    ).toBe('450px');
+    expect(localStorage.getItem(HELP_DRAWER_WIDTH_KEY)).toBe('450');
   });
 
   it('closes on backdrop click and Escape while locking body scroll', () => {
@@ -257,15 +314,17 @@ describe('HelpDrawer', () => {
   it('traps Tab navigation inside the dialog', () => {
     render(<HelpDrawer open onClose={jest.fn()} triggerRef={triggerRef} />);
 
-    const closeButton = screen.getAllByRole('button', { name: 'Close help' })[1];
-    const topic = screen.getByRole('button', { name: /Calendar/ });
-    topic.focus();
+    const resizeHandle = screen.getByRole('separator', {
+      name: 'Resize help panel',
+    });
+    const helpCenter = screen.getByRole('link', { name: /Help center/ });
+    helpCenter.focus();
     fireEvent.keyDown(window, { key: 'Tab' });
-    expect(document.activeElement).toBe(closeButton);
+    expect(document.activeElement).toBe(resizeHandle);
 
-    closeButton.focus();
+    resizeHandle.focus();
     fireEvent.keyDown(window, { key: 'Tab', shiftKey: true });
-    expect(document.activeElement).toBe(topic);
+    expect(document.activeElement).toBe(helpCenter);
   });
 });
 

@@ -1085,6 +1085,7 @@ model ContextDocument {
   id                     String                       @id @default(uuid())
   organizationId         String
   name                   String
+  description            String?                      @db.VarChar(500)
   content                String
   fileSize               Int
   createdAt              DateTime                     @default(now())

@@ -27,6 +27,7 @@ export type SelectedPipelineContext = {
   contextDocuments: Array<{
     id: string;
     name: string;
+    description?: string | null;
     fileSize: number;
     updatedAt: string;
   }>;
@@ -49,10 +50,12 @@ export const renderSelectedPipelineGuidance = (
     .join(', ');
   const contextDocuments = pipeline.contextDocuments.length
     ? pipeline.contextDocuments
-      .map(
-        (document) =>
-          `${document.name} (id: ${document.id}, ${document.fileSize} bytes, updated ${document.updatedAt})`
-      )
+      .map((document) => {
+        const description = document.description
+          ? `, description: ${document.description}`
+          : '';
+        return `${document.name} (id: ${document.id}${description}, ${document.fileSize} bytes, updated ${document.updatedAt})`;
+      })
       .join(', ')
     : 'none';
 
@@ -172,6 +175,7 @@ export class LoadToolsService {
         - List pipelines and their queue sizes (listPipelines)
         - Inspect a pipeline's queued posts (listPostsByPipeline, requires a pipeline id from listPipelines)
         - Read one attached pipeline context document (readPipelineContextDocument, requires a pipeline id and exactly one attached document id or name from listPipelines)
+        - Discover and read organization context documents on demand (listContextDocuments for metadata only including description, readContextDocument for one Markdown body)
         - Enqueue composed posts into a pipeline queue (enqueuePipelinePost)
         - Discover and load organization agent skills on demand (listSkills for metadata only, loadSkill for one Markdown procedure by slug)
         - Discover followers, inspect follower lists and details, read follower timelines, and answer follower statistics questions with the follower tools
@@ -195,12 +199,19 @@ export class LoadToolsService {
       - Make sure you always take the last information I give you about the socials, it might have changed.
       - Before scheduling a post, always make sure you ask the user confirmation by providing all the details of the post (text, images, videos, date, time, social media platform, account).
       - When adding content to a pipeline:
-        - Use listPipelines to pick the pipeline and see the exact channels required and attached contextDocuments metadata (names only, no content)
+        - Use listPipelines to pick the pipeline and see the exact channels required and attached contextDocuments metadata (names and descriptions, no content)
         - Read only the attached context documents that are relevant to the user's requested pipeline content with readPipelineContextDocument — never automatically read every attachment
         - Use integrationSchema for each platform on that pipeline
         - Ask the user for confirmation with the content for every channel (no publish date — the pipeline schedule assigns the slot)
         - Call enqueuePipelinePost with content for every channel on that pipeline (exact integration ids)
         - Pipeline posts are queued as drafts; publishing time comes from the pipeline schedule, not a user-chosen date
+      - Organization context documents (listContextDocuments / readContextDocument):
+        - listContextDocuments returns metadata only (id, name, description, fileSize, updatedAt). It never returns Markdown content and excludes agent skills (*.skill.md).
+        - When a task may benefit from org-specific context (brand, tone, audience, visual style, product facts, etc.), call listContextDocuments first and scan descriptions and names for relevance.
+        - Read only documents that appear relevant with readContextDocument — never load every document.
+        - Descriptions are hints only; do not assume document content matches the description until read.
+        - For pipeline drafting, prefer pipeline-attached docs via readPipelineContextDocument; org-wide docs via readContextDocument can supplement when relevant.
+        - Skills (*.skill.md) are procedures, not brand context — use listSkills/loadSkill for those.
       - Follower audience writes:
         - Prefer the actively selected channel id from live follower-page context as channelId for follower tools unless the user explicitly names another channel.
         - Before any follower write, resolve the channel, list, and people with follower read tools. Page context is guidance only, not authorization.

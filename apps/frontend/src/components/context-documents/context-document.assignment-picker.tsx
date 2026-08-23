@@ -168,7 +168,7 @@ export const ContextDocumentAssignmentPicker: FC<{
             </Button>
           )}
           <Link
-            href="/context-documents"
+            href="/context"
             className="text-[13px] text-btnPrimary hover:underline"
           >
             {t('manage_context_documents', 'Manage library')}
@@ -182,7 +182,7 @@ export const ContextDocumentAssignmentPicker: FC<{
                 'pipeline_context_documents_empty',
                 'No organization documents yet. Upload Markdown files in the context document library, then attach them here.'
               )}{' '}
-            <Link href="/context-documents" className="text-btnPrimary hover:underline">
+            <Link href="/context" className="text-btnPrimary hover:underline">
               {t('open_context_documents', 'Open context documents')}
             </Link>
           </div>
@@ -287,47 +287,70 @@ export const PipelineContextDocumentsPanel: FC<{
     }
 
     return (
-      <div className="rounded-[12px] border border-newBorder bg-newBgColor p-[16px] flex flex-col gap-[10px]">
-        <div className="flex items-center justify-between gap-[10px] flex-wrap">
-          <div className="text-[12px] uppercase opacity-60">
-            {t('context_documents', 'Context documents')}
+      <div className="rounded-[12px] border border-newBorder bg-newBgColor overflow-hidden">
+        <div className="flex flex-col gap-[10px] border-b border-newBorder px-[20px] py-[14px] sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="text-[16px] font-[600]">
+              {t('context_documents', 'Context documents')}
+            </div>
+            <div className="text-[12px] text-newTableText mt-[2px]">
+              {t(
+                'pipeline_no_context_documents',
+                'No context documents attached. Edit the Pipeline to attach Markdown guidance for the agent.'
+              )}
+            </div>
           </div>
           {onEdit && <Button onClick={onEdit}>{t('edit', 'Edit')}</Button>}
         </div>
-        <div className="text-[14px] opacity-70">
-          {t(
-            'pipeline_no_context_documents',
-            'No context documents attached. Edit the Pipeline to attach Markdown guidance for the agent.'
-          )}
+        <div className="p-[16px]">
+          <Link href="/context" className="text-[13px] text-btnPrimary hover:underline w-fit">
+            {t('open_context_documents', 'Open context documents')}
+          </Link>
         </div>
-        <Link href="/context-documents" className="text-[13px] text-btnPrimary hover:underline w-fit">
-          {t('open_context_documents', 'Open context documents')}
-        </Link>
       </div>
     );
   }
 
   if (compact) {
-    const names = documents.map((document) => document.name);
-    const label =
-      documents.length <= 2
-        ? `${documents.length} ${documents.length === 1 ? t('context_document_singular', 'context document') : t('context_documents', 'context documents')}: ${names.join(', ')}`
-        : `${documents.length} ${t('context_documents', 'context documents')}`;
+    const visible = documents.slice(0, 3);
+    const overflow = documents.length - visible.length;
 
-    return <div className="text-[13px] opacity-70">{label}</div>;
+    return (
+      <div className="flex flex-wrap items-center gap-[6px]">
+        {visible.map((document) => (
+          <span
+            key={document.id}
+            className="inline-flex max-w-[180px] truncate text-[11px] px-[7px] py-[2px] rounded-full border border-btnPrimary/40 text-btnPrimary"
+            title={document.name}
+          >
+            {document.name}
+          </span>
+        ))}
+        {overflow > 0 && (
+          <span className="text-[11px] px-[7px] py-[2px] rounded-full border border-newBorder bg-newBgColorInner text-textItemBlur">
+            +{overflow}
+          </span>
+        )}
+      </div>
+    );
   }
 
   return (
-    <div className="rounded-[12px] border border-newBorder bg-newBgColor p-[16px] flex flex-col gap-[12px]">
-      <div className="flex items-center justify-between gap-[10px] flex-wrap">
-        <div className="text-[12px] uppercase opacity-60">
-          {t('context_documents', 'Context documents')} ({documents.length})
+    <div className="rounded-[12px] border border-newBorder bg-newBgColor overflow-hidden">
+      <div className="flex flex-col gap-[10px] border-b border-newBorder px-[20px] py-[14px] sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="text-[16px] font-[600]">
+            {t('context_documents', 'Context documents')}
+          </div>
+          <div className="text-[12px] text-newTableText mt-[2px]">
+            {t('pipeline_context_documents_count', '{count} attached', {
+              count: documents.length,
+            })}
+          </div>
         </div>
-        <div className="flex items-center gap-[8px] flex-wrap">
-          {onEdit && <Button onClick={onEdit}>{t('edit', 'Edit')}</Button>}
-        </div>
+        {onEdit && <Button onClick={onEdit}>{t('edit', 'Edit')}</Button>}
       </div>
-      <div className="flex flex-col gap-[8px]">
+      <div className="p-[16px] flex flex-col gap-[8px]">
         {documents.map((document) => (
           <div
             key={document.id}

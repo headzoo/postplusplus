@@ -4,7 +4,10 @@ import { FC, ReactNode, useCallback } from 'react';
 import { useUser } from '@gitroom/frontend/components/layout/user.context';
 import { useVariables } from '@gitroom/react/helpers/variable.context';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
-import { MenuItem } from '@gitroom/frontend/components/new-layout/menu-item';
+import {
+  MenuItem,
+  NavLayout,
+} from '@gitroom/frontend/components/new-layout/menu-item';
 import { useModals } from '@gitroom/frontend/components/layout/new-modal';
 import { AgentMediaModal } from '@gitroom/frontend/components/layout/agent.media.modal';
 
@@ -35,6 +38,27 @@ export const useMenuItem = () => {
 
   const firstMenu = [
     {
+      name: t('channels', 'Channels'),
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="21"
+          viewBox="0 0 20 21"
+          fill="none"
+        >
+          <path
+            d="M1.66675 18.8337H18.3334M2.50008 14.667V11.3337M6.66675 14.667V8.00033M10.8334 14.667V10.5003M15.0001 14.667V5.50033"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      ),
+      path: '/',
+    },
+    {
       name: t('calendar', 'Calendar'),
       icon: (
         <svg
@@ -54,24 +78,6 @@ export const useMenuItem = () => {
         </svg>
       ),
       path: '/calendar',
-    },
-    {
-      name: 'Agent',
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="23"
-          height="23"
-          viewBox="0 0 32 32"
-          fill="none"
-        >
-          <path
-            d="M21.1963 9.07375C20.2913 6.95494 18.6824 5.21364 16.6416 4.14422C14.6009 3.0748 12.2534 2.74287 9.99616 3.20455C7.73891 3.66623 5.71031 4.8932 4.25334 6.67802C2.79637 8.46284 2.0004 10.696 2 13V21.25C2 21.7141 2.18437 22.1592 2.51256 22.4874C2.84075 22.8156 3.28587 23 3.75 23H10.8337C11.6141 24.7821 12.8964 26.2984 14.5241 27.3638C16.1519 28.4293 18.0546 28.9978 20 29H28.25C28.7141 29 29.1592 28.8156 29.4874 28.4874C29.8156 28.1592 30 27.7141 30 27.25V19C29.9995 16.5553 29.1036 14.1955 27.4814 12.3666C25.8593 10.5376 23.6234 9.36619 21.1963 9.07375ZM4 13C4 11.4177 4.46919 9.87103 5.34824 8.55544C6.22729 7.23984 7.47672 6.21446 8.93853 5.60896C10.4003 5.00346 12.0089 4.84504 13.5607 5.15372C15.1126 5.4624 16.538 6.22432 17.6569 7.34314C18.7757 8.46197 19.5376 9.88743 19.8463 11.4393C20.155 12.9911 19.9965 14.5997 19.391 16.0615C18.7855 17.5233 17.7602 18.7727 16.4446 19.6518C15.129 20.5308 13.5823 21 12 21H4V13ZM28 27H20C18.5854 26.9984 17.1964 26.6225 15.974 25.9106C14.7516 25.1986 13.7394 24.1759 13.04 22.9463C14.4096 22.8041 15.7351 22.3804 16.9333 21.7017C18.1314 21.023 19.1763 20.104 20.0024 19.0023C20.8284 17.9006 21.4179 16.6401 21.7337 15.2998C22.0495 13.9595 22.0848 12.5684 21.8375 11.2137C23.5916 11.6277 25.1545 12.6218 26.273 14.035C27.3915 15.4482 28 17.1977 28 19V27Z"
-            fill="currentColor"
-          />
-        </svg>
-      ),
-      path: '/agents',
     },
     {
       name: t('followers', 'Followers'),
@@ -95,48 +101,6 @@ export const useMenuItem = () => {
       path: '/followers',
     },
     {
-      name: t('media', 'Media'),
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="20"
-          height="21"
-          viewBox="0 0 20 21"
-          fill="none"
-        >
-          <path
-            d="M7.50008 3L6.66675 7.16667M13.3334 3L12.5001 7.16667M18.3334 7.16667H1.66675M5.66675 18H14.3334C15.7335 18 16.4336 18 16.9684 17.7275C17.4388 17.4878 17.8212 17.1054 18.0609 16.635C18.3334 16.1002 18.3334 15.4001 18.3334 14V7C18.3334 5.59987 18.3334 4.8998 18.0609 4.36502C17.8212 3.89462 17.4388 3.51217 16.9684 3.27248C16.4336 3 15.7335 3 14.3334 3H5.66675C4.26662 3 3.56655 3 3.03177 3.27248C2.56137 3.51217 2.17892 3.89462 1.93923 4.36502C1.66675 4.8998 1.66675 5.59987 1.66675 7V14C1.66675 15.4001 1.66675 16.1002 1.93923 16.635C2.17892 17.1054 2.56137 17.4878 3.03177 17.7275C3.56655 18 4.26662 18 5.66675 18Z"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      ),
-      path: '/media',
-    },
-    {
-      name: t('context_documents', 'Docs'),
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="20"
-          height="21"
-          viewBox="0 0 20 21"
-          fill="none"
-        >
-          <path
-            d="M11.6667 2.16699H5.66667C4.26654 2.16699 3.56647 2.16699 3.03169 2.43947C2.56129 2.67916 2.17884 3.06161 1.93915 3.53201C1.66667 4.06679 1.66667 4.76686 1.66667 6.16699V14.8337C1.66667 16.2338 1.66667 16.9339 1.93915 17.4687C2.17884 17.9391 2.56129 18.3215 3.03169 18.5612C3.56647 18.8337 4.26654 18.8337 5.66667 18.8337H14.3333C15.7335 18.8337 16.4335 18.8337 16.9683 18.5612C17.4387 18.3215 17.8212 17.9391 18.0609 17.4687C18.3333 16.9339 18.3333 16.2338 18.3333 14.8337V8.50033M11.6667 2.16699L18.3333 8.50033M11.6667 2.16699V8.50033H18.3333M7.50001 11.5003H12.5M7.50001 14.8337H10.8333"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      ),
-      path: '/context-documents',
-    },
-    {
       name: t('pipelines', 'Pipelines'),
       icon: (
         <svg
@@ -158,6 +122,24 @@ export const useMenuItem = () => {
       path: '/pipelines',
     },
     {
+      name: 'Agent',
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="23"
+          height="23"
+          viewBox="0 0 32 32"
+          fill="none"
+        >
+          <path
+            d="M21.1963 9.07375C20.2913 6.95494 18.6824 5.21364 16.6416 4.14422C14.6009 3.0748 12.2534 2.74287 9.99616 3.20455C7.73891 3.66623 5.71031 4.8932 4.25334 6.67802C2.79637 8.46284 2.0004 10.696 2 13V21.25C2 21.7141 2.18437 22.1592 2.51256 22.4874C2.84075 22.8156 3.28587 23 3.75 23H10.8337C11.6141 24.7821 12.8964 26.2984 14.5241 27.3638C16.1519 28.4293 18.0546 28.9978 20 29H28.25C28.7141 29 29.1592 28.8156 29.4874 28.4874C29.8156 28.1592 30 27.7141 30 27.25V19C29.9995 16.5553 29.1036 14.1955 27.4814 12.3666C25.8593 10.5376 23.6234 9.36619 21.1963 9.07375ZM4 13C4 11.4177 4.46919 9.87103 5.34824 8.55544C6.22729 7.23984 7.47672 6.21446 8.93853 5.60896C10.4003 5.00346 12.0089 4.84504 13.5607 5.15372C15.1126 5.4624 16.538 6.22432 17.6569 7.34314C18.7757 8.46197 19.5376 9.88743 19.8463 11.4393C20.155 12.9911 19.9965 14.5997 19.391 16.0615C18.7855 17.5233 17.7602 18.7727 16.4446 19.6518C15.129 20.5308 13.5823 21 12 21H4V13ZM28 27H20C18.5854 26.9984 17.1964 26.6225 15.974 25.9106C14.7516 25.1986 13.7394 24.1759 13.04 22.9463C14.4096 22.8041 15.7351 22.3804 16.9333 21.7017C18.1314 21.023 19.1763 20.104 20.0024 19.0023C20.8284 17.9006 21.4179 16.6401 21.7337 15.2998C22.0495 13.9595 22.0848 12.5684 21.8375 11.2137C23.5916 11.6277 25.1545 12.6218 26.273 14.035C27.3915 15.4482 28 17.1977 28 19V27Z"
+            fill="currentColor"
+          />
+        </svg>
+      ),
+      path: '/agents',
+    },
+    {
       name: t('rules', 'Rules'),
       icon: (
         <svg
@@ -177,6 +159,48 @@ export const useMenuItem = () => {
         </svg>
       ),
       path: '/rules',
+    },
+    {
+      name: t('media', 'Media'),
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="21"
+          viewBox="0 0 20 21"
+          fill="none"
+        >
+          <path
+            d="M7.50008 3L6.66675 7.16667M13.3334 3L12.5001 7.16667M18.3334 7.16667H1.66675M5.66675 18H14.3334C15.7335 18 16.4336 18 16.9684 17.7275C17.4388 17.4878 17.8212 17.1054 18.0609 16.635C18.3334 16.1002 18.3334 15.4001 18.3334 14V7C18.3334 5.59987 18.3334 4.8998 18.0609 4.36502C17.8212 3.89462 17.4388 3.51217 16.9684 3.27248C16.4336 3 15.7335 3 14.3334 3H5.66675C4.26662 3 3.56655 3 3.03177 3.27248C2.56137 3.51217 2.17892 3.89462 1.93923 4.36502C1.66675 4.8998 1.66675 5.59987 1.66675 7V14C1.66675 15.4001 1.66675 16.1002 1.93923 16.635C2.17892 17.1054 2.56137 17.4878 3.03177 17.7275C3.56655 18 4.26662 18 5.66675 18Z"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      ),
+      path: '/media',
+    },
+    {
+      name: t('context_nav', 'Context'),
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="21"
+          viewBox="0 0 20 21"
+          fill="none"
+        >
+          <path
+            d="M11.6667 2.16699H5.66667C4.26654 2.16699 3.56647 2.16699 3.03169 2.43947C2.56129 2.67916 2.17884 3.06161 1.93915 3.53201C1.66667 4.06679 1.66667 4.76686 1.66667 6.16699V14.8337C1.66667 16.2338 1.66667 16.9339 1.93915 17.4687C2.17884 17.9391 2.56129 18.3215 3.03169 18.5612C3.56647 18.8337 4.26654 18.8337 5.66667 18.8337H14.3333C15.7335 18.8337 16.4335 18.8337 16.9683 18.5612C17.4387 18.3215 17.8212 17.9391 18.0609 17.4687C18.3333 16.9339 18.3333 16.2338 18.3333 14.8337V8.50033M11.6667 2.16699L18.3333 8.50033M11.6667 2.16699V8.50033H18.3333M7.50001 11.5003H12.5M7.50001 14.8337H10.8333"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      ),
+      path: '/context',
     },
   ] satisfies MenuItemInterface[] as MenuItemInterface[];
 
@@ -362,13 +386,16 @@ export const useMenuItem = () => {
   };
 };
 
-export const TopMenu: FC<{ onNavigate?: () => void }> = ({ onNavigate }) => {
+export const TopMenu: FC<{
+  onNavigate?: () => void;
+  layout?: NavLayout;
+}> = ({ onNavigate, layout = 'sidebar' }) => {
   const user = useUser();
   const { firstMenu, secondMenu } = useMenuItem();
   const { isGeneral, billingEnabled } = useVariables();
   return (
     <>
-      <div className="flex flex-1 flex-col minCustom:gap-[16px] blurMe">
+      <div className="flex flex-1 flex-col minCustom:gap-[20px] blurMe">
         {
           // @ts-ignore
           user?.orgId &&
@@ -399,13 +426,14 @@ export const TopMenu: FC<{ onNavigate?: () => void }> = ({ onNavigate }) => {
                 label={item.name}
                 icon={item.icon}
                 key={item.name}
+                layout={layout}
                 onClick={item.onClick}
                 onNavigate={onNavigate}
               />
             ))
         }
       </div>
-      <div className="flex flex-col minCustom:gap-[20px] custom:gap-[8px] blurMe">
+      <div className="flex flex-col minCustom:gap-[24px] custom:gap-[12px] blurMe">
         {secondMenu
           .filter((f) => {
             if (f.hide) {
@@ -431,6 +459,7 @@ export const TopMenu: FC<{ onNavigate?: () => void }> = ({ onNavigate }) => {
               label={item.name}
               icon={item.icon}
               key={item.name}
+              layout={layout}
               onClick={item.onClick}
               onNavigate={onNavigate}
             />

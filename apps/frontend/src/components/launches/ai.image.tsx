@@ -120,11 +120,13 @@ ${style}
 export const AiImage: FC<{
   value: string;
   onChange: (params: { id: string; path: string }) => void;
+  variant?: 'toolbar' | 'action';
 }> = (props) => {
   const t = useT();
-  const { onChange } = props;
+  const { onChange, variant = 'toolbar' } = props;
   const [loading, setLoading] = useState(false);
   const modals = useModals();
+  const isAction = variant === 'action';
 
   const openImageModal = useCallback(() => {
     if (loading) {
@@ -147,17 +149,25 @@ export const AiImage: FC<{
       <div
         onClick={openImageModal}
         className={clsx(
-          'cursor-pointer h-[30px] rounded-[6px] justify-center items-center flex bg-newColColor px-[8px]'
+          'cursor-pointer justify-center items-center flex',
+          isAction
+            ? 'relative bg-btnSimple changeColor flex gap-[8px] h-[44px] px-[18px] justify-center items-center rounded-[8px]'
+            : 'h-[30px] rounded-[6px] bg-newColColor px-[8px]'
         )}
       >
         {loading && (
           <div className="absolute start-[50%] -translate-x-[50%]">
-            <Loading height={15} width={15} type="spin" color="#fff" />
+            {isAction ? (
+              <div className="animate-spin h-[20px] w-[20px] border-4 border-white border-t-transparent rounded-full" />
+            ) : (
+              <Loading height={15} width={15} type="spin" color="#fff" />
+            )}
           </div>
         )}
         <div
           className={clsx(
             'flex gap-[5px] items-center',
+            isAction && 'gap-[8px]',
             loading && 'invisible'
           )}
         >
@@ -185,8 +195,14 @@ export const AiImage: FC<{
               </defs>
             </svg>
           </div>
-          <div className="text-[10px] font-[600] iconBreak:hidden block">
-            {t('ai', 'AI')} Image
+          <div
+            className={clsx(
+              isAction
+                ? undefined
+                : 'text-[10px] font-[600] iconBreak:hidden block'
+            )}
+          >
+            {isAction ? t('ai', 'AI') : <>{t('ai', 'AI')} Image</>}
           </div>
         </div>
       </div>
