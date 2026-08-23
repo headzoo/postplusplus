@@ -209,7 +209,7 @@ export default function RulesPage() {
               <div
                 key={rule.id}
                 className={clsx(
-                  'rounded-[12px] border border-newBorder bg-newBgColor overflow-hidden',
+                  'rounded-[12px] border border-newTableBorder bg-newTableHeader overflow-hidden',
                   pendingId === rule.id && 'opacity-70 pointer-events-none'
                 )}
               >

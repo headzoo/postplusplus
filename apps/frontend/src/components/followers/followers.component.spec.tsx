@@ -10,7 +10,9 @@ import {
   buildFollowersPageHref,
   parseFollowerPath,
   parseFollowerViewPath,
+  resolveFollowerStrategyDefaults,
 } from './followers.component';
+import { getChannelStrategy } from '@gitroom/nestjs-libraries/channel-strategies/channel-strategy.registry';
 import {
   Follower,
   FollowerChannel,
@@ -58,6 +60,71 @@ const channel: FollowerChannel = {
       scope: 'database',
     },
   ],
+};
+let mockChannels: FollowerChannel[] = [channel];
+let mockIntegrations = [
+  {
+    id: 'channel-1',
+    name: 'Acme Channel',
+    identifier: 'x',
+    type: 'social',
+    picture: '/picture.png',
+    disabled: false,
+    inBetweenSteps: false,
+    changeProfilePicture: false,
+    changeNickName: false,
+  },
+];
+
+const strategyWithDefaults = (
+  id: string,
+  defaultFilter: string,
+  defaultSort: string,
+  filterPriority: string[] = []
+) =>
+  ({
+    id,
+    version: 1,
+    summary: { key: 'summary', defaultValue: 'Summary' },
+    ui: {
+      defaultFilter,
+      defaultSort,
+      filterPriority,
+      filterEmphasis: defaultFilter,
+      compactMetrics: [],
+      emptyState: { key: 'empty', defaultValue: 'Empty' },
+    },
+  }) as FollowerChannel['strategy'];
+
+const publicStrategy = (
+  id: Parameters<typeof getChannelStrategy>[0]
+): FollowerChannel['strategy'] => {
+  const strategy = getChannelStrategy(id);
+  return {
+    id: strategy.id,
+    version: strategy.version,
+    summary: strategy.description,
+    ui: {
+      defaultFilter: strategy.ui.defaultFilter,
+      defaultSort: strategy.ui.defaultSort,
+      filterPriority: [...strategy.ui.filterPriority],
+      filterEmphasis: strategy.ui.filterEmphasis,
+      compactMetrics: strategy.ui.compactMetrics,
+      emptyState: strategy.ui.emptyState,
+      assistantInitialCopy: strategy.ui.assistantInitialCopy,
+      suggestedQuestions: strategy.ui.suggestedQuestions,
+    },
+  };
+};
+
+const getFilterChipLabels = () => {
+  const filterBar = screen.getByTestId('followers-filter-bar');
+  const groups = filterBar.querySelectorAll(
+    '[data-filter-group]:not([data-filter-group="lists"])'
+  );
+  return Array.from(groups).flatMap((group) =>
+    Array.from(group.querySelectorAll('a')).map((link) => link.textContent?.trim())
+  );
 };
 
 jest.mock('next/navigation', () => ({
@@ -192,7 +259,25 @@ jest.mock('@gitroom/frontend/components/launches/channels.sidebar', () => ({
   ChannelsSidebar: ({ children }: { children: (collapsed: boolean) => React.ReactNode }) => (
     <div>{children(false)}</div>
   ),
-  ChannelMenu: () => <div data-testid="channel-menu" />,
+  ChannelMenu: ({
+    integrations,
+    onSelect,
+  }: {
+    integrations: { id: string; name: string }[];
+    onSelect: (integration: { id: string }) => void;
+  }) => (
+    <div data-testid="channel-menu">
+      {integrations.map((integration) => (
+        <button
+          key={integration.id}
+          type="button"
+          onClick={() => onSelect(integration)}
+        >
+          {integration.name}
+        </button>
+      ))}
+    </div>
+  ),
   groupChannelsByCustomer: (integrations: { id: string }[]) => [
     { name: '', values: integrations },
   ],
@@ -200,19 +285,7 @@ jest.mock('@gitroom/frontend/components/launches/channels.sidebar', () => ({
 
 jest.mock('@gitroom/frontend/components/launches/helpers/use.integration.list', () => ({
   useIntegrationList: () => ({
-    data: [
-      {
-        id: 'channel-1',
-        name: 'Acme Channel',
-        identifier: 'x',
-        type: 'social',
-        picture: '/picture.png',
-        disabled: false,
-        inBetweenSteps: false,
-        changeProfilePicture: false,
-        changeNickName: false,
-      },
-    ],
+    data: mockIntegrations,
     isLoading: false,
   }),
 }));
@@ -222,7 +295,7 @@ jest.mock('@gitroom/frontend/components/followers/use.followers', () => {
   return {
     ...actual,
     useFollowerChannels: () => ({
-      data: [channel],
+      data: mockChannels,
       isLoading: false,
       error: undefined,
       mutate: jest.fn(),
@@ -275,6 +348,55 @@ jest.mock('@gitroom/frontend/components/followers/use.followers', () => {
 });
 
 describe('follower page href helpers', () => {
+  it.each([
+    ['grow_audience', 'all', 'recent', undefined, undefined],
+    ['lead_capture', 'leads', 'fit', 'leads', undefined],
+    ['community_retention', 'cultivate', 'recent', 'cultivate', undefined],
+    ['brand_awareness', 'all', 'interactions', undefined, 'interactions'],
+    ['customer_support', 'costly', 'recent', 'costly', undefined],
+  ])(
+    'resolves %s defaults only for a bare Followers route',
+    (_id, defaultFilter, defaultSort, slug, sort) => {
+      const strategy = {
+        id: _id,
+        version: 1,
+        summary: { key: 'summary', defaultValue: 'Summary' },
+        ui: {
+          defaultFilter,
+          defaultSort,
+          filterPriority: [],
+          filterEmphasis: defaultFilter,
+          compactMetrics: [],
+          emptyState: { key: 'empty', defaultValue: 'Empty' },
+        },
+      } as FollowerChannel['strategy'];
+      const defaults = resolveFollowerStrategyDefaults({
+        pathname: '/followers',
+        strategy,
+        sorts: [
+          {
+            key: 'interactions',
+            label: 'Interactions',
+            directions: ['asc', 'desc'],
+            defaultDirection: 'desc',
+          },
+        ],
+      });
+
+      expect(defaults).toEqual({
+        ...(slug ? { slug } : {}),
+        ...(sort ? { sort, direction: 'desc' } : {}),
+      });
+      expect(
+        resolveFollowerStrategyDefaults({
+          pathname: '/followers',
+          search: 'alex',
+          strategy,
+        })
+      ).toBeUndefined();
+    }
+  );
+
   it('maps triage slugs and query params', () => {
     expect(parseFollowerViewPath('/followers')).toEqual({
       slug: undefined,
@@ -383,6 +505,21 @@ describe('FollowersComponent', () => {
     decisionOpen.mockResolvedValue(false);
     mockPathname = '/followers';
     mockSearchParams = new URLSearchParams();
+    mockChannels = [channel];
+    mockIntegrations = [
+      {
+        id: 'channel-1',
+        name: 'Acme Channel',
+        identifier: 'x',
+        type: 'social',
+        picture: '/picture.png',
+        disabled: false,
+        inBetweenSteps: false,
+        changeProfilePicture: false,
+        changeNickName: false,
+      },
+    ];
+    channel.strategy = undefined;
     deepLinkIsIgnored = false;
     followersPage = {
       items: [],
@@ -416,6 +553,126 @@ describe('FollowersComponent', () => {
 
     expect(allChip.getAttribute('aria-pressed')).toBe('true');
     expect(hotLeadChip.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('keeps All reachable after applying a strategy default', () => {
+    channel.strategy = strategyWithDefaults('lead_capture', 'leads', 'fit');
+    const { rerender } = render(<FollowersComponent />);
+
+    expect(replace).toHaveBeenCalledWith('/followers/leads');
+
+    mockPathname = '/followers/leads';
+    rerender(<FollowersComponent />);
+    mockPathname = '/followers';
+    rerender(<FollowersComponent />);
+
+    expect(replace).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('link', { name: 'All' }).getAttribute('aria-pressed')).toBe(
+      'true'
+    );
+    expect(useFollowersMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ audience: undefined, triage: undefined })
+    );
+  });
+
+  it('applies strategy defaults only once for each channel', () => {
+    channel.strategy = strategyWithDefaults('community_retention', 'cultivate', 'recent');
+    const { rerender } = render(<FollowersComponent />);
+
+    expect(replace).toHaveBeenCalledWith('/followers/cultivate');
+
+    mockPathname = '/followers/cultivate';
+    rerender(<FollowersComponent />);
+    mockPathname = '/followers';
+    rerender(<FollowersComponent />);
+
+    expect(replace).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not apply a strategy default after entering on a non-bare route', () => {
+    channel.strategy = strategyWithDefaults('community_retention', 'cultivate', 'recent');
+    mockPathname = '/followers/hot';
+    const { rerender } = render(<FollowersComponent />);
+
+    expect(replace).not.toHaveBeenCalled();
+
+    mockPathname = '/followers';
+    rerender(<FollowersComponent />);
+
+    expect(replace).not.toHaveBeenCalled();
+    expect(screen.getByRole('link', { name: 'All' }).getAttribute('aria-pressed')).toBe(
+      'true'
+    );
+  });
+
+  it('applies a new channel strategy default once after switching channels', () => {
+    channel.strategy = strategyWithDefaults('lead_capture', 'leads', 'fit');
+    const secondChannel: FollowerChannel = {
+      ...channel,
+      id: 'channel-2',
+      name: 'Support Channel',
+      strategy: strategyWithDefaults('customer_support', 'costly', 'recent'),
+    };
+    mockChannels = [channel, secondChannel];
+    mockIntegrations = [
+      ...mockIntegrations,
+      { ...mockIntegrations[0], id: 'channel-2', name: 'Support Channel' },
+    ];
+
+    const { rerender } = render(<FollowersComponent />);
+    expect(replace).toHaveBeenCalledWith('/followers/leads');
+
+    mockPathname = '/followers/leads';
+    rerender(<FollowersComponent />);
+    mockPathname = '/followers';
+    rerender(<FollowersComponent />);
+    fireEvent.click(screen.getByRole('button', { name: 'Support Channel' }));
+
+    expect(replace).toHaveBeenLastCalledWith('/followers/costly');
+    expect(replace).toHaveBeenCalledTimes(2);
+
+    mockPathname = '/followers/costly';
+    rerender(<FollowersComponent />);
+    mockPathname = '/followers';
+    rerender(<FollowersComponent />);
+
+    expect(replace).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps the shipped filter chip order for grow audience', () => {
+    channel.strategy = publicStrategy('grow_audience');
+    render(<FollowersComponent />);
+
+    expect(getFilterChipLabels()).toEqual([
+      'All',
+      'Leads',
+      'Hot',
+      'Engaged',
+      'Cultivate',
+      'Mutual',
+      'Quiet',
+      'Costly',
+      'Bots',
+      'Ignored',
+    ]);
+  });
+
+  it('reorders filter chips for non-default strategies', () => {
+    channel.strategy = publicStrategy('lead_capture');
+    render(<FollowersComponent />);
+
+    expect(getFilterChipLabels()).toEqual([
+      'Leads',
+      'Hot',
+      'Engaged',
+      'All',
+      'Cultivate',
+      'Mutual',
+      'Quiet',
+      'Costly',
+      'Bots',
+      'Ignored',
+    ]);
   });
 
   it('groups filter chips with per-group outline colors', () => {

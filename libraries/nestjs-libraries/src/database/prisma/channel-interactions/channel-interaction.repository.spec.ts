@@ -32,6 +32,43 @@ const event = (overrides: Record<string, any> = {}) => ({
   ...overrides,
 });
 
+const interactionCounts = (
+  overrides: Record<string, { inbound?: number; outbound?: number }> = {}
+) => ({
+  like: { inbound: 0, outbound: 0 },
+  mention: { inbound: 0, outbound: 0 },
+  repost: { inbound: 0, outbound: 0 },
+  reply: { inbound: 0, outbound: 0 },
+  follow: { inbound: 0, outbound: 0 },
+  ...Object.fromEntries(
+    Object.entries(overrides).map(([kind, value]) => [
+      kind,
+      { inbound: 0, outbound: 0, ...value },
+    ])
+  ),
+});
+
+const growSelection = {
+  strategyId: 'grow_audience' as const,
+  strategyVersion: 1,
+};
+
+const growIntegrationFilter = {
+  is: { strategyId: { notIn: ['lead_capture', 'community_retention', 'brand_awareness', 'customer_support'] } },
+};
+
+const snapshotInput = (overrides: Record<string, any> = {}) => ({
+  externalId: 'person-1',
+  effortScore: 12,
+  reciprocationScore: 8,
+  reciprocity: 2 / 3,
+  grade: 2,
+  formulaVersion: 2,
+  triage: 'over_invested' as const,
+  ...growSelection,
+  ...overrides,
+});
+
 const createHarness = () => {
   const tx = {
     integration: { findFirst: jest.fn().mockResolvedValue({ id: 'integration' }) },
@@ -985,7 +1022,7 @@ describe('ChannelInteractionRepository', () => {
     }));
   });
 
-  it('builds a bounded due batch from events with directional E/R scores', async () => {
+  it('builds a bounded due batch of per-kind interaction counts', async () => {
     const { repository, tx, groupBy } = createHarness();
     tx.channelAudienceMember.findMany.mockResolvedValue([
       { externalId: 'outbound-only' },
@@ -1002,9 +1039,13 @@ describe('ChannelInteractionRepository', () => {
     await expect(
       repository.getDueRelationshipGradeBatch('org', 'integration', snapshotAt)
     ).resolves.toEqual({
+      strategy: growSelection,
       members: [
-        { externalId: 'outbound-only', effortScore: 8, reciprocationScore: 0 },
-        { externalId: 'zero-activity', effortScore: 0, reciprocationScore: 0 },
+        {
+          externalId: 'outbound-only',
+          interactionCounts: interactionCounts({ reply: { outbound: 2 } }),
+        },
+        { externalId: 'zero-activity', interactionCounts: interactionCounts() },
       ],
     });
     expect(tx.channelAudienceMember.findMany).toHaveBeenLastCalledWith(
@@ -1015,6 +1056,8 @@ describe('ChannelInteractionRepository', () => {
           gradeSnapshots: {
             none: {
               formulaVersion: 3,
+              relationshipStrategyId: 'grow_audience',
+              relationshipStrategyVersion: 1,
               snapshotAt: { gt: new Date('2026-08-09T12:00:00.000Z') },
             },
           },
@@ -1035,14 +1078,12 @@ describe('ChannelInteractionRepository', () => {
     const { repository, tx } = createHarness();
     const snapshotAt = new Date('2026-08-12T12:00:00.000Z');
 
-    await repository.createRelationshipGradeSnapshots('org', 'integration', snapshotAt, [{
-      externalId: 'person-1',
-      effortScore: 12,
-      reciprocationScore: 8,
-      reciprocity: 2 / 3,
-      grade: 2,
-      formulaVersion: 2,
-    }]);
+    await repository.createRelationshipGradeSnapshots(
+      'org',
+      'integration',
+      snapshotAt,
+      [snapshotInput()]
+    );
 
     expect(tx.channelRelationshipGradeSnapshot.createMany).toHaveBeenCalledWith({
       data: [{
@@ -1056,6 +1097,8 @@ describe('ChannelInteractionRepository', () => {
         reciprocity: 2 / 3,
         grade: 2,
         formulaVersion: 2,
+        relationshipStrategyId: 'grow_audience',
+        relationshipStrategyVersion: 1,
       }],
       skipDuplicates: true,
     });
@@ -1064,6 +1107,7 @@ describe('ChannelInteractionRepository', () => {
         organizationId: 'org',
         integrationId: 'integration',
         externalId: 'person-1',
+        integration: growIntegrationFilter,
         OR: [
           { relationshipSnapshotAt: null },
           { relationshipSnapshotAt: { lte: snapshotAt } },
@@ -1076,12 +1120,38 @@ describe('ChannelInteractionRepository', () => {
         relationshipNetGap: -4,
         relationshipTriage: 'over_invested',
         relationshipFormulaVersion: 2,
+        relationshipStrategyId: 'grow_audience',
+        relationshipStrategyVersion: 1,
         relationshipSnapshotAt: snapshotAt,
       },
     });
   });
 
-  it('aggregates targeted member scores without writing snapshots', async () => {
+  it('scopes projection writes to the strategy the batch was scored with', async () => {
+    const { repository, tx } = createHarness();
+    const snapshotAt = new Date('2026-08-12T12:00:00.000Z');
+
+    await repository.updateCurrentRelationshipProjections(
+      'org',
+      'integration',
+      snapshotAt,
+      [snapshotInput({ strategyId: 'lead_capture', triage: 'hot_lead' })]
+    );
+
+    expect(tx.channelAudienceMember.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          integration: { is: { strategyId: { equals: 'lead_capture' } } },
+        }),
+        data: expect.objectContaining({
+          relationshipStrategyId: 'lead_capture',
+          relationshipTriage: 'hot_lead',
+        }),
+      })
+    );
+  });
+
+  it('aggregates targeted member counts without writing snapshots', async () => {
     const { repository, tx, groupBy } = createHarness();
     groupBy.mockResolvedValue([{
       counterpartyExternalId: 'person-1',
@@ -1099,9 +1169,16 @@ describe('ChannelInteractionRepository', () => {
         snapshotAt
       )
     ).resolves.toEqual({
+      strategy: growSelection,
       members: [
-        { externalId: 'person-1', effortScore: 8, reciprocationScore: 0 },
-        { externalId: 'quiet-follower', effortScore: 0, reciprocationScore: 0 },
+        {
+          externalId: 'person-1',
+          interactionCounts: interactionCounts({ reply: { outbound: 2 } }),
+        },
+        {
+          externalId: 'quiet-follower',
+          interactionCounts: interactionCounts(),
+        },
       ],
     });
     expect(groupBy).toHaveBeenLastCalledWith(expect.objectContaining({
@@ -1121,14 +1198,12 @@ describe('ChannelInteractionRepository', () => {
     const snapshotAt = new Date('2026-08-12T12:00:00.000Z');
 
     await expect(
-      repository.updateCurrentRelationshipProjections('org', 'integration', snapshotAt, [{
-        externalId: 'person-1',
-        effortScore: 12,
-        reciprocationScore: 8,
-        reciprocity: 2 / 3,
-        grade: 2,
-        formulaVersion: 2,
-      }])
+      repository.updateCurrentRelationshipProjections(
+        'org',
+        'integration',
+        snapshotAt,
+        [snapshotInput()]
+      )
     ).resolves.toEqual({ count: 1 });
     expect(tx.channelRelationshipGradeSnapshot.createMany).not.toHaveBeenCalled();
     expect(tx.channelAudienceMember.updateMany).toHaveBeenCalledWith({
@@ -1136,6 +1211,7 @@ describe('ChannelInteractionRepository', () => {
         organizationId: 'org',
         integrationId: 'integration',
         externalId: 'person-1',
+        integration: growIntegrationFilter,
         OR: [
           { relationshipSnapshotAt: null },
           { relationshipSnapshotAt: { lte: snapshotAt } },
@@ -1148,6 +1224,8 @@ describe('ChannelInteractionRepository', () => {
         relationshipNetGap: -4,
         relationshipTriage: 'over_invested',
         relationshipFormulaVersion: 2,
+        relationshipStrategyId: 'grow_audience',
+        relationshipStrategyVersion: 1,
         relationshipSnapshotAt: snapshotAt,
       },
     });
@@ -1209,7 +1287,7 @@ describe('ChannelInteractionRepository', () => {
     });
   });
 
-  it('requires a recent formula-v3 snapshot before a follower is current', async () => {
+  it('requires a recent formula-v3 snapshot for the selected strategy', async () => {
     const { repository, tx } = createHarness();
     const snapshotAt = new Date('2026-08-12T12:00:00.000Z');
 
@@ -1220,15 +1298,34 @@ describe('ChannelInteractionRepository', () => {
         organizationId: 'org',
         integrationId: 'integration',
         membershipState: ChannelAudienceMembership.FOLLOWER,
-        gradeSnapshots: {
-          none: {
-            formulaVersion: 3,
-            snapshotAt: { gt: new Date('2026-08-09T12:00:00.000Z') },
+        OR: expect.arrayContaining([
+          {
+            integration: growIntegrationFilter,
+            gradeSnapshots: {
+              none: {
+                formulaVersion: 3,
+                relationshipStrategyId: 'grow_audience',
+                relationshipStrategyVersion: 1,
+                snapshotAt: { gt: new Date('2026-08-09T12:00:00.000Z') },
+              },
+            },
           },
-        },
+          {
+            integration: { is: { strategyId: { equals: 'lead_capture' } } },
+            gradeSnapshots: {
+              none: {
+                formulaVersion: 3,
+                relationshipStrategyId: 'lead_capture',
+                relationshipStrategyVersion: 1,
+                snapshotAt: { gt: new Date('2026-08-09T12:00:00.000Z') },
+              },
+            },
+          },
+        ]),
       },
       select: { id: true },
     });
+    expect(tx.channelAudienceMember.findFirst.mock.calls[0][0].where.OR).toHaveLength(5);
   });
 
   it('uses a custom cadence when checking due relationship grades', async () => {
@@ -1243,12 +1340,16 @@ describe('ChannelInteractionRepository', () => {
     expect(tx.channelAudienceMember.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          gradeSnapshots: {
-            none: {
-              formulaVersion: 3,
-              snapshotAt: { gt: new Date('2026-08-12T11:00:00.000Z') },
-            },
-          },
+          OR: expect.arrayContaining([
+            expect.objectContaining({
+              gradeSnapshots: {
+                none: expect.objectContaining({
+                  formulaVersion: 3,
+                  snapshotAt: { gt: new Date('2026-08-12T11:00:00.000Z') },
+                }),
+              },
+            }),
+          ]),
         }),
       })
     );
@@ -1268,15 +1369,87 @@ describe('ChannelInteractionRepository', () => {
     expect(tx.channelAudienceMember.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          gradeSnapshots: {
-            none: {
-              formulaVersion: 3,
-              snapshotAt: { gt: new Date('2026-07-12T12:00:00.000Z') },
-            },
-          },
+          OR: expect.arrayContaining([
+            expect.objectContaining({
+              gradeSnapshots: {
+                none: expect.objectContaining({
+                  formulaVersion: 3,
+                  snapshotAt: { gt: new Date('2026-07-12T12:00:00.000Z') },
+                }),
+              },
+            }),
+          ]),
         }),
       })
     );
+  });
+
+  it('reports stale projections while a strategy recompute is pending', async () => {
+    const { repository, tx } = createHarness();
+    tx.channelAudienceMember.findFirst.mockResolvedValue({ id: 'member-1' });
+
+    await expect(
+      repository.hasStaleRelationshipProjections('org', 'integration', {
+        strategyId: 'lead_capture',
+        strategyVersion: 2,
+      })
+    ).resolves.toBe(true);
+    expect(tx.channelAudienceMember.findFirst).toHaveBeenCalledWith({
+      where: {
+        organizationId: 'org',
+        integrationId: 'integration',
+        membershipState: ChannelAudienceMembership.FOLLOWER,
+        OR: [
+          { relationshipFormulaVersion: null },
+          { relationshipFormulaVersion: { not: 3 } },
+          { relationshipStrategyId: null },
+          { relationshipStrategyId: { not: 'lead_capture' } },
+          { relationshipStrategyVersion: null },
+          { relationshipStrategyVersion: { not: 2 } },
+        ],
+      },
+      select: { id: true },
+    });
+  });
+
+  it('selects due channels per stored strategy identity including migrated rows', async () => {
+    const { repository, integrationFindMany } = createHarness();
+    integrationFindMany.mockResolvedValue([
+      { id: 'integration-a', organizationId: 'org' },
+    ]);
+    const snapshotAt = new Date('2026-08-12T12:00:00.000Z');
+
+    await expect(
+      repository.listDueRelationshipGradeCandidates(snapshotAt)
+    ).resolves.toEqual({
+      candidates: [{ id: 'integration-a', organizationId: 'org' }],
+      next: undefined,
+    });
+    const where = integrationFindMany.mock.calls[0][0].where;
+    expect(where.OR).toHaveLength(5);
+    expect(where.OR).toContainEqual({
+      strategyId: {
+        notIn: [
+          'lead_capture',
+          'community_retention',
+          'brand_awareness',
+          'customer_support',
+        ],
+      },
+      channelAudienceMembers: {
+        some: {
+          membershipState: ChannelAudienceMembership.FOLLOWER,
+          gradeSnapshots: {
+            none: {
+              formulaVersion: 3,
+              relationshipStrategyId: 'grow_audience',
+              relationshipStrategyVersion: 1,
+              snapshotAt: { gt: new Date('2026-08-09T12:00:00.000Z') },
+            },
+          },
+        },
+      },
+    });
   });
 
   it('increments inbound counts for inbound likes without likesCount', async () => {
@@ -1441,14 +1614,14 @@ describe('ChannelInteractionRepository', () => {
         'org',
         'integration',
         snapshotAt,
-        [{
-          externalId: 'person-1',
+        [snapshotInput({
           effortScore: 4,
           reciprocationScore: 12,
           reciprocity: 1 / 3,
           grade: 3,
           formulaVersion: 3,
-        }],
+          triage: 'hot_lead',
+        })],
         { force: true }
       )
     ).resolves.toEqual({ count: 1 });
@@ -1457,6 +1630,7 @@ describe('ChannelInteractionRepository', () => {
         organizationId: 'org',
         integrationId: 'integration',
         externalId: 'person-1',
+        integration: growIntegrationFilter,
       },
       data: expect.objectContaining({
         relationshipEffortScore: 4,

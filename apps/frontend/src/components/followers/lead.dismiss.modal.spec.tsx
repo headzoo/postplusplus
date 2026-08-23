@@ -7,7 +7,16 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { LeadDismissModal } from './lead.dismiss.modal';
 
 jest.mock('@gitroom/react/translation/get.transation.service.client', () => ({
-  useT: () => (key: string, fallback: string) => fallback,
+  useT: () => (key: string, fallback: string, params?: Record<string, unknown>) => {
+    if (!params) {
+      return fallback;
+    }
+    return Object.entries(params).reduce(
+      (result, [name, value]) =>
+        result.replace(new RegExp(`{{${name}}}`, 'g'), String(value)),
+      fallback
+    );
+  },
 }));
 
 const closeCurrent = jest.fn();

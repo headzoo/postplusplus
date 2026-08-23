@@ -6,6 +6,7 @@ import {
   Injectable,
   BadRequestException,
   ConflictException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { IntegrationRepository } from '@gitroom/nestjs-libraries/database/prisma/integrations/integration.repository';
@@ -95,6 +96,14 @@ import {
 } from '@gitroom/nestjs-libraries/database/prisma/channel-interactions/channel-interaction.repository';
 import { ChannelAnalyticsService } from '@gitroom/nestjs-libraries/database/prisma/channel-analytics/channel-analytics.service';
 import { ChannelAnalyticsRepository } from '@gitroom/nestjs-libraries/database/prisma/channel-analytics/channel-analytics.repository';
+import { UpdateChannelStrategyDto } from '@gitroom/nestjs-libraries/dtos/integrations/channel-strategy.dto';
+import {
+  getChannelStrategy,
+  isChannelStrategyId,
+  resolveChannelStrategy,
+} from '@gitroom/nestjs-libraries/channel-strategies/channel-strategy.registry';
+import { getRelationshipTriage as getStrategyRelationshipTriage } from '@gitroom/nestjs-libraries/channel-strategies/channel-strategy.scoring';
+import { RelationshipGradeScheduleService } from '@gitroom/nestjs-libraries/temporal/relationship-grade.schedule.service';
 
 dayjs.extend(utc);
 
@@ -103,6 +112,7 @@ const FOLLOWER_IGNORED_BACKFILL_MAX_PAGES = 5;
 @Injectable()
 export class IntegrationService {
   private storage = UploadFactory.createStorage();
+  private readonly _logger = new Logger(IntegrationService.name);
   constructor(
     private _integrationRepository: IntegrationRepository,
     private _autopostsRepository: AutopostRepository,
@@ -115,7 +125,8 @@ export class IntegrationService {
     private _channelInteractionService: ChannelInteractionService,
     private _channelInteractionRepository: ChannelInteractionRepository,
     private _channelAnalyticsService: ChannelAnalyticsService,
-    private _channelAnalyticsRepository: ChannelAnalyticsRepository
+    private _channelAnalyticsRepository: ChannelAnalyticsRepository,
+    private _relationshipGradeScheduleService: RelationshipGradeScheduleService
   ) { }
 
   async changeActiveCron(orgId: string) {
@@ -155,6 +166,71 @@ export class IntegrationService {
       id,
       additionalSettings
     );
+  }
+
+  async updateChannelStrategy(
+    orgId: string,
+    integrationId: string,
+    body: UpdateChannelStrategyDto
+  ) {
+    const integration = await this._integrationRepository.getIntegrationById(
+      orgId,
+      integrationId
+    );
+    if (!integration || integration.deletedAt) {
+      throw new NotFoundException('Integration not found');
+    }
+    if (integration.disabled) {
+      throw new BadRequestException('Disabled channels cannot update strategy');
+    }
+    if (integration.type !== 'social') {
+      throw new BadRequestException('Channel strategy is only available for social channels');
+    }
+
+    let provider: SocialProvider | undefined;
+    try {
+      provider = this._integrationManager.getSocialIntegration(
+        integration.providerIdentifier
+      );
+    } catch {
+      provider = undefined;
+    }
+    if (!provider) {
+      throw new BadRequestException('Channel provider is not available');
+    }
+    if (!provider.followers) {
+      throw new BadRequestException(
+        'Channel strategy requires follower identities'
+      );
+    }
+
+    if (!isChannelStrategyId(body.strategyId)) {
+      throw new BadRequestException('Unsupported channel strategy');
+    }
+    const strategy = getChannelStrategy(body.strategyId);
+    const changed = await this._integrationRepository.updateStrategy(
+      orgId,
+      integrationId,
+      strategy.id,
+      strategy.version
+    );
+    let recomputeRequested = false;
+    if (changed) {
+      try {
+        await this._relationshipGradeScheduleService.trigger();
+        recomputeRequested = true;
+      } catch (error) {
+        this._logger?.error(
+          `Failed to request relationship grade recomputation for channel ${integrationId}`,
+          error instanceof Error ? error.stack : String(error)
+        );
+      }
+    }
+
+    return {
+      strategy: this.publicStrategy(strategy),
+      recomputeRequested,
+    };
   }
 
   async listIntegrationContextDocuments(orgId: string, integrationId: string) {
@@ -416,6 +492,16 @@ export class IntegrationService {
               interactionCapability.getInteractionCoverage()
             )
             : undefined;
+          const strategy = resolveChannelStrategy(integration.strategyId);
+          const recomputing =
+            await this._channelInteractionRepository.hasStaleRelationshipProjections(
+              org.id,
+              integration.id,
+              {
+                strategyId: strategy.id,
+                strategyVersion: strategy.version,
+              }
+            );
           return {
             id: integration.id,
             name: integration.name,
@@ -423,6 +509,8 @@ export class IntegrationService {
             display: integration.profile || undefined,
             identifier: integration.providerIdentifier,
             sorts: this.getFollowerSorts(provider),
+            strategy: this.publicFollowerStrategy(strategy),
+            recomputing,
             ...(tracking ? { tracking } : {}),
           };
         })
@@ -494,6 +582,15 @@ export class IntegrationService {
           ),
       }
       : undefined;
+    const strategyApplicable = !!provider?.followers;
+    const strategy = resolveChannelStrategy(integration.strategyId);
+    const recomputing = strategyApplicable
+      ? await this._channelInteractionRepository.hasStaleRelationshipProjections(
+        org.id,
+        integration.id,
+        { strategyId: strategy.id, strategyVersion: strategy.version }
+      )
+      : false;
 
     return {
       id: integration.id,
@@ -509,8 +606,42 @@ export class IntegrationService {
       ...(integration.deletedAt ? { deleted: true } : {}),
       ...(profileUrl ? { profileUrl } : {}),
       ...(trackingAuthorization ? { trackingAuthorization } : {}),
+      strategyApplicable,
+      ...(strategyApplicable
+        ? { strategy: this.publicStrategy(strategy), recomputing }
+        : {}),
+      recomputeRequested: false,
       tracking,
       subscriptions: this.mapChannelSubscriptions(tracked.subscriptions),
+    };
+  }
+
+  private publicStrategy(strategy: ReturnType<typeof resolveChannelStrategy>) {
+    return {
+      id: strategy.id,
+      version: strategy.version,
+      label: strategy.label,
+      description: strategy.description,
+    };
+  }
+
+  private publicFollowerStrategy(
+    strategy: ReturnType<typeof resolveChannelStrategy>
+  ) {
+    return {
+      id: strategy.id,
+      version: strategy.version,
+      summary: strategy.description,
+      ui: {
+        defaultFilter: strategy.ui.defaultFilter,
+        defaultSort: strategy.ui.defaultSort,
+        filterPriority: strategy.ui.filterPriority,
+        filterEmphasis: strategy.ui.filterEmphasis,
+        compactMetrics: strategy.ui.compactMetrics,
+        emptyState: strategy.ui.emptyState,
+        assistantInitialCopy: strategy.ui.assistantInitialCopy,
+        suggestedQuestions: strategy.ui.suggestedQuestions,
+      },
     };
   }
 
@@ -1396,6 +1527,8 @@ export class IntegrationService {
         relationshipNetGap: number | null;
         relationshipTriage: string | null;
         relationshipFormulaVersion: number | null;
+        relationshipStrategyId?: string | null;
+        relationshipStrategyVersion?: number | null;
         relationshipSnapshotAt: Date | null;
         triageIgnores?: Array<{ triage: string }>;
       };
@@ -1407,6 +1540,8 @@ export class IntegrationService {
         reciprocity: number | null;
         grade: number | null;
         formulaVersion: number;
+        relationshipStrategyId?: string | null;
+        relationshipStrategyVersion?: number | null;
       }>;
       notes: Array<{
         id: string;
@@ -1761,7 +1896,10 @@ export class IntegrationService {
       relationshipGrade?: number | null;
       relationshipEffortScore?: number | null;
       relationshipReciprocationScore?: number | null;
+      relationshipTriage?: string | null;
       relationshipFormulaVersion?: number | null;
+      relationshipStrategyId?: string | null;
+      relationshipStrategyVersion?: number | null;
       relationshipSnapshotAt?: Date | null;
     },
     myGrade?: number | null
@@ -1794,11 +1932,20 @@ export class IntegrationService {
         grade: member.relationshipGrade ?? calculated.grade,
         formulaVersion:
           member.relationshipFormulaVersion ?? RELATIONSHIP_FORMULA_VERSION,
+        relationshipStrategyId: member.relationshipStrategyId,
+        relationshipStrategyVersion: member.relationshipStrategyVersion,
       },
-      myGrade
+      myGrade,
+      this.isRelationshipTriage(member.relationshipTriage)
+        ? member.relationshipTriage
+        : undefined
     );
   }
 
+  /**
+   * Stored rows keep the strategy identity they were graded with, so a channel
+   * that switched strategy never re-derives old grades with the new profile.
+   */
   private mapFollowerRelationshipSnapshot(
     snapshot: {
       snapshotAt: Date;
@@ -1808,9 +1955,15 @@ export class IntegrationService {
       reciprocity: number | null;
       grade: number | null;
       formulaVersion: number;
+      relationshipStrategyId?: string | null;
+      relationshipStrategyVersion?: number | null;
     },
-    myGrade?: number | null
+    myGrade?: number | null,
+    storedTriage?: RelationshipTriage
   ): FollowerRelationshipSnapshot {
+    const strategy = isChannelStrategyId(snapshot.relationshipStrategyId)
+      ? getChannelStrategy(snapshot.relationshipStrategyId)
+      : undefined;
     return {
       snapshotAt: snapshot.snapshotAt.toISOString(),
       windowStartedAt: snapshot.windowStartedAt.toISOString(),
@@ -1821,11 +1974,25 @@ export class IntegrationService {
       adjustedGrade: applyPersonalRelationshipGrade(snapshot.grade, myGrade),
       effortStars: scoreToStars(snapshot.effortScore),
       reciprocationStars: scoreToStars(snapshot.reciprocationScore),
-      triage: getRelationshipTriage(
-        snapshot.effortScore,
-        snapshot.reciprocationScore
-      ),
+      triage:
+        storedTriage ??
+        (strategy
+          ? getStrategyRelationshipTriage(
+            {
+              effortScore: snapshot.effortScore,
+              reciprocationScore: snapshot.reciprocationScore,
+            },
+            strategy.getScoringProfile()
+          )
+          : getRelationshipTriage(
+            snapshot.effortScore,
+            snapshot.reciprocationScore
+          )),
       formulaVersion: snapshot.formulaVersion,
+      ...(strategy ? { strategyId: strategy.id } : {}),
+      ...(Number.isSafeInteger(snapshot.relationshipStrategyVersion)
+        ? { strategyVersion: snapshot.relationshipStrategyVersion! }
+        : {}),
     };
   }
 

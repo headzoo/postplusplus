@@ -458,6 +458,29 @@ export class IntegrationRepository {
     });
   }
 
+  async updateStrategy(
+    orgId: string,
+    integrationId: string,
+    strategyId: string,
+    strategyVersion: number
+  ) {
+    const result = await this._integration.model.integration.updateMany({
+      where: {
+        id: integrationId,
+        organizationId: orgId,
+        OR: [
+          { strategyId: { not: strategyId } },
+          { strategyVersion: { not: strategyVersion } },
+        ],
+      },
+      data: {
+        strategyId,
+        strategyVersion,
+      },
+    });
+    return result.count > 0;
+  }
+
   async getIntegrationForOrder(
     id: string,
     order: string,

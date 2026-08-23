@@ -422,7 +422,7 @@ describe('FollowerCard', () => {
     expect(onOpen).not.toHaveBeenCalled();
     expect(triageDismissOpen).toHaveBeenCalledWith('Hot');
     await Promise.resolve();
-    expect(onDismissTriage).toHaveBeenCalledWith('hot_lead');
+    expect(onDismissTriage).toHaveBeenCalledWith('hot_lead', undefined, undefined);
   });
 
   it('snoozes a triage badge when snooze is chosen', async () => {
@@ -557,7 +557,7 @@ describe('FollowerCard', () => {
       screen.getByRole('button', { name: 'Remove Cultivate badge' })
     );
     await Promise.resolve();
-    expect(onDismissTriage).toHaveBeenCalledWith('cultivate');
+    expect(onDismissTriage).toHaveBeenCalledWith('cultivate', undefined, undefined);
   });
 
   it('renders Via badge under the username', () => {

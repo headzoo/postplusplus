@@ -7,6 +7,7 @@ import type {
 
 import { Integration } from '@prisma/client';
 import { RelationshipTriage } from '@gitroom/nestjs-libraries/database/prisma/channel-interactions/channel-interaction.scoring';
+import { ChannelStrategyId } from '@gitroom/nestjs-libraries/channel-strategies/channel-strategy.types';
 
 export interface ClientInformation {
   client_id: string;
@@ -590,6 +591,8 @@ export type FollowerRelationshipSnapshot = {
   reciprocationStars: number;
   triage: RelationshipTriage | null;
   formulaVersion: number;
+  strategyId?: ChannelStrategyId;
+  strategyVersion?: number;
 };
 
 export type FollowerRelationship = {

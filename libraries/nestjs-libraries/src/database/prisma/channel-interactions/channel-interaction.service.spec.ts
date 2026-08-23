@@ -9,6 +9,10 @@ import {
   getRelationshipTriage,
   scoreToStars,
 } from './channel-interaction.service';
+import { calculateRelationshipGrade as calculateStrategyGrade } from '@gitroom/nestjs-libraries/channel-strategies/channel-strategy.scoring';
+import { getChannelStrategy } from '@gitroom/nestjs-libraries/channel-strategies/channel-strategy.registry';
+import { ChannelStrategyId } from '@gitroom/nestjs-libraries/channel-strategies/channel-strategy.types';
+import { growAudienceStrategy } from '@gitroom/nestjs-libraries/channel-strategies/strategies/grow-audience.strategy';
 
 jest.mock(
   '@gitroom/nestjs-libraries/integrations/integration.manager',
@@ -26,6 +30,44 @@ jest.mock('@gitroom/nestjs-libraries/redis/redis.service', () => ({
     expire: jest.fn().mockResolvedValue(1),
   },
 }));
+
+const growStrategy = {
+  strategyId: 'grow_audience' as const,
+  strategyVersion: 1,
+};
+
+const interactionCounts = (
+  overrides: Record<string, { inbound?: number; outbound?: number }> = {}
+) => ({
+  like: { inbound: 0, outbound: 0 },
+  mention: { inbound: 0, outbound: 0 },
+  repost: { inbound: 0, outbound: 0 },
+  reply: { inbound: 0, outbound: 0 },
+  follow: { inbound: 0, outbound: 0 },
+  ...Object.fromEntries(
+    Object.entries(overrides).map(([kind, value]) => [
+      kind,
+      { inbound: 0, outbound: 0, ...value },
+    ])
+  ),
+});
+
+const strategyGrade = (
+  strategyId: ChannelStrategyId,
+  effortScore: number,
+  reciprocationScore: number
+) => {
+  const strategy = getChannelStrategy(strategyId);
+  return calculateStrategyGrade(
+    { effortScore, reciprocationScore },
+    strategy.id,
+    strategy.version,
+    strategy.getScoringProfile()
+  );
+};
+
+const growGrade = (effortScore: number, reciprocationScore: number) =>
+  strategyGrade('grow_audience', effortScore, reciprocationScore);
 
 const interaction = (overrides: Record<string, any> = {}) => ({
   providerEventKey: 'provider-event-1',
@@ -62,10 +104,16 @@ const createRepository = () => ({
   markSubscriptionsForRemoval: jest.fn().mockResolvedValue({ count: 0 }),
   getInteractionAuthorization: jest.fn().mockResolvedValue(null),
   saveInteractionAuthorization: jest.fn().mockResolvedValue({}),
-  getDueRelationshipGradeBatch: jest.fn().mockResolvedValue({ members: [] }),
+  getDueRelationshipGradeBatch: jest.fn().mockResolvedValue({
+    members: [],
+    strategy: growStrategy,
+  }),
   createRelationshipGradeSnapshots: jest.fn().mockResolvedValue({ count: 0 }),
   hasDueRelationshipGradeMembers: jest.fn().mockResolvedValue(false),
-  getRelationshipScoresForMembers: jest.fn().mockResolvedValue({ members: [] }),
+  getRelationshipScoresForMembers: jest.fn().mockResolvedValue({
+    members: [],
+    strategy: growStrategy,
+  }),
   getCurrentRelationshipProjection: jest.fn().mockResolvedValue(null),
   updateCurrentRelationshipProjections: jest.fn().mockResolvedValue({ count: 0 }),
   upsertAudienceMemberGrade: jest.fn().mockResolvedValue({
@@ -484,7 +532,10 @@ describe('ChannelInteractionService', () => {
   it('creates zero-activity snapshots through the repository batch operation', async () => {
     const repository = createRepository();
     repository.getDueRelationshipGradeBatch.mockResolvedValue({
-      members: [{ externalId: 'quiet-follower', effortScore: 0, reciprocationScore: 0 }],
+      strategy: growStrategy,
+      members: [
+        { externalId: 'quiet-follower', interactionCounts: interactionCounts() },
+      ],
     });
     const service = new ChannelInteractionService(repository as any);
     const snapshotAt = new Date('2026-08-12T12:00:00.000Z');
@@ -500,11 +551,95 @@ describe('ChannelInteractionService', () => {
         externalId: 'quiet-follower',
         effortScore: 0,
         reciprocationScore: 0,
-        reciprocity: null,
-        grade: null,
-        formulaVersion: 3,
+        ...growGrade(0, 0),
       }]
     );
+  });
+
+  it('scores a scheduled batch with the strategy selected for the channel', async () => {
+    const repository = createRepository();
+    repository.getDueRelationshipGradeBatch.mockResolvedValue({
+      strategy: { strategyId: 'lead_capture', strategyVersion: 1 },
+      members: [
+        {
+          externalId: 'person-1',
+          interactionCounts: interactionCounts({ reply: { inbound: 1 } }),
+        },
+      ],
+    });
+    const service = new ChannelInteractionService(repository as any);
+    const snapshotAt = new Date('2026-08-12T12:00:00.000Z');
+
+    await service.buildRelationshipGradeSnapshotBatch(
+      'org',
+      'integration',
+      snapshotAt
+    );
+
+    const [snapshot] =
+      repository.createRelationshipGradeSnapshots.mock.calls[0][3];
+    const leadWeight = getChannelStrategy('lead_capture').getScoringProfile()
+      .interactionWeights.reply.inbound;
+    expect(snapshot).toEqual({
+      externalId: 'person-1',
+      effortScore: 0,
+      reciprocationScore: leadWeight,
+      ...strategyGrade('lead_capture', 0, leadWeight),
+    });
+    expect(snapshot.strategyId).toBe('lead_capture');
+    expect(snapshot.strategyVersion).toBe(1);
+  });
+
+  it('resolves the strategy and scoring profile once for a whole batch', async () => {
+    const repository = createRepository();
+    repository.getDueRelationshipGradeBatch.mockResolvedValue({
+      strategy: growStrategy,
+      members: ['a', 'b', 'c'].map((externalId) => ({
+        externalId,
+        interactionCounts: interactionCounts({ like: { inbound: 2 } }),
+      })),
+    });
+    const profileSpy = jest.spyOn(growAudienceStrategy, 'getScoringProfile');
+    const service = new ChannelInteractionService(repository as any);
+
+    await service.buildRelationshipGradeSnapshotBatch(
+      'org',
+      'integration',
+      new Date('2026-08-12T12:00:00.000Z')
+    );
+
+    expect(repository.createRelationshipGradeSnapshots.mock.calls[0][3]).toHaveLength(3);
+    expect(profileSpy).toHaveBeenCalledTimes(1);
+    profileSpy.mockRestore();
+  });
+
+  it('falls back to grow audience when a channel stores an unknown strategy', async () => {
+    const repository = createRepository();
+    repository.getDueRelationshipGradeBatch.mockResolvedValue({
+      strategy: { strategyId: 'retired_strategy', strategyVersion: 9 },
+      members: [
+        {
+          externalId: 'person-1',
+          interactionCounts: interactionCounts({ follow: { inbound: 1 } }),
+        },
+      ],
+    });
+    const service = new ChannelInteractionService(repository as any);
+
+    await service.buildRelationshipGradeSnapshotBatch(
+      'org',
+      'integration',
+      new Date('2026-08-12T12:00:00.000Z')
+    );
+
+    expect(
+      repository.createRelationshipGradeSnapshots.mock.calls[0][3][0]
+    ).toEqual({
+      externalId: 'person-1',
+      effortScore: 0,
+      reciprocationScore: 10,
+      ...growGrade(0, 10),
+    });
   });
 
   it('records normalized events and reports duplicate deliveries', async () => {
@@ -535,8 +670,15 @@ describe('ChannelInteractionService', () => {
   it('refreshes unique counterparties after newly created webhook events', async () => {
     const repository = createRepository();
     repository.getRelationshipScoresForMembers.mockResolvedValue({
+      strategy: growStrategy,
       members: [
-        { externalId: 'person-1', effortScore: 4, reciprocationScore: 2 },
+        {
+          externalId: 'person-1',
+          interactionCounts: interactionCounts({
+            reply: { outbound: 1 },
+            like: { inbound: 1 },
+          }),
+        },
       ],
     });
     const service = new ChannelInteractionService(repository as any);
@@ -564,8 +706,35 @@ describe('ChannelInteractionService', () => {
         externalId: 'person-1',
         effortScore: 4,
         reciprocationScore: 2,
-        ...calculateRelationshipGrade(4, 2),
+        ...growGrade(4, 2),
       }]
+    );
+  });
+
+  it('writes live webhook refreshes with the newly selected strategy', async () => {
+    const repository = createRepository();
+    repository.getRelationshipScoresForMembers.mockResolvedValue({
+      strategy: { strategyId: 'customer_support', strategyVersion: 1 },
+      members: [
+        {
+          externalId: 'person-1',
+          interactionCounts: interactionCounts({ reply: { inbound: 1 } }),
+        },
+      ],
+    });
+    const service = new ChannelInteractionService(repository as any);
+
+    await service.recordNormalizedDelivery('org', 'integration', [
+      interaction(),
+    ] as any);
+
+    const [projection] =
+      repository.updateCurrentRelationshipProjections.mock.calls[0][3];
+    expect(projection.strategyId).toBe('customer_support');
+    expect(projection.strategyVersion).toBe(1);
+    expect(projection.reciprocationScore).toBe(
+      getChannelStrategy('customer_support').getScoringProfile()
+        .interactionWeights.reply.inbound
     );
   });
 
@@ -1630,7 +1799,16 @@ describe('ChannelInteractionService', () => {
       relationshipReciprocationScore: 5,
     });
     repository.getRelationshipScoresForMembers.mockResolvedValue({
-      members: [{ externalId: 'follower-a', effortScore: 20, reciprocationScore: 30 }],
+      strategy: growStrategy,
+      members: [
+        {
+          externalId: 'follower-a',
+          interactionCounts: interactionCounts({
+            reply: { outbound: 5 },
+            follow: { inbound: 3 },
+          }),
+        },
+      ],
     });
     const service = new ChannelInteractionService(repository as any);
     const snapshotAt = new Date('2026-08-12T12:05:00.000Z');
@@ -1647,7 +1825,7 @@ describe('ChannelInteractionService', () => {
       externalId: 'follower-a',
       effortScore: 10,
       reciprocationScore: 30,
-      ...calculateRelationshipGrade(10, 30),
+      ...growGrade(10, 30),
       snapshotAt,
     });
     expect(repository.updateCurrentRelationshipProjections).toHaveBeenCalledWith(
@@ -1658,7 +1836,7 @@ describe('ChannelInteractionService', () => {
         externalId: 'follower-a',
         effortScore: 10,
         reciprocationScore: 30,
-        ...calculateRelationshipGrade(10, 30),
+        ...growGrade(10, 30),
       }],
       { force: true }
     );
@@ -1676,8 +1854,44 @@ describe('ChannelInteractionService', () => {
       externalId: 'follower-a',
       effortScore: 20,
       reciprocationScore: 5,
-      ...calculateRelationshipGrade(20, 5),
+      ...growGrade(20, 5),
       snapshotAt,
+    });
+  });
+
+  it('refreshes one member with the strategy the channel now uses', async () => {
+    const repository = createRepository();
+    repository.getCurrentRelationshipProjection.mockResolvedValue({
+      externalId: 'follower-a',
+      relationshipEffortScore: 10,
+      relationshipReciprocationScore: 5,
+    });
+    repository.getRelationshipScoresForMembers.mockResolvedValue({
+      strategy: { strategyId: 'brand_awareness', strategyVersion: 1 },
+      members: [
+        {
+          externalId: 'follower-a',
+          interactionCounts: interactionCounts({ repost: { inbound: 2 } }),
+        },
+      ],
+    });
+    const service = new ChannelInteractionService(repository as any);
+    const brandRepost = getChannelStrategy('brand_awareness')
+      .getScoringProfile().interactionWeights.repost.inbound;
+
+    await expect(
+      service.refreshFollowerRelationshipScore(
+        'org',
+        'integration',
+        'follower-a',
+        'their',
+        new Date('2026-08-12T12:05:00.000Z')
+      )
+    ).resolves.toMatchObject({
+      effortScore: 10,
+      reciprocationScore: brandRepost * 2,
+      strategyId: 'brand_awareness',
+      strategyVersion: 1,
     });
   });
 

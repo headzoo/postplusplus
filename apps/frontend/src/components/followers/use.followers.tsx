@@ -92,6 +92,28 @@ export type FollowerSort = {
   requiresWindow?: boolean;
 };
 
+export type FollowerStrategyMetadata = {
+  id: string;
+  version: number;
+  summary: {
+    key: string;
+    defaultValue: string;
+  };
+  ui: {
+    defaultFilter: string;
+    defaultSort: string;
+    filterPriority: string[];
+    filterEmphasis: string;
+    compactMetrics: Array<{
+      key: string;
+      label: { key: string; defaultValue: string };
+    }>;
+    emptyState: { key: string; defaultValue: string };
+    assistantInitialCopy: { key: string; defaultValue: string };
+    suggestedQuestions: Array<{ key: string; defaultValue: string }>;
+  };
+};
+
 export type FollowerChannel = {
   id: string;
   name: string;
@@ -99,6 +121,8 @@ export type FollowerChannel = {
   display?: string;
   identifier: string;
   sorts: FollowerSort[];
+  strategy?: FollowerStrategyMetadata;
+  recomputing?: boolean;
   tracking?: FollowerPageTracking;
 };
 

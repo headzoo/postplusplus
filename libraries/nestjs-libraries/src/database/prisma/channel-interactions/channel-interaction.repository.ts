@@ -24,7 +24,6 @@ import {
 import {
   BOT_FORMULA_VERSION,
   getChannelInteractionScore,
-  getRelationshipTriage,
   isEngagedNotYet,
   RELATIONSHIP_FORMULA_VERSION,
   RELATIONSHIP_HOT_SNOOZE_MS,
@@ -50,6 +49,20 @@ import {
   CULTIVATE_WARM_GRADE_THRESHOLD,
   utcDayKey,
 } from '@gitroom/nestjs-libraries/temporal/cultivate.schedule';
+import {
+  CHANNEL_STRATEGY_IDS,
+  ChannelInteractionScoreDirection,
+  ChannelInteractionScoreKind,
+  ChannelStrategyId,
+  RelationshipInteractionCounts,
+  RelationshipTriage,
+} from '@gitroom/nestjs-libraries/channel-strategies/channel-strategy.types';
+import {
+  FALLBACK_CHANNEL_STRATEGY_ID,
+  listChannelStrategies,
+  resolveChannelStrategy,
+} from '@gitroom/nestjs-libraries/channel-strategies/channel-strategy.registry';
+import { createRelationshipInteractionCounts } from '@gitroom/nestjs-libraries/channel-strategies/channel-strategy.scoring';
 
 export type AudienceProfile = {
   externalId: string;
@@ -329,16 +342,36 @@ function botScoreDueWhere(now = new Date()): Prisma.ChannelAudienceMemberWhereIn
   };
 }
 
+/**
+ * Raw per-kind/per-direction counts for one member. Weighting them into effort
+ * and reciprocation scores belongs to the selected strategy profile, so the
+ * repository loads counts and never applies scoring weights itself.
+ */
 export type RelationshipGradeBatchMember = {
+  externalId: string;
+  interactionCounts: RelationshipInteractionCounts;
+};
+
+export type RelationshipGradeStrategySelection = {
+  strategyId: ChannelStrategyId;
+  strategyVersion: number;
+};
+
+export type RelationshipGradeBatch = {
+  members: RelationshipGradeBatchMember[];
+  strategy: RelationshipGradeStrategySelection;
+};
+
+export type RelationshipGradeSnapshotInput = {
   externalId: string;
   effortScore: number;
   reciprocationScore: number;
-};
-
-export type RelationshipGradeSnapshotInput = RelationshipGradeBatchMember & {
   reciprocity: number | null;
   grade: number | null;
   formulaVersion: number;
+  strategyId: ChannelStrategyId;
+  strategyVersion: number;
+  triage: RelationshipTriage;
 };
 
 @Injectable()
@@ -1310,17 +1343,25 @@ export class ChannelInteractionRepository {
             },
           },
         },
-        channelAudienceMembers: {
-          some: {
-            membershipState: ChannelAudienceMembership.FOLLOWER,
-            gradeSnapshots: {
-              none: {
-                formulaVersion: RELATIONSHIP_FORMULA_VERSION,
-                snapshotAt: { gt: dueCutoff },
+        // Prisma cannot compare a member projection to its own channel's
+        // selection, so the bounded registry is expanded into one branch per
+        // strategy identity instead of scanning channels in application memory.
+        OR: this.relationshipStrategyBranches().map((branch) => ({
+          strategyId: branch.selection,
+          channelAudienceMembers: {
+            some: {
+              membershipState: ChannelAudienceMembership.FOLLOWER,
+              gradeSnapshots: {
+                none: {
+                  formulaVersion: RELATIONSHIP_FORMULA_VERSION,
+                  relationshipStrategyId: branch.strategyId,
+                  relationshipStrategyVersion: branch.strategyVersion,
+                  snapshotAt: { gt: dueCutoff },
+                },
               },
             },
           },
-        },
+        })),
         ...(after ? { id: { gt: after } } : {}),
       },
       orderBy: { id: 'asc' },
@@ -1339,10 +1380,14 @@ export class ChannelInteractionRepository {
     snapshotAt: Date,
     take = RELATIONSHIP_BATCH_SIZE,
     cadence?: RelationshipGradeScheduleConfig
-  ): Promise<{ members: RelationshipGradeBatchMember[] }> {
+  ): Promise<RelationshipGradeBatch> {
     const dueCutoff = this.relationshipDueCutoff(snapshotAt, cadence);
     return this.withSerializableRetry(async (tx) => {
-      await this.assertOwnedIntegration(tx, organizationId, integrationId);
+      const strategy = await this.getRelationshipGradeStrategy(
+        tx,
+        organizationId,
+        integrationId
+      );
       const followers = await tx.channelAudienceMember.findMany({
         where: {
           organizationId,
@@ -1351,6 +1396,8 @@ export class ChannelInteractionRepository {
           gradeSnapshots: {
             none: {
               formulaVersion: RELATIONSHIP_FORMULA_VERSION,
+              relationshipStrategyId: strategy.strategyId,
+              relationshipStrategyVersion: strategy.strategyVersion,
               snapshotAt: { gt: dueCutoff },
             },
           },
@@ -1359,9 +1406,10 @@ export class ChannelInteractionRepository {
         take,
         select: { externalId: true },
       });
-      if (!followers.length) return { members: [] };
+      if (!followers.length) return { members: [], strategy };
       return {
-        members: await this.aggregateRelationshipScores(
+        strategy,
+        members: await this.aggregateRelationshipInteractionCounts(
           tx,
           organizationId,
           integrationId,
@@ -1377,18 +1425,20 @@ export class ChannelInteractionRepository {
     integrationId: string,
     externalIds: string[],
     snapshotAt: Date
-  ): Promise<{ members: RelationshipGradeBatchMember[] }> {
+  ): Promise<RelationshipGradeBatch> {
     const uniqueIds = [...new Set(externalIds)].slice(
       0,
       RELATIONSHIP_REFRESH_MAX_MEMBERS
     );
-    if (!uniqueIds.length) {
-      return { members: [] };
-    }
     return this.withSerializableRetry(async (tx) => {
-      await this.assertOwnedIntegration(tx, organizationId, integrationId);
+      const strategy = await this.getRelationshipGradeStrategy(
+        tx,
+        organizationId,
+        integrationId
+      );
       return {
-        members: await this.aggregateRelationshipScores(
+        strategy,
+        members: await this.aggregateRelationshipInteractionCounts(
           tx,
           organizationId,
           integrationId,
@@ -1420,6 +1470,8 @@ export class ChannelInteractionRepository {
           reciprocity: snapshot.reciprocity,
           grade: snapshot.grade,
           formulaVersion: snapshot.formulaVersion,
+          relationshipStrategyId: snapshot.strategyId,
+          relationshipStrategyVersion: snapshot.strategyVersion,
         })),
         skipDuplicates: true,
       });
@@ -1481,21 +1533,58 @@ export class ChannelInteractionRepository {
     snapshotAt: Date,
     cadence?: RelationshipGradeScheduleConfig
   ) {
+    const dueCutoff = this.relationshipDueCutoff(snapshotAt, cadence);
     const member = await this._dailyAggregate.model.channelAudienceMember.findFirst({
       where: {
         organizationId,
         integrationId,
         membershipState: ChannelAudienceMembership.FOLLOWER,
-        gradeSnapshots: {
-          none: {
-            formulaVersion: RELATIONSHIP_FORMULA_VERSION,
-            snapshotAt: { gt: this.relationshipDueCutoff(snapshotAt, cadence) },
+        OR: this.relationshipStrategyBranches().map((branch) => ({
+          integration: { is: { strategyId: branch.selection } },
+          gradeSnapshots: {
+            none: {
+              formulaVersion: RELATIONSHIP_FORMULA_VERSION,
+              relationshipStrategyId: branch.strategyId,
+              relationshipStrategyVersion: branch.strategyVersion,
+              snapshotAt: { gt: dueCutoff },
+            },
           },
-        },
+        })),
       },
       select: { id: true },
     });
     return !!member;
+  }
+
+  /**
+   * Whether any follower projection still carries a different formula or
+   * strategy identity than the one currently selected for the channel. Old
+   * grades stay visible while this is true.
+   */
+  async hasStaleRelationshipProjections(
+    organizationId: string,
+    integrationId: string,
+    strategy: RelationshipGradeStrategySelection
+  ) {
+    const stale = await this._dailyAggregate.model.channelAudienceMember.findFirst({
+      where: {
+        organizationId,
+        integrationId,
+        membershipState: ChannelAudienceMembership.FOLLOWER,
+        OR: [
+          { relationshipFormulaVersion: null },
+          { relationshipFormulaVersion: { not: RELATIONSHIP_FORMULA_VERSION } },
+          { relationshipStrategyId: null },
+          { relationshipStrategyId: { not: strategy.strategyId } },
+          { relationshipStrategyVersion: null },
+          {
+            relationshipStrategyVersion: { not: strategy.strategyVersion },
+          },
+        ],
+      },
+      select: { id: true },
+    });
+    return !!stale;
   }
 
   async getAudienceBotScoreInputs(
@@ -4543,6 +4632,48 @@ export class ChannelInteractionRepository {
     }
   }
 
+  /**
+   * The channel selects the strategy; the registry owns its current version, so
+   * a shipped profile version bump makes every projection stale on its own.
+   */
+  private async getRelationshipGradeStrategy(
+    tx: Prisma.TransactionClient,
+    organizationId: string,
+    integrationId: string
+  ): Promise<RelationshipGradeStrategySelection> {
+    const integration = await tx.integration.findFirst({
+      where: { id: integrationId, organizationId },
+      select: { strategyId: true },
+    });
+    if (!integration) {
+      throw new Error('Channel integration does not belong to organization');
+    }
+    const strategy = resolveChannelStrategy(integration.strategyId);
+    return { strategyId: strategy.id, strategyVersion: strategy.version };
+  }
+
+  private relationshipStrategyBranches() {
+    return listChannelStrategies().map((strategy) => ({
+      strategyId: strategy.id,
+      strategyVersion: strategy.version,
+      selection: this.storedStrategyIdSelection(strategy.id),
+    }));
+  }
+
+  /**
+   * Unknown or legacy stored identifiers resolve to the fallback strategy, so
+   * the fallback branch has to match everything outside the registry too.
+   */
+  private storedStrategyIdSelection(strategyId: ChannelStrategyId) {
+    return strategyId === FALLBACK_CHANNEL_STRATEGY_ID
+      ? {
+        notIn: CHANNEL_STRATEGY_IDS.filter(
+          (id) => id !== FALLBACK_CHANNEL_STRATEGY_ID
+        ) as string[],
+      }
+      : { equals: strategyId as string };
+  }
+
   private relationshipDueCutoff(
     snapshotAt: Date,
     cadence?: RelationshipGradeScheduleConfig
@@ -4550,7 +4681,7 @@ export class ChannelInteractionRepository {
     return relationshipGradeDueCutoff(snapshotAt, cadence);
   }
 
-  private async aggregateRelationshipScores(
+  private async aggregateRelationshipInteractionCounts(
     tx: Prisma.TransactionClient,
     organizationId: string,
     integrationId: string,
@@ -4573,34 +4704,22 @@ export class ChannelInteractionRepository {
       },
       _count: { _all: true },
     });
-    const scores = new Map<string, RelationshipGradeBatchMember>();
+    const counts = new Map<string, RelationshipGradeBatchMember>();
     for (const externalId of externalIds) {
-      scores.set(externalId, {
+      counts.set(externalId, {
         externalId,
-        effortScore: 0,
-        reciprocationScore: 0,
+        interactionCounts: createRelationshipInteractionCounts(),
       });
     }
     for (const aggregate of aggregates) {
-      const member = scores.get(aggregate.counterpartyExternalId);
-      if (!member) continue;
-      const score =
-        aggregate._count._all *
-        getChannelInteractionScore(
-          aggregate.kind.toLowerCase() as Parameters<
-            typeof getChannelInteractionScore
-          >[0],
-          aggregate.direction.toLowerCase() as Parameters<
-            typeof getChannelInteractionScore
-          >[1]
-        );
-      if (aggregate.direction === ChannelInteractionDirection.OUTBOUND) {
-        member.effortScore += score;
-      } else {
-        member.reciprocationScore += score;
-      }
+      const member = counts.get(aggregate.counterpartyExternalId);
+      const kind = aggregate.kind.toLowerCase() as ChannelInteractionScoreKind;
+      const direction =
+        aggregate.direction.toLowerCase() as ChannelInteractionScoreDirection;
+      if (!member?.interactionCounts[kind]) continue;
+      member.interactionCounts[kind][direction] += aggregate._count._all;
     }
-    return externalIds.map((externalId) => scores.get(externalId)!);
+    return externalIds.map((externalId) => counts.get(externalId)!);
   }
 
   private writeCurrentRelationshipProjections(
@@ -4618,6 +4737,13 @@ export class ChannelInteractionRepository {
             organizationId,
             integrationId,
             externalId: snapshot.externalId,
+            // A batch scored under the previous selection must not mark
+            // projections current after the channel switched strategy.
+            integration: {
+              is: {
+                strategyId: this.storedStrategyIdSelection(snapshot.strategyId),
+              },
+            },
             ...(options?.force
               ? {}
               : {
@@ -4633,11 +4759,10 @@ export class ChannelInteractionRepository {
             relationshipReciprocationScore: snapshot.reciprocationScore,
             relationshipNetGap:
               snapshot.reciprocationScore - snapshot.effortScore,
-            relationshipTriage: getRelationshipTriage(
-              snapshot.effortScore,
-              snapshot.reciprocationScore
-            ),
+            relationshipTriage: snapshot.triage,
             relationshipFormulaVersion: snapshot.formulaVersion,
+            relationshipStrategyId: snapshot.strategyId,
+            relationshipStrategyVersion: snapshot.strategyVersion,
             relationshipSnapshotAt: snapshotAt,
           },
         })

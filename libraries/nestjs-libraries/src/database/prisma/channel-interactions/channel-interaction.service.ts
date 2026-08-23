@@ -42,15 +42,28 @@ import {
   AudienceProfile,
   ChannelInteractionRepository,
   DesiredInteractionSubscription,
+  RelationshipGradeBatch,
+  RelationshipGradeSnapshotInput,
+  RelationshipGradeStrategySelection,
 } from './channel-interaction.repository';
 import {
   applyPersonalRelationshipGrade,
   BOT_FORMULA_VERSION,
   calculateBotGrade,
-  calculateRelationshipGrade,
   getChannelInteractionScore,
   isPersonalRelationshipGrade,
 } from './channel-interaction.scoring';
+import {
+  calculateRelationshipGrade as calculateStrategyRelationshipGrade,
+  createRelationshipInteractionCounts,
+  scoreInteractionCounts,
+} from '@gitroom/nestjs-libraries/channel-strategies/channel-strategy.scoring';
+import { resolveChannelStrategy } from '@gitroom/nestjs-libraries/channel-strategies/channel-strategy.registry';
+import {
+  ChannelStrategy,
+  RelationshipScoringProfile,
+  StrategyScoringInput,
+} from '@gitroom/nestjs-libraries/channel-strategies/channel-strategy.types';
 import { RelationshipGradeScheduleConfig } from '@gitroom/nestjs-libraries/temporal/relationship-grade.schedule';
 import {
   LEAD_BRIDGE_DAILY_LIMIT,
@@ -838,15 +851,7 @@ export class ChannelInteractionService {
       uniqueIds,
       snapshotAt
     );
-    const snapshots = batch.members.map((member) => ({
-      externalId: member.externalId,
-      effortScore: member.effortScore,
-      reciprocationScore: member.reciprocationScore,
-      ...calculateRelationshipGrade(
-        member.effortScore,
-        member.reciprocationScore
-      ),
-    }));
+    const snapshots = await this.scoreRelationshipBatch(batch);
     await this._repository.updateCurrentRelationshipProjections(
       organizationId,
       integrationId,
@@ -997,18 +1002,7 @@ export class ChannelInteractionService {
       undefined,
       cadence
     );
-    const snapshots = batch.members.map((member) => {
-      const grade = calculateRelationshipGrade(
-        member.effortScore,
-        member.reciprocationScore
-      );
-      return {
-        externalId: member.externalId,
-        effortScore: member.effortScore,
-        reciprocationScore: member.reciprocationScore,
-        ...grade,
-      };
-    });
+    const snapshots = await this.scoreRelationshipBatch(batch);
     await this._repository.createRelationshipGradeSnapshots(
       organizationId,
       integrationId,
@@ -1462,11 +1456,11 @@ export class ChannelInteractionService {
       [externalId],
       snapshotAt
     );
-    const live = batch.members[0] ?? {
-      externalId,
-      effortScore: 0,
-      reciprocationScore: 0,
-    };
+    const strategy = this.resolveRelationshipStrategy(batch.strategy);
+    const profile = strategy.getScoringProfile();
+    const liveCounts =
+      batch.members[0]?.interactionCounts ??
+      createRelationshipInteractionCounts();
     const keptEffort = Number.isSafeInteger(member.relationshipEffortScore)
       ? member.relationshipEffortScore!
       : 0;
@@ -1476,14 +1470,21 @@ export class ChannelInteractionService {
       ? member.relationshipReciprocationScore!
       : 0;
     const effortScore =
-      direction === 'your' ? live.effortScore : keptEffort;
+      direction === 'your'
+        ? scoreInteractionCounts(profile, liveCounts, 'outbound')
+        : keptEffort;
     const reciprocationScore =
-      direction === 'their' ? live.reciprocationScore : keptReciprocation;
+      direction === 'their'
+        ? scoreInteractionCounts(profile, liveCounts, 'inbound')
+        : keptReciprocation;
     const snapshot = {
       externalId,
       effortScore,
       reciprocationScore,
-      ...calculateRelationshipGrade(effortScore, reciprocationScore),
+      ...this.gradeRelationship(strategy, profile, {
+        effortScore,
+        reciprocationScore,
+      }),
     };
     await this._repository.updateCurrentRelationshipProjections(
       organizationId,
@@ -1496,6 +1497,63 @@ export class ChannelInteractionService {
       ...snapshot,
       snapshotAt,
     };
+  }
+
+  private resolveRelationshipStrategy(
+    selection?: RelationshipGradeStrategySelection
+  ) {
+    return resolveChannelStrategy(selection?.strategyId);
+  }
+
+  private gradeRelationship(
+    strategy: ChannelStrategy,
+    profile: RelationshipScoringProfile,
+    input: StrategyScoringInput
+  ) {
+    return (
+      strategy.scoreRelationship?.(input) ??
+      calculateStrategyRelationshipGrade(
+        input,
+        strategy.id,
+        strategy.version,
+        profile
+      )
+    );
+  }
+
+  /**
+   * Optional preparation runs once for the whole loaded batch; weighting,
+   * grading, and triage stay synchronous and pure per member.
+   */
+  private async scoreRelationshipBatch(
+    batch: RelationshipGradeBatch
+  ): Promise<RelationshipGradeSnapshotInput[]> {
+    const strategy = this.resolveRelationshipStrategy(batch.strategy);
+    const profile = strategy.getScoringProfile();
+    await strategy.prepare?.({
+      strategyId: strategy.id,
+      strategyVersion: strategy.version,
+      memberCount: batch.members.length,
+    });
+    return batch.members.map((member) => {
+      const input = {
+        effortScore: scoreInteractionCounts(
+          profile,
+          member.interactionCounts,
+          'outbound'
+        ),
+        reciprocationScore: scoreInteractionCounts(
+          profile,
+          member.interactionCounts,
+          'inbound'
+        ),
+      };
+      return {
+        externalId: member.externalId,
+        ...input,
+        ...this.gradeRelationship(strategy, profile, input),
+      };
+    });
   }
 
   async getFollowerDetails(

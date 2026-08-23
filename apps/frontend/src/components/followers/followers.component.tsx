@@ -43,6 +43,7 @@ import {
   FOLLOWER_INTERACTION_WINDOWS,
   FollowerChannel,
   FollowerPageTracking,
+  FollowerStrategyMetadata,
   FollowerSortDirection,
   FollowerTriageFilter,
   Follower,
@@ -332,6 +333,66 @@ export const buildFollowersPageHref = ({
   return query ? `${path}?${query}` : path;
 };
 
+export type FollowerStrategyDefaultsInput = {
+  pathname: string;
+  search?: string;
+  listId?: string;
+  sort?: string;
+  direction?: string;
+  strategy?: FollowerStrategyMetadata;
+  sorts?: FollowerChannel['sorts'];
+};
+
+export type FollowerStrategyDefaults = {
+  slug?: string;
+  sort?: string;
+  direction?: FollowerSortDirection;
+};
+
+export const resolveFollowerStrategyDefaults = ({
+  pathname,
+  search,
+  listId,
+  sort,
+  direction,
+  strategy,
+  sorts,
+}: FollowerStrategyDefaultsInput): FollowerStrategyDefaults | undefined => {
+  if (
+    pathname !== '/followers' ||
+    !!search ||
+    !!listId ||
+    !!sort ||
+    !!direction ||
+    !strategy
+  ) {
+    return undefined;
+  }
+
+  const slug = FOLLOWER_VIEW_BY_SLUG[strategy.ui.defaultFilter]
+    ? strategy.ui.defaultFilter
+    : undefined;
+  // Fit is the lead endpoint's established ordering, rather than a generic sort.
+  if (strategy.ui.defaultSort === 'fit') {
+    return { slug: slug === 'leads' ? 'leads' : undefined };
+  }
+  if (strategy.ui.defaultSort === 'recent') {
+    return { slug };
+  }
+  const sortOption = sorts?.find(
+    (candidate) => candidate.key === strategy.ui.defaultSort
+  );
+  return {
+    slug,
+    ...(sortOption
+      ? {
+        sort: sortOption.key,
+        direction: sortOption.defaultDirection,
+      }
+      : {}),
+  };
+};
+
 const pathnameFromHref = (href: string) => {
   try {
     return new URL(href, globalThis.location?.origin || 'http://localhost').pathname;
@@ -589,6 +650,8 @@ export const FollowersComponent: FC = () => {
   const followerModalFromUrlRef = useRef(false);
   const pushedFollowerHistoryRef = useRef(false);
   const listHrefRef = useRef('/followers');
+  const followerMetadataLoadRef = useRef<string | undefined>(undefined);
+  const appliedStrategyDefaultChannelRef = useRef(new Set<string>());
 
   useEffect(() => {
     if (parseFollowerPath(currentWindowPathname()).type === 'follower') {
@@ -643,6 +706,16 @@ export const FollowersComponent: FC = () => {
       return;
     }
 
+    if (
+      nextId &&
+      (historyPath !== '/followers' ||
+        !!urlSearch ||
+        !!urlListId ||
+        !!urlSort ||
+        !!urlDirectionParam)
+    ) {
+      appliedStrategyDefaultChannelRef.current.add(nextId);
+    }
     setSelectedIntegrationId(nextId);
     if (
       nextId &&
@@ -657,8 +730,13 @@ export const FollowersComponent: FC = () => {
   }, [
     channels,
     groupedFollowerIntegrations,
+    historyPath,
     selectedIntegrationId,
     followerPath,
+    urlDirectionParam,
+    urlListId,
+    urlSearch,
+    urlSort,
   ]);
 
   const selectedChannel = useMemo(
@@ -666,9 +744,31 @@ export const FollowersComponent: FC = () => {
     [channels, selectedIntegrationId]
   );
 
+  const strategyDefaults =
+    selectedIntegrationId &&
+    !appliedStrategyDefaultChannelRef.current.has(selectedIntegrationId)
+      ? resolveFollowerStrategyDefaults({
+        pathname: historyPath || '/followers',
+        search: urlSearch,
+        listId: urlListId,
+        sort: urlSort,
+        direction: urlDirectionParam || undefined,
+        strategy: selectedChannel?.strategy,
+        sorts: selectedChannel?.sorts,
+      })
+      : undefined;
+  const strategyDefaultView = strategyDefaults?.slug
+    ? FOLLOWER_VIEW_BY_SLUG[strategyDefaults.slug]
+    : undefined;
+  const resolvedTriage = triage ?? strategyDefaultView?.triage;
+  const resolvedAudience = audience ?? strategyDefaultView?.audience;
+
   const triageDefaultSort =
-    !urlSort && !sort && triage ? TRIAGE_DEFAULT_SORTS[triage] : undefined;
-  const requestedSort = urlSort ?? sort ?? triageDefaultSort?.key;
+    !urlSort && !sort && resolvedTriage
+      ? TRIAGE_DEFAULT_SORTS[resolvedTriage]
+      : undefined;
+  const requestedSort =
+    urlSort ?? sort ?? strategyDefaults?.sort ?? triageDefaultSort?.key;
   const effectiveSort = selectedChannel?.sorts.some(
     (item) => item.key === requestedSort
   )
@@ -786,6 +886,27 @@ export const FollowersComponent: FC = () => {
     listHrefRef.current = listHref;
   }, [followerPath, listHref]);
 
+  useEffect(() => {
+    if (
+      followerPath.type === 'follower' ||
+      !selectedIntegrationId ||
+      !strategyDefaults
+    ) {
+      return;
+    }
+    appliedStrategyDefaultChannelRef.current.add(selectedIntegrationId);
+    const href = buildFollowersPageHref(strategyDefaults);
+    if (href !== listHref) {
+      router.replace(href);
+    }
+  }, [
+    followerPath,
+    listHref,
+    router,
+    selectedIntegrationId,
+    strategyDefaults,
+  ]);
+
   const closeFollowerDetailUrl = useCallback(() => {
     if (pushedFollowerHistoryRef.current) {
       pushedFollowerHistoryRef.current = false;
@@ -863,7 +984,10 @@ export const FollowersComponent: FC = () => {
 
   const currentCursor = cursorHistory[cursorHistory.length - 1];
   const requestedDirection =
-    urlDirection ?? direction ?? triageDefaultSort?.direction;
+    urlDirection ??
+    direction ??
+    strategyDefaults?.direction ??
+    triageDefaultSort?.direction;
   const effectiveDirection = activeSort
     ? requestedDirection && activeSort.directions.includes(requestedDirection)
       ? requestedDirection
@@ -883,11 +1007,23 @@ export const FollowersComponent: FC = () => {
     direction: effectiveDirection,
     window: requiresWindow ? window : undefined,
     search: trimmedSearch || undefined,
-    triage: urlListId ? undefined : triage,
-    audience: urlListId ? undefined : audience,
+    triage: urlListId ? undefined : resolvedTriage,
+    audience: urlListId ? undefined : resolvedAudience,
     listId: urlListId,
     isBot: urlIsBot || undefined,
   });
+
+  useEffect(() => {
+    if (!followersPage || !selectedIntegrationId) {
+      return;
+    }
+    const pageKey = `${selectedIntegrationId}:${currentCursor || 'first'}`;
+    if (followerMetadataLoadRef.current === pageKey) {
+      return;
+    }
+    followerMetadataLoadRef.current = pageKey;
+    void mutateChannels();
+  }, [currentCursor, followersPage, mutateChannels, selectedIntegrationId]);
 
   const { data: followerLists = [] } = useFollowerLists(selectedIntegrationId);
   const {
@@ -901,7 +1037,9 @@ export const FollowersComponent: FC = () => {
     unignoreFollower,
   } = useFollowerListMutations(selectedIntegrationId);
 
-  const activeCategory = !urlListId ? triage || audience : undefined;
+  const activeCategory = !urlListId
+    ? resolvedTriage || resolvedAudience
+    : undefined;
   const activeList = useMemo(
     () => followerLists.find((list) => list.id === urlListId),
     [followerLists, urlListId]
@@ -939,6 +1077,13 @@ export const FollowersComponent: FC = () => {
         platform: selectedChannel?.identifier,
         display: selectedChannel?.display,
       },
+      strategy: selectedChannel?.strategy
+        ? {
+          id: selectedChannel.strategy.id,
+          version: selectedChannel.strategy.version,
+          summary: selectedChannel.strategy.summary.defaultValue,
+        }
+        : undefined,
       follower:
         followerPath.type === 'follower'
           ? {
@@ -1202,6 +1347,22 @@ export const FollowersComponent: FC = () => {
     urlListId,
   ]);
 
+  const orderedFollowerFilterGroups = useMemo(() => {
+    const priority = selectedChannel?.strategy?.ui.filterPriority || [];
+    const rank = (slug?: string) => {
+      const index = slug ? priority.indexOf(slug) : priority.indexOf('all');
+      return index === -1 ? Number.MAX_SAFE_INTEGER : index;
+    };
+    return FOLLOWER_FILTER_GROUPS.map((group) => ({
+      ...group,
+      items: [...group.items].sort((left, right) => rank(left.slug) - rank(right.slug)),
+    })).sort(
+      (left, right) =>
+        Math.min(...left.items.map((item) => rank(item.slug))) -
+        Math.min(...right.items.map((item) => rank(item.slug)))
+    );
+  }, [selectedChannel?.strategy?.ui.filterPriority]);
+
   if (isLoadingChannels || isLoadingIntegrations) {
     return (
       <div className="bg-newBgColorInner p-[20px] flex flex-1 flex-col gap-[15px] transition-all items-center justify-center">
@@ -1297,7 +1458,7 @@ export const FollowersComponent: FC = () => {
       );
     }
 
-    if (audience === 'ignored') {
+    if (resolvedAudience === 'ignored') {
       return (
         <div className="flex flex-col items-center justify-center gap-[8px] rounded-[12px] border border-newTableBorder bg-newTableHeader p-[32px] text-center">
           <p className="text-[18px] text-newTextColor">
@@ -1313,7 +1474,7 @@ export const FollowersComponent: FC = () => {
       );
     }
 
-    if (audience === 'lead') {
+    if (resolvedAudience === 'lead') {
       return (
         <div className="flex flex-col items-center justify-center gap-[8px] rounded-[12px] border border-newTableBorder bg-newTableHeader p-[32px] text-center">
           <p className="text-[18px] text-newTextColor">
@@ -1329,7 +1490,7 @@ export const FollowersComponent: FC = () => {
       );
     }
 
-    if (audience === 'cultivate') {
+    if (resolvedAudience === 'cultivate') {
       return (
         <div className="flex flex-col items-center justify-center gap-[8px] rounded-[12px] border border-newTableBorder bg-newTableHeader p-[32px] text-center">
           <p className="text-[18px] text-newTextColor">
@@ -1348,9 +1509,9 @@ export const FollowersComponent: FC = () => {
       );
     }
 
-    if (triage) {
+    if (resolvedTriage) {
       const activeFilter = TRIAGE_FILTER_OPTIONS.find(
-        (option) => option.value === triage
+        (option) => option.value === resolvedTriage
       );
       return (
         <div className="flex flex-col items-center justify-center gap-[8px] rounded-[12px] border border-newTableBorder bg-newTableHeader p-[32px] text-center">
@@ -1367,7 +1528,7 @@ export const FollowersComponent: FC = () => {
               {
                 filter: activeFilter
                   ? t(activeFilter.key, activeFilter.defaultLabel)
-                  : triage,
+                  : resolvedTriage,
               }
             )}
           </p>
@@ -1454,6 +1615,19 @@ export const FollowersComponent: FC = () => {
       );
     }
 
+    if (selectedChannel?.strategy) {
+      return (
+        <div className="flex flex-col items-center justify-center gap-[8px] rounded-[12px] border border-newTableBorder bg-newTableHeader p-[32px] text-center">
+          <p className="text-[18px] text-newTextColor">
+            {t(
+              selectedChannel.strategy.ui.emptyState.key,
+              selectedChannel.strategy.ui.emptyState.defaultValue
+            )}
+          </p>
+        </div>
+      );
+    }
+
     return (
       <div className="flex flex-col items-center justify-center gap-[8px] rounded-[12px] border border-newTableBorder bg-newTableHeader p-[32px] text-center">
         <p className="text-[18px] text-newTextColor">
@@ -1492,7 +1666,24 @@ export const FollowersComponent: FC = () => {
 
       <div className="bg-newBgColorInner flex-1 flex-col flex p-[20px] gap-[16px] min-w-0">
         <div className="flex flex-col gap-[12px]">
-          {Number.isFinite(followersPage?.total) && (
+          {selectedChannel?.strategy && (
+            <div className="flex flex-wrap items-center gap-x-[12px] gap-y-[4px] text-[13px]">
+              <span className="font-medium text-newTextColor">
+                {t(
+                  selectedChannel.strategy.summary.key,
+                  selectedChannel.strategy.summary.defaultValue
+                )}
+              </span>
+              {Number.isFinite(followersPage?.total) && (
+                <span className="text-textItemBlur">
+                  {t('followers_total', '{{count}} total', {
+                    count: followersPage!.total!,
+                  })}
+                </span>
+              )}
+            </div>
+          )}
+          {!selectedChannel?.strategy && Number.isFinite(followersPage?.total) && (
             <p className="text-[13px] text-textItemBlur">
               {t('followers_total', '{{count}} total', {
                 count: followersPage!.total!,
@@ -1616,7 +1807,7 @@ export const FollowersComponent: FC = () => {
           aria-label={t('followers_triage_filter_group', 'Triage filter')}
           data-testid="followers-filter-bar"
         >
-          {FOLLOWER_FILTER_GROUPS.map((group) => (
+          {orderedFollowerFilterGroups.map((group) => (
             <div
               key={group.id}
               className="flex flex-wrap gap-[8px]"
@@ -1630,8 +1821,8 @@ export const FollowersComponent: FC = () => {
                   : urlListId || urlIsBot
                     ? false
                     : option.audience
-                      ? audience === option.audience
-                      : !audience && triage === option.value;
+                      ? resolvedAudience === option.audience
+                      : !resolvedAudience && resolvedTriage === option.value;
                 const hrefSlug = option.isBot
                   ? urlIsBot
                     ? undefined
@@ -1649,7 +1840,11 @@ export const FollowersComponent: FC = () => {
                     scroll={false}
                     className={clsx(
                       FILTER_CHIP_BASE,
-                      getFilterChipClasses(group.color, isSelected)
+                      getFilterChipClasses(group.color, isSelected),
+                      selectedChannel?.strategy?.ui.filterEmphasis ===
+                        (option.slug || 'all') &&
+                        !isSelected &&
+                        'ring-1 ring-current'
                     )}
                     aria-pressed={isSelected}
                     aria-current={isSelected ? 'page' : undefined}
@@ -1727,6 +1922,14 @@ export const FollowersComponent: FC = () => {
         {isInteractionsSort && (
           <TrackingNotice tracking={tracking} showFreshness={isTrackingReady} />
         )}
+        {selectedChannel?.recomputing && (
+          <div className="rounded-[10px] border border-amber-500/30 bg-amber-500/10 px-[14px] py-[10px] text-[13px] text-amber-400">
+            {t(
+              'followers_strategy_recomputing',
+              'Relationship grades are being recomputed for this strategy. Existing grades remain visible until the update finishes.'
+            )}
+          </div>
+        )}
 
         {followersError && (
           <div className="flex flex-col items-center justify-center gap-[12px] rounded-[12px] border border-newTableBorder bg-newTableHeader p-[24px] text-center">
@@ -1761,7 +1964,7 @@ export const FollowersComponent: FC = () => {
                 <FollowerCard
                   key={follower.id}
                   follower={
-                    audience === 'ignored'
+                    resolvedAudience === 'ignored'
                       ? { ...follower, isIgnored: true }
                       : follower
                   }
@@ -1781,7 +1984,7 @@ export const FollowersComponent: FC = () => {
                       return;
                     }
                     await addMember(list.id, follower.id);
-                    if (audience === 'lead') {
+                    if (resolvedAudience === 'lead') {
                       await mutateFollowers(
                         (page) =>
                           applyIgnoreToFollowerPage(page, follower.id, {
@@ -1794,7 +1997,7 @@ export const FollowersComponent: FC = () => {
                   onToggleIgnored={async (ignored) => {
                     if (ignored) {
                       await ignoreFollower(follower.id);
-                      if (audience !== 'ignored') {
+                      if (resolvedAudience !== 'ignored') {
                         await mutateFollowers(
                           (page) =>
                             applyIgnoreToFollowerPage(page, follower.id, {
@@ -1807,7 +2010,7 @@ export const FollowersComponent: FC = () => {
                       return;
                     }
                     await unignoreFollower(follower.id);
-                    if (audience === 'ignored') {
+                    if (resolvedAudience === 'ignored') {
                       await mutateFollowers(
                         (page) =>
                           applyIgnoreToFollowerPage(page, follower.id, {
@@ -1821,9 +2024,9 @@ export const FollowersComponent: FC = () => {
                   onDismissTriage={async (triageValue, reasons, options) => {
                     await ignoreTriage(follower.id, triageValue, reasons, options);
                     const shouldRemoveFromPage =
-                      triage === triageValue ||
-                      (audience === 'lead' && triageValue === 'lead') ||
-                      (audience === 'cultivate' && triageValue === 'cultivate');
+                      resolvedTriage === triageValue ||
+                      (resolvedAudience === 'lead' && triageValue === 'lead') ||
+                      (resolvedAudience === 'cultivate' && triageValue === 'cultivate');
                     if (shouldRemoveFromPage) {
                       await mutateFollowers(
                         (page) =>

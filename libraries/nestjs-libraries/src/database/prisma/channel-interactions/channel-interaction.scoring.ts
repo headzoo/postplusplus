@@ -1,10 +1,20 @@
-export type ChannelInteractionScoreKind =
-  | 'like'
-  | 'mention'
-  | 'repost'
-  | 'reply'
-  | 'follow';
-export type ChannelInteractionScoreDirection = 'inbound' | 'outbound';
+import {
+  calculateRelationshipGrade as calculateStrategyRelationshipGrade,
+  getInteractionScore,
+  getRelationshipTriage as getStrategyRelationshipTriage,
+} from '../../../channel-strategies/channel-strategy.scoring';
+import { growAudienceStrategy } from '../../../channel-strategies/strategies/grow-audience.strategy';
+import {
+  ChannelInteractionScoreDirection,
+  ChannelInteractionScoreKind,
+  RelationshipTriage,
+} from '../../../channel-strategies/channel-strategy.types';
+
+export type {
+  ChannelInteractionScoreDirection,
+  ChannelInteractionScoreKind,
+  RelationshipTriage,
+} from '../../../channel-strategies/channel-strategy.types';
 
 export const RELATIONSHIP_FORMULA_VERSION = 3;
 export const RELATIONSHIP_SCORE_CAP = 40;
@@ -24,32 +34,11 @@ export const RELATIONSHIP_HOT_SNOOZE_MS =
 export const RELATIONSHIP_TRIAGE_SNOOZE_MS =
   RELATIONSHIP_TRIAGE_SNOOZE_DAYS * 24 * 60 * 60 * 1000;
 
-export type RelationshipTriage =
-  | 'quiet'
-  | 'hot_lead'
-  | 'over_invested'
-  | 'mutual';
-
-const SCORES: Record<
-  ChannelInteractionScoreKind,
-  Record<ChannelInteractionScoreDirection, number>
-> = {
-  like: { inbound: 2, outbound: 1 },
-  mention: { inbound: 4, outbound: 2 },
-  repost: { inbound: 6, outbound: 3 },
-  reply: { inbound: 8, outbound: 4 },
-  follow: { inbound: 10, outbound: 5 },
-};
-
 export function getChannelInteractionScore(
   kind: ChannelInteractionScoreKind,
   direction: ChannelInteractionScoreDirection
 ): number {
-  const score = SCORES[kind]?.[direction];
-  if (score === undefined) {
-    throw new Error('Unsupported interaction kind or direction');
-  }
-  return score;
+  return getInteractionScore(growAudienceStrategy.getScoringProfile(), kind, direction);
 }
 
 function assertRelationshipScores(
@@ -83,31 +72,10 @@ export function getRelationshipTriage(
   effortScore: number,
   reciprocationScore: number
 ): RelationshipTriage {
-  assertRelationshipScores(effortScore, reciprocationScore);
-  if (
-    Math.max(effortScore, reciprocationScore) <
-    RELATIONSHIP_MEANINGFUL_ACTIVITY_THRESHOLD
-  ) {
-    return 'quiet';
-  }
-  const hotRatio =
-    effortScore > 0
-      ? RELATIONSHIP_TOUCHED_DIRECTIONAL_RATIO
-      : RELATIONSHIP_DIRECTIONAL_RATIO;
-  if (
-    reciprocationScore >= RELATIONSHIP_MEANINGFUL_ACTIVITY_THRESHOLD &&
-    (effortScore === 0 || reciprocationScore >= hotRatio * effortScore)
-  ) {
-    return 'hot_lead';
-  }
-  if (
-    effortScore >= RELATIONSHIP_MEANINGFUL_ACTIVITY_THRESHOLD &&
-    (reciprocationScore === 0 ||
-      effortScore >= RELATIONSHIP_DIRECTIONAL_RATIO * reciprocationScore)
-  ) {
-    return 'over_invested';
-  }
-  return 'mutual';
+  return getStrategyRelationshipTriage(
+    { effortScore, reciprocationScore },
+    growAudienceStrategy.getScoringProfile()
+  );
 }
 
 export function isEngagedNotYet(
@@ -126,32 +94,17 @@ export function calculateRelationshipGrade(
   effortScore: number,
   reciprocationScore: number
 ) {
-  assertRelationshipScores(effortScore, reciprocationScore);
-  if (effortScore === 0 && reciprocationScore === 0) {
-    return {
-      reciprocity: null,
-      grade: null,
-      formulaVersion: RELATIONSHIP_FORMULA_VERSION,
-    };
-  }
-  const reciprocity =
-    Math.min(effortScore, reciprocationScore) /
-    Math.max(effortScore, reciprocationScore);
-  const effort = Math.min(effortScore / RELATIONSHIP_SCORE_CAP, 1);
-  const reciprocation = Math.min(reciprocationScore / RELATIONSHIP_SCORE_CAP, 1);
-  const priority = Math.min(
-    1,
-    Math.max(
-      0,
-      reciprocation +
-      Math.min(effort, reciprocation) -
-      Math.max(effort - reciprocation, 0)
-    )
-  );
+  const { grade, reciprocity, formulaVersion } =
+    calculateStrategyRelationshipGrade(
+      { effortScore, reciprocationScore },
+      growAudienceStrategy.id,
+      growAudienceStrategy.version,
+      growAudienceStrategy.getScoringProfile()
+    );
   return {
     reciprocity,
-    grade: roundToHalf(1 + 4 * priority),
-    formulaVersion: RELATIONSHIP_FORMULA_VERSION,
+    grade,
+    formulaVersion,
   };
 }
 

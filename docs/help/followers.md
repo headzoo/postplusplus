@@ -96,6 +96,32 @@ You may see banners such as:
 
 Fix auth and permissions with **Authorize tracking** or **Refresh OAuth** under [Settings → Channels](/help/settings#channels-and-connection-health).
 
+## Channel strategy
+
+Each follower-capable channel has a **Channel strategy** in [Settings → Channels](/help/settings#channel-strategy). The choice shapes defaults and guidance—it does **not** fork Followers into separate UIs.
+
+### What changes on Followers
+
+Strategy affects **initial navigation only** when you have not already chosen a filter, sort, direction, custom list, or search:
+
+| Strategy | Default view | Default sort emphasis |
+| -------- | ------------ | --------------------- |
+| **Grow audience** | **All** | **Recent** (existing chip order) |
+| **Capture leads** | **Leads** | Lead **Fit** ordering |
+| **Retain community** | **Cultivate** | **Recent** |
+| **Build awareness** | **All** | **Interactions** |
+| **Support customers** | **Costly** | **Recent** |
+
+Strategy also adjusts filter chip order and emphasis, the compact strategy summary above the grid, empty-state copy for the active filter, and the Followers assistant opening message and suggested question chips.
+
+Explicit URL routes (`/followers/leads`, `/followers/cultivate`, and similar), custom lists, search, sort, direction, pagination, and in-session chip clicks always win over strategy defaults.
+
+### Recomputing grades
+
+After you change strategy in Settings, relationship grades recompute asynchronously. On Followers you may see **Relationship grades are being recomputed for this strategy. Existing grades remain visible until the update finishes.** Prior grades stay on cards until each person is updated with the new strategy keys.
+
+To return to shipped defaults, re-select **Grow audience** in Settings.
+
 ## Followers assistant
 
-A floating chat helper can answer questions using the page you’re on. Prefer refreshing or re-checking the list for authoritative counts after changes.
+A floating chat helper can answer questions using the page you’re on. Its opening copy and suggested question chips follow the selected channel’s strategy. Server-side guidance uses trusted strategy directives; it never overrides confirmation rules or authorization boundaries. Prefer refreshing or re-checking the list for authoritative counts after changes.

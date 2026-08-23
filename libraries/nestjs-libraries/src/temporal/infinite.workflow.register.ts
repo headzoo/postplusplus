@@ -264,7 +264,6 @@ export class InfiniteWorkflowRegister implements OnModuleInit {
   controllers: [],
   providers: [
     InfiniteWorkflowRegister,
-    RelationshipGradeScheduleService,
     FollowerBotScoreScheduleService,
     AdminScheduleWorkflowService,
   ],

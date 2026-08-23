@@ -1,12 +1,13 @@
 'use client';
 
-import React, { FC, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { FC, KeyboardEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import clsx from 'clsx';
 import { Button } from '@gitroom/react/form/button';
 import { LoadingComponent } from '@gitroom/frontend/components/layout/loading';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
+import { useSWRConfig } from 'swr';
 import { DNDProvider } from '@gitroom/frontend/components/launches/helpers/dnd.provider';
 import { ChannelMenu } from '@gitroom/frontend/components/launches/channels.sidebar';
 import {
@@ -15,6 +16,8 @@ import {
 } from '@gitroom/frontend/components/launches/helpers/use.integration.list';
 import {
   ChannelDetails,
+  ChannelStrategyPublicSummary,
+  channelStrategyOptions,
   ChannelSubscriptionDetail,
   useChannelDetails,
 } from '@gitroom/frontend/components/settings/use.channel.details';
@@ -24,6 +27,8 @@ import {
   ChannelInteractionTrackingFailureCategory,
   FollowerPageTracking,
 } from '@gitroom/frontend/components/followers/use.followers';
+import { FALLBACK_CHANNEL_STRATEGY_ID } from '@gitroom/nestjs-libraries/channel-strategies/channel-strategy.registry';
+import type { ChannelStrategyId } from '@gitroom/nestjs-libraries/channel-strategies/channel-strategy.types';
 
 const TRACKING_STATE_LABELS: Record<string, { key: string; defaultLabel: string }> = {
   active: { key: 'channel_tracking_active', defaultLabel: 'Active' },
@@ -144,6 +149,229 @@ const subscriptionSortRank = (state: string) => {
   return 3;
 };
 
+const localizedStrategyCopy = (
+  copy: ChannelStrategyPublicSummary['label'],
+  t: ReturnType<typeof useT>
+) => t(copy.key, copy.defaultValue);
+
+const ChannelStrategySection: FC<{
+  integrationId: string;
+  strategyApplicable?: boolean;
+  strategy?: ChannelStrategyPublicSummary;
+  recomputing?: boolean;
+  loading: boolean;
+  onStrategyUpdated: () => Promise<unknown>;
+}> = ({
+  integrationId,
+  strategyApplicable,
+  strategy,
+  recomputing,
+  loading,
+  onStrategyUpdated,
+}) => {
+  const t = useT();
+  const toast = useToaster();
+  const fetch = useFetch();
+  const { mutate } = useSWRConfig();
+  const persistedStrategyId = strategy?.id ?? FALLBACK_CHANNEL_STRATEGY_ID;
+  const [selectedId, setSelectedId] =
+    useState<ChannelStrategyId>(persistedStrategyId);
+  const [saving, setSaving] = useState(false);
+  const [recomputeNotice, setRecomputeNotice] = useState(false);
+
+  useEffect(() => {
+    setSelectedId(persistedStrategyId);
+  }, [persistedStrategyId]);
+
+  useEffect(() => {
+    if (recomputing) {
+      setRecomputeNotice(true);
+    }
+  }, [recomputing]);
+
+  const hasChanges = selectedId !== persistedStrategyId;
+  const showRecomputeNotice = recomputeNotice || !!recomputing;
+
+  const handleOptionKeyDown = useCallback(
+    (strategyId: ChannelStrategyId) =>
+      (event: KeyboardEvent<HTMLDivElement>) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          if (!saving) {
+            setSelectedId(strategyId);
+          }
+        }
+      },
+    [saving]
+  );
+
+  const saveStrategy = useCallback(async () => {
+    if (!strategyApplicable || saving || !hasChanges) {
+      return;
+    }
+    setSaving(true);
+    try {
+      const response = await fetch(`/integrations/${integrationId}/strategy`, {
+        method: 'PUT',
+        body: JSON.stringify({ strategyId: selectedId }),
+      });
+      if (!response.ok) {
+        throw new Error('strategy save failed');
+      }
+      const body = (await response.json()) as {
+        strategy?: ChannelStrategyPublicSummary;
+        recomputeRequested?: boolean;
+      };
+      setRecomputeNotice(!!body.recomputeRequested || !!recomputing);
+      await Promise.all([
+        onStrategyUpdated(),
+        mutate('/integrations/list'),
+        mutate('/followers/channels'),
+      ]);
+      toast.show(
+        t('channel_strategy_saved', 'Channel strategy updated.'),
+        'success'
+      );
+    } catch {
+      setSelectedId(persistedStrategyId);
+      toast.show(
+        t(
+          'channel_strategy_save_failed',
+          'Could not update the channel strategy.'
+        )
+      );
+    } finally {
+      setSaving(false);
+    }
+  }, [
+    fetch,
+    hasChanges,
+    integrationId,
+    mutate,
+    onStrategyUpdated,
+    persistedStrategyId,
+    recomputing,
+    saving,
+    selectedId,
+    strategyApplicable,
+    t,
+    toast,
+  ]);
+
+  if (loading && strategyApplicable === undefined) {
+    return (
+      <div className="flex flex-col gap-[10px] border border-newBorder rounded-[8px] p-[16px]">
+        <div className="text-[16px] font-[500]">
+          {t('channel_strategy', 'Channel strategy')}
+        </div>
+        <div className="text-[14px] text-newTextColor">
+          {t('loading', 'Loading...')}
+        </div>
+      </div>
+    );
+  }
+
+  if (strategyApplicable === false) {
+    return (
+      <div className="flex flex-col gap-[10px] border border-newBorder rounded-[8px] p-[16px]">
+        <div className="text-[16px] font-[500]">
+          {t('channel_strategy', 'Channel strategy')}
+        </div>
+        <div className="text-[14px] text-newTextColor">
+          {t(
+            'channel_strategy_not_applicable',
+            'Not available for this channel because it does not expose follower identities.'
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-[12px] border border-newBorder rounded-[8px] p-[16px]">
+      <div>
+        <div className="text-[16px] font-[500]">
+          {t('channel_strategy', 'Channel strategy')}
+        </div>
+        <div className="text-[13px] text-newTextColor mt-[4px]">
+          {t(
+            'channel_strategy_description',
+            'Choose how relationship grades and Followers defaults prioritize people on this channel.'
+          )}
+        </div>
+      </div>
+
+      {showRecomputeNotice && (
+        <div className="rounded-[10px] border border-sky-500/30 bg-sky-500/10 px-[14px] py-[12px] text-[13px] text-sky-100">
+          {t(
+            'channel_strategy_recomputing',
+            'Relationship rankings are updating. Existing grades stay visible while the new strategy is applied.'
+          )}
+        </div>
+      )}
+
+      <div
+        className="flex flex-col gap-[10px]"
+        role="radiogroup"
+        aria-label={t('channel_strategy', 'Channel strategy')}
+      >
+        {channelStrategyOptions.map((option) => {
+          const label = localizedStrategyCopy(option.label, t);
+          const description = localizedStrategyCopy(option.description, t);
+          const isSelected = selectedId === option.id;
+          const isDefault = option.id === FALLBACK_CHANNEL_STRATEGY_ID;
+          const optionLabel = isDefault
+            ? `${label} (${t('channel_strategy_default', 'Default')})`
+            : label;
+
+          return (
+            <div
+              key={option.id}
+              role="radio"
+              aria-checked={isSelected}
+              tabIndex={saving ? -1 : 0}
+              onClick={() => {
+                if (!saving) {
+                  setSelectedId(option.id);
+                }
+              }}
+              onKeyDown={handleOptionKeyDown(option.id)}
+              className={clsx(
+                'border rounded-[8px] p-[12px] flex flex-col gap-[6px] cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-btnPrimary',
+                isSelected
+                  ? 'border-btnPrimary bg-btnPrimary/10'
+                  : 'border-newBorder hover:bg-boxHover',
+                saving && 'opacity-60 cursor-not-allowed'
+              )}
+            >
+              <div className="flex items-center justify-between gap-[8px] text-[14px] font-[500]">
+                <span>{optionLabel}</span>
+                {isSelected && (
+                  <span className="text-[12px] uppercase tracking-wide text-emerald-300">
+                    {t('selected', 'Selected')}
+                  </span>
+                )}
+              </div>
+              <div className="text-[13px] text-newTextColor">{description}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          loading={saving}
+          disabled={saving || !hasChanges}
+          onClick={saveStrategy}
+        >
+          {t('save', 'Save')}
+        </Button>
+      </div>
+    </div>
+  );
+};
+
 const ChannelDetailPanel: FC<{
   integration: IntegrationListItem;
   details?: ChannelDetails;
@@ -152,6 +380,7 @@ const ChannelDetailPanel: FC<{
   refreshing: boolean;
   onAuthorizeTracking: () => void;
   authorizing: boolean;
+  onStrategyUpdated: () => Promise<unknown>;
 }> = ({
   integration,
   details,
@@ -160,6 +389,7 @@ const ChannelDetailPanel: FC<{
   refreshing,
   onAuthorizeTracking,
   authorizing,
+  onStrategyUpdated,
 }) => {
   const t = useT();
   const tracking = details?.tracking;
@@ -285,6 +515,15 @@ const ChannelDetailPanel: FC<{
               {formatTimestamp(tracking?.followerSnapshotAt)}
             </DetailRow>
           </div>
+
+          <ChannelStrategySection
+            integrationId={integration.id}
+            strategyApplicable={details?.strategyApplicable}
+            strategy={details?.strategy}
+            recomputing={details?.recomputing}
+            loading={loading}
+            onStrategyUpdated={onStrategyUpdated}
+          />
 
           <CoverageTable coverage={tracking?.coverage} />
           <SubscriptionsTable subscriptions={details?.subscriptions || []} />
@@ -510,6 +749,7 @@ export const ChannelsSettings: FC = () => {
               refreshing={refreshing}
               onAuthorizeTracking={authorizeTracking}
               authorizing={authorizing}
+              onStrategyUpdated={details.mutate}
             />
           ) : (
             t('select_a_channel', 'Select a channel')

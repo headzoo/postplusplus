@@ -20,6 +20,15 @@ const withHelpDir = async (files, callback) => {
   }
 };
 
+test('buildHelpManifest rejects an empty help corpus', async () => {
+  await withHelpDir({}, async (helpDir) => {
+    await assert.rejects(
+      () => buildHelpManifest({ helpDir }),
+      /No help markdown found/
+    );
+  });
+});
+
 test('buildHelpManifest extracts deterministic metadata and ordering', async () => {
   await withHelpDir(
     {

@@ -437,6 +437,8 @@ model Integration {
   customerId                          String?
   rootInternalId                      String?
   additionalSettings                  String?                              @default("[]")
+  strategyId                          String                               @default("grow_audience")
+  strategyVersion                     Int                                  @default(1)
   exisingPlugData                     ExisingPlugData[]
   customer                            Customer?                            @relation(fields: [customerId], references: [id])
   organization                        Organization                         @relation(fields: [organizationId], references: [id])
@@ -1516,6 +1518,8 @@ model ChannelAudienceMember {
   relationshipNetGap             Int?
   relationshipTriage             String?
   relationshipFormulaVersion     Int?
+  relationshipStrategyId         String?
+  relationshipStrategyVersion    Int?
   relationshipSnapshotAt         DateTime?
   botGrade                       Int?
   isBot                          Boolean?
@@ -1554,7 +1558,7 @@ model ChannelAudienceMember {
   @@index([integrationId, membershipState, relationshipReciprocationScore, externalId], map: "ChannelAudienceMember_rel_reciprocation_keyset_idx")
   @@index([integrationId, membershipState, relationshipNetGap, externalId], map: "ChannelAudienceMember_rel_net_gap_keyset_idx")
   @@index([integrationId, membershipState, relationshipTriage, externalId], map: "ChannelAudienceMember_rel_triage_keyset_idx")
-  @@index([integrationId, membershipState, relationshipFormulaVersion, relationshipSnapshotAt], map: "ChannelAudienceMember_rel_formula_due_idx")
+  @@index([integrationId, membershipState, relationshipFormulaVersion, relationshipStrategyId, relationshipStrategyVersion, relationshipSnapshotAt], map: "ChannelAudienceMember_rel_formula_due_idx")
   @@index([integrationId, membershipState, botGrade, externalId], map: "ChannelAudienceMember_bot_grade_keyset_idx")
   @@index([integrationId, membershipState, isBot, externalId], map: "ChannelAudienceMember_is_bot_keyset_idx")
   @@index([integrationId, membershipState, botFormulaVersion, botGradedAt], map: "ChannelAudienceMember_bot_formula_due_idx")
@@ -2016,6 +2020,8 @@ model ChannelRelationshipGradeSnapshot {
   reciprocity            Float?
   grade                  Float?
   formulaVersion         Int                   @default(1)
+  relationshipStrategyId String?
+  relationshipStrategyVersion Int?
   createdAt              DateTime              @default(now())
   organization           Organization          @relation(fields: [organizationId], references: [id])
   integration            Integration           @relation(fields: [integrationId], references: [id])

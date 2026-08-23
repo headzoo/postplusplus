@@ -152,6 +152,13 @@ export const buildHelpManifest = async (options = {}) => {
   }
 
   pages.sort((left, right) => left.slug.localeCompare(right.slug));
+
+  if (pages.length === 0) {
+    throw new Error(
+      `No help markdown found in ${helpDir}. Refusing to write an empty manifest.`
+    );
+  }
+
   validateLinks(pages);
 
   return {

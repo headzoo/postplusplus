@@ -15,6 +15,9 @@ dist
 .devcontainer
 **/.git
 **/*.md
+# Help corpus is regenerated during `next build`; without these sources the
+# Docker image ships an empty Topics list in the in-app help drawer.
+!apps/frontend/src/help/**/*.md
 **/LICENSE
 **/npm-debug.log
 **/*.vscode

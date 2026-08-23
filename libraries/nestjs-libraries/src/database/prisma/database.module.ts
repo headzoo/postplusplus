@@ -75,6 +75,7 @@ import { PostRulesRepository } from '@gitroom/nestjs-libraries/database/prisma/r
 import { PostRulesService } from '@gitroom/nestjs-libraries/database/prisma/rules/post-rules.service';
 import { PostRulesExecutionRepository } from '@gitroom/nestjs-libraries/database/prisma/rules/post-rules.execution.repository';
 import { PostRulesExecutionService } from '@gitroom/nestjs-libraries/database/prisma/rules/post-rules.execution.service';
+import { RelationshipGradeScheduleService } from '@gitroom/nestjs-libraries/temporal/relationship-grade.schedule.service';
 
 @Global()
 @Module({
@@ -155,6 +156,7 @@ import { PostRulesExecutionService } from '@gitroom/nestjs-libraries/database/pr
     PostRulesService,
     PostRulesExecutionRepository,
     PostRulesExecutionService,
+    RelationshipGradeScheduleService,
   ],
   get exports() {
     return this.providers;

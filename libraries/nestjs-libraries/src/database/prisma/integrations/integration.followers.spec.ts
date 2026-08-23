@@ -60,6 +60,7 @@ describe('IntegrationService followers', () => {
       getFollowerInteractionMetrics: jest.fn().mockResolvedValue(new Map()),
       getFollowerNoteCounts: jest.fn().mockResolvedValue(new Map()),
       findMemberExternalIdByUsername: jest.fn(),
+      hasStaleRelationshipProjections: jest.fn().mockResolvedValue(false),
     };
     (service as any)._channelInteractionService = {
       getFollowerDetails: jest.fn(),
@@ -69,6 +70,9 @@ describe('IntegrationService followers', () => {
       upsertFollowerGrade: jest.fn(),
       refreshFollowerRelationshipScore: jest.fn(),
       getStoredFollowerAudienceCounts: jest.fn(),
+    };
+    (service as any)._relationshipGradeScheduleService = {
+      trigger: jest.fn(),
     };
     return service;
   };
@@ -181,6 +185,20 @@ describe('IntegrationService followers', () => {
             defaultDirection: 'desc',
           },
         ],
+        strategy: {
+          id: 'grow_audience',
+          version: 1,
+          summary: {
+            key: 'channelStrategies.grow_audience.description',
+            defaultValue:
+              'Prioritize reciprocal relationships that can expand your audience.',
+          },
+          ui: expect.objectContaining({
+            defaultFilter: 'all',
+            defaultSort: 'recent',
+          }),
+        },
+        recomputing: false,
       },
     ]);
     expect(followers).toHaveBeenCalledWith(
@@ -260,6 +278,8 @@ describe('IntegrationService followers', () => {
       refreshNeeded: false,
       inBetweenSteps: false,
       profileUrl: 'https://x.com/channel',
+      strategyApplicable: false,
+      recomputeRequested: false,
       tracking: expect.objectContaining({
         state: 'partial',
         failureCategory: 'authorization',
@@ -310,6 +330,135 @@ describe('IntegrationService followers', () => {
     expect(
       (service as any)._channelInteractionRepository.getInteractionTracking
     ).not.toHaveBeenCalled();
+  });
+
+  it('returns the selected public strategy only for follower-capable channels', async () => {
+    const service = createService(
+      [{ ...integration, strategyId: 'lead_capture', strategyVersion: 1 }],
+      { supported: { followers: jest.fn() } }
+    );
+
+    await expect(service.getChannelDetails(org, 'channel-a')).resolves.toMatchObject({
+      strategyApplicable: true,
+      strategy: {
+        id: 'lead_capture',
+        version: 1,
+        label: { defaultValue: 'Capture leads' },
+      },
+      recomputeRequested: false,
+    });
+  });
+
+  it('reports recomputing while stored projections still use another strategy', async () => {
+    const service = createService(
+      [{ ...integration, strategyId: 'lead_capture', strategyVersion: 1 }],
+      { supported: { followers: jest.fn() } }
+    );
+    (service as any)._channelInteractionRepository
+      .hasStaleRelationshipProjections.mockResolvedValue(true);
+
+    await expect(
+      service.getChannelDetails(org, 'channel-a')
+    ).resolves.toMatchObject({ recomputing: true });
+    expect(
+      (service as any)._channelInteractionRepository
+        .hasStaleRelationshipProjections
+    ).toHaveBeenCalledWith('org-a', 'channel-a', {
+      strategyId: 'lead_capture',
+      strategyVersion: 1,
+    });
+  });
+
+  it('does not query recompute status for channels without follower identities', async () => {
+    const service = createService([integration], { supported: {} });
+
+    await expect(
+      service.getChannelDetails(org, 'channel-a')
+    ).resolves.not.toHaveProperty('recomputing');
+    expect(
+      (service as any)._channelInteractionRepository
+        .hasStaleRelationshipProjections
+    ).not.toHaveBeenCalled();
+  });
+
+  it('updates a valid strategy and requests recomputation after persistence', async () => {
+    const updateStrategy = jest.fn().mockResolvedValue(true);
+    const service = createService([integration], { supported: { followers: jest.fn() } });
+    (service as any)._integrationRepository.updateStrategy = updateStrategy;
+    (service as any)._relationshipGradeScheduleService.trigger.mockResolvedValue(undefined);
+
+    await expect(
+      service.updateChannelStrategy(org.id, 'channel-a', {
+        strategyId: 'lead_capture',
+      })
+    ).resolves.toEqual({
+      strategy: expect.objectContaining({
+        id: 'lead_capture',
+        version: 1,
+      }),
+      recomputeRequested: true,
+    });
+    expect(updateStrategy).toHaveBeenCalledWith(
+      org.id,
+      'channel-a',
+      'lead_capture',
+      1
+    );
+    expect(
+      (service as any)._relationshipGradeScheduleService.trigger
+    ).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a changed strategy saved when recomputation fails', async () => {
+    const service = createService([integration], { supported: { followers: jest.fn() } });
+    (service as any)._integrationRepository.updateStrategy = jest.fn().mockResolvedValue(true);
+    (service as any)._relationshipGradeScheduleService.trigger.mockRejectedValue(
+      new Error('Temporal unavailable')
+    );
+
+    await expect(
+      service.updateChannelStrategy(org.id, 'channel-a', {
+        strategyId: 'lead_capture',
+      })
+    ).resolves.toMatchObject({
+      strategy: { id: 'lead_capture', version: 1 },
+      recomputeRequested: false,
+    });
+  });
+
+  it('does not trigger recomputation for an unchanged strategy', async () => {
+    const service = createService([integration], { supported: { followers: jest.fn() } });
+    (service as any)._integrationRepository.updateStrategy = jest.fn().mockResolvedValue(false);
+
+    await expect(
+      service.updateChannelStrategy(org.id, 'channel-a', {
+        strategyId: 'grow_audience',
+      })
+    ).resolves.toMatchObject({ recomputeRequested: false });
+    expect(
+      (service as any)._relationshipGradeScheduleService.trigger
+    ).not.toHaveBeenCalled();
+  });
+
+  it('rejects strategy updates for unsupported and cross-organization channels', async () => {
+    const unsupported = createService([integration], { supported: {} });
+    await expect(
+      unsupported.updateChannelStrategy(org.id, 'channel-a', {
+        strategyId: 'lead_capture',
+      })
+    ).rejects.toMatchObject({ status: 400 });
+
+    const supported = createService([integration], { supported: { followers: jest.fn() } });
+    await expect(
+      supported.updateChannelStrategy('other-org', 'channel-a', {
+        strategyId: 'lead_capture',
+      })
+    ).rejects.toMatchObject({ status: 404 });
+    await expect(
+      supported.updateChannelStrategy(org.id, 'channel-a', {
+        strategyId: 'not_a_strategy' as any,
+      })
+    ).rejects.toMatchObject({ status: 400 });
   });
 
   it('rejects channel details for another organization', async () => {
@@ -1406,6 +1555,73 @@ describe('IntegrationService followers', () => {
       }),
     ]);
     expect(result.relationship.formulaVersion).toBe(2);
+  });
+
+  it('reads historical grades with the strategy each snapshot was scored with', async () => {
+    const service = createService(
+      [{ ...integration, strategyId: 'customer_support', strategyVersion: 1 }],
+      { supported: { followers: jest.fn() } }
+    );
+    (service as any)._channelInteractionService.getFollowerDetails.mockResolvedValue({
+      member: {
+        externalId: 'follower-a',
+        name: 'Follower A',
+        username: null,
+        picture: null,
+        profileUrl: null,
+        bio: null,
+        followersCount: null,
+        followingCount: null,
+        followedAt: null,
+        accountCreatedAt: null,
+        relationshipGrade: 2,
+        relationshipEffortScore: 12,
+        relationshipReciprocationScore: 4,
+        relationshipTriage: 'mutual',
+        relationshipFormulaVersion: 3,
+        relationshipStrategyId: 'customer_support',
+        relationshipStrategyVersion: 1,
+        relationshipSnapshotAt: new Date('2026-08-14T12:00:00.000Z'),
+      },
+      snapshots: [
+        {
+          snapshotAt: new Date('2026-08-01T00:00:00.000Z'),
+          windowStartedAt: new Date('2026-07-02T00:00:00.000Z'),
+          effortScore: 12,
+          reciprocationScore: 4,
+          reciprocity: 1 / 3,
+          grade: 1.5,
+          formulaVersion: 3,
+          relationshipStrategyId: 'grow_audience',
+          relationshipStrategyVersion: 1,
+        },
+      ],
+      notes: [],
+      events: [],
+      tracking: { followerSync: null, subscriptions: [] },
+    });
+
+    const result = await service.getFollowerMemberDetails(
+      org,
+      user,
+      'channel-a',
+      'follower-a'
+    );
+
+    // Historical rows keep the identity and triage they were graded with.
+    expect(result.relationship.history[0]).toMatchObject({
+      grade: 1.5,
+      triage: 'over_invested',
+      strategyId: 'grow_audience',
+      strategyVersion: 1,
+    });
+    // The live projection keeps its stored triage instead of being re-derived.
+    expect(result.relationship.current).toMatchObject({
+      grade: 2,
+      triage: 'mutual',
+      strategyId: 'customer_support',
+      strategyVersion: 1,
+    });
   });
 
   it('keeps personal grade independent from relationship snapshot grades', async () => {

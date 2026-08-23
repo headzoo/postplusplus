@@ -2,7 +2,22 @@ import {
   BOT_CONFIDENCE_THRESHOLD,
   BOT_FORMULA_VERSION,
   calculateBotGrade,
+  RELATIONSHIP_FORMULA_VERSION,
 } from './channel-interaction.scoring';
+import { listChannelStrategies } from '@gitroom/nestjs-libraries/channel-strategies/channel-strategy.registry';
+
+describe('relationship formula identity', () => {
+  // Due predicates match stored snapshots on the shared engine formula version,
+  // so a profile that drifts from it would never look current again.
+  it.each(listChannelStrategies().map((strategy) => [strategy.id, strategy]))(
+    'keeps %s on the shared engine formula version',
+    (_id, strategy: any) => {
+      expect(strategy.getScoringProfile().formulaVersion).toBe(
+        RELATIONSHIP_FORMULA_VERSION
+      );
+    }
+  );
+});
 
 describe('calculateBotGrade', () => {
   const now = new Date('2026-08-20T12:00:00.000Z');

@@ -53,6 +53,11 @@ export type FollowerPageContext = {
     platform?: string;
     display?: string;
   };
+  strategy?: {
+    id: string;
+    version: number;
+    summary?: string;
+  };
   follower?: {
     id?: string;
     username?: string;
@@ -112,6 +117,13 @@ export const formatFollowerPageContext = (
     platform: shortenFollowerContextText(context.channel.platform, 80),
     display: shortenFollowerContextText(context.channel.display),
   },
+  strategy: context.strategy
+    ? {
+      id: shortenFollowerContextText(context.strategy.id, 80) || '',
+      version: context.strategy.version,
+      summary: shortenFollowerContextText(context.strategy.summary),
+    }
+    : undefined,
   follower: context.follower
     ? {
       id: shortenFollowerContextText(context.follower.id, 160),

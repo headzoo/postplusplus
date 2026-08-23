@@ -51,6 +51,26 @@ On a selected channel you can:
 
 Banners may explain partial tracking or missing permissions. Empty: **No channels yet**.
 
+### Channel strategy
+
+For channels that expose follower identities, the channel detail includes **Channel strategy**. Choose how relationship grades and Followers defaults prioritize people on this channel.
+
+You always pick one of five strategies—there is no **None** option:
+
+| Strategy | Purpose |
+| -------- | ------- |
+| **Grow audience** (**Default**) | Reciprocal relationships that can expand your reach. Matches pre-strategy behavior for existing channels. |
+| **Capture leads** | High-intent inbound conversations, mentions, replies, and follows. |
+| **Retain community** | Two-way interactions with people who already engage. |
+| **Build awareness** | Mentions and reposts that amplify your brand. |
+| **Support customers** | Incoming questions and support threads; recognizes outbound replies. |
+
+Channels that do **not** expose follower identities show **Not available for this channel because it does not expose follower identities**—that is capability N/A, not a strategy choice.
+
+Saving a new strategy is immediate. Relationship grades recompute in the background. While that runs, a banner explains that **Relationship rankings are updating. Existing grades stay visible while the new strategy is applied.** Re-selecting **Grow audience** is the reset-to-default action.
+
+See [Followers → Channel strategy](/help/followers#channel-strategy) for how the choice affects default navigation, the assistant, and recomputation banners on the Followers page.
+
 ## Webhooks and Auto Post
 
 These tabs appear depending on your plan.

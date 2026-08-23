@@ -78,9 +78,35 @@ docker compose run --rm --no-deps postiz pnpm exec prisma migrate resolve \
 20260813000000_audience_member_note_count
 20260813120000_post_webhook_http_logs
 20260813130000_align_relationship_fk_name
+20260823130000_channel_strategy
 ```
 
 Use the same `prisma migrate resolve --applied <migration-name> --schema ...` command for each verified migration. Leave unapplied migrations unresolved so `migrate deploy` can apply them.
+
+### Channel strategy migration (`20260823130000_channel_strategy`)
+
+This migration adds `strategyId` and `strategyVersion` on `Integration` (backfilled to `grow_audience` / `1`, then non-null with defaults) and nullable `relationshipStrategyId` and `relationshipStrategyVersion` on audience-member projections and relationship snapshots. Existing projection rows keep their prior grades but become stale until the relationship-grade job recomputes them with matching strategy keys.
+
+**Rollout order**
+
+1. Run `pnpm run prisma-migrate-deploy` (or the Compose migration container) before replacing application containers.
+2. Deploy backend, orchestrator, and frontend together so registry, API, Temporal activity, and UI agree on strategy IDs.
+3. Verify Settings → Channels reads strategy for a follower-capable integration and unsupported channels show N/A.
+4. Change strategy on one internal or test channel; confirm Settings shows the recompute notice and Followers shows the recomputing banner.
+5. Wait for relationship grades to return to **current** (projection strategy keys match the integration selection).
+6. Confirm Followers default route, filter emphasis, empty-state copy, and assistant opening/questions match the selected strategy.
+7. Broaden rollout to production channels.
+
+**Rollback**
+
+- Rolling back application images is safe: stored grades and projection rows remain in the database.
+- Do **not** drop the new columns during an incident rollback.
+- Older app versions ignore or fall back to **Grow audience** for unknown or missing strategy IDs.
+- After rollback, allow the regular relationship-grade schedule to stabilize before planning any later cleanup migration.
+
+**Maintainer: scoring profile changes**
+
+Strategy modules live under `libraries/nestjs-libraries/src/channel-strategies/`. Each strategy exposes an integer `version` and a `getScoringProfile()` profile. When you change scoring weights, coefficients, or triage math in a profile, increment that strategy's `version` in the same change. Stored projections are current only when integration strategy ID/version and projection `relationshipStrategyId`/`relationshipStrategyVersion` match the registry entry; a version bump marks existing grades stale and triggers recomputation. Never edit profile math without a version bump.
 
 5. Run:
 

@@ -7,6 +7,28 @@ import {
   ChannelInteractionTrackingFailureCategory,
   FollowerPageTracking,
 } from '@gitroom/frontend/components/followers/use.followers';
+import { listChannelStrategies } from '@gitroom/nestjs-libraries/channel-strategies/channel-strategy.registry';
+import type { ChannelStrategyId } from '@gitroom/nestjs-libraries/channel-strategies/channel-strategy.types';
+
+export type ChannelStrategyLocalizedCopy = {
+  key: string;
+  defaultValue: string;
+};
+
+export type ChannelStrategyPublicSummary = {
+  id: ChannelStrategyId;
+  version: number;
+  label: ChannelStrategyLocalizedCopy;
+  description: ChannelStrategyLocalizedCopy;
+};
+
+export const channelStrategyOptions: ChannelStrategyPublicSummary[] =
+  listChannelStrategies().map((strategy) => ({
+    id: strategy.id,
+    version: strategy.version,
+    label: strategy.label,
+    description: strategy.description,
+  }));
 
 export type ChannelSubscriptionDetail = {
   eventKey: string;
@@ -36,6 +58,10 @@ export type ChannelDetails = {
   trackingAuthorization?: { connected: boolean };
   tracking: FollowerPageTracking;
   subscriptions: ChannelSubscriptionDetail[];
+  strategyApplicable: boolean;
+  strategy?: ChannelStrategyPublicSummary;
+  recomputing?: boolean;
+  recomputeRequested?: boolean;
 };
 
 export const useChannelDetails = (integrationId?: string) => {

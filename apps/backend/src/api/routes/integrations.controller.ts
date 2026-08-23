@@ -37,6 +37,7 @@ import { RefreshIntegrationService } from '@gitroom/nestjs-libraries/integration
 import { ReorderCustomerDto } from '@gitroom/nestjs-libraries/dtos/integrations/customer-reorder.dto';
 import { RenameCustomerDto } from '@gitroom/nestjs-libraries/dtos/integrations/customer-rename.dto';
 import { ChannelTrackingAuthorizationDto } from '@gitroom/nestjs-libraries/dtos/integrations/channel.tracking.authorization.dto';
+import { UpdateChannelStrategyDto } from '@gitroom/nestjs-libraries/dtos/integrations/channel-strategy.dto';
 
 export const publicProfileUrl = (value: string | undefined) => {
   if (!value) {
@@ -133,6 +134,15 @@ export class IntegrationsController {
     @Param('id') id: string
   ) {
     return this._integrationService.getChannelDetails(org, id);
+  }
+
+  @Put('/:id/strategy')
+  async updateChannelStrategy(
+    @GetOrgFromRequest() org: Organization,
+    @Param('id') id: string,
+    @Body() body: UpdateChannelStrategyDto
+  ) {
+    return this._integrationService.updateChannelStrategy(org.id, id, body);
   }
 
   // Authorizing tracking grants extra permissions on a channel that already
