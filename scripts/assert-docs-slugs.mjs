@@ -14,6 +14,7 @@ const repoDir = path.resolve(scriptDir, '..');
 const docsDir = path.join(repoDir, 'docs');
 
 const INTERNAL_LINK_PATTERN = /\]\((\/[^)#?]+)(#[^)#?]+)?\)/g;
+const SAME_PAGE_LINK_PATTERN = /\]\(#([^)\s]+)\)/g;
 
 /**
  * Verifies heading slug parity for a markdown document.
@@ -96,6 +97,22 @@ const loadCanonicalPages = async () => {
     pages.set(`/${slug}`, pages.get(`/${slug}/`));
   }
 
+  for (const entry of docsNav) {
+    if (entry.kind !== 'group') {
+      continue;
+    }
+
+    for (const page of entry.pages) {
+      const pagePath = path.join(docsDir, entry.slug, `${page.name}.md`);
+      const markdown = await readFile(pagePath, 'utf8');
+      pages.set(`/${entry.slug}/${page.name}`, {
+        label: `docs/${entry.slug}/${page.name}.md`,
+        markdown,
+        headings: getHeadings(markdown),
+      });
+    }
+  }
+
   return pages;
 };
 
@@ -139,7 +156,11 @@ const buildRouteAnchorMap = async (canonicalPages) => {
         : `/${targetDir.replace(/^docs\//, '')}/${page.name}`;
 
     if (await pathExists(path.join(repoDir, targetDir, `${page.name}.md`))) {
-      routeAnchors.set(route, new Set());
+      const markdown = await readFile(
+        path.join(repoDir, targetDir, `${page.name}.md`),
+        'utf8',
+      );
+      routeAnchors.set(route, new Set(getHeadings(markdown).map((heading) => heading.anchor)));
     }
   }
 
@@ -197,6 +218,20 @@ const verifyManifestParity = async () => {
     }
   }
 
+  for (const entry of docsNav) {
+    if (entry.kind !== 'group') {
+      continue;
+    }
+
+    for (const page of entry.pages) {
+      const pagePath = path.join(docsDir, entry.slug, `${page.name}.md`);
+
+      if (!(await pathExists(pagePath))) {
+        errors.push(`Missing docs/${entry.slug}/${page.name}.md for manifest group`);
+      }
+    }
+  }
+
   const manifestSlugs = new Set(['index', ...canonicalPageSlugs]);
   const rootEntries = await readdir(docsDir, { withFileTypes: true });
 
@@ -212,7 +247,9 @@ const verifyManifestParity = async () => {
     }
   }
 
-  const manifestGroupSlugs = new Set(groupOverviewSlugs);
+  const manifestGroupSlugs = new Set(
+    docsNav.filter((entry) => entry.kind === 'group').map((entry) => entry.slug),
+  );
 
   for (const entry of rootEntries) {
     if (!entry.isDirectory()) {
@@ -264,6 +301,14 @@ const verifyInternalLinks = (canonicalPages, routeAnchors) => {
 
       if (anchor && !routeAnchors.get(resolvedRoute)?.has(anchor)) {
         errors.push(`${page.label}: unresolved anchor in ${match[0]}`);
+      }
+    }
+
+    for (const match of page.markdown.matchAll(SAME_PAGE_LINK_PATTERN)) {
+      const anchor = match[1];
+
+      if (!page.headings.some((heading) => heading.anchor === anchor)) {
+        errors.push(`${page.label}: unresolved same-page anchor ${match[0]}`);
       }
     }
   }

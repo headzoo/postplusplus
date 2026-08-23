@@ -24,6 +24,8 @@ module.exports = {
     '<rootDir>/apps/orchestrator/src/workflows/autopost.workflow.v2.spec.ts',
     '<rootDir>/apps/frontend/src/components/settings/logs.component.spec.tsx',
     '<rootDir>/apps/frontend/src/components/settings/channels.component.spec.tsx',
+    '<rootDir>/apps/frontend/src/components/help/help-content.spec.tsx',
+    '<rootDir>/apps/frontend/src/components/help/help.drawer.spec.tsx',
     '<rootDir>/libraries/nestjs-libraries/src/integrations/social/file.provider.spec.ts',
     '<rootDir>/libraries/nestjs-libraries/src/integrations/webhook.file.sink.spec.ts',
     '<rootDir>/libraries/nestjs-libraries/src/integrations/social/x.provider.interactions.spec.ts',

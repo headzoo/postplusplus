@@ -454,6 +454,9 @@ importers:
       mime-types:
         specifier: ^2.1.35
         version: 2.1.35
+      minisearch:
+        specifier: ^7.2.0
+        version: 7.2.0
       multer:
         specifier: ^1.4.5-lts.1
         version: 1.4.5-lts.2

@@ -16,6 +16,42 @@ export const normalizeHeadingText = (value) =>
     .trim();
 
 /**
+ * Removes fenced code blocks without changing the remaining Markdown content.
+ *
+ * @param {string} markdown Markdown contents.
+ * @returns {string} Markdown outside fenced code blocks.
+ */
+export const withoutFencedCodeBlocks = (markdown) => {
+  let fence;
+
+  return markdown
+    .split('\n')
+    .filter((line) => {
+      const marker = /^(?: {0,3})(`{3,}|~{3,})/.exec(line)?.[1];
+
+      if (fence) {
+        if (
+          marker &&
+          marker[0] === fence.character &&
+          marker.length >= fence.length
+        ) {
+          fence = undefined;
+        }
+
+        return false;
+      }
+
+      if (marker) {
+        fence = { character: marker[0], length: marker.length };
+        return false;
+      }
+
+      return true;
+    })
+    .join('\n');
+};
+
+/**
  * Converts a heading to the anchor id used in README TOC links and VitePress headings.
  *
  * @param {string} value Markdown heading text.
@@ -40,7 +76,7 @@ export const toAnchor = (value) =>
 export const getHeadings = (markdown) => {
   const usedAnchors = new Map();
 
-  return markdown
+  return withoutFencedCodeBlocks(markdown)
     .split('\n')
     .map((line) => /^(#{2,6})\s+(.+)$/.exec(line))
     .filter(Boolean)

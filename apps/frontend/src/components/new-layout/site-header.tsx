@@ -1,6 +1,6 @@
 'use client';
 
-import { FC } from 'react';
+import { FC, RefObject } from 'react';
 import { Title } from '@gitroom/frontend/components/layout/title';
 import { StreakComponent } from '@gitroom/frontend/components/layout/streak.component';
 import { OrganizationSelector } from '@gitroom/frontend/components/layout/organization.selector';
@@ -8,13 +8,36 @@ import { ChromeExtensionComponent } from '@gitroom/frontend/components/layout/ch
 import { AttachToFeedbackIcon } from '@gitroom/frontend/components/new-layout/sentry.feedback.component';
 import NotificationComponent from '@gitroom/frontend/components/notifications/notification.component';
 import { NewPost } from '@gitroom/frontend/components/launches/new.post';
-import { MenuIcon } from '@gitroom/frontend/components/ui/icons';
+import { HelpIcon, MenuIcon } from '@gitroom/frontend/components/ui/icons';
 import { HeaderMoreMenu } from '@gitroom/frontend/components/new-layout/header-more-menu';
 
 export const SiteHeader: FC<{
   showNewPost: boolean;
   onOpenSidebar: () => void;
-}> = ({ showNewPost, onOpenSidebar }) => {
+  onOpenHelp: (trigger: HTMLButtonElement) => void;
+  desktopHelpTriggerRef?: RefObject<HTMLButtonElement | null>;
+  mobileHelpTriggerRef?: RefObject<HTMLButtonElement | null>;
+}> = ({
+  showNewPost,
+  onOpenSidebar,
+  onOpenHelp,
+  desktopHelpTriggerRef,
+  mobileHelpTriggerRef,
+}) => {
+  const helpButton = (triggerRef?: RefObject<HTMLButtonElement | null>) => (
+    <button
+      ref={triggerRef}
+      type="button"
+      aria-label="Help"
+      data-tooltip-id="tooltip"
+      data-tooltip-content="Help"
+      onClick={(event) => onOpenHelp(event.currentTarget)}
+      className="hover:text-newTextColor"
+    >
+      <HelpIcon size={24} />
+    </button>
+  );
+
   return (
     <div className="flex bg-newBgColorInner h-[80px] px-[20px] items-center mobile:h-auto mobile:py-[12px] mobile:px-[12px] mobile:flex-col mobile:items-stretch mobile:gap-[8px]">
       <div className="flex flex-1 items-center gap-[12px] min-w-0">
@@ -31,6 +54,7 @@ export const SiteHeader: FC<{
         </div>
         <div className="flex items-center gap-[20px] text-textItemBlur mobile:hidden">
           <StreakComponent />
+          {helpButton(desktopHelpTriggerRef)}
           <OrganizationSelector />
           <ChromeExtensionComponent />
           <AttachToFeedbackIcon />
@@ -41,6 +65,7 @@ export const SiteHeader: FC<{
       <div className="hidden mobile:flex items-center justify-start gap-[16px] text-textItemBlur">
         {showNewPost && <NewPost variant="header" />}
         <StreakComponent />
+        {helpButton(mobileHelpTriggerRef)}
         <NotificationComponent />
         <HeaderMoreMenu />
       </div>

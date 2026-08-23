@@ -1,4 +1,4 @@
-import { cp, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { rewriteMarkdownLinks } from './docs-link-rewriter.mjs';
@@ -151,15 +151,20 @@ const buildVitePressSidebar = async (nav) => {
     }
 
     if (entry.kind === 'group') {
-      target.push({
+      const group = {
         text: entry.title,
-        link: `/${entry.slug}/`,
         collapsed: false,
         items: entry.pages.map((page) => ({
           text: page.title,
           link: `/${entry.slug}/${page.name}`,
         })),
-      });
+      };
+
+      if (entry.hasOverview !== false) {
+        group.link = `/${entry.slug}/`;
+      }
+
+      target.push(group);
       continue;
     }
 
@@ -246,6 +251,13 @@ await cp(featureScreenshotsSourceDir, featureScreenshotsTargetDir, {
 });
 
 let syncedCount = 0;
+const syncedTargetDirs = new Set(
+  syncedPages.map((page) => page.targetDir).filter((targetDir) => targetDir && targetDir !== 'docs'),
+);
+
+for (const targetDir of syncedTargetDirs) {
+  await rm(path.join(repoDir, targetDir), { recursive: true, force: true });
+}
 
 for (const page of syncedPages) {
   const targetDir = page.targetDir ?? 'docs';

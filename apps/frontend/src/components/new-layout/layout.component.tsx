@@ -1,6 +1,6 @@
 'use client';
 
-import React, { ReactNode, useCallback, useEffect, useState } from 'react';
+import React, { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { jakartaSans } from '@gitroom/frontend/app/fonts';
 
 import clsx from 'clsx';
@@ -31,15 +31,22 @@ import { useIntegrationList } from '@gitroom/frontend/components/launches/helper
 import { SidebarNav } from '@gitroom/frontend/components/new-layout/sidebar-nav';
 import { MobileSidebarDrawer } from '@gitroom/frontend/components/new-layout/mobile-sidebar.drawer';
 import { SiteHeader } from '@gitroom/frontend/components/new-layout/site-header';
+import { HelpDrawer } from '@gitroom/frontend/components/help/help.drawer';
 
 export const LayoutComponent = ({ children }: { children: ReactNode }) => {
   const fetch = useFetch();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const desktopHelpTriggerRef = useRef<HTMLButtonElement>(null);
+  const mobileHelpTriggerRef = useRef<HTMLButtonElement>(null);
+  const activeHelpTriggerRef = useRef<HTMLButtonElement>(null);
 
   const { backendUrl, billingEnabled, isGeneral } = useVariables();
 
   const searchParams = useSearchParams();
+  const helpParam = searchParams.get('help');
+  const helpLocationKey = `${pathname}?${searchParams.toString()}`;
   const load = useCallback(async (path: string) => {
     return await (await fetch(path)).json();
   }, []);
@@ -61,6 +68,12 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     setSidebarOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    if (helpParam) {
+      setHelpOpen(true);
+    }
+  }, [helpParam]);
 
   if (!user) return null;
 
@@ -100,6 +113,12 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                     open={sidebarOpen}
                     onClose={() => setSidebarOpen(false)}
                   />
+                  <HelpDrawer
+                    open={helpOpen}
+                    onClose={() => setHelpOpen(false)}
+                    triggerRef={activeHelpTriggerRef}
+                    locationKey={helpLocationKey}
+                  />
                   <div className="flex-1 flex gap-[8px]">
                     <Support />
                     <div className="flex flex-col bg-newBgColorInner w-[80px] rounded-[12px] mobile:hidden">
@@ -117,6 +136,12 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                       <SiteHeader
                         showNewPost={integrations.length > 0}
                         onOpenSidebar={() => setSidebarOpen(true)}
+                        onOpenHelp={(trigger) => {
+                          activeHelpTriggerRef.current = trigger;
+                          setHelpOpen(true);
+                        }}
+                        desktopHelpTriggerRef={desktopHelpTriggerRef}
+                        mobileHelpTriggerRef={mobileHelpTriggerRef}
                       />
                       <div className="flex flex-1 gap-[1px] min-w-0 overflow-hidden">
                         {children}

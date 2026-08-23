@@ -184,6 +184,32 @@ export const CloseIcon: FC<IconProps> = ({
   </svg>
 );
 
+// Help / question mark Icon
+export const HelpIcon: FC<IconProps> = ({
+  size = 24,
+  className,
+  ...props
+}) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    className={className}
+    {...props}
+  >
+    <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" />
+    <path
+      d="M9.5 9.75C9.5 8.507 10.507 7.5 11.75 7.5C12.993 7.5 14 8.507 14 9.75C14 10.75 13.35 11.5 12.45 11.95C11.95 12.2 11.65 12.7 11.65 13.25"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+    <circle cx="12" cy="16.75" r="0.75" fill="currentColor" />
+  </svg>
+);
+
 // Small Close Icon (10x11 variant)
 export const CloseIconSmall: FC<IconProps> = ({
   size = 10,

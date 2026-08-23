@@ -290,5 +290,47 @@ export const sidebar: DefaultTheme.SidebarItem[] =
       }
     ],
     "collapsed": false
+  },
+  {
+    "text": "Help",
+    "collapsed": false,
+    "items": [
+      {
+        "text": "Agent",
+        "link": "/help/agent"
+      },
+      {
+        "text": "Calendar",
+        "link": "/help/calendar"
+      },
+      {
+        "text": "Dashboard",
+        "link": "/help/dashboard"
+      },
+      {
+        "text": "Docs",
+        "link": "/help/docs"
+      },
+      {
+        "text": "Followers",
+        "link": "/help/followers"
+      },
+      {
+        "text": "Media",
+        "link": "/help/media"
+      },
+      {
+        "text": "Pipelines",
+        "link": "/help/pipelines"
+      },
+      {
+        "text": "Rules",
+        "link": "/help/rules"
+      },
+      {
+        "text": "Settings",
+        "link": "/help/settings"
+      }
+    ]
   }
 ]
