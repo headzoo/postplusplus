@@ -28,6 +28,7 @@ import {
   isEngagedNotYet,
   RELATIONSHIP_FORMULA_VERSION,
   RELATIONSHIP_HOT_SNOOZE_MS,
+  RELATIONSHIP_TRIAGE_SNOOZE_MS,
   RELATIONSHIP_WINDOW_MS,
 } from './channel-interaction.scoring';
 import {
@@ -2864,13 +2865,119 @@ export class ChannelInteractionRepository {
     return { ok: true as const };
   }
 
+  async removeAudienceListMembers(
+    organizationId: string,
+    integrationId: string,
+    listId: string,
+    options: {
+      externalIds?: string[];
+      onlyFollowing?: boolean;
+      limit?: number;
+    }
+  ) {
+    const limit = options.limit ?? 50;
+    const list = await this._dailyAggregate.model.channelAudienceList.findFirst({
+      where: { id: listId, organizationId, integrationId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!list) {
+      return { missing: 'list' as const };
+    }
+
+    const memberSelect = {
+      counterpartyExternalId: true,
+      audienceMember: {
+        select: {
+          name: true,
+          username: true,
+        },
+      },
+    } as const;
+
+    let rows: Array<{
+      counterpartyExternalId: string;
+      audienceMember: {
+        name: string | null;
+        username: string | null;
+      };
+    }>;
+
+    if (options.onlyFollowing) {
+      rows = await this._dailyAggregate.model.channelAudienceListMember.findMany({
+        where: {
+          organizationId,
+          integrationId,
+          listId,
+          audienceMember: {
+            membershipState: ChannelAudienceMembership.FOLLOWER,
+          },
+        },
+        orderBy: { counterpartyExternalId: 'asc' },
+        take: limit,
+        select: memberSelect,
+      });
+    } else {
+      const externalIds = options.externalIds ?? [];
+      rows = await this._dailyAggregate.model.channelAudienceListMember.findMany({
+        where: {
+          organizationId,
+          integrationId,
+          listId,
+          counterpartyExternalId: { in: externalIds },
+        },
+        orderBy: { counterpartyExternalId: 'asc' },
+        select: memberSelect,
+      });
+    }
+
+    const removed = rows.map((row) => ({
+      externalId: row.counterpartyExternalId,
+      name: row.audienceMember.name,
+      username: row.audienceMember.username,
+    }));
+
+    if (removed.length) {
+      await this._dailyAggregate.model.channelAudienceListMember.deleteMany({
+        where: {
+          organizationId,
+          integrationId,
+          listId,
+          counterpartyExternalId: {
+            in: removed.map((member) => member.externalId),
+          },
+        },
+      });
+    }
+
+    const remaining = options.onlyFollowing
+      ? await this._dailyAggregate.model.channelAudienceListMember.count({
+          where: {
+            organizationId,
+            integrationId,
+            listId,
+            audienceMember: {
+              membershipState: ChannelAudienceMembership.FOLLOWER,
+            },
+          },
+        })
+      : 0;
+
+    return {
+      ok: true as const,
+      removed,
+      remaining,
+      hasMore: remaining > 0,
+    };
+  }
+
   async addAudienceTriageIgnore(
     organizationId: string,
     integrationId: string,
     externalId: string,
     triage: string,
     createdByUserId?: string,
-    reasons?: string[]
+    reasons?: string[],
+    options?: { snooze?: boolean }
   ) {
     return this.withSerializableRetry(async (tx) => {
       await this.assertOwnedIntegration(tx, organizationId, integrationId);
@@ -2891,6 +2998,9 @@ export class ChannelInteractionRepository {
       if (!member) {
         return { missing: 'member' as const };
       }
+      const expiresAt = options?.snooze
+        ? new Date(Date.now() + RELATIONSHIP_TRIAGE_SNOOZE_MS)
+        : null;
       await tx.channelAudienceMemberTriageIgnore.upsert({
         where: {
           organizationId_integrationId_counterpartyExternalId_triage: {
@@ -2905,11 +3015,14 @@ export class ChannelInteractionRepository {
           integrationId,
           counterpartyExternalId: externalId,
           triage,
+          expiresAt,
           ...(createdByUserId ? { createdByUserId } : {}),
         },
-        update: {},
+        update: {
+          expiresAt,
+        },
       });
-      if (triage === 'lead') {
+      if (triage === 'lead' && !options?.snooze) {
         await this.upsertLeadFitFeedback(tx, {
           organizationId,
           integrationId,

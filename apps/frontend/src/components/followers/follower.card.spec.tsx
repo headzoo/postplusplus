@@ -30,10 +30,15 @@ jest.mock('@mantine/hooks', () => ({
 }));
 
 const decisionOpen = jest.fn();
+const triageDismissOpen = jest.fn();
 const leadDismissOpen = jest.fn();
 
 jest.mock('@gitroom/frontend/components/layout/new-modal', () => ({
   useDecisionModal: () => ({ open: decisionOpen }),
+}));
+
+jest.mock('@gitroom/frontend/components/followers/triage.dismiss.modal', () => ({
+  useTriageDismissModal: () => ({ open: triageDismissOpen }),
 }));
 
 jest.mock('@gitroom/frontend/components/followers/lead.dismiss.modal', () => ({
@@ -53,6 +58,8 @@ describe('FollowerCard', () => {
   beforeEach(() => {
     decisionOpen.mockReset();
     decisionOpen.mockResolvedValue(false);
+    triageDismissOpen.mockReset();
+    triageDismissOpen.mockResolvedValue(null);
     leadDismissOpen.mockReset();
     leadDismissOpen.mockResolvedValue(null);
   });
@@ -398,7 +405,7 @@ describe('FollowerCard', () => {
   it('confirms before dismissing a triage badge and does not open the card', async () => {
     const onOpen = jest.fn();
     const onDismissTriage = jest.fn();
-    decisionOpen.mockResolvedValue(true);
+    triageDismissOpen.mockResolvedValue('remove');
     render(
       <FollowerCard
         follower={{
@@ -413,19 +420,35 @@ describe('FollowerCard', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Remove Hot badge' }));
 
     expect(onOpen).not.toHaveBeenCalled();
-    expect(decisionOpen).toHaveBeenCalledWith(
-      expect.objectContaining({
-        title: 'Remove Hot badge?',
-        approveLabel: 'Yes',
-      })
-    );
+    expect(triageDismissOpen).toHaveBeenCalledWith('Hot');
     await Promise.resolve();
     expect(onDismissTriage).toHaveBeenCalledWith('hot_lead');
   });
 
+  it('snoozes a triage badge when snooze is chosen', async () => {
+    const onDismissTriage = jest.fn();
+    triageDismissOpen.mockResolvedValue('snooze');
+    render(
+      <FollowerCard
+        follower={{
+          ...baseFollower,
+          relationshipTriage: 'hot_lead',
+        }}
+        onDismissTriage={onDismissTriage}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Hot badge' }));
+    await Promise.resolve();
+
+    expect(onDismissTriage).toHaveBeenCalledWith('hot_lead', undefined, {
+      snooze: true,
+    });
+  });
+
   it('does not dismiss a triage badge when confirmation is cancelled', async () => {
     const onDismissTriage = jest.fn();
-    decisionOpen.mockResolvedValue(false);
+    triageDismissOpen.mockResolvedValue(null);
     render(
       <FollowerCard
         follower={{
@@ -444,7 +467,7 @@ describe('FollowerCard', () => {
 
   it('renders a dismissible Lead badge when the follower is a lead', async () => {
     const onDismissTriage = jest.fn();
-    leadDismissOpen.mockResolvedValue(['bio_wording']);
+    leadDismissOpen.mockResolvedValue({ action: 'remove', reasons: ['bio_wording'] });
     render(
       <FollowerCard
         follower={{
@@ -504,7 +527,7 @@ describe('FollowerCard', () => {
 
   it('renders cultivate reason and dismissible Cultivate badge', async () => {
     const onDismissTriage = jest.fn();
-    decisionOpen.mockResolvedValue(true);
+    triageDismissOpen.mockResolvedValue('remove');
     render(
       <FollowerCard
         follower={{
@@ -519,14 +542,44 @@ describe('FollowerCard', () => {
     );
 
     expect(screen.getByText('Cultivate')).toBeTruthy();
-    expect(
-      screen.getByText('No outbound attention in 20 days · mutual relationship')
-    ).toBeTruthy();
-    expect(screen.getByText('Like their latest post')).toBeTruthy();
+    const handle = screen.getByText('@alex');
+    const cultivateReason = screen.getByText(
+      'No outbound attention in 20 days · mutual relationship'
+    );
+    const suggestedAction = screen.getByText('Like their latest post');
+    expect(handle.compareDocumentPosition(cultivateReason)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING
+    );
+    expect(handle.compareDocumentPosition(suggestedAction)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING
+    );
     fireEvent.click(
       screen.getByRole('button', { name: 'Remove Cultivate badge' })
     );
     await Promise.resolve();
     expect(onDismissTriage).toHaveBeenCalledWith('cultivate');
+  });
+
+  it('renders Via badge under the username', () => {
+    render(
+      <FollowerCard
+        follower={{
+          ...baseFollower,
+          isLead: true,
+          leadBridges: [
+            {
+              externalId: 'bridge-1',
+              username: 'RyanEls4',
+            },
+          ],
+        }}
+      />
+    );
+
+    const handle = screen.getByText('@alex');
+    const viaBadge = screen.getByText('Via @RyanEls4');
+    expect(handle.compareDocumentPosition(viaBadge)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING
+    );
   });
 });

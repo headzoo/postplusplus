@@ -19,6 +19,11 @@ import { FollowerDetailTool } from '@gitroom/nestjs-libraries/chat/tools/followe
 import { FollowerTimelineTool } from '@gitroom/nestjs-libraries/chat/tools/follower.timeline.tool';
 import { FollowerListsTool } from '@gitroom/nestjs-libraries/chat/tools/follower.lists.tool';
 import { FollowerStatisticsTool } from '@gitroom/nestjs-libraries/chat/tools/follower.statistics.tool';
+import { FollowerListRemoveMembersTool } from '@gitroom/nestjs-libraries/chat/tools/follower.list.remove.members.tool';
+import { FollowerListAddMemberTool } from '@gitroom/nestjs-libraries/chat/tools/follower.list.add.member.tool';
+import { FollowerIgnoreTool } from '@gitroom/nestjs-libraries/chat/tools/follower.ignore.tool';
+import { FollowerUnignoreTool } from '@gitroom/nestjs-libraries/chat/tools/follower.unignore.tool';
+import { FollowerTriageIgnoreTool } from '@gitroom/nestjs-libraries/chat/tools/follower.triage.ignore.tool';
 import { AgentSkillsListTool } from '@gitroom/nestjs-libraries/chat/tools/agent-skills.list.tool';
 import { AgentSkillLoadTool } from '@gitroom/nestjs-libraries/chat/tools/agent-skill.load.tool';
 
@@ -32,6 +37,11 @@ export const toolList = [
   FollowerTimelineTool,
   FollowerListsTool,
   FollowerStatisticsTool,
+  FollowerListRemoveMembersTool,
+  FollowerListAddMemberTool,
+  FollowerIgnoreTool,
+  FollowerUnignoreTool,
+  FollowerTriageIgnoreTool,
   PipelinesListTool,
   PipelinePostsListTool,
   PipelineEnqueuePostTool,

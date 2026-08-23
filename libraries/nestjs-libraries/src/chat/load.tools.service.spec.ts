@@ -13,7 +13,7 @@ jest.mock('@ai-sdk/openai', () => ({
 }));
 
 jest.mock('@mastra/memory', () => ({
-  Memory: class Memory {},
+  Memory: class Memory { },
 }));
 
 jest.mock('@gitroom/nestjs-libraries/chat/mastra.store', () => ({
@@ -107,6 +107,7 @@ describe('renderFollowerPageGuidance', () => {
       meaning: "Their effort exceeds the channel's.",
     },
     search: 'alex',
+    availableLists: [{ id: 'list-great', name: 'Great' }],
     sort: {
       key: 'followers_count',
       label: 'Followers',
@@ -122,9 +123,14 @@ describe('renderFollowerPageGuidance', () => {
 
     expect(guidance).toContain('Current page: list at /followers/hot');
     expect(guidance).toContain('Postiz on X · x · id: channel-1');
+    expect(guidance).toContain(
+      'Actively selected channel (prefer this channelId for follower tools'
+    );
+    expect(guidance).toContain('Great (id: list-great)');
     expect(guidance).toContain("Their effort exceeds the channel's.");
     expect(guidance).toContain('Sorting applies only to the currently loaded page.');
     expect(guidance).toContain('use follower tools to refresh and validate');
+    expect(guidance).toContain('refreshFollowerPage');
   });
 
   it('does not add follower guidance outside follower pages', () => {
@@ -158,6 +164,10 @@ describe('renderFollowerPageGuidance', () => {
 
     expect(instructions).toContain('actorless personal-grade limits');
     expect(instructions).toContain('follower tools');
+    expect(instructions).toContain('removeFollowerListMembers');
+    expect(instructions).toContain('Follower audience writes');
+    expect(instructions).toContain('actively selected channel');
+    expect(instructions).toContain('refreshFollowerPage');
   });
 
   it('documents organization skill discovery, slash invocation, and safety precedence', async () => {

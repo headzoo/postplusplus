@@ -11,7 +11,10 @@ import {
   buildFollowerDetailHref,
   buildFollowerDetailUrl,
   buildFollowersUrl,
+  followerListsKey,
+  isFollowerChannelCacheKey,
   isFollowerListCacheKey,
+  revalidateFollowerChannelCaches,
 } from './use.followers';
 
 describe('buildFollowersUrl', () => {
@@ -139,6 +142,52 @@ describe('follower list cache updates', () => {
     expect(
       isFollowerListCacheKey('channel-1', '/followers/channel-2?limit=24')
     ).toBe(false);
+  });
+
+  it('matches channel-scoped list, member, timeline, and lists keys for refresh', () => {
+    expect(
+      isFollowerChannelCacheKey('channel-1', '/followers/channel-1?limit=24')
+    ).toBe(true);
+    expect(
+      isFollowerChannelCacheKey(
+        'channel-1',
+        '/followers/channel-1/member?externalId=follower-1'
+      )
+    ).toBe(true);
+    expect(
+      isFollowerChannelCacheKey(
+        'channel-1',
+        '/followers/channel-1/member/timeline?externalId=follower-1'
+      )
+    ).toBe(true);
+    expect(
+      isFollowerChannelCacheKey('channel-1', followerListsKey('channel-1'))
+    ).toBe(true);
+    expect(
+      isFollowerChannelCacheKey('channel-1', '/followers/channel-2?limit=24')
+    ).toBe(false);
+    expect(
+      isFollowerChannelCacheKey('channel-1', '/followers/channels')
+    ).toBe(false);
+  });
+
+  it('revalidates matching channel cache keys via mutate', async () => {
+    const mutateCache = jest.fn().mockResolvedValue(undefined);
+
+    await revalidateFollowerChannelCaches(mutateCache, 'channel-1');
+
+    expect(mutateCache).toHaveBeenCalledWith(
+      expect.any(Function),
+      undefined,
+      { revalidate: true }
+    );
+    const matcher = mutateCache.mock.calls[0][0] as (key: unknown) => boolean;
+    expect(matcher('/followers/channel-1?limit=24')).toBe(true);
+    expect(
+      matcher('/followers/channel-1/member?externalId=follower-1')
+    ).toBe(true);
+    expect(matcher(followerListsKey('channel-1'))).toBe(true);
+    expect(matcher('/followers/channel-2?limit=24')).toBe(false);
   });
 
   it('patches the matching follower card fields from a refreshed snapshot', () => {
@@ -324,6 +373,25 @@ describe('follower list cache updates', () => {
         { id: 'follower-1', name: 'Alex', engagedNotYet: false },
         { id: 'follower-2', name: 'Sam', engagedNotYet: true },
       ],
+      hasMore: false,
+    });
+    expect(
+      applyTriageIgnoreToFollowerPage(
+        {
+          items: [
+            {
+              id: 'cultivate-1',
+              name: 'Alex',
+              isCultivate: true,
+            },
+          ],
+          hasMore: false,
+        },
+        'cultivate-1',
+        { triage: 'cultivate' }
+      )
+    ).toEqual({
+      items: [{ id: 'cultivate-1', name: 'Alex', isCultivate: false }],
       hasMore: false,
     });
   });

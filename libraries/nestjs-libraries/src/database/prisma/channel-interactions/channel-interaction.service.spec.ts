@@ -73,6 +73,12 @@ const createRepository = () => ({
     relationshipGrade: 4,
   }),
   addAudienceTriageIgnore: jest.fn().mockResolvedValue({ ok: true }),
+  removeAudienceListMembers: jest.fn().mockResolvedValue({
+    ok: true,
+    removed: [],
+    remaining: 0,
+    hasMore: false,
+  }),
   listCultivateCandidates: jest.fn().mockResolvedValue([]),
   rankCultivateCandidates: jest.fn().mockReturnValue([]),
   upsertCultivatePicks: jest.fn().mockResolvedValue({ count: 0 }),
@@ -1435,6 +1441,7 @@ describe('ChannelInteractionService', () => {
       'follower-a',
       'hot_lead',
       'user-a',
+      undefined,
       undefined
     );
 
@@ -1454,7 +1461,8 @@ describe('ChannelInteractionService', () => {
       'follower-a',
       'lead',
       'user-a',
-      ['wrong_topic']
+      ['wrong_topic'],
+      undefined
     );
 
     await expect(
@@ -1472,7 +1480,34 @@ describe('ChannelInteractionService', () => {
       'follower-a',
       'cultivate',
       'user-a',
+      undefined,
       undefined
+    );
+  });
+
+  it('snoozes a follower triage badge without lead dismiss reasons', async () => {
+    const repository = createRepository();
+    const service = new ChannelInteractionService(repository as any);
+
+    await expect(
+      service.ignoreFollowerTriage(
+        'org',
+        'integration',
+        'follower-a',
+        'lead',
+        'user-a',
+        undefined,
+        { snooze: true }
+      )
+    ).resolves.toBeUndefined();
+    expect(repository.addAudienceTriageIgnore).toHaveBeenCalledWith(
+      'org',
+      'integration',
+      'follower-a',
+      'lead',
+      'user-a',
+      undefined,
+      { snooze: true }
     );
   });
 
@@ -1511,6 +1546,7 @@ describe('ChannelInteractionService', () => {
       'follower-a',
       'engaged_not_yet',
       'user-a',
+      undefined,
       undefined
     );
 
@@ -1534,6 +1570,56 @@ describe('ChannelInteractionService', () => {
         'user-a'
       )
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('removes following list members through a bounded batch', async () => {
+    const repository = createRepository();
+    repository.removeAudienceListMembers.mockResolvedValue({
+      ok: true,
+      removed: [
+        { externalId: 'person-1', name: 'Alex', username: 'alex' },
+      ],
+      remaining: 3,
+      hasMore: true,
+    });
+    const service = new ChannelInteractionService(repository as any);
+
+    await expect(
+      service.removeFollowerListMembers('org', 'integration', 'list-1', {
+        onlyFollowing: true,
+      })
+    ).resolves.toEqual({
+      removed: [{ id: 'person-1', name: 'Alex', username: 'alex' }],
+      remaining: 3,
+      hasMore: true,
+    });
+    expect(repository.removeAudienceListMembers).toHaveBeenCalledWith(
+      'org',
+      'integration',
+      'list-1',
+      { onlyFollowing: true }
+    );
+  });
+
+  it('rejects invalid removeFollowerListMembers option combinations', async () => {
+    const repository = createRepository();
+    const service = new ChannelInteractionService(repository as any);
+
+    await expect(
+      service.removeFollowerListMembers('org', 'integration', 'list-1', {})
+    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      service.removeFollowerListMembers('org', 'integration', 'list-1', {
+        onlyFollowing: true,
+        externalIds: ['person-1'],
+      })
+    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      service.removeFollowerListMembers('org', 'integration', 'list-1', {
+        externalIds: ['person-1', 'person-1'],
+      })
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(repository.removeAudienceListMembers).not.toHaveBeenCalled();
   });
 
   it('refreshes one score direction and keeps the other projected score', async () => {

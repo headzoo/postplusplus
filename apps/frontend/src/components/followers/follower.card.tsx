@@ -5,7 +5,7 @@ import clsx from 'clsx';
 import Link from 'next/link';
 import ImageWithFallback from '@gitroom/react/helpers/image.with.fallback';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
-import { useDecisionModal } from '@gitroom/frontend/components/layout/new-modal';
+import { useTriageDismissModal } from '@gitroom/frontend/components/followers/triage.dismiss.modal';
 import { useLeadDismissModal } from '@gitroom/frontend/components/followers/lead.dismiss.modal';
 import { Follower, FollowerList, DismissibleTriage } from '@gitroom/frontend/components/followers/use.followers';
 import { RelationshipStars } from '@gitroom/frontend/components/followers/follower.relationship.stars';
@@ -57,15 +57,18 @@ const TRIAGE_STYLES: Record<DismissibleTriage, string> = {
   cultivate: 'border-teal-500/40 text-teal-500',
 };
 
+export type DismissTriageOptions = { snooze?: boolean };
+
 export const RelationshipTriageBadge: FC<{
   triage: DismissibleTriage;
   onRemove?: (
     triage: DismissibleTriage,
-    reasons?: LeadFitDismissReason[]
+    reasons?: LeadFitDismissReason[],
+    options?: DismissTriageOptions
   ) => Promise<void> | void;
 }> = ({ triage, onRemove }) => {
   const t = useT();
-  const decision = useDecisionModal();
+  const triageDismiss = useTriageDismissModal();
   const leadDismiss = useLeadDismissModal();
   const label = TRIAGE_LABELS[triage];
   const displayLabel = t(label.key, label.defaultLabel);
@@ -78,31 +81,28 @@ export const RelationshipTriageBadge: FC<{
         return;
       }
       if (triage === 'lead') {
-        const reasons = await leadDismiss.open();
-        if (!reasons?.length) {
+        const result = await leadDismiss.open();
+        if (!result) {
           return;
         }
-        await onRemove(triage, reasons);
+        if (result.action === 'snooze') {
+          await onRemove(triage, undefined, { snooze: true });
+          return;
+        }
+        await onRemove(triage, result.reasons);
         return;
       }
-      const approved = await decision.open({
-        title: t('followers_triage_remove_title', 'Remove {{label}} badge?', {
-          label: displayLabel,
-        }),
-        description: t(
-          'followers_triage_remove_description',
-          'This follower will be removed from the {{label}} list.',
-          { label: displayLabel }
-        ),
-        approveLabel: t('yes', 'Yes'),
-        cancelLabel: t('cancel', 'Cancel'),
-      });
-      if (!approved) {
+      const action = await triageDismiss.open(displayLabel);
+      if (!action) {
         return;
       }
-      await onRemove(triage);
+      await onRemove(
+        triage,
+        undefined,
+        action === 'snooze' ? { snooze: true } : undefined
+      );
     },
-    [decision, displayLabel, leadDismiss, onRemove, t, triage]
+    [displayLabel, leadDismiss, onRemove, triage, triageDismiss]
   );
 
   const className = clsx(
@@ -162,7 +162,8 @@ export const FollowerCard: FC<{
   onToggleIgnored?: (ignored: boolean) => Promise<void> | void;
   onDismissTriage?: (
     triage: DismissibleTriage,
-    reasons?: LeadFitDismissReason[]
+    reasons?: LeadFitDismissReason[],
+    options?: DismissTriageOptions
   ) => Promise<void> | void;
   onOpen?: () => void;
 }> = ({
@@ -205,6 +206,16 @@ export const FollowerCard: FC<{
       follower.reciprocationStars !== undefined ||
       follower.myGrade !== undefined ||
       follower.relationshipTriage != null;
+    const leadBridge = (follower.leadBridges ?? [])
+      .slice(0, 1)
+      .find((item) => !!item.username);
+    const leadBridgeViaHandle = leadBridge?.username
+      ? `@${leadBridge.username.replace(/^@/, '')}`
+      : null;
+    const hasContextBadges =
+      !!(follower.isCultivate && follower.cultivateReason) ||
+      !!(follower.isCultivate && follower.suggestedAction) ||
+      !!leadBridgeViaHandle;
 
     const handleCardClick = () => {
       onOpen?.();
@@ -357,45 +368,6 @@ export const FollowerCard: FC<{
                     onRemove={onDismissTriage}
                   />
                 )}
-                {follower.isCultivate && follower.cultivateReason && (
-                  <span
-                    className="inline-flex max-w-[240px] shrink truncate rounded-full border border-newTableBorder px-[8px] py-[2px] text-[11px] font-[500] text-textItemBlur"
-                    title={follower.cultivateReason}
-                  >
-                    {follower.cultivateReason}
-                  </span>
-                )}
-                {follower.isCultivate && follower.suggestedAction && (
-                  <span
-                    className="inline-flex max-w-[200px] shrink truncate rounded-full border border-newTableBorder px-[8px] py-[2px] text-[11px] font-[500] text-textItemBlur"
-                    title={follower.suggestedAction}
-                  >
-                    {follower.suggestedAction}
-                  </span>
-                )}
-                {(follower.leadBridges ?? []).slice(0, 1).map((bridge) => {
-                  const viaHandle = bridge.username
-                    ? `@${bridge.username.replace(/^@/, '')}`
-                    : null;
-                  if (!viaHandle) {
-                    return null;
-                  }
-                  return (
-                    <span
-                      key={bridge.externalId}
-                      className="inline-flex w-fit shrink-0 items-center rounded-full border border-newTableBorder px-[8px] py-[2px] text-[11px] font-[600] text-textItemBlur"
-                      title={t(
-                        'followers_lead_via_title',
-                        'Discovered via {{handle}}',
-                        { handle: viaHandle }
-                      )}
-                    >
-                      {t('followers_lead_via', 'Via {{handle}}', {
-                        handle: viaHandle,
-                      })}
-                    </span>
-                  );
-                })}
                 {Number.isFinite(follower.leadFitScore) && (
                   <span
                     className="inline-flex w-fit shrink-0 items-center rounded-full border border-sky-500/40 px-[8px] py-[2px] text-[11px] font-[600] text-sky-500"
@@ -462,6 +434,41 @@ export const FollowerCard: FC<{
                     {handle}
                   </span>
                 ))}
+              {hasContextBadges && (
+                <div className="mt-[4px] flex min-w-0 flex-wrap items-center gap-[8px]">
+                  {follower.isCultivate && follower.cultivateReason && (
+                    <span
+                      className="inline-flex max-w-[240px] shrink truncate rounded-full border border-newTableBorder px-[8px] py-[2px] text-[11px] font-[500] text-textItemBlur"
+                      title={follower.cultivateReason}
+                    >
+                      {follower.cultivateReason}
+                    </span>
+                  )}
+                  {follower.isCultivate && follower.suggestedAction && (
+                    <span
+                      className="inline-flex max-w-[200px] shrink truncate rounded-full border border-newTableBorder px-[8px] py-[2px] text-[11px] font-[500] text-textItemBlur"
+                      title={follower.suggestedAction}
+                    >
+                      {follower.suggestedAction}
+                    </span>
+                  )}
+                  {leadBridgeViaHandle && leadBridge && (
+                    <span
+                      key={leadBridge.externalId}
+                      className="inline-flex w-fit shrink-0 items-center rounded-full border border-newTableBorder px-[8px] py-[2px] text-[11px] font-[600] text-textItemBlur"
+                      title={t(
+                        'followers_lead_via_title',
+                        'Discovered via {{handle}}',
+                        { handle: leadBridgeViaHandle }
+                      )}
+                    >
+                      {t('followers_lead_via', 'Via {{handle}}', {
+                        handle: leadBridgeViaHandle,
+                      })}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="col-span-2 flex min-w-0 flex-col gap-[12px] h-full md:col-auto md:flex-1">

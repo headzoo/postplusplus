@@ -7,6 +7,7 @@ module.exports = {
     '<rootDir>/libraries/nestjs-libraries/src/database/prisma/context-documents/**/*.spec.ts',
     '<rootDir>/libraries/nestjs-libraries/src/chat/tools/pipeline.context-document.tools.spec.ts',
     '<rootDir>/libraries/nestjs-libraries/src/chat/tools/agent-skill.tools.spec.ts',
+    '<rootDir>/libraries/nestjs-libraries/src/chat/tools/follower.tools.spec.ts',
     '<rootDir>/libraries/nestjs-libraries/src/chat/load.tools.service.spec.ts',
     '<rootDir>/libraries/nestjs-libraries/src/database/prisma/posts/posts.repository.spec.ts',
     '<rootDir>/libraries/nestjs-libraries/src/database/prisma/posts/posts.service.edit.spec.ts',

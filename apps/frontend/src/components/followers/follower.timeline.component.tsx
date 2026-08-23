@@ -9,6 +9,7 @@ import ImageWithFallback from '@gitroom/react/helpers/image.with.fallback';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { Button } from '@gitroom/react/form/button';
 import { LoadingComponent } from '@gitroom/frontend/components/layout/loading';
+import { useCopilotFollowerPageProperties } from '@gitroom/frontend/components/followers/use.copilot.follower.page';
 import {
   formatFollowerPageContext,
   normalizeFollowerSearch,
@@ -192,6 +193,7 @@ export const FollowerTimelineComponent: FC = () => {
     description: 'followerPage',
     value: timelineContext,
   });
+  useCopilotFollowerPageProperties(timelineContext);
 
   const backHref = useMemo(() => {
     if (!integrationId || !username) {

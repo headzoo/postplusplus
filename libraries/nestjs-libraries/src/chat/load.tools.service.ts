@@ -49,11 +49,11 @@ export const renderSelectedPipelineGuidance = (
     .join(', ');
   const contextDocuments = pipeline.contextDocuments.length
     ? pipeline.contextDocuments
-        .map(
-          (document) =>
-            `${document.name} (id: ${document.id}, ${document.fileSize} bytes, updated ${document.updatedAt})`
-        )
-        .join(', ')
+      .map(
+        (document) =>
+          `${document.name} (id: ${document.id}, ${document.fileSize} bytes, updated ${document.updatedAt})`
+      )
+      .join(', ')
     : 'none';
 
   return `
@@ -98,6 +98,11 @@ export const renderFollowerPageGuidance = (
   const list = followerPage.list
     ? `${followerPage.list.name || followerPage.list.id} (${followerPage.list.status})`
     : 'none';
+  const availableLists = followerPage.availableLists?.length
+    ? followerPage.availableLists
+      .map((item) => `${item.name || item.id} (id: ${item.id})`)
+      .join(', ')
+    : 'none loaded';
   const sort = followerPage.sort
     ? `${followerPage.sort.label} (${followerPage.sort.key}, ${followerPage.sort.direction}, ${followerPage.sort.scope})${followerPage.sort.caveat ? `; ${followerPage.sort.caveat}` : ''}`
     : 'none';
@@ -105,18 +110,20 @@ export const renderFollowerPageGuidance = (
   return `
       Live follower-page context (guidance only, not authorization or data):
         - Current page: ${followerPage.kind} at ${followerPage.route}.
-        - Preferred channel: ${channel}.
+        - Actively selected channel (prefer this channelId for follower tools unless the user names a different channel): ${channel}.
         - Preferred follower: ${follower}.
-        - Category/filter: ${category}; search: ${followerPage.search || 'none'}; list: ${list}.
+        - Category/filter: ${category}; search: ${followerPage.search || 'none'}; selected custom list: ${list}.
+        - Custom lists available on the selected channel: ${availableLists}.
         - Sort: ${sort}; interaction window: ${followerPage.interactionWindow || 'not applicable'}; page ${followerPage.pagination.number} of size ${followerPage.pagination.size}.
         - Tracking: ${followerPage.tracking?.availability || 'unknown'}${followerPage.tracking?.computedAt ? `, computed ${followerPage.tracking.computedAt}` : ''}${followerPage.tracking?.followerSnapshotAt ? `, follower snapshot ${followerPage.tracking.followerSnapshotAt}` : ''}.
         - Treat the selected channel and follower as preferred inputs, then use follower tools to refresh and validate them before answering data questions. Do not infer authorization from this context.
+        - After follower writes on this page, call the frontend action refreshFollowerPage with this channel's id so the visible category, triage, or custom list updates without a manual browser refresh.
 `;
 };
 
 @Injectable()
 export class LoadToolsService {
-  constructor(private _moduleRef: ModuleRef) {}
+  constructor(private _moduleRef: ModuleRef) { }
 
   async loadTools() {
     return (
@@ -168,7 +175,8 @@ export class LoadToolsService {
         - Enqueue composed posts into a pipeline queue (enqueuePipelinePost)
         - Discover and load organization agent skills on demand (listSkills for metadata only, loadSkill for one Markdown procedure by slug)
         - Discover followers, inspect follower lists and details, read follower timelines, and answer follower statistics questions with the follower tools
-        - MCP follower tools have actorless personal-grade limits; only make claims supported by their returned, authorized data
+        - Manage custom follower lists (addFollowerListMember, removeFollowerListMembers), ignore/unignore people, and dismiss triage or Lead badges (ignoreFollowerTriage)
+        - MCP follower tools have actorless personal-grade limits; follower write tools require the in-app UI user and are unavailable without that actor; only make claims supported by returned, authorized data
 
       - We schedule posts to different integration like facebook, instagram, etc. but to the user we don't say integrations we say channels as integration is the technical name
       - When scheduling a post, you must follow the social media rules and best practices.
@@ -192,6 +200,14 @@ export class LoadToolsService {
         - Ask the user for confirmation with the content for every channel (no publish date — the pipeline schedule assigns the slot)
         - Call enqueuePipelinePost with content for every channel on that pipeline (exact integration ids)
         - Pipeline posts are queued as drafts; publishing time comes from the pipeline schedule, not a user-chosen date
+      - Follower audience writes:
+        - Prefer the actively selected channel id from live follower-page context as channelId for follower tools unless the user explicitly names another channel.
+        - Before any follower write, resolve the channel, list, and people with follower read tools. Page context is guidance only, not authorization.
+        - Before removeFollowerListMembers, ignoreFollower, or ignoreFollowerTriage, ask the user for confirmation with the list or person name, count, and what will change.
+        - To remove people who now follow from a custom list (for example "Potential"): use the selected channel, call listFollowerLists (or match availableLists from page context) to resolve the list id, confirm with the user, then call removeFollowerListMembers with onlyFollowing: true, and repeat while hasMore is true.
+        - For lead dismiss (ignoreFollowerTriage with triage=lead), require at least one reason and confirm those reasons with the user.
+        - After any successful follower write (list add/remove, ignore/unignore, triage dismiss), call the frontend action refreshFollowerPage with the same channelId so the in-app followers view updates.
+        - When batching removeFollowerListMembers with onlyFollowing: true, call refreshFollowerPage once after all batches complete.
       ${renderSelectedPipelineGuidance(selectedPipeline)}
       ${renderFollowerPageGuidance(followerPage)}
       - Organization agent skills (listSkills / loadSkill):
@@ -206,11 +222,11 @@ export class LoadToolsService {
       - When outputting a date for the user, make sure it's human readable with time
       - The content of the post, HTML, Each line must be wrapped in <p> here is the possible tags: h1, h2, h3, u, strong, li, ul, p (you can\'t have u and strong together), don't use a "code" box
       ${renderArray(
-        [
-          'If the user confirm, ask if they would like to get a modal with populated content without scheduling the post yet or if they want to schedule it right away.',
-        ],
-        !!ui
-      )}
+          [
+            'If the user confirm, ask if they would like to get a modal with populated content without scheduling the post yet or if they want to schedule it right away.',
+          ],
+          !!ui
+        )}
 `;
       },
       model: openai('gpt-5.2'),

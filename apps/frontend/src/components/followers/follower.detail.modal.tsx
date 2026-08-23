@@ -325,8 +325,12 @@ const FollowerDetailContent: FC<{
   const { ignoreTriage } = useFollowerListMutations(integrationId);
 
   const handleDismissTriage = useCallback(
-    async (triage: DismissibleTriage, reasons?: string[]) => {
-      await ignoreTriage(externalId, triage, reasons);
+    async (
+      triage: DismissibleTriage,
+      reasons?: string[],
+      options?: { snooze?: boolean }
+    ) => {
+      await ignoreTriage(externalId, triage, reasons, options);
       await revalidateDetail();
     },
     [externalId, ignoreTriage, revalidateDetail]

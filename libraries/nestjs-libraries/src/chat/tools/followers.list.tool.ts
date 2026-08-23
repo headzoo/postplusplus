@@ -19,7 +19,7 @@ export class FollowersListTool implements AgentToolInterface {
   run() {
     return createTool({
       id: this.name,
-      description: `List a bounded page of followers for one follower-capable channel. Sort keys must be advertised by listFollowerChannels; page-scoped sorts only order the fetched page, while database sorts use stored audience data. Categories: ${followerCategoriesDescription}`,
+      description: `List a bounded page of followers for one follower-capable channel. Sort keys must be advertised by listFollowerChannels; page-scoped sorts only order the fetched page, while database sorts use stored audience data. Custom-list pages (listId) can include people who now follow the channel; followedAt means they currently follow. Categories: ${followerCategoriesDescription}`,
       inputSchema: followerQueryWithChannelSchema,
       mcp: { annotations: { ...followerToolAnnotations, title: 'List followers' } },
       outputSchema: z.object({
@@ -30,6 +30,7 @@ export class FollowersListTool implements AgentToolInterface {
             username: z.string().optional(),
             picture: z.string().url().optional(),
             profileUrl: z.string().url().optional(),
+            followedAt: z.string().optional(),
             relationshipGrade: z.number().nullable().optional(),
             myGrade: z.number().nullable().optional(),
             relationshipTriage: z.string().nullable().optional(),

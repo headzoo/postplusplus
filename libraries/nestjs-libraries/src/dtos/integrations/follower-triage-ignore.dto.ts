@@ -2,7 +2,9 @@ import {
   ArrayMinSize,
   ArrayUnique,
   IsArray,
+  IsBoolean,
   IsIn,
+  IsOptional,
   IsString,
   MaxLength,
   MinLength,
@@ -33,11 +35,18 @@ export class IgnoreFollowerTriageDto {
     | 'lead'
     | 'engaged_not_yet';
 
-  @ValidateIf((body: IgnoreFollowerTriageDto) => body.triage === 'lead')
+  @ValidateIf(
+    (body: IgnoreFollowerTriageDto) =>
+      body.triage === 'lead' && body.snooze !== true
+  )
   @IsArray()
   @ArrayMinSize(1)
   @ArrayUnique()
   @IsString({ each: true })
   @IsIn([...LEAD_FIT_DISMISS_REASONS], { each: true })
   reasons?: (typeof LEAD_FIT_DISMISS_REASONS)[number][];
+
+  @IsOptional()
+  @IsBoolean()
+  snooze?: boolean;
 }

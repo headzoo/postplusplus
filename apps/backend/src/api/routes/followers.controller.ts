@@ -100,7 +100,8 @@ export class FollowersController {
       integrationId,
       body.externalId,
       body.triage,
-      body.reasons
+      body.reasons,
+      body.snooze
     );
   }
 

@@ -795,6 +795,25 @@ export const useFollowerRelationshipScoreMutation = (
 export const followerListsKey = (integrationId: string) =>
   `/followers/${integrationId}/lists`;
 
+export const isFollowerChannelCacheKey = (
+  integrationId: string,
+  key: unknown
+) =>
+  typeof key === 'string' &&
+  (isFollowerListCacheKey(integrationId, key) ||
+    key.startsWith(`/followers/${integrationId}/member`) ||
+    key === followerListsKey(integrationId));
+
+export const revalidateFollowerChannelCaches = (
+  mutateCache: ReturnType<typeof useSWRConfig>['mutate'],
+  integrationId: string
+) =>
+  mutateCache(
+    (key) => isFollowerChannelCacheKey(integrationId, key),
+    undefined,
+    { revalidate: true }
+  );
+
 export const useFollowerLists = (integrationId?: string) => {
   const fetch = useFetch();
 
@@ -895,7 +914,10 @@ export const applyImportedMemberToFollowerPage = (
 export const applyTriageIgnoreToFollowerPage = (
   page: FollowerPage | undefined,
   externalId: string,
-  options?: { removeFromPage?: boolean; triage?: DismissibleTriage }
+  options?: {
+    removeFromPage?: boolean;
+    triage?: DismissibleTriage;
+  }
 ): FollowerPage | undefined => {
   if (!page) {
     return page;
@@ -911,6 +933,9 @@ export const applyTriageIgnoreToFollowerPage = (
       }
       if (options?.triage === 'engaged_not_yet') {
         return { ...item, engagedNotYet: false };
+      }
+      if (options?.triage === 'cultivate') {
+        return { ...item, isCultivate: false };
       }
       return { ...item, relationshipTriage: null };
     });
@@ -1086,7 +1111,8 @@ export const useFollowerListMutations = (integrationId?: string) => {
     async (
       externalId: string,
       triage: DismissibleTriage,
-      reasons?: string[]
+      reasons?: string[],
+      options?: { snooze?: boolean }
     ) => {
       if (!integrationId) {
         throw new Error('Channel is required');
@@ -1099,6 +1125,7 @@ export const useFollowerListMutations = (integrationId?: string) => {
             externalId,
             triage,
             ...(reasons?.length ? { reasons } : {}),
+            ...(options?.snooze ? { snooze: true } : {}),
           }),
         }
       );

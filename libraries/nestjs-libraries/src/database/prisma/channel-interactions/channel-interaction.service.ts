@@ -1760,13 +1760,73 @@ export class ChannelInteractionService {
     }
   }
 
+  async removeFollowerListMembers(
+    organizationId: string,
+    integrationId: string,
+    listId: string,
+    options: {
+      externalIds?: string[];
+      onlyFollowing?: boolean;
+      limit?: number;
+    }
+  ) {
+    this.validateBoundedString(listId, 'listId', MAX_ID_LENGTH);
+    const hasExternalIds = Array.isArray(options.externalIds);
+    const onlyFollowing = options.onlyFollowing === true;
+    if (hasExternalIds === onlyFollowing) {
+      throw new BadRequestException(
+        'Provide either externalIds or onlyFollowing, not both'
+      );
+    }
+    if (hasExternalIds) {
+      const externalIds = options.externalIds ?? [];
+      if (!externalIds.length) {
+        throw new BadRequestException('externalIds must include at least one id');
+      }
+      if (externalIds.length > 50) {
+        throw new BadRequestException('externalIds cannot exceed 50 ids');
+      }
+      const unique = new Set(externalIds);
+      if (unique.size !== externalIds.length) {
+        throw new BadRequestException('externalIds must be unique');
+      }
+      for (const externalId of externalIds) {
+        this.validateBoundedString(externalId, 'externalId', MAX_ID_LENGTH);
+      }
+    }
+
+    const result = await this._repository.removeAudienceListMembers(
+      organizationId,
+      integrationId,
+      listId,
+      {
+        ...(hasExternalIds ? { externalIds: options.externalIds } : {}),
+        ...(onlyFollowing ? { onlyFollowing: true } : {}),
+        ...(options.limit != null ? { limit: options.limit } : {}),
+      }
+    );
+    if ('missing' in result) {
+      throw new NotFoundException('Follower list was not found');
+    }
+    return {
+      removed: result.removed.map((member) => ({
+        id: member.externalId,
+        name: member.name || member.username || member.externalId,
+        ...(member.username ? { username: member.username } : {}),
+      })),
+      remaining: result.remaining,
+      hasMore: result.hasMore,
+    };
+  }
+
   async ignoreFollowerTriage(
     organizationId: string,
     integrationId: string,
     externalId: string,
     triage: string,
     createdByUserId?: string,
-    reasons?: string[]
+    reasons?: string[],
+    options?: { snooze?: boolean }
   ) {
     this.validateBoundedString(externalId, 'externalId', MAX_ID_LENGTH);
     if (
@@ -1782,7 +1842,7 @@ export class ChannelInteractionService {
     ) {
       throw new BadRequestException('Invalid triage value');
     }
-    if (triage === 'lead') {
+    if (triage === 'lead' && !options?.snooze) {
       if (!Array.isArray(reasons) || reasons.length === 0) {
         throw new BadRequestException('Lead dismiss requires at least one reason');
       }
@@ -1793,7 +1853,8 @@ export class ChannelInteractionService {
       externalId,
       triage,
       createdByUserId,
-      reasons
+      reasons,
+      options
     );
     if (result.missing === 'member') {
       throw new NotFoundException('Follower was not found');

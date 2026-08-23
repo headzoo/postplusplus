@@ -15,6 +15,7 @@ import { FollowerCard } from '@gitroom/frontend/components/followers/follower.ca
 import { FollowerDetailModal } from '@gitroom/frontend/components/followers/follower.detail.modal';
 import { FollowerListCreateModal } from '@gitroom/frontend/components/followers/follower.list.create.modal';
 import { FollowerListAddModal } from '@gitroom/frontend/components/followers/follower.list.add.modal';
+import { useCopilotFollowerPageProperties } from '@gitroom/frontend/components/followers/use.copilot.follower.page';
 import { useModals } from '@gitroom/frontend/components/layout/new-modal';
 import { PlusIcon } from '@gitroom/frontend/components/ui/icons';
 import {
@@ -866,6 +867,10 @@ export const FollowersComponent: FC = () => {
           status: activeList ? 'current' : 'unknown_or_deleted',
         }
         : undefined,
+      availableLists: followerLists.map((list) => ({
+        id: list.id,
+        name: list.name,
+      })),
       sort: activeSort && effectiveDirection
         ? {
           key: activeSort.key,
@@ -895,6 +900,7 @@ export const FollowersComponent: FC = () => {
     activeSort,
     deepLinkDetail?.follower,
     effectiveDirection,
+    followerLists,
     followerPath,
     followersPage?.tracking,
     historyPath,
@@ -912,6 +918,7 @@ export const FollowersComponent: FC = () => {
     description: 'followerPage',
     value: followerPageContext,
   });
+  useCopilotFollowerPageProperties(followerPageContext);
 
   const openFollowerDetailModal = useCallback(
     ({
@@ -1689,8 +1696,8 @@ export const FollowersComponent: FC = () => {
                       );
                     }
                   }}
-                  onDismissTriage={async (triageValue, reasons) => {
-                    await ignoreTriage(follower.id, triageValue, reasons);
+                  onDismissTriage={async (triageValue, reasons, options) => {
+                    await ignoreTriage(follower.id, triageValue, reasons, options);
                     const shouldRemoveFromPage =
                       triage === triageValue ||
                       (audience === 'lead' && triageValue === 'lead') ||

@@ -68,6 +68,10 @@ jest.mock('@copilotkit/react-core', () => ({
   useCopilotReadable: (value: unknown) => useCopilotReadableMock(value),
 }));
 
+jest.mock('@gitroom/frontend/components/followers/use.copilot.follower.page', () => ({
+  useCopilotFollowerPageProperties: jest.fn(),
+}));
+
 jest.mock('next/link', () => ({
   __esModule: true,
   default: ({
@@ -421,6 +425,9 @@ describe('FollowersComponent', () => {
         channel: expect.objectContaining({ id: 'channel-1', name: 'Acme Channel' }),
         search: 'alex',
         list: expect.objectContaining({ id: 'list-1', name: 'VIP', status: 'current' }),
+        availableLists: expect.arrayContaining([
+          expect.objectContaining({ id: 'list-1', name: 'VIP' }),
+        ]),
         sort: expect.objectContaining({
           key: 'their_effort',
           direction: 'asc',

@@ -1151,13 +1151,36 @@ export class IntegrationService {
     }
   }
 
+  async removeFollowerListMembers(
+    org: Organization,
+    integrationId: string,
+    listId: string,
+    options: {
+      externalIds?: string[];
+      onlyFollowing?: boolean;
+    }
+  ) {
+    await this.getFollowerIntegrationProvider(org, integrationId);
+    try {
+      return await this._channelInteractionService.removeFollowerListMembers(
+        org.id,
+        integrationId,
+        listId,
+        options
+      );
+    } catch (error) {
+      this.rethrowFollowerListError(error);
+    }
+  }
+
   async ignoreFollowerMemberTriage(
     org: Organization,
     user: User,
     integrationId: string,
     externalId: string,
     triage: string,
-    reasons?: string[]
+    reasons?: string[],
+    snooze?: boolean
   ) {
     await this.getFollowerIntegrationProvider(org, integrationId);
     try {
@@ -1167,7 +1190,8 @@ export class IntegrationService {
         externalId,
         triage,
         user.id,
-        reasons
+        reasons,
+        snooze ? { snooze: true } : undefined
       );
     } catch (error) {
       if (error instanceof NotFoundException) {

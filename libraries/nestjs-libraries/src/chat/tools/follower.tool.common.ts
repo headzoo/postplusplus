@@ -18,6 +18,16 @@ export const followerToolAnnotations = {
   openWorldHint: false,
 };
 
+export const followerWriteToolAnnotations = {
+  title: 'Follower audience write',
+  readOnlyHint: false,
+  destructiveHint: false,
+  idempotentHint: false,
+  openWorldHint: false,
+};
+
+export const FOLLOWER_LIST_MEMBER_WRITE_BATCH = 50;
+
 export const followerCategoriesDescription = Object.entries(
   FOLLOWER_CATEGORY_DESCRIPTIONS
 )
@@ -90,6 +100,8 @@ export const followerSelectorWithChannelSchema = followerSelectorShape
   })
   .refine(validateFollowerSelector, 'Provide exactly one of externalId or username.');
 
+export type FollowerToolActor = { userId: string };
+
 export const getFollowerToolContext = (inputData: unknown, context: any) => {
   checkAuth(inputData, context);
   const organization = JSON.parse(
@@ -107,6 +119,17 @@ export const getFollowerToolContext = (inputData: unknown, context: any) => {
         ? { userId: actor.userId }
         : undefined,
   };
+};
+
+export const requireFollowerWriteActor = (
+  actor: FollowerToolActor | undefined
+): FollowerToolActor => {
+  if (!actor?.userId) {
+    throw new BadRequestException(
+      'Follower write tools require an authenticated UI user'
+    );
+  }
+  return actor;
 };
 
 export const requireFollowerChannelId = (channelId: string | undefined) => {

@@ -69,6 +69,10 @@ export type FollowerPageContext = {
     name?: string;
     status: 'current' | 'unknown_or_deleted';
   };
+  availableLists?: Array<{
+    id: string;
+    name?: string;
+  }>;
   sort?: {
     key: string;
     label: string;
@@ -130,6 +134,13 @@ export const formatFollowerPageContext = (
       status: context.list.status,
     }
     : undefined,
+  availableLists: context.availableLists
+    ?.slice(0, 20)
+    .map((list) => ({
+      id: shortenFollowerContextText(list.id, 160) || '',
+      name: shortenFollowerContextText(list.name, 80),
+    }))
+    .filter((list) => list.id),
   sort: context.sort
     ? {
       key: shortenFollowerContextText(context.sort.key, 80) || '',

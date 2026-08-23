@@ -321,7 +321,29 @@ describe('FollowersController', () => {
       'channel-a',
       'follower-a',
       'hot_lead',
+      undefined,
       undefined
+    );
+  });
+
+  it('forwards snooze when ignoring a triage badge temporarily', async () => {
+    service.ignoreFollowerMemberTriage.mockResolvedValue(undefined);
+
+    await expect(
+      controller.ignoreFollowerMemberTriage(org, user, 'channel-a', {
+        externalId: 'follower-a',
+        triage: 'hot_lead',
+        snooze: true,
+      })
+    ).resolves.toBeUndefined();
+    expect(service.ignoreFollowerMemberTriage).toHaveBeenCalledWith(
+      org,
+      user,
+      'channel-a',
+      'follower-a',
+      'hot_lead',
+      undefined,
+      true
     );
   });
 
@@ -341,7 +363,8 @@ describe('FollowersController', () => {
       'channel-a',
       'follower-a',
       'lead',
-      ['bio_wording']
+      ['bio_wording'],
+      undefined
     );
   });
 
@@ -355,6 +378,11 @@ describe('FollowersController', () => {
       triage: 'lead',
       reasons: ['wrong_topic'],
     });
+    const leadSnooze = Object.assign(new IgnoreFollowerTriageDto(), {
+      externalId: 'follower-a',
+      triage: 'lead',
+      snooze: true,
+    });
     const hotLead = Object.assign(new IgnoreFollowerTriageDto(), {
       externalId: 'follower-a',
       triage: 'hot_lead',
@@ -366,6 +394,7 @@ describe('FollowersController', () => {
       ])
     );
     await expect(validate(leadWithReasons)).resolves.toHaveLength(0);
+    await expect(validate(leadSnooze)).resolves.toHaveLength(0);
     await expect(validate(hotLead)).resolves.toHaveLength(0);
   });
 

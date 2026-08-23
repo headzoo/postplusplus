@@ -95,6 +95,8 @@ const createHarness = () => {
     channelAudienceListMember: {
       upsert: jest.fn(),
       deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
+      findMany: jest.fn().mockResolvedValue([]),
+      count: jest.fn().mockResolvedValue(0),
     },
     channelAudienceMemberTriageIgnore: {
       upsert: jest.fn(),
@@ -2531,11 +2533,68 @@ describe('ChannelInteractionRepository', () => {
         integrationId: 'integration',
         counterpartyExternalId: 'person-1',
         triage: 'hot_lead',
+        expiresAt: null,
         createdByUserId: 'user-a',
       },
-      update: {},
+      update: {
+        expiresAt: null,
+      },
     });
     expect(tx.channelAudienceLeadFitFeedback.upsert).not.toHaveBeenCalled();
+  });
+
+  it('snoozes an audience triage badge for seven days', async () => {
+    const { repository, tx } = createHarness();
+    const now = new Date('2026-08-23T12:00:00.000Z');
+    jest.useFakeTimers();
+    jest.setSystemTime(now);
+    tx.channelAudienceMember.findFirst.mockResolvedValue({
+      externalId: 'person-1',
+      name: null,
+      username: null,
+      bio: null,
+      followersCount: null,
+      followingCount: null,
+      leadFitScore: null,
+      leadFitReason: null,
+      leadFitMatchedTopics: null,
+    });
+    tx.channelAudienceMemberTriageIgnore.upsert.mockResolvedValue({});
+
+    await expect(
+      repository.addAudienceTriageIgnore(
+        'org',
+        'integration',
+        'person-1',
+        'hot_lead',
+        'user-a',
+        undefined,
+        { snooze: true }
+      )
+    ).resolves.toEqual({ ok: true });
+
+    expect(tx.channelAudienceMemberTriageIgnore.upsert).toHaveBeenCalledWith({
+      where: {
+        organizationId_integrationId_counterpartyExternalId_triage: {
+          organizationId: 'org',
+          integrationId: 'integration',
+          counterpartyExternalId: 'person-1',
+          triage: 'hot_lead',
+        },
+      },
+      create: {
+        organizationId: 'org',
+        integrationId: 'integration',
+        counterpartyExternalId: 'person-1',
+        triage: 'hot_lead',
+        expiresAt: new Date('2026-08-30T12:00:00.000Z'),
+        createdByUserId: 'user-a',
+      },
+      update: {
+        expiresAt: new Date('2026-08-30T12:00:00.000Z'),
+      },
+    });
+    jest.useRealTimers();
   });
 
   it('snapshots rejected lead-fit feedback when dismissing a lead badge', async () => {
@@ -3093,5 +3152,93 @@ describe('ChannelInteractionRepository', () => {
         'SummerYule'
       )
     ).resolves.toBeNull();
+  });
+
+  it('removes only following list members in a bounded batch', async () => {
+    const { repository, tx } = createHarness();
+    tx.channelAudienceList.findFirst.mockResolvedValue({ id: 'list-1' });
+    tx.channelAudienceListMember.findMany.mockResolvedValue([
+      {
+        counterpartyExternalId: 'person-1',
+        audienceMember: { name: 'Alex', username: 'alex' },
+      },
+      {
+        counterpartyExternalId: 'person-2',
+        audienceMember: { name: 'Sam', username: null },
+      },
+    ]);
+    tx.channelAudienceListMember.count.mockResolvedValue(1);
+
+    await expect(
+      repository.removeAudienceListMembers('org', 'integration', 'list-1', {
+        onlyFollowing: true,
+        limit: 50,
+      })
+    ).resolves.toEqual({
+      ok: true,
+      removed: [
+        { externalId: 'person-1', name: 'Alex', username: 'alex' },
+        { externalId: 'person-2', name: 'Sam', username: null },
+      ],
+      remaining: 1,
+      hasMore: true,
+    });
+
+    expect(tx.channelAudienceListMember.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          listId: 'list-1',
+          audienceMember: {
+            membershipState: ChannelAudienceMembership.FOLLOWER,
+          },
+        }),
+        take: 50,
+      })
+    );
+    expect(tx.channelAudienceListMember.deleteMany).toHaveBeenCalledWith({
+      where: {
+        organizationId: 'org',
+        integrationId: 'integration',
+        listId: 'list-1',
+        counterpartyExternalId: { in: ['person-1', 'person-2'] },
+      },
+    });
+  });
+
+  it('removes explicit list member ids and reports no remaining following batch', async () => {
+    const { repository, tx } = createHarness();
+    tx.channelAudienceList.findFirst.mockResolvedValue({ id: 'list-1' });
+    tx.channelAudienceListMember.findMany.mockResolvedValue([
+      {
+        counterpartyExternalId: 'person-1',
+        audienceMember: { name: 'Alex', username: 'alex' },
+      },
+    ]);
+
+    await expect(
+      repository.removeAudienceListMembers('org', 'integration', 'list-1', {
+        externalIds: ['person-1', 'missing'],
+      })
+    ).resolves.toEqual({
+      ok: true,
+      removed: [
+        { externalId: 'person-1', name: 'Alex', username: 'alex' },
+      ],
+      remaining: 0,
+      hasMore: false,
+    });
+    expect(tx.channelAudienceListMember.count).not.toHaveBeenCalled();
+  });
+
+  it('returns missing list when batch-removing from an unknown list', async () => {
+    const { repository, tx } = createHarness();
+    tx.channelAudienceList.findFirst.mockResolvedValue(null);
+
+    await expect(
+      repository.removeAudienceListMembers('org', 'integration', 'missing', {
+        onlyFollowing: true,
+      })
+    ).resolves.toEqual({ missing: 'list' });
+    expect(tx.channelAudienceListMember.findMany).not.toHaveBeenCalled();
   });
 });

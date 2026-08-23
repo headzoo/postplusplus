@@ -78,7 +78,20 @@ describe('LeadDismissModal', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Remove Lead' }));
 
-    expect(resolution).toHaveBeenCalledWith(['bio_wording']);
+    expect(resolution).toHaveBeenCalledWith({
+      action: 'remove',
+      reasons: ['bio_wording'],
+    });
+    expect(closeCurrent).toHaveBeenCalled();
+  });
+
+  it('snoozes without requiring dismiss reasons', () => {
+    const resolution = jest.fn();
+    render(<LeadDismissModal resolution={resolution} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Snooze 7 days' }));
+
+    expect(resolution).toHaveBeenCalledWith({ action: 'snooze' });
     expect(closeCurrent).toHaveBeenCalled();
   });
 

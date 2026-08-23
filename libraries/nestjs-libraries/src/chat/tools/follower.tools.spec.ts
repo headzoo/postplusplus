@@ -1,7 +1,7 @@
 jest.mock(
   '@gitroom/nestjs-libraries/database/prisma/integrations/integration.service',
   () => ({
-    IntegrationService: class IntegrationService {},
+    IntegrationService: class IntegrationService { },
   })
 );
 
@@ -27,14 +27,66 @@ jest.mock('@ai-sdk/openai', () => ({
 }));
 
 jest.mock('@mastra/memory', () => ({
-  Memory: class Memory {},
+  Memory: class Memory { },
 }));
 
 jest.mock('@gitroom/nestjs-libraries/chat/mastra.store', () => ({
   pStore: {},
 }));
 
-import { HttpException } from '@nestjs/common';
+jest.mock('@gitroom/nestjs-libraries/chat/tools/tool.list', () => {
+  const {
+    FollowerChannelsTool,
+  } = require('@gitroom/nestjs-libraries/chat/tools/follower.channels.tool');
+  const {
+    FollowersListTool,
+  } = require('@gitroom/nestjs-libraries/chat/tools/followers.list.tool');
+  const {
+    FollowerDetailTool,
+  } = require('@gitroom/nestjs-libraries/chat/tools/follower.detail.tool');
+  const {
+    FollowerTimelineTool,
+  } = require('@gitroom/nestjs-libraries/chat/tools/follower.timeline.tool');
+  const {
+    FollowerListsTool,
+  } = require('@gitroom/nestjs-libraries/chat/tools/follower.lists.tool');
+  const {
+    FollowerStatisticsTool,
+  } = require('@gitroom/nestjs-libraries/chat/tools/follower.statistics.tool');
+  const {
+    FollowerListRemoveMembersTool,
+  } = require('@gitroom/nestjs-libraries/chat/tools/follower.list.remove.members.tool');
+  const {
+    FollowerListAddMemberTool,
+  } = require('@gitroom/nestjs-libraries/chat/tools/follower.list.add.member.tool');
+  const {
+    FollowerIgnoreTool,
+  } = require('@gitroom/nestjs-libraries/chat/tools/follower.ignore.tool');
+  const {
+    FollowerUnignoreTool,
+  } = require('@gitroom/nestjs-libraries/chat/tools/follower.unignore.tool');
+  const {
+    FollowerTriageIgnoreTool,
+  } = require('@gitroom/nestjs-libraries/chat/tools/follower.triage.ignore.tool');
+
+  return {
+    toolList: [
+      FollowerChannelsTool,
+      FollowersListTool,
+      FollowerDetailTool,
+      FollowerTimelineTool,
+      FollowerListsTool,
+      FollowerStatisticsTool,
+      FollowerListRemoveMembersTool,
+      FollowerListAddMemberTool,
+      FollowerIgnoreTool,
+      FollowerUnignoreTool,
+      FollowerTriageIgnoreTool,
+    ],
+  };
+});
+
+import { BadRequestException, HttpException } from '@nestjs/common';
 import { IntegrationService } from '@gitroom/nestjs-libraries/database/prisma/integrations/integration.service';
 import {
   FOLLOWER_CATEGORY_DESCRIPTIONS,
@@ -50,16 +102,23 @@ import { FollowerDetailTool } from '@gitroom/nestjs-libraries/chat/tools/followe
 import { FollowerTimelineTool } from '@gitroom/nestjs-libraries/chat/tools/follower.timeline.tool';
 import { FollowerListsTool } from '@gitroom/nestjs-libraries/chat/tools/follower.lists.tool';
 import { FollowerStatisticsTool } from '@gitroom/nestjs-libraries/chat/tools/follower.statistics.tool';
+import { FollowerListRemoveMembersTool } from '@gitroom/nestjs-libraries/chat/tools/follower.list.remove.members.tool';
+import { FollowerListAddMemberTool } from '@gitroom/nestjs-libraries/chat/tools/follower.list.add.member.tool';
+import { FollowerIgnoreTool } from '@gitroom/nestjs-libraries/chat/tools/follower.ignore.tool';
+import { FollowerUnignoreTool } from '@gitroom/nestjs-libraries/chat/tools/follower.unignore.tool';
+import { FollowerTriageIgnoreTool } from '@gitroom/nestjs-libraries/chat/tools/follower.triage.ignore.tool';
 import {
   followerCategoriesDescription,
   followerQueryWithChannelSchema,
   followerSelectorWithChannelSchema,
   followerToolAnnotations,
+  followerWriteToolAnnotations,
   getFollowerToolContext,
+  requireFollowerWriteActor,
 } from '@gitroom/nestjs-libraries/chat/tools/follower.tool.common';
 import { toolList } from '@gitroom/nestjs-libraries/chat/tools/tool.list';
 
-const FOLLOWER_TOOL_NAMES = [
+const FOLLOWER_READ_TOOL_NAMES = [
   'listFollowerChannels',
   'listFollowers',
   'getFollowerDetail',
@@ -68,13 +127,39 @@ const FOLLOWER_TOOL_NAMES = [
   'summarizeFollowerAudience',
 ] as const;
 
-const FOLLOWER_TOOL_CLASSES = [
+const FOLLOWER_WRITE_TOOL_NAMES = [
+  'removeFollowerListMembers',
+  'addFollowerListMember',
+  'ignoreFollower',
+  'unignoreFollower',
+  'ignoreFollowerTriage',
+] as const;
+
+const FOLLOWER_TOOL_NAMES = [
+  ...FOLLOWER_READ_TOOL_NAMES,
+  ...FOLLOWER_WRITE_TOOL_NAMES,
+] as const;
+
+const FOLLOWER_READ_TOOL_CLASSES = [
   FollowerChannelsTool,
   FollowersListTool,
   FollowerDetailTool,
   FollowerTimelineTool,
   FollowerListsTool,
   FollowerStatisticsTool,
+];
+
+const FOLLOWER_WRITE_TOOL_CLASSES = [
+  FollowerListRemoveMembersTool,
+  FollowerListAddMemberTool,
+  FollowerIgnoreTool,
+  FollowerUnignoreTool,
+  FollowerTriageIgnoreTool,
+];
+
+const FOLLOWER_TOOL_CLASSES = [
+  ...FOLLOWER_READ_TOOL_CLASSES,
+  ...FOLLOWER_WRITE_TOOL_CLASSES,
 ];
 
 describe('follower tools cross-surface contracts', () => {
@@ -121,6 +206,11 @@ describe('follower tools cross-surface contracts', () => {
     getFollowerMemberTimeline: jest.fn(),
     listFollowerLists: jest.fn(),
     getStoredFollowerAudienceCounts: jest.fn(),
+    removeFollowerListMembers: jest.fn(),
+    addFollowerListMember: jest.fn(),
+    ignoreFollowerMember: jest.fn(),
+    unignoreFollowerMember: jest.fn(),
+    ignoreFollowerMemberTriage: jest.fn(),
   });
 
   beforeEach(() => {
@@ -154,7 +244,7 @@ describe('follower tools cross-surface contracts', () => {
       );
 
       expect(exposed.map((tool) => tool.id)).toEqual([...FOLLOWER_TOOL_NAMES]);
-      for (const tool of exposed) {
+      for (const tool of exposed.slice(0, FOLLOWER_READ_TOOL_NAMES.length)) {
         expect(tool.annotations).toEqual(
           expect.objectContaining({
             ...followerToolAnnotations,
@@ -162,6 +252,25 @@ describe('follower tools cross-surface contracts', () => {
           })
         );
       }
+      for (const tool of exposed.slice(FOLLOWER_READ_TOOL_NAMES.length)) {
+        expect(tool.annotations).toEqual(
+          expect.objectContaining({
+            readOnlyHint: false,
+            openWorldHint: false,
+            title: expect.any(String),
+          })
+        );
+      }
+      expect(
+        exposed.find((tool) => tool.id === 'removeFollowerListMembers')?.annotations
+      ).toEqual(
+        expect.objectContaining({
+          ...followerWriteToolAnnotations,
+          title: 'Remove follower list members',
+          destructiveHint: true,
+          idempotentHint: true,
+        })
+      );
     });
 
     it('loads the same follower tool names for the postiz agent and MCP listTools', async () => {
@@ -217,7 +326,17 @@ describe('follower tools cross-surface contracts', () => {
     });
 
     it('includes follower capabilities and MCP actorless limits in agent instructions', async () => {
-      const service = new LoadToolsService({ get: jest.fn() } as any);
+      const service = new LoadToolsService({
+        get: jest.fn((toolClass: (typeof FOLLOWER_TOOL_CLASSES)[number]) => {
+          if (FOLLOWER_TOOL_CLASSES.includes(toolClass)) {
+            return new toolClass({} as IntegrationService);
+          }
+          return {
+            name: 'other-tool',
+            run: async () => ({ id: 'other-tool' }),
+          };
+        }),
+      } as any);
       await service.agent();
 
       const instructions = capturedAgentOptions.instructions({
@@ -226,11 +345,26 @@ describe('follower tools cross-surface contracts', () => {
 
       expect(instructions).toContain('follower tools');
       expect(instructions).toContain('actorless personal-grade limits');
-      expect(instructions).toContain('summarizeFollowerAudience');
+      expect(instructions).toContain('follower statistics');
+      expect(instructions).toContain('removeFollowerListMembers');
+      expect(instructions).toContain('onlyFollowing: true');
+      expect(instructions).toContain('Follower audience writes');
+      expect(instructions).toContain('actively selected channel');
+      expect(instructions).toContain('refreshFollowerPage');
     });
 
     it('adds live follower-page guidance to instructions when context is present', async () => {
-      const service = new LoadToolsService({ get: jest.fn() } as any);
+      const service = new LoadToolsService({
+        get: jest.fn((toolClass: (typeof FOLLOWER_TOOL_CLASSES)[number]) => {
+          if (FOLLOWER_TOOL_CLASSES.includes(toolClass)) {
+            return new toolClass({} as IntegrationService);
+          }
+          return {
+            name: 'other-tool',
+            run: async () => ({ id: 'other-tool' }),
+          };
+        }),
+      } as any);
       await service.agent();
       const followerPage = {
         kind: 'list' as const,
@@ -632,6 +766,147 @@ describe('follower tools cross-surface contracts', () => {
         undefined,
         channelId,
         expect.objectContaining({ sort: 'my_grade' })
+      );
+    });
+  });
+
+  describe('follower write tools', () => {
+    it('removes only-following list members through removeFollowerListMembers', async () => {
+      const integrationService = createIntegrationService();
+      integrationService.removeFollowerListMembers.mockResolvedValue({
+        removed: [{ id: 'follower-1', name: 'Alex', username: 'alex' }],
+        remaining: 2,
+        hasMore: true,
+      });
+      const tool = new FollowerListRemoveMembersTool(
+        integrationService as unknown as IntegrationService
+      ).run();
+
+      const result = await tool.execute!(
+        { channelId, listId: 'list-1', onlyFollowing: true },
+        createUiContext()
+      );
+
+      expect(integrationService.removeFollowerListMembers).toHaveBeenCalledWith(
+        { id: organizationId },
+        channelId,
+        'list-1',
+        { onlyFollowing: true }
+      );
+      expect(result.output).toEqual({
+        removed: [{ id: 'follower-1', name: 'Alex', username: 'alex' }],
+        remaining: 2,
+        hasMore: true,
+      });
+    });
+
+    it('rejects actorless follower writes and MCP contexts without a UI user', async () => {
+      const integrationService = createIntegrationService();
+      const tool = new FollowerListRemoveMembersTool(
+        integrationService as unknown as IntegrationService
+      ).run();
+
+      expect(() => requireFollowerWriteActor(undefined)).toThrow(BadRequestException);
+      await expect(
+        tool.execute!(
+          { channelId, listId: 'list-1', onlyFollowing: true },
+          createMcpContext()
+        )
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(integrationService.removeFollowerListMembers).not.toHaveBeenCalled();
+    });
+
+    it('rejects removeFollowerListMembers inputs that mix or omit selectors', () => {
+      const tool = new FollowerListRemoveMembersTool(
+        createIntegrationService() as unknown as IntegrationService
+      ).run();
+      const schema = tool.inputSchema!;
+
+      expect(
+        schema.safeParse({
+          channelId,
+          listId: 'list-1',
+          onlyFollowing: true,
+          externalIds: ['a'],
+        }).success
+      ).toBe(false);
+      expect(
+        schema.safeParse({
+          channelId,
+          listId: 'list-1',
+        }).success
+      ).toBe(false);
+      expect(
+        schema.safeParse({
+          channelId,
+          listId: 'list-1',
+          externalIds: ['a', 'a'],
+        }).success
+      ).toBe(false);
+      expect(
+        schema.safeParse({
+          channelId,
+          listId: 'list-1',
+          externalIds: ['a'],
+        }).success
+      ).toBe(true);
+    });
+
+    it('requires lead dismiss reasons on ignoreFollowerTriage', () => {
+      const tool = new FollowerTriageIgnoreTool(
+        createIntegrationService() as unknown as IntegrationService
+      ).run();
+      const schema = tool.inputSchema!;
+
+      expect(
+        schema.safeParse({
+          channelId,
+          externalId: 'follower-1',
+          triage: 'lead',
+        }).success
+      ).toBe(false);
+      expect(
+        schema.safeParse({
+          channelId,
+          externalId: 'follower-1',
+          triage: 'lead',
+          reasons: ['wrong_topic'],
+        }).success
+      ).toBe(true);
+    });
+
+    it('adds a list member and ignores a follower through write tools', async () => {
+      const integrationService = createIntegrationService();
+      integrationService.addFollowerListMember.mockResolvedValue(undefined);
+      integrationService.ignoreFollowerMember.mockResolvedValue(undefined);
+      const addTool = new FollowerListAddMemberTool(
+        integrationService as unknown as IntegrationService
+      ).run();
+      const ignoreTool = new FollowerIgnoreTool(
+        integrationService as unknown as IntegrationService
+      ).run();
+
+      await addTool.execute!(
+        { channelId, listId: 'list-1', externalId: 'follower-1' },
+        createUiContext()
+      );
+      await ignoreTool.execute!(
+        { channelId, externalId: 'follower-1' },
+        createUiContext()
+      );
+
+      expect(integrationService.addFollowerListMember).toHaveBeenCalledWith(
+        { id: organizationId },
+        { id: userId },
+        channelId,
+        'list-1',
+        'follower-1'
+      );
+      expect(integrationService.ignoreFollowerMember).toHaveBeenCalledWith(
+        { id: organizationId },
+        { id: userId },
+        channelId,
+        'follower-1'
       );
     });
   });
