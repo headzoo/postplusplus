@@ -1,13 +1,13 @@
 export const HELP_TEXT = `Usage:
   pnpm run commands:users:reset-admin-passkeys <userId> --confirm-email <email>
 
-Operations-only recovery: deletes all admin passkey credentials and WebAuthn
-challenges for the target super-admin, and revokes every active admin
-verification session. The user remains isSuperAdmin=true and must enroll a new
-passkey on next /admin access.
+Operations-only recovery: deletes all passkey credentials and WebAuthn
+challenges for the target user, and revokes every active verification session.
+Login MFA is off until the user enrolls again. Super-admins must enroll before
+the next /admin access.
 
-Recovery risk: after reset, anyone who controls that super-admin's normal login
-can enroll a replacement passkey. Restrict shell/database access and retain ops
+Recovery risk: after reset, anyone who controls that user's normal login can
+enroll a replacement passkey. Restrict shell/database access and retain ops
 logs from this command's output.
 
 Options:
@@ -143,13 +143,6 @@ export function validateResetTarget(
 ): ResetValidationResult {
   if (!user) {
     return { ok: false, message: 'User not found.' };
-  }
-
-  if (user.isSuperAdmin !== true) {
-    return {
-      ok: false,
-      message: `User ${user.id} is not a platform super-admin.`,
-    };
   }
 
   if (normalizeEmail(user.email) !== normalizeEmail(confirmEmail)) {

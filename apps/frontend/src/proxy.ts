@@ -88,6 +88,18 @@ export async function proxy(request: NextRequest) {
       maxAge: -1,
       domain: getCookieUrlFromDomain(process.env.FRONTEND_URL!),
     });
+    response.cookies.set('passkey_auth', '', {
+      path: '/',
+      ...(!process.env.NOT_SECURED
+        ? {
+            secure: true,
+            httpOnly: true,
+            sameSite: false,
+          }
+        : {}),
+      maxAge: -1,
+      domain: getCookieUrlFromDomain(process.env.FRONTEND_URL!),
+    });
     return response;
   }
 

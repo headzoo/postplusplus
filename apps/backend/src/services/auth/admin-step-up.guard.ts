@@ -15,6 +15,7 @@ import {
 import { ORIGINAL_OPERATOR_REQUEST_KEY } from '@gitroom/nestjs-libraries/user/original.operator.from.request';
 import { ADMIN_STEP_UP_KEY } from '@gitroom/backend/services/auth/admin-step-up.decorator';
 import { readAdminAuthToken } from '@gitroom/backend/services/auth/admin-auth.cookie';
+import { readPasskeyAuthToken } from '@gitroom/backend/services/auth/passkey-auth.cookie';
 
 export const ADMIN_STEP_UP_REQUIRED = 'ADMIN_STEP_UP_REQUIRED';
 export const ADMIN_STEP_UP_FRESH_REQUIRED = 'ADMIN_STEP_UP_FRESH_REQUIRED';
@@ -53,7 +54,8 @@ export class AdminStepUpGuard implements CanActivate {
     const check = await this._adminPasskeyService.validateVerification(
       operator,
       readAdminAuthToken(request),
-      policy
+      policy,
+      readPasskeyAuthToken(request)
     );
 
     if (check.valid) {

@@ -1,6 +1,7 @@
 export const ADMIN_WEBAUTHN_CHALLENGE_TTL_MS = 5 * 60 * 1000;
 export const ADMIN_VERIFICATION_SESSION_TTL_MS = 20 * 60 * 1000;
 export const ADMIN_WEBAUTHN_FRESH_ACTION_TTL_MS = 5 * 60 * 1000;
+export const ACCOUNT_PASSKEY_SESSION_TTL_MS = 365 * 24 * 60 * 60 * 1000;
 
 export type AdminWebAuthnConfiguration = {
   rpName: string;
@@ -9,6 +10,7 @@ export type AdminWebAuthnConfiguration = {
   challengeTtlMs: number;
   verificationSessionTtlMs: number;
   freshActionTtlMs: number;
+  accountSessionTtlMs: number;
 };
 
 function parseOrigin(value: string | undefined, variableName: string) {
@@ -86,6 +88,7 @@ export function parseAdminWebAuthnConfiguration(
     challengeTtlMs: ADMIN_WEBAUTHN_CHALLENGE_TTL_MS,
     verificationSessionTtlMs: ADMIN_VERIFICATION_SESSION_TTL_MS,
     freshActionTtlMs: ADMIN_WEBAUTHN_FRESH_ACTION_TTL_MS,
+    accountSessionTtlMs: ACCOUNT_PASSKEY_SESSION_TTL_MS,
   };
 }
 

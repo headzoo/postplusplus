@@ -51,6 +51,14 @@ export type AdminVerificationCheck =
   | { valid: true; expiresAt: Date; freshUntil: Date }
   | { valid: false; reason: 'enrollment' | 'session' | 'stale' };
 
+export type PasskeySessionKind = 'admin' | 'account';
+
+export type AccountPasskeyStatus = {
+  enrolled: boolean;
+  verified: boolean;
+  expiresAt: string | null;
+};
+
 export function hashAdminSessionToken(token: string) {
   return createHash('sha256').update(token).digest('hex');
 }
@@ -73,17 +81,31 @@ export class AdminPasskeyService {
     return operator;
   }
 
+  assertUser(user?: AdminOperator | null) {
+    if (!user?.id || user.activated === false) {
+      // Deliberately not HttpForbiddenException: that filter clears the
+      // normal login instead of only denying this capability.
+      throw new HttpException('Forbidden', 403);
+    }
+
+    return user;
+  }
+
   async getStatus(
     operator?: AdminOperator | null,
-    token?: string
+    token?: string,
+    accountToken?: string
   ): Promise<AdminVerificationStatus> {
     const admin = this.assertOperator(operator);
     const configuration = getAdminWebAuthnConfiguration();
     const now = new Date();
-    const [credentials, session] = await Promise.all([
+    const [credentials, adminSession, accountSession] = await Promise.all([
       this._adminPasskeyRepository.countCredentials(admin.id),
       this.loadSession(admin.id, token, now),
+      this.loadSession(admin.id, accountToken, now),
     ]);
+
+    const session = adminSession ?? accountSession;
 
     if (!credentials || !session) {
       return {
@@ -95,60 +117,119 @@ export class AdminPasskeyService {
       };
     }
 
-    const freshUntil = new Date(
-      session.authenticatedAt.getTime() + configuration.freshActionTtlMs
-    );
+    // Freshness only comes from a short-lived admin step-up session.
+    const freshUntil = adminSession
+      ? new Date(
+          adminSession.authenticatedAt.getTime() + configuration.freshActionTtlMs
+        )
+      : new Date(0);
 
     return {
       enrolled: true,
       verified: true,
-      fresh: freshUntil.getTime() > now.getTime(),
+      fresh: !!adminSession && freshUntil.getTime() > now.getTime(),
       expiresAt: session.expiresAt.toISOString(),
-      freshUntil: freshUntil.toISOString(),
+      freshUntil: adminSession ? freshUntil.toISOString() : null,
     };
+  }
+
+  async getAccountStatus(
+    user?: AdminOperator | null,
+    token?: string
+  ): Promise<AccountPasskeyStatus> {
+    const account = this.assertUser(user);
+    const now = new Date();
+    const [credentials, session] = await Promise.all([
+      this._adminPasskeyRepository.countCredentials(account.id),
+      this.loadSession(account.id, token, now),
+    ]);
+
+    if (!credentials || !session) {
+      return {
+        enrolled: credentials > 0,
+        verified: false,
+        expiresAt: null,
+      };
+    }
+
+    return {
+      enrolled: true,
+      verified: true,
+      expiresAt: session.expiresAt.toISOString(),
+    };
+  }
+
+  async hasEnrolledPasskey(userId: string) {
+    return (await this._adminPasskeyRepository.countCredentials(userId)) > 0;
+  }
+
+  async hasValidAccountSession(userId: string, token?: string) {
+    const session = await this.loadSession(userId, token, new Date());
+    return !!session;
   }
 
   async validateVerification(
     operator: AdminOperator | null | undefined,
     token: string | undefined,
-    policy: AdminVerificationPolicy
+    policy: AdminVerificationPolicy,
+    accountToken?: string
   ): Promise<AdminVerificationCheck> {
     const admin = this.assertOperator(operator);
     const configuration = getAdminWebAuthnConfiguration();
     const now = new Date();
-    const [credentials, session] = await Promise.all([
+    const [credentials, adminSession, accountSession] = await Promise.all([
       this._adminPasskeyRepository.countCredentials(admin.id),
       this.loadSession(admin.id, token, now),
+      this.loadSession(admin.id, accountToken, now),
     ]);
 
     if (!credentials) {
       return { valid: false, reason: 'enrollment' };
     }
 
+    if (policy === 'fresh') {
+      if (!adminSession) {
+        return { valid: false, reason: 'session' };
+      }
+
+      const freshUntil = new Date(
+        adminSession.authenticatedAt.getTime() + configuration.freshActionTtlMs
+      );
+
+      if (freshUntil.getTime() <= now.getTime()) {
+        return { valid: false, reason: 'stale' };
+      }
+
+      return {
+        valid: true,
+        expiresAt: adminSession.expiresAt,
+        freshUntil,
+      };
+    }
+
+    const session = adminSession ?? accountSession;
     if (!session) {
       return { valid: false, reason: 'session' };
     }
 
-    const freshUntil = new Date(
-      session.authenticatedAt.getTime() + configuration.freshActionTtlMs
-    );
-
-    if (policy === 'fresh' && freshUntil.getTime() <= now.getTime()) {
-      return { valid: false, reason: 'stale' };
-    }
+    const freshUntil = adminSession
+      ? new Date(
+          adminSession.authenticatedAt.getTime() + configuration.freshActionTtlMs
+        )
+      : new Date(0);
 
     return { valid: true, expiresAt: session.expiresAt, freshUntil };
   }
 
   async createRegistrationOptions(operator?: AdminOperator | null) {
-    const admin = this.assertOperator(operator);
+    const admin = this.assertUser(operator);
     const configuration = getAdminWebAuthnConfiguration();
     const credentials = await this._adminPasskeyRepository.listCredentials(
       admin.id
     );
 
     if (credentials.length) {
-      throw new HttpException('An admin passkey is already enrolled', 409);
+      throw new HttpException('A passkey is already enrolled', 409);
     }
 
     const options = await generateRegistrationOptions({
@@ -182,13 +263,14 @@ export class AdminPasskeyService {
 
   async verifyRegistration(
     operator: AdminOperator | null | undefined,
-    response: RegistrationResponseJSON
+    response: RegistrationResponseJSON,
+    sessionKind: PasskeySessionKind = 'admin'
   ): Promise<AdminVerificationIssue> {
-    const admin = this.assertOperator(operator);
+    const admin = this.assertUser(operator);
     const configuration = getAdminWebAuthnConfiguration();
 
     if (await this._adminPasskeyRepository.countCredentials(admin.id)) {
-      throw new HttpException('An admin passkey is already enrolled', 409);
+      throw new HttpException('A passkey is already enrolled', 409);
     }
 
     const now = new Date();
@@ -226,7 +308,7 @@ export class AdminPasskeyService {
 
     const { credential, credentialDeviceType, credentialBackedUp, aaguid } =
       verification.registrationInfo;
-    const issued = this.issueSessionToken(now, configuration);
+    const issued = this.issueSessionToken(now, configuration, sessionKind);
     const result = await this._adminPasskeyRepository.completeRegistration({
       userId: admin.id,
       challenge: presentedChallenge,
@@ -248,7 +330,7 @@ export class AdminPasskeyService {
     });
 
     if (result.outcome === 'credential-exists') {
-      throw new HttpException('An admin passkey is already enrolled', 409);
+      throw new HttpException('A passkey is already enrolled', 409);
     }
 
     if (result.outcome !== 'created') {
@@ -259,14 +341,14 @@ export class AdminPasskeyService {
   }
 
   async createAssertionOptions(operator?: AdminOperator | null) {
-    const admin = this.assertOperator(operator);
+    const admin = this.assertUser(operator);
     const configuration = getAdminWebAuthnConfiguration();
     const credentials = await this._adminPasskeyRepository.listCredentials(
       admin.id
     );
 
     if (!credentials.length) {
-      throw new HttpException('No admin passkey is enrolled', 409);
+      throw new HttpException('No passkey is enrolled', 409);
     }
 
     const options = await generateAuthenticationOptions({
@@ -291,9 +373,10 @@ export class AdminPasskeyService {
 
   async verifyAssertion(
     operator: AdminOperator | null | undefined,
-    response: AuthenticationResponseJSON
+    response: AuthenticationResponseJSON,
+    sessionKind: PasskeySessionKind = 'admin'
   ): Promise<AdminVerificationIssue> {
-    const admin = this.assertOperator(operator);
+    const admin = this.assertUser(operator);
     const configuration = getAdminWebAuthnConfiguration();
     const now = new Date();
     const credential = await this._adminPasskeyRepository.findCredential(
@@ -343,7 +426,7 @@ export class AdminPasskeyService {
       throw this.assertionRejected();
     }
 
-    const issued = this.issueSessionToken(now, configuration);
+    const issued = this.issueSessionToken(now, configuration, sessionKind);
     const result = await this._adminPasskeyRepository.completeAssertion({
       userId: admin.id,
       challenge: presentedChallenge,
@@ -367,6 +450,62 @@ export class AdminPasskeyService {
     }
 
     return this.toIssuedSession(issued, result.session, configuration);
+  }
+
+  async revokeCredential(user?: AdminOperator | null) {
+    const account = this.assertUser(user);
+    const [revokedCredentials, deletedChallenges, revokedSessions] =
+      await Promise.all([
+        this._adminPasskeyRepository.revokeCredentials(account.id),
+        this._adminPasskeyRepository.deleteChallengesForUser(account.id),
+        this._adminPasskeyRepository.revokeSessionsForUser(account.id),
+      ]);
+
+    return {
+      revokedCredentials,
+      deletedChallenges,
+      revokedSessions,
+    };
+  }
+
+  /**
+   * Issues an account session (long TTL). Super-admins also receive a short
+   * admin step-up session so /admin does not immediately re-prompt.
+   */
+  async issueLoginSessions(
+    user: AdminOperator,
+    response: AuthenticationResponseJSON | RegistrationResponseJSON,
+    mode: 'registration' | 'assertion'
+  ): Promise<{
+    account: AdminVerificationIssue;
+    admin?: AdminVerificationIssue;
+  }> {
+    if (mode === 'registration') {
+      const account = await this.verifyRegistration(
+        user,
+        response as RegistrationResponseJSON,
+        'account'
+      );
+      if (user.isSuperAdmin === true) {
+        // Registration already consumed the challenge; mint admin session
+        // from a fresh account-verified credential path by issuing a second
+        // short-lived session token bound to the same user.
+        const admin = await this.issueCompanionAdminSessionForUser(user.id);
+        return { account, admin };
+      }
+      return { account };
+    }
+
+    const account = await this.verifyAssertion(
+      user,
+      response as AuthenticationResponseJSON,
+      'account'
+    );
+    if (user.isSuperAdmin === true) {
+      const admin = await this.issueCompanionAdminSessionForUser(user.id);
+      return { account, admin };
+    }
+    return { account };
   }
 
   revokeSession(token?: string) {
@@ -414,13 +553,37 @@ export class AdminPasskeyService {
     );
   }
 
-  private issueSessionToken(now: Date, configuration: AdminWebAuthnConfiguration) {
+  async issueCompanionAdminSessionForUser(userId: string): Promise<AdminVerificationIssue> {
+    const configuration = getAdminWebAuthnConfiguration();
+    const now = new Date();
+    const issued = this.issueSessionToken(now, configuration, 'admin');
+    const session = await this._adminPasskeyRepository.createSessionOnly({
+      userId,
+      session: {
+        tokenHash: issued.tokenHash,
+        authenticatedAt: now,
+        expiresAt: issued.expiresAt,
+      },
+    });
+
+    return this.toIssuedSession(issued, session, configuration);
+  }
+
+  private issueSessionToken(
+    now: Date,
+    configuration: AdminWebAuthnConfiguration,
+    kind: PasskeySessionKind = 'admin'
+  ) {
     const token = randomBytes(ADMIN_SESSION_TOKEN_BYTES).toString('base64url');
+    const ttlMs =
+      kind === 'account'
+        ? configuration.accountSessionTtlMs
+        : configuration.verificationSessionTtlMs;
 
     return {
       token,
       tokenHash: hashAdminSessionToken(token),
-      expiresAt: new Date(now.getTime() + configuration.verificationSessionTtlMs),
+      expiresAt: new Date(now.getTime() + ttlMs),
     };
   }
 

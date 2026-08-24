@@ -19,6 +19,10 @@ import {
   readAdminAuthToken,
   setAdminAuthCookie,
 } from '@gitroom/backend/services/auth/admin-auth.cookie';
+import {
+  readPasskeyAuthToken,
+  setPasskeyAuthCookie,
+} from '@gitroom/backend/services/auth/passkey-auth.cookie';
 
 @ApiTags('Admin Auth')
 @Controller('/admin-auth')
@@ -30,14 +34,17 @@ export class AdminAuthController {
     @GetOriginalOperatorFromRequest() operator: AdminOperator,
     @Req() request: Request
   ) {
+    this._adminPasskeyService.assertOperator(operator);
     return this._adminPasskeyService.getStatus(
       operator,
-      readAdminAuthToken(request)
+      readAdminAuthToken(request),
+      readPasskeyAuthToken(request)
     );
   }
 
   @Post('/register-options')
   registerOptions(@GetOriginalOperatorFromRequest() operator: AdminOperator) {
+    this._adminPasskeyService.assertOperator(operator);
     return this._adminPasskeyService.createRegistrationOptions(operator);
   }
 
@@ -47,16 +54,22 @@ export class AdminAuthController {
     @Body() body: AdminPasskeyRegistrationDto,
     @Res({ passthrough: true }) response: Response
   ) {
-    const issued = await this._adminPasskeyService.verifyRegistration(
+    this._adminPasskeyService.assertOperator(operator);
+    const account = await this._adminPasskeyService.verifyRegistration(
       operator,
-      body as unknown as RegistrationResponseJSON
+      body as unknown as RegistrationResponseJSON,
+      'account'
+    );
+    const admin = await this._adminPasskeyService.issueCompanionAdminSessionForUser(
+      operator.id
     );
 
-    return this.issueSession(response, issued);
+    return this.issueSessions(response, account, admin);
   }
 
   @Post('/challenge')
   challenge(@GetOriginalOperatorFromRequest() operator: AdminOperator) {
+    this._adminPasskeyService.assertOperator(operator);
     return this._adminPasskeyService.createAssertionOptions(operator);
   }
 
@@ -66,23 +79,33 @@ export class AdminAuthController {
     @Body() body: AdminPasskeyAssertionDto,
     @Res({ passthrough: true }) response: Response
   ) {
-    const issued = await this._adminPasskeyService.verifyAssertion(
+    this._adminPasskeyService.assertOperator(operator);
+    const account = await this._adminPasskeyService.verifyAssertion(
       operator,
-      body as unknown as AuthenticationResponseJSON
+      body as unknown as AuthenticationResponseJSON,
+      'account'
+    );
+    const admin = await this._adminPasskeyService.issueCompanionAdminSessionForUser(
+      operator.id
     );
 
-    return this.issueSession(response, issued);
+    return this.issueSessions(response, account, admin);
   }
 
-  private issueSession(response: Response, issued: AdminVerificationIssue) {
-    setAdminAuthCookie(response, issued.token, issued.expiresAt);
+  private issueSessions(
+    response: Response,
+    account: AdminVerificationIssue,
+    admin: AdminVerificationIssue
+  ) {
+    setPasskeyAuthCookie(response, account.token, account.expiresAt);
+    setAdminAuthCookie(response, admin.token, admin.expiresAt);
 
     return {
       enrolled: true,
       verified: true,
       fresh: true,
-      expiresAt: issued.expiresAt.toISOString(),
-      freshUntil: issued.freshUntil.toISOString(),
+      expiresAt: admin.expiresAt.toISOString(),
+      freshUntil: admin.freshUntil.toISOString(),
     };
   }
 }

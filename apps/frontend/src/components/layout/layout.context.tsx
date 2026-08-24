@@ -84,6 +84,7 @@ function LayoutContextInner(params: { children: ReactNode }) {
         setCookie('showorg', '', -10);
         setCookie('impersonate', '', -10);
         setCookie('admin_auth', '', -10);
+          setCookie('passkey_auth', '', -10);
         window.location.href = '/';
         return true;
       }
@@ -114,6 +115,13 @@ function LayoutContextInner(params: { children: ReactNode }) {
           .clone()
           .json()
           .catch(() => null);
+        if (body?.code === 'ACCOUNT_PASSKEY_REQUIRED') {
+          if (!window.location.pathname.startsWith('/passkey/verify')) {
+            const returnTo = `${window.location.pathname}${window.location.search}`;
+            window.location.href = `/passkey/verify?returnTo=${encodeURIComponent(returnTo)}`;
+          }
+          return true;
+        }
         if (
           body?.code === 'ADMIN_STEP_UP_REQUIRED' ||
           body?.code === 'ADMIN_STEP_UP_FRESH_REQUIRED'
@@ -133,6 +141,7 @@ function LayoutContextInner(params: { children: ReactNode }) {
           setCookie('showorg', '', -10);
           setCookie('impersonate', '', -10);
           setCookie('admin_auth', '', -10);
+          setCookie('passkey_auth', '', -10);
         }
         window.location.href = '/';
       }

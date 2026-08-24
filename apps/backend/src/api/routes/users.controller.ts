@@ -44,7 +44,21 @@ import { AdminPasskeyService } from '@gitroom/nestjs-libraries/database/prisma/a
 import {
   clearAdminAuthCookie,
   readAdminAuthToken,
+  setAdminAuthCookie,
 } from '@gitroom/backend/services/auth/admin-auth.cookie';
+import {
+  clearPasskeyAuthCookie,
+  readPasskeyAuthToken,
+  setPasskeyAuthCookie,
+} from '@gitroom/backend/services/auth/passkey-auth.cookie';
+import {
+  AdminPasskeyAssertionDto,
+  AdminPasskeyRegistrationDto,
+} from '@gitroom/nestjs-libraries/dtos/admin/admin-passkey.dto';
+import type {
+  AuthenticationResponseJSON,
+  RegistrationResponseJSON,
+} from '@simplewebauthn/server';
 
 @ApiTags('User')
 @Controller('/user')
@@ -368,6 +382,103 @@ export class UsersController {
     response.status(200).send();
   }
 
+
+  @Get('/passkey/status')
+  async getPasskeyStatus(
+    @GetUserFromRequest() user: User,
+    @Req() request: Request
+  ) {
+    return this._adminPasskeyService.getAccountStatus(
+      user,
+      readPasskeyAuthToken(request)
+    );
+  }
+
+  @Post('/passkey/register-options')
+  async getPasskeyRegisterOptions(@GetUserFromRequest() user: User) {
+    return this._adminPasskeyService.createRegistrationOptions(user);
+  }
+
+  @Post('/passkey/register-verify')
+  async verifyPasskeyRegistration(
+    @GetUserFromRequest() user: User,
+    @Body() body: AdminPasskeyRegistrationDto,
+    @Res({ passthrough: true }) response: Response
+  ) {
+    const account = await this._adminPasskeyService.verifyRegistration(
+      user,
+      body as unknown as RegistrationResponseJSON,
+      'account'
+    );
+    setPasskeyAuthCookie(response, account.token, account.expiresAt);
+
+    if (user.isSuperAdmin) {
+      const admin =
+        await this._adminPasskeyService.issueCompanionAdminSessionForUser(
+          user.id
+        );
+      setAdminAuthCookie(response, admin.token, admin.expiresAt);
+    }
+
+    return {
+      enrolled: true,
+      verified: true,
+      expiresAt: account.expiresAt.toISOString(),
+    };
+  }
+
+  @Post('/passkey/challenge')
+  async getPasskeyChallenge(@GetUserFromRequest() user: User) {
+    return this._adminPasskeyService.createAssertionOptions(user);
+  }
+
+  @Post('/passkey/verify')
+  async verifyPasskeyAssertion(
+    @GetUserFromRequest() user: User,
+    @Body() body: AdminPasskeyAssertionDto,
+    @Res({ passthrough: true }) response: Response
+  ) {
+    const account = await this._adminPasskeyService.verifyAssertion(
+      user,
+      body as unknown as AuthenticationResponseJSON,
+      'account'
+    );
+    setPasskeyAuthCookie(response, account.token, account.expiresAt);
+
+    if (user.isSuperAdmin) {
+      const admin =
+        await this._adminPasskeyService.issueCompanionAdminSessionForUser(
+          user.id
+        );
+      setAdminAuthCookie(response, admin.token, admin.expiresAt);
+    }
+
+    return {
+      enrolled: true,
+      verified: true,
+      expiresAt: account.expiresAt.toISOString(),
+    };
+  }
+
+  @Post('/passkey/disable')
+  async disablePasskey(
+    @GetUserFromRequest() user: User,
+    @Body() body: AdminPasskeyAssertionDto,
+    @Res({ passthrough: true }) response: Response
+  ) {
+    // Require a fresh assertion before removing the credential.
+    await this._adminPasskeyService.verifyAssertion(
+      user,
+      body as unknown as AuthenticationResponseJSON,
+      'account'
+    );
+    await this._adminPasskeyService.revokeCredential(user);
+    clearPasskeyAuthCookie(response);
+    clearAdminAuthCookie(response);
+
+    return { enrolled: false, verified: false };
+  }
+
   @Post('/logout')
   async logout(
     @Res({ passthrough: true }) response: Response,
@@ -417,7 +528,11 @@ export class UsersController {
       expires: new Date(0),
     });
 
+    await this._adminPasskeyService.revokeSession(
+      readPasskeyAuthToken(request)
+    );
     clearAdminAuthCookie(response);
+    clearPasskeyAuthCookie(response);
 
     response.status(200).send();
   }

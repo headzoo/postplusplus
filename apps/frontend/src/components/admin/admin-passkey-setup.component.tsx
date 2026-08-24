@@ -97,11 +97,11 @@ export const AdminPasskeySetupComponent = () => {
   return (
     <AdminPasskeyCard
       action="Set up passkey"
-      description="Admin access requires a passkey. Create one to continue."
+      description="Admin access uses your account passkey. Create one to continue."
       error={error}
       loading={loading}
       onSubmit={enroll}
-      title="Set up admin passkey"
+      title="Set up account passkey"
     />
   );
 };

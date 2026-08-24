@@ -15,6 +15,7 @@ import { HttpForbiddenException } from '@gitroom/nestjs-libraries/services/excep
 import { ORIGINAL_OPERATOR_REQUEST_KEY } from '@gitroom/nestjs-libraries/user/original.operator.from.request';
 import { AuthMiddleware, removeAuth } from './auth.middleware';
 import { ADMIN_AUTH_COOKIE } from './admin-auth.cookie';
+import { PASSKEY_AUTH_COOKIE } from './passkey-auth.cookie';
 
 const verifyJWT = AuthService.verifyJWT as jest.Mock;
 
@@ -41,9 +42,14 @@ describe('AuthMiddleware original operator context', () => {
     updateApiKey: jest.fn(),
   };
   const userService = { getUserById: jest.fn() };
+  const adminPasskeyService = {
+    hasEnrolledPasskey: jest.fn().mockResolvedValue(false),
+    hasValidAccountSession: jest.fn().mockResolvedValue(false),
+  };
   const middleware = new AuthMiddleware(
     organizationService as any,
-    userService as any
+    userService as any,
+    adminPasskeyService as any
   );
 
   const buildRequest = (cookies: Record<string, string> = {}) =>
@@ -122,7 +128,7 @@ describe('AuthMiddleware original operator context', () => {
 });
 
 describe('removeAuth', () => {
-  it('clears the admin step-up cookie alongside normal auth', () => {
+  it('clears admin and account passkey cookies alongside normal auth', () => {
     const response = { cookie: jest.fn(), header: jest.fn() } as any;
 
     removeAuth(response);
@@ -134,6 +140,11 @@ describe('removeAuth', () => {
     );
     expect(response.cookie).toHaveBeenCalledWith(
       ADMIN_AUTH_COOKIE,
+      '',
+      expect.objectContaining({ maxAge: -1, expires: new Date(0) })
+    );
+    expect(response.cookie).toHaveBeenCalledWith(
+      PASSKEY_AUTH_COOKIE,
       '',
       expect.objectContaining({ maxAge: -1, expires: new Date(0) })
     );

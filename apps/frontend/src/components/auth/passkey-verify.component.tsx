@@ -6,42 +6,50 @@ import { useToaster } from '@gitroom/react/toaster/toaster';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useUser } from '@gitroom/frontend/components/layout/user.context';
 import { LoadingComponent } from '@gitroom/frontend/components/layout/loading';
-import { AdminPasskeyCard } from './admin-passkey-setup.component';
-import { useAdminAuthStatus } from './use.admin-auth';
+import { AdminPasskeyCard } from '@gitroom/frontend/components/admin/admin-passkey-setup.component';
+import { usePasskeyStatus } from '@gitroom/frontend/components/settings/use.passkey-status';
 import {
   assertionOptionsToCredentialOptions,
-  getSafeAdminReturnTo,
   serializeAssertionCredential,
-} from './admin-passkey.utils';
+} from '@gitroom/frontend/components/admin/admin-passkey.utils';
 
 const ceremonyError = (error: unknown) =>
   error instanceof DOMException && error.name === 'NotAllowedError'
     ? 'Passkey verification was cancelled or timed out. Please try again.'
-    : 'Unable to verify your admin passkey. Please try again.';
+    : 'Unable to verify your passkey. Please try again.';
 
-export const AdminPasskeyVerifyComponent = () => {
+const getSafeReturnTo = (returnTo?: string | null) => {
+  if (!returnTo || !returnTo.startsWith('/') || returnTo.startsWith('//')) {
+    return '/';
+  }
+  if (returnTo.startsWith('/passkey')) {
+    return '/';
+  }
+  return returnTo;
+};
+
+export const PasskeyVerifyComponent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const user = useUser();
   const fetch = useFetch();
   const toaster = useToaster();
-  const { data: status, error, mutate } = useAdminAuthStatus();
+  const { data: status, error, mutate } = usePasskeyStatus();
   const [loading, setLoading] = useState(false);
   const returnTo = useMemo(
-    () => getSafeAdminReturnTo(searchParams.get('returnTo')),
+    () => getSafeReturnTo(searchParams.get('returnTo')),
     [searchParams]
   );
 
   useEffect(() => {
-    if (user && !user.admin) {
-      router.replace('/calendar');
+    if (!user) {
       return;
     }
     if (status && !status.enrolled) {
-      router.replace(`/admin/passkey/setup?returnTo=${encodeURIComponent(returnTo)}`);
+      router.replace(returnTo);
       return;
     }
-    if (status?.verified && status.fresh) {
+    if (status?.verified) {
       router.replace(returnTo);
     }
   }, [router, returnTo, status, user]);
@@ -57,21 +65,21 @@ export const AdminPasskeyVerifyComponent = () => {
 
     setLoading(true);
     try {
-      const challengeResponse = await fetch('/admin-auth/challenge', {
+      const challengeResponse = await fetch('/user/passkey/challenge', {
         method: 'POST',
       });
       if (!challengeResponse.ok) {
         throw new Error('Unable to create passkey challenge');
       }
+
       const credential = await navigator.credentials.get(
         assertionOptionsToCredentialOptions(await challengeResponse.json())
       );
-
       if (!credential || !(credential instanceof PublicKeyCredential)) {
         throw new Error('No passkey assertion was returned');
       }
 
-      const verifyResponse = await fetch('/admin-auth/verify', {
+      const verifyResponse = await fetch('/user/passkey/verify', {
         method: 'POST',
         body: JSON.stringify(serializeAssertionCredential(credential)),
       });
@@ -81,8 +89,8 @@ export const AdminPasskeyVerifyComponent = () => {
 
       await mutate();
       router.replace(returnTo);
-    } catch (error) {
-      toaster.show(ceremonyError(error), 'warning');
+    } catch (err) {
+      toaster.show(ceremonyError(err), 'warning');
     } finally {
       setLoading(false);
     }
@@ -92,21 +100,18 @@ export const AdminPasskeyVerifyComponent = () => {
     return <LoadingComponent />;
   }
 
-  if (
-    !user.admin ||
-    (status && (!status.enrolled || (status.verified && status.fresh)))
-  ) {
+  if (status && (!status.enrolled || status.verified)) {
     return null;
   }
 
   return (
     <AdminPasskeyCard
       action="Verify passkey"
-      description="Verify your account passkey before accessing the admin area."
+      description="Verify your passkey to finish signing in."
       error={error}
       loading={loading}
       onSubmit={verify}
-      title="Verify admin access"
+      title="Verify your passkey"
     />
   );
 };

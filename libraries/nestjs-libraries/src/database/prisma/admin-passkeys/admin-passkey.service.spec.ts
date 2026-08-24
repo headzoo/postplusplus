@@ -751,3 +751,93 @@ describe('AdminPasskeyRepository assertion completion', () => {
     expect(tx.adminVerificationSession.create).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('AdminPasskeyService account passkeys', () => {
+  const repository = {
+    countCredentials: jest.fn(),
+    listCredentials: jest.fn(),
+    findCredential: jest.fn(),
+    createChallenge: jest.fn(),
+    hasPendingChallenge: jest.fn(),
+    completeRegistration: jest.fn(),
+    completeAssertion: jest.fn(),
+    findActiveSession: jest.fn(),
+    revokeSession: jest.fn(),
+    revokeSessionsForUser: jest.fn(),
+    revokeCredentials: jest.fn(),
+    deleteChallengesForUser: jest.fn(),
+    createSessionOnly: jest.fn(),
+  };
+
+  const service = new AdminPasskeyService(repository as any);
+  const member = {
+    id: 'user-1',
+    email: 'member@example.com',
+    isSuperAdmin: false,
+    activated: true,
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('allows non-super-admins to read account passkey status', async () => {
+    repository.countCredentials.mockResolvedValue(1);
+    repository.findActiveSession.mockResolvedValue(null);
+
+    await expect(service.getAccountStatus(member, undefined)).resolves.toEqual({
+      enrolled: true,
+      verified: false,
+      expiresAt: null,
+    });
+  });
+
+  it('rejects inactive users from account passkey flows', () => {
+    expect(() =>
+      service.assertUser({ ...member, activated: false })
+    ).toThrow(HttpException);
+  });
+
+  it('treats a valid account session as general admin verification', async () => {
+    const admin = {
+      id: 'admin-1',
+      email: 'admin@example.com',
+      isSuperAdmin: true,
+      activated: true,
+    };
+    const now = new Date();
+    repository.countCredentials.mockResolvedValue(1);
+    repository.findActiveSession.mockImplementation(async (tokenHash: string) => {
+      if (tokenHash === hashAdminSessionToken('account-token')) {
+        return {
+          id: 'session-1',
+          userId: admin.id,
+          credentialId: 'cred-1',
+          authenticatedAt: now,
+          expiresAt: new Date(now.getTime() + 60_000),
+        };
+      }
+      return null;
+    });
+
+    await expect(
+      service.validateVerification(admin, undefined, 'general', 'account-token')
+    ).resolves.toMatchObject({ valid: true });
+
+    await expect(
+      service.validateVerification(admin, undefined, 'fresh', 'account-token')
+    ).resolves.toMatchObject({ valid: false, reason: 'session' });
+  });
+
+  it('revokes credentials, challenges, and sessions on disable', async () => {
+    repository.revokeCredentials.mockResolvedValue(1);
+    repository.deleteChallengesForUser.mockResolvedValue(2);
+    repository.revokeSessionsForUser.mockResolvedValue(3);
+
+    await expect(service.revokeCredential(member)).resolves.toEqual({
+      revokedCredentials: 1,
+      deletedChallenges: 2,
+      revokedSessions: 3,
+    });
+  });
+});

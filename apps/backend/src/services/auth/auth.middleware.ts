@@ -1,4 +1,4 @@
-import { Injectable, NestMiddleware } from '@nestjs/common';
+import { HttpException, Injectable, NestMiddleware } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '@gitroom/helpers/auth/auth.service';
 import { User } from '@prisma/client';
@@ -9,6 +9,8 @@ import { HttpForbiddenException } from '@gitroom/nestjs-libraries/services/excep
 import { setSentryUserContext } from '@gitroom/nestjs-libraries/sentry/initialize.sentry';
 import { ORIGINAL_OPERATOR_REQUEST_KEY } from '@gitroom/nestjs-libraries/user/original.operator.from.request';
 import { clearAdminAuthCookie } from '@gitroom/backend/services/auth/admin-auth.cookie';
+import { clearPasskeyAuthCookie, readPasskeyAuthToken } from '@gitroom/backend/services/auth/passkey-auth.cookie';
+import { AdminPasskeyService } from '@gitroom/nestjs-libraries/database/prisma/admin-passkeys/admin-passkey.service';
 
 export const removeAuth = (res: Response) => {
   res.cookie('auth', '', {
@@ -24,6 +26,7 @@ export const removeAuth = (res: Response) => {
     maxAge: -1,
   });
   clearAdminAuthCookie(res);
+  clearPasskeyAuthCookie(res);
   res.header('logout', 'true');
 };
 
@@ -31,7 +34,8 @@ export const removeAuth = (res: Response) => {
 export class AuthMiddleware implements NestMiddleware {
   constructor(
     private _organizationService: OrganizationService,
-    private _userService: UsersService
+    private _userService: UsersService,
+    private _adminPasskeyService: AdminPasskeyService
   ) {}
   async use(req: Request, res: Response, next: NextFunction) {
     const auth = req.headers.auth || req.cookies.auth;
@@ -95,6 +99,29 @@ export class AuthMiddleware implements NestMiddleware {
             orgId: loadImpersonate.organization.id,
             paymentId: loadImpersonate.organization.paymentId,
           });
+
+      // Account passkey gate: enrolled users must present passkey_auth.
+      // Uses the original operator so impersonation cannot bypass MFA.
+      const originalOperator = req[ORIGINAL_OPERATOR_REQUEST_KEY] as User;
+      if (
+        originalOperator?.id &&
+        !this.isAccountPasskeyAllowlisted(req) &&
+        (await this._adminPasskeyService.hasEnrolledPasskey(originalOperator.id)) &&
+        !(await this._adminPasskeyService.hasValidAccountSession(
+          originalOperator.id,
+          readPasskeyAuthToken(req)
+        ))
+      ) {
+        throw new HttpException(
+          {
+            statusCode: 428,
+            code: 'ACCOUNT_PASSKEY_REQUIRED',
+            message: 'Account passkey verification is required',
+          },
+          428
+        );
+      }
+
           next();
           return;
         }
@@ -129,9 +156,45 @@ export class AuthMiddleware implements NestMiddleware {
         orgId: setOrg.id,
         paymentId: setOrg.paymentId,
       });
+
+      // Account passkey gate: enrolled users must present passkey_auth.
+      // Uses the original operator so impersonation cannot bypass MFA.
+      const originalOperator = req[ORIGINAL_OPERATOR_REQUEST_KEY] as User;
+      if (
+        originalOperator?.id &&
+        !this.isAccountPasskeyAllowlisted(req) &&
+        (await this._adminPasskeyService.hasEnrolledPasskey(originalOperator.id)) &&
+        !(await this._adminPasskeyService.hasValidAccountSession(
+          originalOperator.id,
+          readPasskeyAuthToken(req)
+        ))
+      ) {
+        throw new HttpException(
+          {
+            statusCode: 428,
+            code: 'ACCOUNT_PASSKEY_REQUIRED',
+            message: 'Account passkey verification is required',
+          },
+          428
+        );
+      }
+
     } catch (err) {
+      if (err instanceof HttpException) {
+        throw err;
+      }
       throw new HttpForbiddenException();
     }
     next();
+  }
+
+  private isAccountPasskeyAllowlisted(req: Request) {
+    const path = (req.originalUrl || req.url || '').split('?')[0];
+    return (
+      path === '/user/self' ||
+      path === '/user/logout' ||
+      path.startsWith('/user/passkey/') ||
+      path.startsWith('/admin-auth/')
+    );
   }
 }

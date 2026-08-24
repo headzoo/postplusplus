@@ -299,6 +299,23 @@ export class AdminPasskeyRepository {
     });
   }
 
+  async createSessionOnly(input: {
+    userId: string;
+    session: AdminVerificationSessionInput;
+    credentialId?: string | null;
+  }): Promise<AdminVerificationSessionRecord> {
+    return this._adminPasskey.model.adminVerificationSession.create({
+      data: {
+        userId: input.userId,
+        credentialId: input.credentialId ?? null,
+        tokenHash: input.session.tokenHash,
+        authenticatedAt: input.session.authenticatedAt,
+        expiresAt: input.session.expiresAt,
+      },
+      select: sessionSelect,
+    });
+  }
+
   async revokeSession(tokenHash: string) {
     const revoked =
       await this._adminPasskey.model.adminVerificationSession.updateMany({
@@ -317,6 +334,26 @@ export class AdminPasskeyRepository {
       });
 
     return revoked.count;
+  }
+
+
+  async revokeCredentials(userId: string) {
+    const revoked =
+      await this._adminPasskey.model.adminPasskeyCredential.updateMany({
+        where: { userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+
+    return revoked.count;
+  }
+
+  async deleteChallengesForUser(userId: string) {
+    const deleted =
+      await this._adminPasskey.model.adminWebAuthnChallenge.deleteMany({
+        where: { userId },
+      });
+
+    return deleted.count;
   }
 
   private async consumeChallenge(

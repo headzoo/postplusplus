@@ -93,16 +93,13 @@ describe('validateResetTarget', () => {
     });
   });
 
-  it('rejects non-super-admin users', () => {
+  it('allows non-super-admin users', () => {
     expect(
       validateResetTarget(
         { ...superAdmin, isSuperAdmin: false },
         'ops@example.com'
       )
-    ).toEqual({
-      ok: false,
-      message: 'User user-1 is not a platform super-admin.',
-    });
+    ).toEqual({ ok: true });
   });
 
   it('rejects email mismatches', () => {
@@ -112,7 +109,7 @@ describe('validateResetTarget', () => {
     });
   });
 
-  it('accepts a matching super-admin target', () => {
+  it('accepts a matching user target', () => {
     expect(validateResetTarget(superAdmin, 'OPS@example.com')).toEqual({
       ok: true,
     });
@@ -209,7 +206,7 @@ describe('executeAdminPasskeyReset', () => {
     expect(tx.adminPasskeyCredential.deleteMany).not.toHaveBeenCalled();
   });
 
-  it('rejects non-super-admin users inside the transaction', async () => {
+  it('resets passkeys for non-super-admin users inside the transaction', async () => {
     const tx = {
       user: {
         findUnique: jest
@@ -217,13 +214,13 @@ describe('executeAdminPasskeyReset', () => {
           .mockResolvedValue({ ...superAdmin, isSuperAdmin: false }),
       },
       adminPasskeyCredential: {
-        deleteMany: jest.fn(),
+        deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
       adminWebAuthnChallenge: {
-        deleteMany: jest.fn(),
+        deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
       adminVerificationSession: {
-        updateMany: jest.fn(),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
     };
 
@@ -231,9 +228,14 @@ describe('executeAdminPasskeyReset', () => {
 
     await expect(
       executeAdminPasskeyReset(prisma as never, 'user-1', 'ops@example.com')
-    ).rejects.toThrow('User user-1 is not a platform super-admin.');
+    ).resolves.toMatchObject({
+      userId: 'user-1',
+      deletedCredentials: 1,
+      deletedChallenges: 1,
+      revokedSessions: 1,
+    });
 
-    expect(tx.adminPasskeyCredential.deleteMany).not.toHaveBeenCalled();
+    expect(tx.adminPasskeyCredential.deleteMany).toHaveBeenCalled();
   });
 
   it('rejects email mismatches inside the transaction', async () => {
