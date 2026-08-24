@@ -44,6 +44,7 @@ export const customFetch = (
     // Only readable in local `NOT_SECURED` mode; secured deployments keep the
     // admin step-up cookie HttpOnly.
     const authNonSecuredAdminAuth = readCookie('admin_auth');
+    const authNonSecuredPasskeyAuth = readCookie('passkey_auth');
 
     const fetchRequest = await fetch(params.baseUrl + url, {
       ...(secured ? { credentials: 'include' } : {}),
@@ -70,6 +71,9 @@ export const customFetch = (
           : {}),
         ...(authNonSecuredAdminAuth
           ? { 'admin-auth': authNonSecuredAdminAuth }
+          : {}),
+        ...(authNonSecuredPasskeyAuth
+          ? { 'passkey-auth': authNonSecuredPasskeyAuth }
           : {}),
       },
       // @ts-ignore

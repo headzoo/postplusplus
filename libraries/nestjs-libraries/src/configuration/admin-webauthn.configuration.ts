@@ -1,7 +1,10 @@
+import { AUTH_COOKIE_TTL_MS } from '@gitroom/helpers/auth/auth.constants';
+
 export const ADMIN_WEBAUTHN_CHALLENGE_TTL_MS = 5 * 60 * 1000;
 export const ADMIN_VERIFICATION_SESSION_TTL_MS = 20 * 60 * 1000;
 export const ADMIN_WEBAUTHN_FRESH_ACTION_TTL_MS = 5 * 60 * 1000;
-export const ACCOUNT_PASSKEY_SESSION_TTL_MS = 365 * 24 * 60 * 60 * 1000;
+/** Account passkey session matches the normal login `auth` cookie lifetime. */
+export const ACCOUNT_PASSKEY_SESSION_TTL_MS = AUTH_COOKIE_TTL_MS;
 
 export type AdminWebAuthnConfiguration = {
   rpName: string;

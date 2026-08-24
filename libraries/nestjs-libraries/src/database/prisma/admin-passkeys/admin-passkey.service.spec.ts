@@ -17,6 +17,7 @@ import {
   verifyRegistrationResponse,
 } from '@simplewebauthn/server';
 import {
+  ACCOUNT_PASSKEY_SESSION_TTL_MS,
   ADMIN_VERIFICATION_SESSION_TTL_MS,
   ADMIN_WEBAUTHN_CHALLENGE_TTL_MS,
   ADMIN_WEBAUTHN_FRESH_ACTION_TTL_MS,
@@ -839,5 +840,99 @@ describe('AdminPasskeyService account passkeys', () => {
       deletedChallenges: 2,
       revokedSessions: 3,
     });
+  });
+
+  it('issues a long-lived account session on registration, not the admin TTL', async () => {
+    const authenticatedAt = new Date();
+    repository.countCredentials.mockResolvedValue(0);
+    repository.hasPendingChallenge.mockResolvedValue(true);
+    verifyRegistrationResponseMock.mockImplementation(async (options: any) => {
+      await options.expectedChallenge('registration-challenge');
+      return {
+        verified: true,
+        registrationInfo: {
+          aaguid: 'aaguid-1',
+          credentialDeviceType: 'multiDevice',
+          credentialBackedUp: true,
+          credential: {
+            id: 'new-credential-id',
+            publicKey: Uint8Array.from([9, 9]),
+            counter: 0,
+            transports: ['internal'],
+          },
+        },
+      } as any;
+    });
+    repository.completeRegistration.mockImplementation(async (input: any) => ({
+      outcome: 'created',
+      session: {
+        id: 'session-account-reg',
+        userId: member.id,
+        credentialId: 'credential-row-1',
+        authenticatedAt,
+        expiresAt: input.session.expiresAt,
+      },
+    }));
+
+    const issued = await service.verifyRegistration(
+      member,
+      registrationResponse as any,
+      'account'
+    );
+
+    const input = repository.completeRegistration.mock.calls[0][0];
+    expect(
+      input.session.expiresAt.getTime() - input.session.authenticatedAt.getTime()
+    ).toBe(ACCOUNT_PASSKEY_SESSION_TTL_MS);
+    expect(
+      input.session.expiresAt.getTime() - input.session.authenticatedAt.getTime()
+    ).not.toBe(ADMIN_VERIFICATION_SESSION_TTL_MS);
+    expect(issued.expiresAt.getTime()).toBe(input.session.expiresAt.getTime());
+  });
+
+  it('issues a long-lived account session on assertion, not the admin TTL', async () => {
+    const authenticatedAt = new Date();
+    repository.findCredential.mockResolvedValue(storedCredential);
+    repository.hasPendingChallenge.mockResolvedValue(true);
+    verifyAuthenticationResponseMock.mockImplementation(async (options: any) => {
+      await options.expectedChallenge('assertion-challenge');
+      return {
+        verified: true,
+        authenticationInfo: {
+          credentialID: storedCredential.credentialId,
+          newCounter: 12,
+          userVerified: true,
+          credentialDeviceType: 'multiDevice',
+          credentialBackedUp: false,
+          origin: 'https://admin.postiz.example',
+          rpID: 'admin.postiz.example',
+        },
+      } as any;
+    });
+    repository.completeAssertion.mockImplementation(async (input: any) => ({
+      outcome: 'verified',
+      session: {
+        id: 'session-account-assert',
+        userId: member.id,
+        credentialId: storedCredential.id,
+        authenticatedAt,
+        expiresAt: input.session.expiresAt,
+      },
+    }));
+
+    const issued = await service.verifyAssertion(
+      member,
+      assertionResponse as any,
+      'account'
+    );
+
+    const input = repository.completeAssertion.mock.calls[0][0];
+    expect(
+      input.session.expiresAt.getTime() - input.session.authenticatedAt.getTime()
+    ).toBe(ACCOUNT_PASSKEY_SESSION_TTL_MS);
+    expect(
+      input.session.expiresAt.getTime() - input.session.authenticatedAt.getTime()
+    ).not.toBe(ADMIN_VERIFICATION_SESSION_TTL_MS);
+    expect(issued.expiresAt.getTime()).toBe(input.session.expiresAt.getTime());
   });
 });

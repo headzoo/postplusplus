@@ -1,4 +1,5 @@
 import {
+  ACCOUNT_PASSKEY_SESSION_TTL_MS,
   ADMIN_VERIFICATION_SESSION_TTL_MS,
   ADMIN_WEBAUTHN_CHALLENGE_TTL_MS,
   ADMIN_WEBAUTHN_FRESH_ACTION_TTL_MS,
@@ -18,6 +19,7 @@ describe('admin WebAuthn configuration', () => {
       challengeTtlMs: ADMIN_WEBAUTHN_CHALLENGE_TTL_MS,
       verificationSessionTtlMs: ADMIN_VERIFICATION_SESSION_TTL_MS,
       freshActionTtlMs: ADMIN_WEBAUTHN_FRESH_ACTION_TTL_MS,
+      accountSessionTtlMs: ACCOUNT_PASSKEY_SESSION_TTL_MS,
     });
   });
 

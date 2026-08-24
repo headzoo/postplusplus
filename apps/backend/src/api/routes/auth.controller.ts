@@ -17,6 +17,7 @@ import { ForgotReturnPasswordDto } from '@gitroom/nestjs-libraries/dtos/auth/for
 import { ForgotPasswordDto } from '@gitroom/nestjs-libraries/dtos/auth/forgot.password.dto';
 import { ResendActivationDto } from '@gitroom/nestjs-libraries/dtos/auth/resend-activation.dto';
 import { ApiTags } from '@nestjs/swagger';
+import { AUTH_COOKIE_TTL_MS } from '@gitroom/helpers/auth/auth.constants';
 import { getCookieUrlFromDomain } from '@gitroom/helpers/subdomain/subdomain.management';
 import { EmailService } from '@gitroom/nestjs-libraries/services/email.service';
 import { RealIP } from 'nestjs-real-ip';
@@ -78,7 +79,7 @@ export class AuthController {
               sameSite: 'none',
             }
           : {}),
-        expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365),
+        expires: new Date(Date.now() + AUTH_COOKIE_TTL_MS),
       });
 
       if (process.env.NOT_SECURED) {
@@ -95,7 +96,7 @@ export class AuthController {
                 sameSite: 'none',
               }
             : {}),
-          expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365),
+          expires: new Date(Date.now() + AUTH_COOKIE_TTL_MS),
         });
 
         if (process.env.NOT_SECURED) {
@@ -143,7 +144,7 @@ export class AuthController {
               sameSite: 'none',
             }
           : {}),
-        expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365),
+        expires: new Date(Date.now() + AUTH_COOKIE_TTL_MS),
       });
 
       if (process.env.NOT_SECURED) {
@@ -160,7 +161,7 @@ export class AuthController {
                 sameSite: 'none',
               }
             : {}),
-          expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365),
+          expires: new Date(Date.now() + AUTH_COOKIE_TTL_MS),
         });
 
         if (process.env.NOT_SECURED) {
@@ -240,7 +241,7 @@ export class AuthController {
             sameSite: 'none',
           }
         : {}),
-      expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365),
+      expires: new Date(Date.now() + AUTH_COOKIE_TTL_MS),
     });
 
     if (process.env.NOT_SECURED) {
@@ -293,7 +294,7 @@ export class AuthController {
             sameSite: 'none',
           }
         : {}),
-      expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365),
+      expires: new Date(Date.now() + AUTH_COOKIE_TTL_MS),
     });
 
     if (process.env.NOT_SECURED) {

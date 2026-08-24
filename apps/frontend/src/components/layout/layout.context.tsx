@@ -48,6 +48,22 @@ export const mirrorAdminAuthHeaderToCookie = (
     setCookie('admin_auth', headerAdminAuth, 365);
   }
 };
+
+export const mirrorPasskeyAuthHeaderToCookie = (
+  response: Pick<Response, 'headers'>,
+  isSecured: boolean
+) => {
+  if (isSecured) {
+    return;
+  }
+
+  const headerPasskeyAuth =
+    response.headers?.get('passkey-auth') ||
+    response.headers?.get('Passkey-Auth');
+  if (headerPasskeyAuth) {
+    setCookie('passkey_auth', headerPasskeyAuth, 365);
+  }
+};
 function LayoutContextInner(params: { children: ReactNode }) {
   const returnUrl = useReturnUrl();
   const { backendUrl, isGeneral, isSecured } = useVariables();
@@ -73,6 +89,7 @@ function LayoutContextInner(params: { children: ReactNode }) {
         setCookie('auth', headerAuth, 365);
       }
       mirrorAdminAuthHeaderToCookie(response, isSecured);
+      mirrorPasskeyAuthHeaderToCookie(response, isSecured);
       if (showOrg) {
         setCookie('showorg', showOrg, 365);
       }
@@ -84,7 +101,7 @@ function LayoutContextInner(params: { children: ReactNode }) {
         setCookie('showorg', '', -10);
         setCookie('impersonate', '', -10);
         setCookie('admin_auth', '', -10);
-          setCookie('passkey_auth', '', -10);
+        setCookie('passkey_auth', '', -10);
         window.location.href = '/';
         return true;
       }
