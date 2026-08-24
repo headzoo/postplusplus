@@ -73,6 +73,32 @@ jest.mock('./use.channel.details', () => ({
     .channelStrategyOptions,
 }));
 
+const routerReplace = jest.fn();
+const searchParamsGet = jest.fn((key: string) =>
+  key === 'selected' ? null : null
+);
+
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({
+    replace: routerReplace,
+    push: jest.fn(),
+  }),
+  usePathname: () => '/settings/channels',
+  useSearchParams: () => ({
+    get: searchParamsGet,
+    toString: () => '',
+  }),
+}));
+
+jest.mock('@gitroom/frontend/components/launches/settings.modal', () => ({
+  ChannelAdditionalSettingsForm: () => (
+    <div data-testid="channel-additional-settings">
+      <div>Context documents</div>
+      <button type="button">Save additional</button>
+    </div>
+  ),
+}));
+
 const strategyApplicableDetails = {
   strategyApplicable: true,
   strategy: {
@@ -132,6 +158,8 @@ describe('ChannelsSettings', () => {
     toastShow.mockReset();
     globalMutate.mockReset();
     mutateChannelDetails.mockReset();
+    routerReplace.mockReset();
+    searchParamsGet.mockImplementation(() => null);
     globalMutate.mockResolvedValue(undefined);
     mutateChannelDetails.mockResolvedValue(undefined);
     Object.defineProperty(window, 'location', {
@@ -411,5 +439,48 @@ describe('ChannelsSettings', () => {
         'Relationship rankings are updating. Existing grades stay visible while the new strategy is applied.'
       )
     ).toBeTruthy();
+  });
+
+  it('renders additional channel settings and syncs selection to the URL', () => {
+    (useIntegrationList as jest.Mock).mockReturnValue({
+      data: [
+        {
+          id: 'channel-a',
+          name: 'Headzoo',
+          identifier: 'x',
+          internalId: '1911740070',
+          display: '@headzoo',
+          disabled: false,
+          refreshNeeded: false,
+          inBetweenSteps: false,
+        },
+        {
+          id: 'channel-b',
+          name: 'Harbor',
+          identifier: 'bluesky',
+          internalId: 'bsky-1',
+          display: '@harbor',
+          disabled: false,
+          refreshNeeded: false,
+          inBetweenSteps: false,
+        },
+      ],
+      isLoading: false,
+    });
+    searchParamsGet.mockImplementation((key: string) =>
+      key === 'selected' ? 'channel-b' : null
+    );
+
+    render(<ChannelsSettings />);
+
+    expect(screen.getByTestId('channel-additional-settings')).toBeTruthy();
+    expect(screen.getByText('Context documents')).toBeTruthy();
+    expect(useChannelDetails).toHaveBeenCalledWith('channel-b');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Headzoo' }));
+    expect(routerReplace).toHaveBeenCalledWith(
+      '/settings/channels?selected=channel-a',
+      { scroll: false }
+    );
   });
 });

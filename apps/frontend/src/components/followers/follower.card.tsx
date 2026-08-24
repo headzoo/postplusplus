@@ -7,7 +7,7 @@ import ImageWithFallback from '@gitroom/react/helpers/image.with.fallback';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { useTriageDismissModal } from '@gitroom/frontend/components/followers/triage.dismiss.modal';
 import { useLeadDismissModal } from '@gitroom/frontend/components/followers/lead.dismiss.modal';
-import { Follower, FollowerList, DismissibleTriage } from '@gitroom/frontend/components/followers/use.followers';
+import { Follower, FollowerList, DismissibleTriage, getProfileLinkAutoSnoozeTriages } from '@gitroom/frontend/components/followers/use.followers';
 import { RelationshipStars } from '@gitroom/frontend/components/followers/follower.relationship.stars';
 import { FollowerListDropdown } from '@gitroom/frontend/components/followers/follower.list.dropdown';
 import { TimelineIcon, RobotIcon } from '@gitroom/frontend/components/ui/icons';
@@ -237,8 +237,17 @@ export const FollowerCard: FC<{
       }
     };
 
-    const stopProfileNavigation = (event: MouseEvent<HTMLAnchorElement>) => {
+    const handleProfileLinkClick = async (
+      event: MouseEvent<HTMLAnchorElement>
+    ) => {
       event.stopPropagation();
+      if (!onDismissTriage) {
+        return;
+      }
+      const triages = getProfileLinkAutoSnoozeTriages(follower);
+      for (const triage of triages) {
+        await onDismissTriage(triage, undefined, { snooze: true });
+      }
     };
 
     const stopProfileKeyboard = (event: KeyboardEvent<HTMLAnchorElement>) => {
@@ -294,7 +303,7 @@ export const FollowerCard: FC<{
               href={follower.profileUrl}
               target="_blank"
               rel="noreferrer noopener"
-              onClick={stopProfileNavigation}
+              onClick={handleProfileLinkClick}
               onKeyDown={stopProfileKeyboard}
               className="shrink-0 rounded-full hover:opacity-80"
               aria-label={t(
@@ -423,7 +432,7 @@ export const FollowerCard: FC<{
                     href={follower.profileUrl}
                     target="_blank"
                     rel="noreferrer noopener"
-                    onClick={stopProfileNavigation}
+                    onClick={handleProfileLinkClick}
                     onKeyDown={stopProfileKeyboard}
                     className="mt-[2px] inline-block max-w-full shrink-0 text-[13px] text-textItemBlur truncate hover:underline hover:opacity-80"
                   >

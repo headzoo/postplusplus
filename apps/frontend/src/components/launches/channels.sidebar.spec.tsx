@@ -192,9 +192,28 @@ describe('ChannelMenu', () => {
 
     expect(selectedRow?.className).not.toContain('opacity-20');
     expect(unselectedRow?.className).toContain('opacity-20');
+    expect(selectedRow?.className).toContain('py-2');
+    expect(selectedRow?.className).not.toMatch(/(?:^|\s)p-2(?:\s|$)/);
 
     fireEvent.click(screen.getByText('Beta One'));
     expect(onSelect).toHaveBeenCalledWith(betaOne);
+  });
+
+  it('uses halved gaps between groups and between header and items', () => {
+    const { container } = render(
+      <ChannelMenu
+        collapsed={false}
+        integrations={[acmeOne, betaOne]}
+      />
+    );
+
+    const groupsWrapper = container.firstElementChild as HTMLElement | null;
+    expect(groupsWrapper?.className).toContain('gap-[16px]');
+
+    const groupRoot = screen
+      .getByRole('button', { name: 'Acme' })
+      .closest('div.flex.flex-col');
+    expect(groupRoot?.className).toContain('gap-[8px]');
   });
 
   it('renders a group menu on named headers and disables impossible moves', () => {

@@ -60,6 +60,7 @@ export const SettingsPopup: FC<{
   const router = useRouter();
   const showLogout = !url.get('onboarding') || user?.tier?.current === 'FREE';
   const isLogsPath = pathname === '/settings/logs';
+  const isChannelsPath = pathname === '/settings/channels';
   const loadProfile = useCallback(async () => {
     const personal = await (await fetch('/user/personal')).json();
     form.setValue('fullname', personal.name || '');
@@ -88,7 +89,11 @@ export const SettingsPopup: FC<{
   }, []);
 
   const [tab, setTab] = useState(
-    isLogsPath ? 'logs' : url.get('tab') || 'global_settings'
+    isLogsPath
+      ? 'logs'
+      : isChannelsPath
+        ? 'channels'
+        : url.get('tab') || 'global_settings'
   );
 
   const t = useT();
@@ -129,8 +134,21 @@ export const SettingsPopup: FC<{
   useEffect(() => {
     if (isLogsPath) {
       setTab('logs');
+      return;
     }
-  }, [isLogsPath]);
+    if (isChannelsPath) {
+      setTab('channels');
+      return;
+    }
+    if (url.get('tab') === 'channels') {
+      const selected = url.get('selected');
+      router.replace(
+        selected
+          ? `/settings/channels?selected=${encodeURIComponent(selected)}`
+          : '/settings/channels'
+      );
+    }
+  }, [isChannelsPath, isLogsPath, router, url]);
 
   const selectTab = useCallback(
     (tabKey: string) => {
@@ -139,12 +157,17 @@ export const SettingsPopup: FC<{
         router.push('/settings/logs');
         return;
       }
+      if (tabKey === 'channels') {
+        setTab('channels');
+        router.push('/settings/channels');
+        return;
+      }
       setTab(tabKey);
-      if (isLogsPath) {
+      if (isLogsPath || isChannelsPath) {
         router.push(`/settings?tab=${tabKey}`);
       }
     },
-    [isLogsPath, router]
+    [isChannelsPath, isLogsPath, router]
   );
 
   return (

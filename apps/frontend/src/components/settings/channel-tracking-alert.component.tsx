@@ -77,7 +77,7 @@ export const ChannelTrackingAlert: FC<{
   tracking?: FollowerPageTracking;
   subscriptions?: ChannelSubscriptionDetail[];
   settingsHref?: string;
-}> = ({ channelName, tracking, subscriptions, settingsHref = '/settings?tab=channels' }) => {
+}> = ({ channelName, tracking, subscriptions, settingsHref = '/settings/channels' }) => {
   const t = useT();
 
   if (!tracking || (tracking.state !== 'error' && tracking.state !== 'partial')) {

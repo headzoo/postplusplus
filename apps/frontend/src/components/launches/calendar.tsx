@@ -167,6 +167,29 @@ function cellEntryKey(entry: CellEntry): string {
     .join(',')}`;
 }
 
+function uniqueIntegrationsFromTimeSlot(
+  option: Array<{ integration: Integrations | Integrations[] }>
+): Integrations[] {
+  const seen = new Set<string>();
+  const result: Integrations[] = [];
+
+  for (const item of option) {
+    const list = Array.isArray(item.integration)
+      ? item.integration
+      : [item.integration];
+
+    for (const integration of list) {
+      if (!integration?.id || seen.has(integration.id)) {
+        continue;
+      }
+      seen.add(integration.id);
+      result.push(integration);
+    }
+  }
+
+  return result;
+}
+
 // Shared hook for post actions (edit, delete, statistics)
 const usePostActions = (onMutate?: () => void) => {
   const t = useT();
@@ -441,7 +464,7 @@ export const DayView = () => {
               <CalendarContext.Provider
                 value={{
                   ...calendar,
-                  integrations: option.flatMap((p) => p.integration),
+                  integrations: uniqueIntegrationsFromTimeSlot(option),
                 }}
               >
                 <CalendarColumn
@@ -1249,10 +1272,10 @@ export const CalendarColumn: FC<{
                 <div
                   className={`w-full h-full rounded-[10px] py-[10px] flex-wrap hover:border hover:border-seventh flex justify-center items-center gap-[20px] opacity-30 grayscale hover:grayscale-0 hover:opacity-100`}
                 >
-                  {integrations.map((selectedIntegrations) => (
+                  {integrations.map((integration) => (
                     <div
                       className="relative"
-                      key={selectedIntegrations.identifier}
+                      key={integration.id}
                     >
                       <div
                         className={clsx(
@@ -1260,15 +1283,13 @@ export const CalendarColumn: FC<{
                         )}
                       >
                         <SafeImage
-                          src={
-                            selectedIntegrations.picture || '/no-picture.jpg'
-                          }
+                          src={integration.picture || '/no-picture.jpg'}
                           className="rounded-[8px]"
-                          alt={selectedIntegrations.identifier}
+                          alt={integration.identifier}
                           width={32}
                           height={32}
                         />
-                        {selectedIntegrations.identifier === 'youtube' ? (
+                        {integration.identifier === 'youtube' ? (
                           <img
                             src="/icons/platforms/youtube.svg"
                             className="absolute z-10 -bottom-[5px] -end-[5px]"
@@ -1276,9 +1297,9 @@ export const CalendarColumn: FC<{
                           />
                         ) : (
                           <SafeImage
-                            src={`/icons/platforms/${selectedIntegrations.identifier}.png`}
+                            src={`/icons/platforms/${integration.identifier}.png`}
                             className="rounded-[8px] absolute z-10 -bottom-[5px] -end-[5px] border border-fifth"
-                            alt={selectedIntegrations.identifier}
+                            alt={integration.identifier}
                             width={20}
                             height={20}
                           />

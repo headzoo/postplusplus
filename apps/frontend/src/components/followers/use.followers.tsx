@@ -52,6 +52,15 @@ export type DismissibleTriage =
   | 'engaged_not_yet'
   | 'cultivate';
 
+export const PROFILE_LINK_AUTO_SNOOZE_TRIAGES = [
+  'hot_lead',
+  'engaged_not_yet',
+  'cultivate',
+] as const satisfies readonly DismissibleTriage[];
+
+export type ProfileLinkAutoSnoozeTriage =
+  (typeof PROFILE_LINK_AUTO_SNOOZE_TRIAGES)[number];
+
 export type FollowerTriageFilter =
   | 'engaged_not_yet'
   | 'hot_lead'
@@ -1008,6 +1017,25 @@ export const applyImportedMemberToFollowerPage = (
     ],
   };
 };
+
+export function getProfileLinkAutoSnoozeTriages(
+  follower: Pick<
+    Follower,
+    'relationshipTriage' | 'engagedNotYet' | 'isCultivate'
+  >
+): ProfileLinkAutoSnoozeTriage[] {
+  const triages: ProfileLinkAutoSnoozeTriage[] = [];
+  if (follower.relationshipTriage === 'hot_lead') {
+    triages.push('hot_lead');
+  }
+  if (follower.engagedNotYet) {
+    triages.push('engaged_not_yet');
+  }
+  if (follower.isCultivate) {
+    triages.push('cultivate');
+  }
+  return triages;
+}
 
 export const applyTriageIgnoreToFollowerPage = (
   page: FollowerPage | undefined,

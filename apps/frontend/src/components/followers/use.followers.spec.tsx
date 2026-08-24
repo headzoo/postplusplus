@@ -14,10 +14,56 @@ import {
   buildFollowerDetailUrl,
   buildFollowersUrl,
   followerListsKey,
+  getProfileLinkAutoSnoozeTriages,
   isFollowerChannelCacheKey,
   isFollowerListCacheKey,
   revalidateFollowerChannelCaches,
 } from './use.followers';
+
+describe('getProfileLinkAutoSnoozeTriages', () => {
+  it('returns Hot Engaged and Cultivate when present', () => {
+    expect(
+      getProfileLinkAutoSnoozeTriages({
+        relationshipTriage: 'hot_lead',
+        engagedNotYet: true,
+        isCultivate: true,
+      })
+    ).toEqual(['hot_lead', 'engaged_not_yet', 'cultivate']);
+  });
+
+  it('ignores Lead Mutual Costly and Quiet', () => {
+    expect(
+      getProfileLinkAutoSnoozeTriages({
+        relationshipTriage: 'mutual',
+        engagedNotYet: false,
+        isCultivate: false,
+      })
+    ).toEqual([]);
+    expect(
+      getProfileLinkAutoSnoozeTriages({
+        relationshipTriage: 'over_invested',
+      })
+    ).toEqual([]);
+    expect(
+      getProfileLinkAutoSnoozeTriages({
+        relationshipTriage: 'quiet',
+      })
+    ).toEqual([]);
+  });
+
+  it('returns only the matching auto-snooze triages', () => {
+    expect(
+      getProfileLinkAutoSnoozeTriages({
+        engagedNotYet: true,
+      })
+    ).toEqual(['engaged_not_yet']);
+    expect(
+      getProfileLinkAutoSnoozeTriages({
+        isCultivate: true,
+      })
+    ).toEqual(['cultivate']);
+  });
+});
 
 describe('buildFollowersUrl', () => {
   const baseParams = {

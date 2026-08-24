@@ -17,7 +17,6 @@ import { useModals } from '@gitroom/frontend/components/layout/new-modal';
 import { TimeTable } from '@gitroom/frontend/components/launches/time.table';
 import { BotPicture } from '@gitroom/frontend/components/launches/bot.picture';
 import { CustomerModal } from '@gitroom/frontend/components/launches/customer.modal';
-import { SettingsModal } from '@gitroom/frontend/components/launches/settings.modal';
 import { CustomVariables } from '@gitroom/frontend/components/launches/add.provider.component';
 import { useRouter } from 'next/navigation';
 import { useVariables } from '@gitroom/react/helpers/variable.context';
@@ -266,25 +265,10 @@ export const Menu: FC<{
     });
     setShow(false);
   }, [integrations]);
-  const additionalSettings = useCallback(() => {
-    const findIntegration = integrations.find(
-      (integration) => integration.id === id
-    );
-    modal.openModal({
-      title: t('additional_settings', 'Additional Settings'),
-      children: (
-        <SettingsModal
-          // @ts-ignore
-          integration={findIntegration}
-          onClose={() => {
-            mutate();
-            toast.show(t('settings_updated', 'Settings Updated'), 'success');
-          }}
-        />
-      ),
-    });
+  const openChannelSettings = useCallback(() => {
+    router.push(`/settings/channels?selected=${id}`);
     setShow(false);
-  }, [integrations, t]);
+  }, [id, router]);
   const addToCustomer = useCallback(() => {
     const findIntegration = integrations.find(
       (integration) => integration.id === id
@@ -481,7 +465,7 @@ export const Menu: FC<{
           )}
           <div
             className="flex gap-[12px] items-center py-[8px] px-[10px]"
-            onClick={additionalSettings}
+            onClick={openChannelSettings}
           >
             <div>
               <svg
@@ -498,7 +482,7 @@ export const Menu: FC<{
               </svg>
             </div>
             <div className="text-[14px]">
-              {t('additional_settings', 'Additional Settings')}
+              {t('settings', 'Settings')}
             </div>
           </div>
           {(canChangeProfilePicture || canChangeNickName) && (

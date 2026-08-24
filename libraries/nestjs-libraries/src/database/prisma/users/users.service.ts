@@ -147,4 +147,12 @@ export class UsersService {
       preferences
     );
   }
+
+  getDismissedAlerts(userId: string) {
+    return this._usersRepository.getDismissedAlerts(userId);
+  }
+
+  dismissAlert(userId: string, alertKey: string) {
+    return this._usersRepository.dismissAlert(userId, alertKey);
+  }
 }

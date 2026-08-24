@@ -29,6 +29,7 @@ import {
   GetDashboardAnalyticsPreferencesQueryDto,
   SaveDashboardAnalyticsPreferencesDto,
 } from '@gitroom/nestjs-libraries/dtos/users/dashboard-analytics-preferences.dto';
+import { DismissAlertDto } from '@gitroom/nestjs-libraries/dtos/users/dismissed-alert.dto';
 import { HttpForbiddenException } from '@gitroom/nestjs-libraries/services/exception.filter';
 import { RealIP } from 'nestjs-real-ip';
 import { UserAgent } from '@gitroom/nestjs-libraries/user/user.agent';
@@ -302,6 +303,19 @@ export class UsersController {
       organization.id,
       body.preferences
     );
+  }
+
+  @Get('/dismissed-alerts')
+  async getDismissedAlerts(@GetUserFromRequest() user: User) {
+    return this._userService.getDismissedAlerts(user.id);
+  }
+
+  @Post('/dismissed-alerts')
+  async dismissAlert(
+    @GetUserFromRequest() user: User,
+    @Body() body: DismissAlertDto
+  ) {
+    return this._userService.dismissAlert(user.id, body.alertKey);
   }
 
   @Post('/api-key/rotate')

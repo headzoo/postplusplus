@@ -22,6 +22,7 @@ import {
   useChannelDetails,
 } from '@gitroom/frontend/components/settings/use.channel.details';
 import { ChannelTrackingAlert } from '@gitroom/frontend/components/settings/channel-tracking-alert.component';
+import { ChannelAdditionalSettingsForm } from '@gitroom/frontend/components/launches/settings.modal';
 import {
   ChannelInteractionKindCoverage,
   ChannelInteractionTrackingFailureCategory,
@@ -29,6 +30,7 @@ import {
 } from '@gitroom/frontend/components/followers/use.followers';
 import { FALLBACK_CHANNEL_STRATEGY_ID } from '@gitroom/nestjs-libraries/channel-strategies/channel-strategy.registry';
 import type { ChannelStrategyId } from '@gitroom/nestjs-libraries/channel-strategies/channel-strategy.types';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 const TRACKING_STATE_LABELS: Record<string, { key: string; defaultLabel: string }> = {
   active: { key: 'channel_tracking_active', defaultLabel: 'Active' },
@@ -169,208 +171,208 @@ const ChannelStrategySection: FC<{
   loading,
   onStrategyUpdated,
 }) => {
-  const t = useT();
-  const toast = useToaster();
-  const fetch = useFetch();
-  const { mutate } = useSWRConfig();
-  const persistedStrategyId = strategy?.id ?? FALLBACK_CHANNEL_STRATEGY_ID;
-  const [selectedId, setSelectedId] =
-    useState<ChannelStrategyId>(persistedStrategyId);
-  const [saving, setSaving] = useState(false);
-  const [recomputeNotice, setRecomputeNotice] = useState(false);
+    const t = useT();
+    const toast = useToaster();
+    const fetch = useFetch();
+    const { mutate } = useSWRConfig();
+    const persistedStrategyId = strategy?.id ?? FALLBACK_CHANNEL_STRATEGY_ID;
+    const [selectedId, setSelectedId] =
+      useState<ChannelStrategyId>(persistedStrategyId);
+    const [saving, setSaving] = useState(false);
+    const [recomputeNotice, setRecomputeNotice] = useState(false);
 
-  useEffect(() => {
-    setSelectedId(persistedStrategyId);
-  }, [persistedStrategyId]);
-
-  useEffect(() => {
-    if (recomputing) {
-      setRecomputeNotice(true);
-    }
-  }, [recomputing]);
-
-  const hasChanges = selectedId !== persistedStrategyId;
-  const showRecomputeNotice = recomputeNotice || !!recomputing;
-
-  const handleOptionKeyDown = useCallback(
-    (strategyId: ChannelStrategyId) =>
-      (event: KeyboardEvent<HTMLDivElement>) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          if (!saving) {
-            setSelectedId(strategyId);
-          }
-        }
-      },
-    [saving]
-  );
-
-  const saveStrategy = useCallback(async () => {
-    if (!strategyApplicable || saving || !hasChanges) {
-      return;
-    }
-    setSaving(true);
-    try {
-      const response = await fetch(`/integrations/${integrationId}/strategy`, {
-        method: 'PUT',
-        body: JSON.stringify({ strategyId: selectedId }),
-      });
-      if (!response.ok) {
-        throw new Error('strategy save failed');
-      }
-      const body = (await response.json()) as {
-        strategy?: ChannelStrategyPublicSummary;
-        recomputeRequested?: boolean;
-      };
-      setRecomputeNotice(!!body.recomputeRequested || !!recomputing);
-      await Promise.all([
-        onStrategyUpdated(),
-        mutate('/integrations/list'),
-        mutate('/followers/channels'),
-      ]);
-      toast.show(
-        t('channel_strategy_saved', 'Channel strategy updated.'),
-        'success'
-      );
-    } catch {
+    useEffect(() => {
       setSelectedId(persistedStrategyId);
-      toast.show(
-        t(
-          'channel_strategy_save_failed',
-          'Could not update the channel strategy.'
-        )
+    }, [persistedStrategyId]);
+
+    useEffect(() => {
+      if (recomputing) {
+        setRecomputeNotice(true);
+      }
+    }, [recomputing]);
+
+    const hasChanges = selectedId !== persistedStrategyId;
+    const showRecomputeNotice = recomputeNotice || !!recomputing;
+
+    const handleOptionKeyDown = useCallback(
+      (strategyId: ChannelStrategyId) =>
+        (event: KeyboardEvent<HTMLDivElement>) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            if (!saving) {
+              setSelectedId(strategyId);
+            }
+          }
+        },
+      [saving]
+    );
+
+    const saveStrategy = useCallback(async () => {
+      if (!strategyApplicable || saving || !hasChanges) {
+        return;
+      }
+      setSaving(true);
+      try {
+        const response = await fetch(`/integrations/${integrationId}/strategy`, {
+          method: 'PUT',
+          body: JSON.stringify({ strategyId: selectedId }),
+        });
+        if (!response.ok) {
+          throw new Error('strategy save failed');
+        }
+        const body = (await response.json()) as {
+          strategy?: ChannelStrategyPublicSummary;
+          recomputeRequested?: boolean;
+        };
+        setRecomputeNotice(!!body.recomputeRequested || !!recomputing);
+        await Promise.all([
+          onStrategyUpdated(),
+          mutate('/integrations/list'),
+          mutate('/followers/channels'),
+        ]);
+        toast.show(
+          t('channel_strategy_saved', 'Channel strategy updated.'),
+          'success'
+        );
+      } catch {
+        setSelectedId(persistedStrategyId);
+        toast.show(
+          t(
+            'channel_strategy_save_failed',
+            'Could not update the channel strategy.'
+          )
+        );
+      } finally {
+        setSaving(false);
+      }
+    }, [
+      fetch,
+      hasChanges,
+      integrationId,
+      mutate,
+      onStrategyUpdated,
+      persistedStrategyId,
+      recomputing,
+      saving,
+      selectedId,
+      strategyApplicable,
+      t,
+      toast,
+    ]);
+
+    if (loading && strategyApplicable === undefined) {
+      return (
+        <div className="flex flex-col gap-[10px] border border-newBorder rounded-[8px] p-[16px]">
+          <div className="text-[16px] font-[500]">
+            {t('channel_strategy', 'Channel strategy')}
+          </div>
+          <div className="text-[14px] text-newTextColor">
+            {t('loading', 'Loading...')}
+          </div>
+        </div>
       );
-    } finally {
-      setSaving(false);
     }
-  }, [
-    fetch,
-    hasChanges,
-    integrationId,
-    mutate,
-    onStrategyUpdated,
-    persistedStrategyId,
-    recomputing,
-    saving,
-    selectedId,
-    strategyApplicable,
-    t,
-    toast,
-  ]);
 
-  if (loading && strategyApplicable === undefined) {
+    if (strategyApplicable === false) {
+      return (
+        <div className="flex flex-col gap-[10px] border border-newBorder rounded-[8px] p-[16px]">
+          <div className="text-[16px] font-[500]">
+            {t('channel_strategy', 'Channel strategy')}
+          </div>
+          <div className="text-[14px] text-newTextColor">
+            {t(
+              'channel_strategy_not_applicable',
+              'Not available for this channel because it does not expose follower identities.'
+            )}
+          </div>
+        </div>
+      );
+    }
+
     return (
-      <div className="flex flex-col gap-[10px] border border-newBorder rounded-[8px] p-[16px]">
-        <div className="text-[16px] font-[500]">
-          {t('channel_strategy', 'Channel strategy')}
+      <div className="flex flex-col gap-[12px] border border-newBorder rounded-[8px] p-[16px]">
+        <div>
+          <div className="text-[16px] font-[500]">
+            {t('channel_strategy', 'Channel strategy')}
+          </div>
+          <div className="text-[13px] text-newTextColor mt-[4px]">
+            {t(
+              'channel_strategy_description',
+              'Choose how relationship grades and Followers defaults prioritize people on this channel.'
+            )}
+          </div>
         </div>
-        <div className="text-[14px] text-newTextColor">
-          {t('loading', 'Loading...')}
-        </div>
-      </div>
-    );
-  }
 
-  if (strategyApplicable === false) {
-    return (
-      <div className="flex flex-col gap-[10px] border border-newBorder rounded-[8px] p-[16px]">
-        <div className="text-[16px] font-[500]">
-          {t('channel_strategy', 'Channel strategy')}
-        </div>
-        <div className="text-[14px] text-newTextColor">
-          {t(
-            'channel_strategy_not_applicable',
-            'Not available for this channel because it does not expose follower identities.'
-          )}
-        </div>
-      </div>
-    );
-  }
+        {showRecomputeNotice && (
+          <div className="rounded-[10px] border border-sky-500/30 bg-sky-500/10 px-[14px] py-[12px] text-[13px] text-sky-100">
+            {t(
+              'channel_strategy_recomputing',
+              'Relationship rankings are updating. Existing grades stay visible while the new strategy is applied.'
+            )}
+          </div>
+        )}
 
-  return (
-    <div className="flex flex-col gap-[12px] border border-newBorder rounded-[8px] p-[16px]">
-      <div>
-        <div className="text-[16px] font-[500]">
-          {t('channel_strategy', 'Channel strategy')}
-        </div>
-        <div className="text-[13px] text-newTextColor mt-[4px]">
-          {t(
-            'channel_strategy_description',
-            'Choose how relationship grades and Followers defaults prioritize people on this channel.'
-          )}
-        </div>
-      </div>
-
-      {showRecomputeNotice && (
-        <div className="rounded-[10px] border border-sky-500/30 bg-sky-500/10 px-[14px] py-[12px] text-[13px] text-sky-100">
-          {t(
-            'channel_strategy_recomputing',
-            'Relationship rankings are updating. Existing grades stay visible while the new strategy is applied.'
-          )}
-        </div>
-      )}
-
-      <div
-        className="flex flex-col gap-[10px]"
-        role="radiogroup"
-        aria-label={t('channel_strategy', 'Channel strategy')}
-      >
-        {channelStrategyOptions.map((option) => {
-          const label = localizedStrategyCopy(option.label, t);
-          const description = localizedStrategyCopy(option.description, t);
-          const isSelected = selectedId === option.id;
-          const isDefault = option.id === FALLBACK_CHANNEL_STRATEGY_ID;
-          const optionLabel = isDefault
-            ? `${label} (${t('channel_strategy_default', 'Default')})`
-            : label;
-
-          return (
-            <div
-              key={option.id}
-              role="radio"
-              aria-checked={isSelected}
-              tabIndex={saving ? -1 : 0}
-              onClick={() => {
-                if (!saving) {
-                  setSelectedId(option.id);
-                }
-              }}
-              onKeyDown={handleOptionKeyDown(option.id)}
-              className={clsx(
-                'border rounded-[8px] p-[12px] flex flex-col gap-[6px] cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-btnPrimary',
-                isSelected
-                  ? 'border-btnPrimary bg-btnPrimary/10'
-                  : 'border-newBorder hover:bg-boxHover',
-                saving && 'opacity-60 cursor-not-allowed'
-              )}
-            >
-              <div className="flex items-center justify-between gap-[8px] text-[14px] font-[500]">
-                <span>{optionLabel}</span>
-                {isSelected && (
-                  <span className="text-[12px] uppercase tracking-wide text-emerald-300">
-                    {t('selected', 'Selected')}
-                  </span>
-                )}
-              </div>
-              <div className="text-[13px] text-newTextColor">{description}</div>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="flex justify-end">
-        <Button
-          type="button"
-          loading={saving}
-          disabled={saving || !hasChanges}
-          onClick={saveStrategy}
+        <div
+          className="flex flex-col gap-[10px]"
+          role="radiogroup"
+          aria-label={t('channel_strategy', 'Channel strategy')}
         >
-          {t('save', 'Save')}
-        </Button>
+          {channelStrategyOptions.map((option) => {
+            const label = localizedStrategyCopy(option.label, t);
+            const description = localizedStrategyCopy(option.description, t);
+            const isSelected = selectedId === option.id;
+            const isDefault = option.id === FALLBACK_CHANNEL_STRATEGY_ID;
+            const optionLabel = isDefault
+              ? `${label} (${t('channel_strategy_default', 'Default')})`
+              : label;
+
+            return (
+              <div
+                key={option.id}
+                role="radio"
+                aria-checked={isSelected}
+                tabIndex={saving ? -1 : 0}
+                onClick={() => {
+                  if (!saving) {
+                    setSelectedId(option.id);
+                  }
+                }}
+                onKeyDown={handleOptionKeyDown(option.id)}
+                className={clsx(
+                  'border rounded-[8px] p-[12px] flex flex-col gap-[6px] cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-btnPrimary',
+                  isSelected
+                    ? 'border-btnPrimary bg-btnPrimary/10'
+                    : 'border-newBorder hover:bg-boxHover',
+                  saving && 'opacity-60 cursor-not-allowed'
+                )}
+              >
+                <div className="flex items-center justify-between gap-[8px] text-[14px] font-[500]">
+                  <span>{optionLabel}</span>
+                  {isSelected && (
+                    <span className="text-[12px] uppercase tracking-wide text-emerald-300">
+                      {t('selected', 'Selected')}
+                    </span>
+                  )}
+                </div>
+                <div className="text-[13px] text-newTextColor">{description}</div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            loading={saving}
+            disabled={saving || !hasChanges}
+            onClick={saveStrategy}
+          >
+            {t('save', 'Save')}
+          </Button>
+        </div>
       </div>
-    </div>
-  );
-};
+    );
+  };
 
 const ChannelDetailPanel: FC<{
   integration: IntegrationListItem;
@@ -391,147 +393,152 @@ const ChannelDetailPanel: FC<{
   authorizing,
   onStrategyUpdated,
 }) => {
-  const t = useT();
-  const tracking = details?.tracking;
-  const stateLabel = tracking
-    ? TRACKING_STATE_LABELS[tracking.state] || TRACKING_STATE_LABELS.unsupported
-    : undefined;
-  const failure = tracking ? trackingFailureMessage(tracking, t) : undefined;
-  const showTrackingAlert =
-    tracking?.state === 'error' || tracking?.state === 'partial';
+    const t = useT();
+    const tracking = details?.tracking;
+    const stateLabel = tracking
+      ? TRACKING_STATE_LABELS[tracking.state] || TRACKING_STATE_LABELS.unsupported
+      : undefined;
+    const failure = tracking ? trackingFailureMessage(tracking, t) : undefined;
+    const showTrackingAlert =
+      tracking?.state === 'error' || tracking?.state === 'partial';
 
-  return (
-    <div className="flex flex-col gap-[20px] min-w-0">
-      <div className="flex items-start justify-between gap-[12px]">
-        <div className="min-w-0">
-          <div className="text-[20px] font-[500] truncate">{integration.name}</div>
-          <div className="text-[14px] text-newTextColor truncate">
-            {integration.display || integration.identifier}
+    return (
+      <div className="flex flex-col gap-[20px] min-w-0">
+        <div className="flex items-start justify-between gap-[12px]">
+          <div className="min-w-0">
+            <div className="text-[20px] font-[500] truncate">{integration.name}</div>
+            <div className="text-[14px] text-newTextColor truncate">
+              {integration.display || integration.identifier}
+            </div>
           </div>
-        </div>
-        <div className="flex gap-[8px] shrink-0">
-          {details?.trackingAuthorization && (
+          <div className="flex gap-[8px] shrink-0">
+            {details?.trackingAuthorization && (
+              <Button
+                type="button"
+                secondary
+                loading={authorizing}
+                disabled={authorizing}
+                onClick={onAuthorizeTracking}
+              >
+                {details.trackingAuthorization.connected
+                  ? t('reauthorize_tracking', 'Reauthorize tracking')
+                  : t('authorize_tracking', 'Authorize tracking')}
+              </Button>
+            )}
             <Button
               type="button"
               secondary
-              loading={authorizing}
-              disabled={authorizing}
-              onClick={onAuthorizeTracking}
+              loading={refreshing}
+              disabled={refreshing}
+              onClick={onRefreshOauth}
             >
-              {details.trackingAuthorization.connected
-                ? t('reauthorize_tracking', 'Reauthorize tracking')
-                : t('authorize_tracking', 'Authorize tracking')}
+              {t('refresh_oauth', 'Refresh OAuth')}
             </Button>
-          )}
-          <Button
-            type="button"
-            secondary
-            loading={refreshing}
-            disabled={refreshing}
-            onClick={onRefreshOauth}
-          >
-            {t('refresh_oauth', 'Refresh OAuth')}
-          </Button>
-        </div>
-      </div>
-
-      {details?.trackingAuthorization &&
-        !details.trackingAuthorization.connected && (
-          <div className="rounded-[10px] border border-amber-500/30 bg-amber-500/10 px-[14px] py-[12px] text-[13px] text-amber-100">
-            {t(
-              'tracking_authorization_needed',
-              'Some interaction events need an extra permission grant before they can be tracked. Use Authorize tracking to give it.'
-            )}
           </div>
-        )}
-
-      <div className="flex flex-col gap-[10px] border border-newBorder rounded-[8px] p-[16px]">
-        <DetailRow label={t('provider', 'Provider')}>
-          {integration.identifier}
-        </DetailRow>
-        <DetailRow label={t('account_id', 'Account ID')}>
-          {details?.internalId || integration.internalId || '—'}
-        </DetailRow>
-        <DetailRow label={t('status', 'Status')}>
-          {details?.deleted
-            ? t('deleted', 'Deleted')
-            : integration.disabled
-              ? t('disabled', 'Disabled')
-              : integration.refreshNeeded
-                ? t('reconnect_needed', 'Reconnect needed')
-                : integration.inBetweenSteps
-                  ? t('setup_incomplete', 'Setup incomplete')
-                  : t('connected', 'Connected')}
-        </DetailRow>
-        {details?.profileUrl && (
-          <DetailRow label={t('profile', 'Profile')}>
-            <a
-              href={details.profileUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="underline"
-            >
-              {details.profileUrl}
-            </a>
-          </DetailRow>
-        )}
-      </div>
-
-      {loading && !details ? (
-        <div className="flex justify-center py-[40px]">
-          <LoadingComponent />
         </div>
-      ) : (
-        <>
-          {showTrackingAlert && (
-            <ChannelTrackingAlert
-              channelName={integration.display || integration.name}
-              tracking={tracking}
-              subscriptions={details?.subscriptions}
-            />
-          )}
 
-          <div className="flex flex-col gap-[10px] border border-newBorder rounded-[8px] p-[16px]">
-            <div className="text-[16px] font-[500]">
-              {t('interaction_tracking', 'Interaction tracking')}
+        {details?.trackingAuthorization &&
+          !details.trackingAuthorization.connected && (
+            <div className="rounded-[10px] border border-amber-500/30 bg-amber-500/10 px-[14px] py-[12px] text-[13px] text-amber-100">
+              {t(
+                'tracking_authorization_needed',
+                'Some interaction events need an extra permission grant before they can be tracked. Use Authorize tracking to give it.'
+              )}
             </div>
-            <DetailRow label={t('state', 'State')}>
-              {stateLabel
-                ? t(stateLabel.key, stateLabel.defaultLabel)
-                : '—'}
+          )}
+
+        <div className="flex flex-col gap-[10px] border border-newBorder rounded-[8px] p-[16px]">
+          <DetailRow label={t('provider', 'Provider')}>
+            {integration.identifier}
+          </DetailRow>
+          <DetailRow label={t('account_id', 'Account ID')}>
+            {details?.internalId || integration.internalId || '—'}
+          </DetailRow>
+          <DetailRow label={t('status', 'Status')}>
+            {details?.deleted
+              ? t('deleted', 'Deleted')
+              : integration.disabled
+                ? t('disabled', 'Disabled')
+                : integration.refreshNeeded
+                  ? t('reconnect_needed', 'Reconnect needed')
+                  : integration.inBetweenSteps
+                    ? t('setup_incomplete', 'Setup incomplete')
+                    : t('connected', 'Connected')}
+          </DetailRow>
+          {details?.profileUrl && (
+            <DetailRow label={t('profile', 'Profile')}>
+              <a
+                href={details.profileUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="underline"
+              >
+                {details.profileUrl}
+              </a>
             </DetailRow>
-            {tracking?.availability && (
-              <DetailRow label={t('availability', 'Availability')}>
-                {tracking.availability}
-              </DetailRow>
-            )}
-            {failure && (
-              <DetailRow label={t('reason', 'Reason')}>{failure}</DetailRow>
-            )}
-            <DetailRow label={t('tracking_started', 'Tracking started')}>
-              {formatTimestamp(tracking?.trackingStartedAt)}
-            </DetailRow>
-            <DetailRow label={t('follower_sync', 'Follower sync')}>
-              {formatTimestamp(tracking?.followerSnapshotAt)}
-            </DetailRow>
+          )}
+        </div>
+
+        {loading && !details ? (
+          <div className="flex justify-center py-[40px]">
+            <LoadingComponent />
           </div>
+        ) : (
+          <>
+            {showTrackingAlert && (
+              <ChannelTrackingAlert
+                channelName={integration.display || integration.name}
+                tracking={tracking}
+                subscriptions={details?.subscriptions}
+              />
+            )}
 
-          <ChannelStrategySection
-            integrationId={integration.id}
-            strategyApplicable={details?.strategyApplicable}
-            strategy={details?.strategy}
-            recomputing={details?.recomputing}
-            loading={loading}
-            onStrategyUpdated={onStrategyUpdated}
-          />
+            <div className="flex flex-col gap-[10px] border border-newBorder rounded-[8px] p-[16px]">
+              <div className="text-[16px] font-[500]">
+                {t('interaction_tracking', 'Interaction tracking')}
+              </div>
+              <DetailRow label={t('state', 'State')}>
+                {stateLabel
+                  ? t(stateLabel.key, stateLabel.defaultLabel)
+                  : '—'}
+              </DetailRow>
+              {tracking?.availability && (
+                <DetailRow label={t('availability', 'Availability')}>
+                  {tracking.availability}
+                </DetailRow>
+              )}
+              {failure && (
+                <DetailRow label={t('reason', 'Reason')}>{failure}</DetailRow>
+              )}
+              <DetailRow label={t('tracking_started', 'Tracking started')}>
+                {formatTimestamp(tracking?.trackingStartedAt)}
+              </DetailRow>
+              <DetailRow label={t('follower_sync', 'Follower sync')}>
+                {formatTimestamp(tracking?.followerSnapshotAt)}
+              </DetailRow>
+            </div>
 
-          <CoverageTable coverage={tracking?.coverage} />
-          <SubscriptionsTable subscriptions={details?.subscriptions || []} />
-        </>
-      )}
-    </div>
-  );
-};
+            <ChannelStrategySection
+              integrationId={integration.id}
+              strategyApplicable={details?.strategyApplicable}
+              strategy={details?.strategy}
+              recomputing={details?.recomputing}
+              loading={loading}
+              onStrategyUpdated={onStrategyUpdated}
+            />
+
+            <ChannelAdditionalSettingsForm
+              key={integration.id}
+              integration={integration}
+            />
+
+            <CoverageTable coverage={tracking?.coverage} />
+            <SubscriptionsTable subscriptions={details?.subscriptions || []} />
+          </>
+        )}
+      </div>
+    );
+  };
 
 const CoverageTable: FC<{ coverage?: ChannelInteractionKindCoverage[] }> = ({
   coverage,
@@ -643,24 +650,56 @@ export const ChannelsSettings: FC = () => {
   const t = useT();
   const toast = useToaster();
   const fetch = useFetch();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { data: integrations, isLoading } = useIntegrationList();
-  const [selectedId, setSelectedId] = useState<string>();
+  const selectedFromUrl = searchParams.get('selected') || undefined;
   const [refreshing, setRefreshing] = useState(false);
   const [authorizing, setAuthorizing] = useState(false);
+
+  const selectedId = useMemo(() => {
+    if (!integrations?.length) {
+      return undefined;
+    }
+    if (
+      selectedFromUrl &&
+      integrations.some((item) => item.id === selectedFromUrl)
+    ) {
+      return selectedFromUrl;
+    }
+    return integrations[0].id;
+  }, [integrations, selectedFromUrl]);
+
   const selected = useMemo(
     () => integrations?.find((item) => item.id === selectedId),
     [integrations, selectedId]
   );
   const details = useChannelDetails(selected?.id);
 
+  const syncSelectedToUrl = useCallback(
+    (id: string) => {
+      if (id === selectedFromUrl) {
+        return;
+      }
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('selected', id);
+      const query = params.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname, {
+        scroll: false,
+      });
+    },
+    [pathname, router, searchParams, selectedFromUrl]
+  );
+
   useEffect(() => {
-    if (!integrations?.length) {
+    if (!selectedId) {
       return;
     }
-    if (!selectedId || !integrations.some((item) => item.id === selectedId)) {
-      setSelectedId(integrations[0].id);
+    if (selectedId !== selectedFromUrl) {
+      syncSelectedToUrl(selectedId);
     }
-  }, [integrations, selectedId]);
+  }, [selectedId, selectedFromUrl, syncSelectedToUrl]);
 
   const refreshOauth = useCallback(async () => {
     if (!selected) {
@@ -731,7 +770,7 @@ export const ChannelsSettings: FC = () => {
             collapsed={false}
             integrations={integrations}
             selectedIds={selectedId ? [selectedId] : []}
-            onSelect={(integration) => setSelectedId(integration.id)}
+            onSelect={(integration) => syncSelectedToUrl(integration.id)}
           />
         </div>
         <div

@@ -15,6 +15,7 @@ export class UsersRepository {
   constructor(
     private _user: PrismaRepository<'user'>,
     private _dashboardAnalyticsPreference: PrismaRepository<'dashboardAnalyticsPreference'>,
+    private _userDismissedAlert: PrismaRepository<'userDismissedAlert'>,
     private _integration: PrismaRepository<'integration'>,
     private _transaction: PrismaTransaction
   ) { }
@@ -380,5 +381,32 @@ export class UsersRepository {
       organizationId,
       integrationIds.length === 1 ? integrationIds[0] : undefined
     );
+  }
+
+  async getDismissedAlerts(userId: string) {
+    const rows = await this._userDismissedAlert.model.userDismissedAlert.findMany(
+      {
+        where: { userId },
+        select: { alertKey: true },
+        orderBy: { alertKey: 'asc' },
+      }
+    );
+    return { keys: rows.map((row) => row.alertKey) };
+  }
+
+  async dismissAlert(userId: string, alertKey: string) {
+    await this._userDismissedAlert.model.userDismissedAlert.upsert({
+      where: {
+        userId_alertKey: { userId, alertKey },
+      },
+      create: {
+        userId,
+        alertKey,
+      },
+      update: {
+        dismissedAt: new Date(),
+      },
+    });
+    return this.getDismissedAlerts(userId);
   }
 }

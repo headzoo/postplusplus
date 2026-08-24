@@ -15,6 +15,7 @@ import { FollowerCard } from '@gitroom/frontend/components/followers/follower.ca
 import { FollowerDetailModal } from '@gitroom/frontend/components/followers/follower.detail.modal';
 import { FollowerListCreateModal } from '@gitroom/frontend/components/followers/follower.list.create.modal';
 import { FollowerListAddModal } from '@gitroom/frontend/components/followers/follower.list.add.modal';
+import { FollowerTriageTip } from '@gitroom/frontend/components/followers/follower.triage.tip';
 import { useCopilotFollowerPageProperties } from '@gitroom/frontend/components/followers/use.copilot.follower.page';
 import {
   useDecisionModal,
@@ -1898,6 +1899,8 @@ export const FollowersComponent: FC = () => {
             </button>
           </div>
         </div>
+
+        <FollowerTriageTip slug={slug} hidden={!!urlListId} />
 
         {urlListId && (
           <div className="flex items-center gap-[8px]">

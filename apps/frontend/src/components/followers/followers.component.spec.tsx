@@ -141,6 +141,20 @@ jest.mock('@gitroom/frontend/components/followers/use.copilot.follower.page', ()
   useCopilotFollowerPageProperties: jest.fn(),
 }));
 
+const dismissAlertMock = jest.fn();
+let dismissedAlertKeys: string[] = [];
+let dismissedAlertsLoading = false;
+
+jest.mock('@gitroom/frontend/components/layout/use.dismissed.alerts', () => ({
+  useDismissedAlerts: () => ({
+    data: dismissedAlertsLoading
+      ? undefined
+      : { keys: dismissedAlertKeys },
+    isLoading: dismissedAlertsLoading,
+    dismissAlert: dismissAlertMock,
+  }),
+}));
+
 jest.mock('next/link', () => ({
   __esModule: true,
   default: ({
@@ -503,6 +517,9 @@ describe('FollowersComponent', () => {
     deleteListMock.mockResolvedValue(undefined);
     decisionOpen.mockReset();
     decisionOpen.mockResolvedValue(false);
+    dismissAlertMock.mockReset();
+    dismissedAlertKeys = [];
+    dismissedAlertsLoading = false;
     mockPathname = '/followers';
     mockSearchParams = new URLSearchParams();
     mockChannels = [channel];
@@ -553,6 +570,37 @@ describe('FollowersComponent', () => {
 
     expect(allChip.getAttribute('aria-pressed')).toBe('true');
     expect(hotLeadChip.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('shows a triage tip on All and Hot views', () => {
+    const { rerender } = render(<FollowersComponent />);
+
+    expect(
+      screen.getByTestId('followers-triage-tip').getAttribute('data-triage-tip')
+    ).toBe('all');
+
+    mockPathname = '/followers/hot';
+    rerender(<FollowersComponent />);
+
+    expect(
+      screen.getByTestId('followers-triage-tip').getAttribute('data-triage-tip')
+    ).toBe('hot');
+  });
+
+  it('hides the triage tip when a custom list is selected', () => {
+    mockSearchParams = new URLSearchParams('listId=list-1');
+    render(<FollowersComponent />);
+
+    expect(screen.queryByTestId('followers-triage-tip')).toBeNull();
+  });
+
+  it('dismisses the active triage tip with a per-triage alert key', () => {
+    mockPathname = '/followers/hot';
+    render(<FollowersComponent />);
+
+    fireEvent.click(screen.getByTestId('followers-triage-tip-dismiss'));
+
+    expect(dismissAlertMock).toHaveBeenCalledWith('followers.triage.hot');
   });
 
   it('keeps All reachable after applying a strategy default', () => {

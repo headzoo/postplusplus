@@ -155,6 +155,7 @@ model User {
   adminWebAuthnChallenges            AdminWebAuthnChallenge[]
   adminVerificationSessions          AdminVerificationSession[]
   dashboardAnalyticsPreferences      DashboardAnalyticsPreference[]
+  dismissedAlerts                    UserDismissedAlert[]
 
   @@unique([email, providerName])
   @@index([lastReadNotifications])
@@ -522,6 +523,17 @@ model DashboardAnalyticsPreference {
   @@index([userId, organizationId])
   @@index([organizationId, integrationId])
   @@index([integrationId])
+}
+
+model UserDismissedAlert {
+  id          String   @id @default(uuid())
+  userId      String
+  alertKey    String
+  dismissedAt DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, alertKey])
+  @@index([userId])
 }
 
 model Signatures {
@@ -2009,23 +2021,23 @@ model ChannelAudienceNote {
 }
 
 model ChannelRelationshipGradeSnapshot {
-  id                     String                @id @default(cuid())
-  organizationId         String
-  integrationId          String
-  counterpartyExternalId String
-  windowStartedAt        DateTime
-  snapshotAt             DateTime
-  effortScore            Int
-  reciprocationScore     Int
-  reciprocity            Float?
-  grade                  Float?
-  formulaVersion         Int                   @default(1)
-  relationshipStrategyId String?
+  id                          String                @id @default(cuid())
+  organizationId              String
+  integrationId               String
+  counterpartyExternalId      String
+  windowStartedAt             DateTime
+  snapshotAt                  DateTime
+  effortScore                 Int
+  reciprocationScore          Int
+  reciprocity                 Float?
+  grade                       Float?
+  formulaVersion              Int                   @default(1)
+  relationshipStrategyId      String?
   relationshipStrategyVersion Int?
-  createdAt              DateTime              @default(now())
-  organization           Organization          @relation(fields: [organizationId], references: [id])
-  integration            Integration           @relation(fields: [integrationId], references: [id])
-  audienceMember         ChannelAudienceMember @relation("AudienceMemberGradeSnapshots", fields: [integrationId, counterpartyExternalId], references: [integrationId, externalId])
+  createdAt                   DateTime              @default(now())
+  organization                Organization          @relation(fields: [organizationId], references: [id])
+  integration                 Integration           @relation(fields: [integrationId], references: [id])
+  audienceMember              ChannelAudienceMember @relation("AudienceMemberGradeSnapshots", fields: [integrationId, counterpartyExternalId], references: [integrationId, externalId])
 
   @@unique([integrationId, counterpartyExternalId, snapshotAt])
   @@index([integrationId, counterpartyExternalId, snapshotAt])

@@ -26,6 +26,7 @@ export class IgnoreFollowerTriageDto {
     'quiet',
     'lead',
     'engaged_not_yet',
+    'cultivate',
   ])
   triage!:
     | 'hot_lead'
@@ -33,7 +34,8 @@ export class IgnoreFollowerTriageDto {
     | 'over_invested'
     | 'quiet'
     | 'lead'
-    | 'engaged_not_yet';
+    | 'engaged_not_yet'
+    | 'cultivate';
 
   @ValidateIf(
     (body: IgnoreFollowerTriageDto) =>

@@ -1,8 +1,6 @@
 'use client';
 
 import React, { FC, useCallback, useEffect, useState } from 'react';
-import { useModals } from '@gitroom/frontend/components/layout/new-modal';
-import { Integration } from '@prisma/client';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { Button } from '@gitroom/react/form/button';
 import { Slider } from '@gitroom/react/form/slider';
@@ -10,6 +8,7 @@ import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { ContextDocumentAssignmentPicker } from '@gitroom/frontend/components/context-documents/context-document.assignment-picker';
 import { PipelineContextDocument } from '@gitroom/frontend/components/pipelines/pipeline.types';
 import { useToaster } from '@gitroom/react/toaster/toaster';
+import { useSWRConfig } from 'swr';
 
 export const Element: FC<{
   setting: any;
@@ -33,20 +32,18 @@ export const Element: FC<{
   );
 };
 
-export const SettingsModal: FC<{
-  integration: Integration & {
-    customer?: {
-      id: string;
-      name: string;
-    };
+export const ChannelAdditionalSettingsForm: FC<{
+  integration: {
+    id: string;
+    additionalSettings?: string | null;
   };
-  onClose: () => void;
+  onSaved?: () => void;
 }> = (props) => {
   const fetch = useFetch();
   const t = useT();
   const toast = useToaster();
-  const { onClose, integration } = props;
-  const modal = useModals();
+  const { mutate } = useSWRConfig();
+  const { onSaved, integration } = props;
   const [values, setValues] = useState(
     JSON.parse(integration?.additionalSettings || '[]')
   );
@@ -58,6 +55,10 @@ export const SettingsModal: FC<{
   >([]);
   const [loadingDocuments, setLoadingDocuments] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setValues(JSON.parse(integration?.additionalSettings || '[]'));
+  }, [integration.id, integration?.additionalSettings]);
 
   useEffect(() => {
     let cancelled = false;
@@ -139,8 +140,9 @@ export const SettingsModal: FC<{
         throw new Error('Failed to save channel context documents');
       }
 
-      modal.closeAll();
-      onClose();
+      await mutate('/integrations/list');
+      toast.show(t('settings_updated', 'Settings Updated'), 'success');
+      onSaved?.();
     } catch {
       toast.show(
         t('channel_settings_save_error', 'Failed to save channel settings'),
@@ -152,8 +154,8 @@ export const SettingsModal: FC<{
   }, [
     fetch,
     integration.id,
-    modal,
-    onClose,
+    mutate,
+    onSaved,
     selectedContextDocumentIds,
     t,
     toast,
@@ -161,9 +163,9 @@ export const SettingsModal: FC<{
   ]);
 
   return (
-    <div>
+    <div className="flex flex-col gap-[16px] border border-newBorder rounded-[8px] p-[16px]">
       {!!values.length && (
-        <div className="mt-[16px]">
+        <div className="flex flex-col gap-[16px]">
           {values.map((setting: any, index: number) => (
             <Element
               key={setting.title}
@@ -174,7 +176,7 @@ export const SettingsModal: FC<{
         </div>
       )}
 
-      <div className="mt-[16px]">
+      <div>
         {loadingDocuments ? (
           <div className="text-[13px] opacity-70">
             {t('loading', 'Loading...')}
@@ -197,7 +199,7 @@ export const SettingsModal: FC<{
         )}
       </div>
 
-      <div className="my-[16px] flex gap-[10px]">
+      <div className="flex gap-[10px]">
         <Button onClick={save} disabled={saving || loadingDocuments}>
           {saving ? t('saving', 'Saving...') : t('save', 'Save')}
         </Button>

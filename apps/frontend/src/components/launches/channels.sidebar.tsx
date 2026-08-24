@@ -375,7 +375,7 @@ const ChannelMenuRow: FC<
           'data-tooltip-content': integration.name,
         })}
         className={clsx(
-          'flex gap-[12px] items-center p-2 bg-newBgColorInner hover:bg-boxHover group/profile transition-all rounded-[8px]',
+          'flex gap-[12px] items-center py-2 bg-newBgColorInner hover:bg-boxHover group/profile transition-all rounded-[8px]',
           (onSelect || integration.refreshNeeded) && 'cursor-pointer',
           isUnselected && 'opacity-20 hover:opacity-100',
           !showMenu && 'group-[.sidebar]:justify-center'
@@ -619,7 +619,7 @@ const ChannelMenuGroup: FC<
 
     return (
       <div
-        className="gap-[16px] flex flex-col relative"
+        className="gap-[8px] flex flex-col relative"
         ref={(node) => {
           drop(node);
         }}
@@ -746,7 +746,7 @@ export const ChannelMenu: FC<ChannelMenuProps & { collapsed: boolean }> = ({
   let namedIndex = -1;
 
   return (
-    <>
+    <div className="flex flex-col gap-[16px]">
       {groups.map((group) => {
         if (group.id) {
           namedIndex += 1;
@@ -765,6 +765,6 @@ export const ChannelMenu: FC<ChannelMenuProps & { collapsed: boolean }> = ({
           />
         );
       })}
-    </>
+    </div>
   );
 };

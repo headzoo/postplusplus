@@ -45,7 +45,7 @@ export const ContinueTrackingAuthorization: FC<{
         return;
       }
 
-      push('/settings?tab=channels');
+      push('/settings/channels');
     })();
   }, []);
 
@@ -53,7 +53,7 @@ export const ContinueTrackingAuthorization: FC<{
     return (
       <div className="flex flex-col gap-[12px] items-center justify-center py-[60px] text-[14px]">
         <div className="text-amber-300">{error}</div>
-        <a href="/settings?tab=channels" className="underline">
+        <a href="/settings/channels" className="underline">
           {t('open_channel_settings', 'Open channel settings')}
         </a>
       </div>

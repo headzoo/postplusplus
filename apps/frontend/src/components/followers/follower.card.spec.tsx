@@ -118,6 +118,88 @@ describe('FollowerCard', () => {
     });
   });
 
+  it('snoozes Hot triage when a profile link is clicked', async () => {
+    const onOpen = jest.fn();
+    const onDismissTriage = jest.fn();
+    render(
+      <FollowerCard
+        follower={{
+          ...baseFollower,
+          relationshipTriage: 'hot_lead',
+        }}
+        onDismissTriage={onDismissTriage}
+        onOpen={onOpen}
+      />
+    );
+
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('link', { name: 'View profile for Alex Example' })
+      );
+    });
+
+    expect(onOpen).not.toHaveBeenCalled();
+    expect(onDismissTriage).toHaveBeenCalledTimes(1);
+    expect(onDismissTriage).toHaveBeenCalledWith('hot_lead', undefined, {
+      snooze: true,
+    });
+  });
+
+  it('snoozes all matching Hot Engaged and Cultivate triages on profile link click', async () => {
+    const onDismissTriage = jest.fn().mockResolvedValue(undefined);
+    render(
+      <FollowerCard
+        follower={{
+          ...baseFollower,
+          relationshipTriage: 'hot_lead',
+          engagedNotYet: true,
+          isCultivate: true,
+        }}
+        onDismissTriage={onDismissTriage}
+      />
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('@alex'));
+    });
+
+    expect(onDismissTriage).toHaveBeenCalledTimes(3);
+    expect(onDismissTriage).toHaveBeenNthCalledWith(1, 'hot_lead', undefined, {
+      snooze: true,
+    });
+    expect(onDismissTriage).toHaveBeenNthCalledWith(
+      2,
+      'engaged_not_yet',
+      undefined,
+      { snooze: true }
+    );
+    expect(onDismissTriage).toHaveBeenNthCalledWith(3, 'cultivate', undefined, {
+      snooze: true,
+    });
+  });
+
+  it('does not snooze Lead or Mutual when a profile link is clicked', async () => {
+    const onDismissTriage = jest.fn();
+    render(
+      <FollowerCard
+        follower={{
+          ...baseFollower,
+          isLead: true,
+          relationshipTriage: 'mutual',
+        }}
+        onDismissTriage={onDismissTriage}
+      />
+    );
+
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('link', { name: 'View profile for Alex Example' })
+      );
+    });
+
+    expect(onDismissTriage).not.toHaveBeenCalled();
+  });
+
   it('labels interactionScore as Activity score', () => {
     render(<FollowerCard follower={baseFollower} onOpen={jest.fn()} />);
 
