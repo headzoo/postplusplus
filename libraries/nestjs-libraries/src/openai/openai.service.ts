@@ -9,6 +9,9 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || 'sk-proj-',
 });
 
+const truncateString = (max: number) =>
+  z.string().transform((value) => value.trim().slice(0, max));
+
 const PicturePrompt = z.object({
   prompt: z.string(),
 });
@@ -21,8 +24,8 @@ const TriageRerankResponse = z.object({
   candidates: z.array(
     z.object({
       externalId: z.string().min(1).max(512),
-      reason: z.string().min(1).max(280),
-      suggestedAction: z.string().min(1).max(280),
+      reason: truncateString(280).pipe(z.string().min(1)),
+      suggestedAction: truncateString(280).pipe(z.string().min(1)),
     })
   ),
 });
@@ -396,9 +399,9 @@ Do not infer private traits. Omit candidates when deferral or no engagement is a
   }) {
     const LeadFitScore = z.object({
       score: z.number().min(0).max(100),
-      reason: z.string().max(280),
-      concerns: z.array(z.string().max(120)).max(5),
-      matchedTopics: z.array(z.string().max(80)).max(8),
+      reason: truncateString(280),
+      concerns: z.array(truncateString(120)).max(5),
+      matchedTopics: z.array(truncateString(80)).max(8),
     });
 
     const documents =
