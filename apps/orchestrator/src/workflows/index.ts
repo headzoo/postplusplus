@@ -30,5 +30,6 @@ export * from './channel-follower-bot-score.workflow.v1';
 export * from './channel-lead-bridge.workflow.v1';
 export * from './channel-lead-bridge-admin-trigger.workflow.v1';
 export * from './channel-cultivate.workflow.v1';
+export * from './channel-hot-materialization.workflow.v1';
 export * from './channel-analytics-snapshot.workflow.v1';
 export * from './channel-analytics-snapshot.workflow.v2';

@@ -114,6 +114,21 @@ describe('FollowersController', () => {
     );
   });
 
+  it('accepts the hot audience and rejects it combined with triage', async () => {
+    const valid = Object.assign(new FollowersQueryDto(), { audience: 'hot' });
+    const combined = Object.assign(new FollowersQueryDto(), {
+      audience: 'hot',
+      triage: 'hot_lead',
+    });
+
+    await expect(validate(valid)).resolves.toHaveLength(0);
+    await expect(validate(combined)).resolves.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ property: 'audience' }),
+      ])
+    );
+  });
+
   it('accepts the lead audience and rejects it combined with triage', async () => {
     const valid = Object.assign(new FollowersQueryDto(), { audience: 'lead' });
     const invalidAudience = Object.assign(new FollowersQueryDto(), {

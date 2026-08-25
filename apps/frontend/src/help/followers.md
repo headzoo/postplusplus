@@ -34,7 +34,7 @@ Use the chips above the grid:
 | Filter        | Meaning                                                                         |
 | ------------- | ------------------------------------------------------------------------------- |
 | **All**       | Everyone in the current view                                                    |
-| **Hot**       | Their effort exceeds the channel’s, including unreciprocated inbound engagement |
+| **Hot**       | Hourly materialized picks for relationships that need reciprocation             |
 | **Mutual**    | Effort is balanced                                                              |
 | **Costly**    | The channel’s effort exceeds theirs                                             |
 | **Quiet**     | Little activity either way                                                      |
@@ -43,9 +43,13 @@ Use the chips above the grid:
 | **Bots**      | Likely automated accounts                                                       |
 | **Ignored**   | People you’ve hidden from other views                                           |
 
-**Hot** defaults sort to **Net effort gap**. Empty triage: **No followers match this triage filter**.
+**Hot** uses hourly materialized picks (not live net-gap sorting). Cards can show a reason and suggested action when available. Empty Hot view: **No hot picks right now**. Other triage filters still use live relationship scores.
 
 ## Leads, Hot, and Cultivate
+
+### Hot
+
+Hot refreshes about once per hour with a bounded set of relationships that need reciprocation. Ordering comes from the latest completed hourly batch, so new picks can take up to an hour to appear after activity changes. Cards may show a reason and suggested action from rules or optional AI reranking—rules-only reasons are not labeled as AI-generated. Dismissing Hot removes the card immediately even though the underlying pick row may remain until the next batch.
 
 ### Leads
 

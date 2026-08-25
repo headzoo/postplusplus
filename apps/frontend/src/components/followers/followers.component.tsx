@@ -63,11 +63,11 @@ const PAGE_SIZE_OPTIONS = [12, 24, 48] as const;
 
 const FOLLOWER_VIEW_BY_SLUG: Record<
   string,
-  { triage?: FollowerTriageFilter; audience?: 'lead' | 'ignored' | 'cultivate'; isBot?: true }
+  { triage?: FollowerTriageFilter; audience?: 'lead' | 'ignored' | 'cultivate' | 'hot'; isBot?: true }
 > = {
   // Legacy bookmark slug; canonicalize to /followers/hot.
-  engaged: { triage: 'hot_lead' },
-  hot: { triage: 'hot_lead' },
+  engaged: { audience: 'hot' },
+  hot: { audience: 'hot' },
   mutual: { triage: 'mutual' },
   costly: { triage: 'over_invested' },
   quiet: { triage: 'quiet' },
@@ -84,7 +84,7 @@ type FollowerFilterColor = 'neutral' | 'orange' | 'teal' | 'amber' | 'indigo';
 type FollowerFilterOption = {
   slug?: string;
   value?: FollowerTriageFilter;
-  audience?: 'lead' | 'cultivate' | 'ignored';
+  audience?: 'lead' | 'cultivate' | 'ignored' | 'hot';
   isBot?: true;
   key: string;
   defaultLabel: string;
@@ -120,7 +120,7 @@ const FOLLOWER_FILTER_GROUPS: FollowerFilterGroup[] = [
       },
       {
         slug: 'hot',
-        value: 'hot_lead',
+        audience: 'hot',
         key: 'followers_triage_hot_lead',
         defaultLabel: 'Hot',
       },
@@ -215,15 +215,6 @@ const getFilterChipClasses = (
     : 'border-indigo-500/40 text-textItemBlur hover:border-indigo-500/60 hover:text-indigo-400';
 };
 
-const TRIAGE_DEFAULT_SORTS: Partial<
-  Record<
-    FollowerTriageFilter,
-    { key: string; direction: FollowerSortDirection }
-  >
-> = {
-  hot_lead: { key: 'net_gap', direction: 'desc' },
-};
-
 const decodeFollowerPathSegment = (value: string) => {
   try {
     return decodeURIComponent(value);
@@ -236,7 +227,7 @@ export type FollowerListPath = {
   type: 'list';
   slug?: string;
   triage?: FollowerTriageFilter;
-  audience?: 'lead' | 'ignored' | 'cultivate';
+  audience?: 'lead' | 'ignored' | 'cultivate' | 'hot';
   isBot?: true;
 };
 
@@ -758,12 +749,8 @@ export const FollowersComponent: FC = () => {
   const resolvedTriage = triage ?? strategyDefaultView?.triage;
   const resolvedAudience = audience ?? strategyDefaultView?.audience;
 
-  const triageDefaultSort =
-    !urlSort && !sort && resolvedTriage
-      ? TRIAGE_DEFAULT_SORTS[resolvedTriage]
-      : undefined;
   const requestedSort =
-    urlSort ?? sort ?? strategyDefaults?.sort ?? triageDefaultSort?.key;
+    urlSort ?? sort ?? strategyDefaults?.sort;
   const effectiveSort = selectedChannel?.sorts.some(
     (item) => item.key === requestedSort
   )
@@ -990,8 +977,7 @@ export const FollowersComponent: FC = () => {
   const requestedDirection =
     urlDirection ??
     direction ??
-    strategyDefaults?.direction ??
-    triageDefaultSort?.direction;
+    strategyDefaults?.direction;
   const effectiveDirection = activeSort
     ? requestedDirection && activeSort.directions.includes(requestedDirection)
       ? requestedDirection
@@ -1007,9 +993,9 @@ export const FollowersComponent: FC = () => {
     integrationId: selectedIntegrationId,
     cursor: currentCursor,
     limit,
-    sort: effectiveSort,
-    direction: effectiveDirection,
-    window: requiresWindow ? window : undefined,
+    sort: resolvedAudience === 'hot' ? undefined : effectiveSort,
+    direction: resolvedAudience === 'hot' ? undefined : effectiveDirection,
+    window: resolvedAudience === 'hot' ? undefined : requiresWindow ? window : undefined,
     search: trimmedSearch || undefined,
     triage: urlListId ? undefined : resolvedTriage,
     audience: urlListId ? undefined : resolvedAudience,
@@ -1488,6 +1474,22 @@ export const FollowersComponent: FC = () => {
             {t(
               'followers_lead_empty_description',
               'Leads are people who interacted with this channel but do not currently follow it, plus prospects discovered through warm followers’ networks.'
+            )}
+          </p>
+        </div>
+      );
+    }
+
+    if (resolvedAudience === 'hot') {
+      return (
+        <div className="flex flex-col items-center justify-center gap-[8px] rounded-[12px] border border-newTableBorder bg-newTableHeader p-[32px] text-center">
+          <p className="text-[18px] text-newTextColor">
+            {t('followers_hot_empty_title', 'No hot picks right now')}
+          </p>
+          <p className="text-[14px] text-textItemBlur max-w-[520px]">
+            {t(
+              'followers_hot_empty_description',
+              'Hot refreshes hourly with a bounded set of relationships that need reciprocation. New picks can take up to an hour to appear after activity changes.'
             )}
           </p>
         </div>
@@ -2032,7 +2034,8 @@ export const FollowersComponent: FC = () => {
                     const shouldRemoveFromPage =
                       resolvedTriage === triageValue ||
                       (resolvedAudience === 'lead' && triageValue === 'lead') ||
-                      (resolvedAudience === 'cultivate' && triageValue === 'cultivate');
+                      (resolvedAudience === 'cultivate' && triageValue === 'cultivate') ||
+                      (resolvedAudience === 'hot' && triageValue === 'hot_lead');
                     if (shouldRemoveFromPage) {
                       await mutateFollowers(
                         (page) =>

@@ -36,7 +36,10 @@ import {
   logEventType,
 } from '@gitroom/nestjs-libraries/database/prisma/logs/http-log.serialize';
 import { PostsRepository } from '@gitroom/nestjs-libraries/database/prisma/posts/posts.repository';
-import { OpenaiService } from '@gitroom/nestjs-libraries/openai/openai.service';
+import {
+  OpenaiService,
+  TriageRerankInput,
+} from '@gitroom/nestjs-libraries/openai/openai.service';
 import { ContextDocumentService } from '@gitroom/nestjs-libraries/database/prisma/context-documents/context-document.service';
 import {
   AudienceProfile,
@@ -45,6 +48,7 @@ import {
   RelationshipGradeBatch,
   RelationshipGradeSnapshotInput,
   RelationshipGradeStrategySelection,
+  utcHourKey,
 } from './channel-interaction.repository';
 import {
   applyPersonalRelationshipGrade,
@@ -58,12 +62,21 @@ import {
   createRelationshipInteractionCounts,
   scoreInteractionCounts,
 } from '@gitroom/nestjs-libraries/channel-strategies/channel-strategy.scoring';
-import { resolveChannelStrategy } from '@gitroom/nestjs-libraries/channel-strategies/channel-strategy.registry';
+import {
+  resolveChannelStrategy,
+  resolveMaterializationConfig,
+} from '@gitroom/nestjs-libraries/channel-strategies/channel-strategy.registry';
 import {
   ChannelStrategy,
+  ChannelStrategyId,
   RelationshipScoringProfile,
   StrategyScoringInput,
+  TriagePipelineKind,
 } from '@gitroom/nestjs-libraries/channel-strategies/channel-strategy.types';
+import {
+  selectExpertiseForTriage,
+  SelectedExpertise,
+} from '@gitroom/nestjs-libraries/channel-strategies/expertise.registry';
 import { RelationshipGradeScheduleConfig } from '@gitroom/nestjs-libraries/temporal/relationship-grade.schedule';
 import {
   LEAD_BRIDGE_DAILY_LIMIT,
@@ -74,13 +87,9 @@ import {
   leadBridgeCursorKey,
   leadBridgeDailyCountKey,
   leadBridgeDailyTtlSeconds,
-  utcDayKey,
 } from '@gitroom/nestjs-libraries/temporal/lead-bridge.schedule';
 import { parseSkillFilename } from '@gitroom/nestjs-libraries/upload/context-document.upload.validation';
-import {
-  CULTIVATE_CANDIDATE_POOL_SIZE,
-  CULTIVATE_DAILY_PICK_LIMIT,
-} from '@gitroom/nestjs-libraries/temporal/cultivate.schedule';
+import { utcDayKey } from '@gitroom/nestjs-libraries/temporal/cultivate.schedule';
 
 export {
   applyPersonalRelationshipGrade,
@@ -104,6 +113,13 @@ const MAX_POST_CONTENT_LENGTH = 100000;
 const AUTHORIZATION_REFRESH_SKEW_MS = 60 * 1000;
 const AUTHORIZATION_REFRESH_LOCK_SECONDS = 60;
 const LIKER_SYNC_PAUSE_FALLBACK_SECONDS = 15 * 60;
+const TRIAGE_DOCUMENT_MAX_COUNT = 8;
+const TRIAGE_DOCUMENT_MAX_CONTENT_LENGTH = 6_000;
+const TRIAGE_REASON_MAX_LENGTH = 280;
+const TRIAGE_CANDIDATE_NAME_MAX_LENGTH = 160;
+const TRIAGE_CANDIDATE_USERNAME_MAX_LENGTH = 160;
+const TRIAGE_CANDIDATE_BIO_MAX_LENGTH = 1_000;
+const TRIAGE_CANDIDATE_RULES_REASON_MAX_LENGTH = 500;
 const likerSyncPauseKey = (integrationId: string) =>
   `channel-interaction-liker-sync:${integrationId}`;
 
@@ -1263,7 +1279,11 @@ export class ChannelInteractionService {
       );
       return { scored: 0, candidates: 0 };
     }
-    const limit = params.limit ?? LEAD_FIT_BACKFILL_LIMIT;
+    const config = await this.resolveTriageMaterializationConfig(
+      params.organizationId,
+      params.integrationId
+    );
+    const limit = params.limit ?? config.profile.lead.fitBackfillLimit;
     const candidates =
       await this._repository.listUnscoredLeadCandidatesForIntegration({
         organizationId: params.organizationId,
@@ -1282,6 +1302,73 @@ export class ChannelInteractionService {
       `Lead fit backfill for integration ${params.integrationId}: scored ${scored}/${candidates.length} unscored lead(s)`
     );
     return { scored, candidates: candidates.length };
+  }
+
+  private async resolveTriageMaterializationConfig(
+    organizationId: string,
+    integrationId: string
+  ) {
+    const batch = await this._repository.getRelationshipScoresForMembers(
+      organizationId,
+      integrationId,
+      [],
+      new Date()
+    );
+    return resolveMaterializationConfig(batch.strategy?.strategyId);
+  }
+
+  private async buildTriagePromptContext(params: {
+    organizationId: string;
+    integrationId: string;
+    strategyId: ChannelStrategyId;
+    triage: TriagePipelineKind;
+  }) {
+    const strategy = resolveChannelStrategy(params.strategyId);
+    let documents: Array<{ name: string; content: string }> = [];
+    try {
+      documents = this._contextDocumentService
+        ? (await this._contextDocumentService.listAttachedDocumentsForIntegration(
+          params.organizationId,
+          params.integrationId
+        ))
+          .filter((document) => !parseSkillFilename(document.name))
+          .sort((left, right) => left.name.localeCompare(right.name))
+          .slice(0, TRIAGE_DOCUMENT_MAX_COUNT)
+          .map((document) => ({
+            name: document.name,
+            content: document.content.slice(0, TRIAGE_DOCUMENT_MAX_CONTENT_LENGTH),
+          }))
+        : [];
+    } catch (error) {
+      this._logger.warn(
+        `Triage context documents unavailable for ${params.integrationId}: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+
+    let expertise: readonly SelectedExpertise[] = [];
+    try {
+      expertise = selectExpertiseForTriage({
+        strategyId: strategy.id,
+        triage: params.triage,
+      });
+    } catch (error) {
+      this._logger.warn(
+        `Triage expertise unavailable for ${params.integrationId}: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+    return {
+      strategy: {
+        id: strategy.id,
+        version: strategy.version,
+        summary: strategy.agent.summary.defaultValue,
+        directives: [...strategy.agent.directives],
+      },
+      channelDocuments: documents,
+      expertise: expertise.map((playbook) => ({
+        name: playbook.name,
+        content: playbook.content,
+      })),
+    };
   }
 
   private async scoreLeadCandidates(
@@ -1306,17 +1393,17 @@ export class ChannelInteractionService {
     if (!candidates.length) {
       return 0;
     }
-    const documents =
-      await this._contextDocumentService.listAttachedDocumentsForIntegration(
-        organizationId,
-        integrationId
-      );
-    const channelDocuments = documents
-      .filter((document) => !parseSkillFilename(document.name))
-      .map((document) => ({
-        name: document.name,
-        content: document.content,
-      }));
+    const config = await this.resolveTriageMaterializationConfig(
+      organizationId,
+      integrationId
+    );
+    const context = await this.buildTriagePromptContext({
+      organizationId,
+      integrationId,
+      strategyId: config.strategyId,
+      triage: 'lead',
+    });
+    const channelDocuments = context.channelDocuments;
     if (!channelDocuments.length) {
       this._logger.warn(
         `Lead fit scoring for integration ${integrationId} has no attached channel documents; scores will be low-confidence`
@@ -1326,7 +1413,7 @@ export class ChannelInteractionService {
       await this._repository.listLeadFitFeedbackExamples({
         organizationId,
         integrationId,
-        limit: LEAD_FIT_FEEDBACK_EXAMPLE_LIMIT,
+        limit: config.profile.lead.feedbackExampleLimit,
       });
     const truncateBio = (bio: string | null) =>
       bio ? bio.slice(0, 500) : undefined;
@@ -1348,6 +1435,8 @@ export class ChannelInteractionService {
       try {
         const result = await this._openaiService!.scoreLeadFit({
           channelDocuments,
+          strategy: context.strategy,
+          expertise: context.expertise,
           candidate: {
             ...(candidate.name ? { name: candidate.name } : {}),
             ...(candidate.username ? { username: candidate.username } : {}),
@@ -1392,28 +1481,279 @@ export class ChannelInteractionService {
     return scored;
   }
 
+  private shouldUseTriageReranking() {
+    return (
+      process.env.TRIAGE_AI_RERANK_ENABLED === 'true' &&
+      !!process.env.OPENAI_API_KEY &&
+      !!this._openaiService
+    );
+  }
+
+  private async rerankTriageCandidates<T extends {
+    externalId: string;
+    rulesRank: number;
+    rulesReason: string;
+    name?: string | null;
+    username?: string | null;
+    bio?: string | null;
+  }>(params: {
+    organizationId: string;
+    integrationId: string;
+    triage: 'hot' | 'cultivate';
+    strategyId: ChannelStrategyId;
+    pickLimit: number;
+    candidates: T[];
+  }) {
+    const rules = params.candidates.slice(0, params.pickLimit).map((candidate, index) => ({
+      ...candidate,
+      finalRank: index + 1,
+      aiRank: null as number | null,
+      aiReason: null as string | null,
+      suggestedAction: null as string | null,
+      source: 'rules',
+    }));
+    if (!this.shouldUseTriageReranking()) {
+      return { picks: rules, source: 'rules' as const };
+    }
+    try {
+      const context = await this.buildTriagePromptContext({
+        organizationId: params.organizationId,
+        integrationId: params.integrationId,
+        strategyId: params.strategyId,
+        triage: params.triage,
+      });
+      const input: TriageRerankInput = {
+        triage: params.triage,
+        ...context,
+        candidates: params.candidates.map((candidate) => ({
+          externalId: candidate.externalId,
+          ...(candidate.name
+            ? {
+              name: candidate.name.slice(
+                0,
+                TRIAGE_CANDIDATE_NAME_MAX_LENGTH
+              ),
+            }
+            : {}),
+          ...(candidate.username
+            ? {
+              username: candidate.username.slice(
+                0,
+                TRIAGE_CANDIDATE_USERNAME_MAX_LENGTH
+              ),
+            }
+            : {}),
+          ...(candidate.bio
+            ? {
+              bio: candidate.bio.slice(0, TRIAGE_CANDIDATE_BIO_MAX_LENGTH),
+            }
+            : {}),
+          rulesReason: candidate.rulesReason.slice(
+            0,
+            TRIAGE_CANDIDATE_RULES_REASON_MAX_LENGTH
+          ),
+        })),
+      };
+      const reranked = await this._openaiService!.rerankTriageCandidates(input);
+      if (reranked.length > params.pickLimit) {
+        throw new Error('AI rerank exceeded the configured pick limit');
+      }
+      const candidateById = new Map(
+        params.candidates.map((candidate) => [candidate.externalId, candidate])
+      );
+      const seen = new Set<string>();
+      const picks = reranked.map((candidate, index) => {
+        const rulesCandidate = candidateById.get(candidate.externalId);
+        const reason = candidate.reason.trim();
+        const suggestedAction = candidate.suggestedAction.trim();
+        if (
+          !rulesCandidate ||
+          seen.has(candidate.externalId) ||
+          !reason ||
+          !suggestedAction ||
+          reason.length > TRIAGE_REASON_MAX_LENGTH ||
+          suggestedAction.length > TRIAGE_REASON_MAX_LENGTH
+        ) {
+          throw new Error('AI rerank contained invalid candidate data');
+        }
+        seen.add(candidate.externalId);
+        return {
+          ...rulesCandidate,
+          finalRank: index + 1,
+          aiRank: index + 1,
+          aiReason: reason,
+          suggestedAction,
+          source: 'ai',
+        };
+      });
+      return { picks, source: 'ai' as const };
+    } catch (error) {
+      this._logger.warn(
+        `Triage AI rerank failed for ${params.integrationId}/${params.triage}: ${error instanceof Error ? error.message.slice(0, 200) : 'unknown error'}`
+      );
+      return { picks: rules, source: 'rules' as const };
+    }
+  }
+
+  private hotRulesReason(candidate: {
+    relationshipNetGap: number | null;
+    relationshipReciprocationScore: number | null;
+    lastInboundAt: Date | null;
+  }) {
+    const signals = [
+      candidate.relationshipNetGap != null
+        ? `Net inbound gap ${candidate.relationshipNetGap}`
+        : undefined,
+      candidate.relationshipReciprocationScore != null
+        ? `Inbound score ${candidate.relationshipReciprocationScore}`
+        : undefined,
+      candidate.lastInboundAt
+        ? `Last inbound ${candidate.lastInboundAt.toISOString()}`
+        : undefined,
+    ].filter((signal): signal is string => !!signal);
+    return signals.join(' · ') || 'Current Hot rules eligibility';
+  }
+
+  async materializeHotPicksForIntegration(
+    organizationId: string,
+    integrationId: string,
+    now = new Date()
+  ) {
+    const hour = utcHourKey(now);
+    const config = await this.resolveTriageMaterializationConfig(
+      organizationId,
+      integrationId
+    );
+    const nearFullAt = Math.ceil(
+      config.profile.hot.pickLimit * config.profile.hot.nearFullRatio
+    );
+    const visibleCount = await this._repository.countVisibleHotPicks({
+      organizationId,
+      integrationId,
+      hour,
+      strategyId: config.strategyId,
+      strategyVersion: config.strategyVersion,
+      materializationVersion: config.materializationVersion,
+    });
+    if (visibleCount >= nearFullAt) {
+      return { hour, skipped: 'near_full' as const, visibleCount };
+    }
+
+    const refreshIds = await this._repository.listHotRefreshExternalIds({
+      organizationId,
+      integrationId,
+      poolSize: config.profile.hot.candidatePoolSize,
+      recentEventSince: new Date(
+        now.getTime() -
+        config.profile.hot.recentEventLookbackHours * 60 * 60 * 1000
+      ),
+    });
+    if (refreshIds.length) {
+      const batch = await this._repository.getRelationshipScoresForMembers(
+        organizationId,
+        integrationId,
+        refreshIds,
+        now
+      );
+      const snapshots = await this.scoreRelationshipBatch(batch);
+      await this._repository.updateCurrentRelationshipProjections(
+        organizationId,
+        integrationId,
+        now,
+        snapshots,
+        { force: true }
+      );
+    }
+    const candidates = await this._repository.listHotRulesCandidates({
+      organizationId,
+      integrationId,
+      strategyId: config.strategyId,
+      strategyVersion: config.strategyVersion,
+      poolSize: config.profile.hot.candidatePoolSize,
+    });
+    const rules = candidates.map((candidate, index) => ({
+      ...candidate,
+      rulesRank: index + 1,
+      rulesReason: this.hotRulesReason(candidate),
+    }));
+    const reranked = await this.rerankTriageCandidates({
+      organizationId,
+      integrationId,
+      triage: 'hot',
+      strategyId: config.strategyId,
+      pickLimit: config.profile.hot.pickLimit,
+      candidates: rules,
+    });
+    const result = await this._repository.replaceHotPickBatch({
+      organizationId,
+      integrationId,
+      hour,
+      strategyId: config.strategyId,
+      strategyVersion: config.strategyVersion,
+      materializationVersion: config.materializationVersion,
+      candidateCount: candidates.length,
+      source: reranked.source,
+      completedAt: now,
+      picks: reranked.picks.map((pick) => ({
+        counterpartyExternalId: pick.externalId,
+        rulesRank: pick.rulesRank,
+        finalRank: pick.finalRank,
+        rulesReason: pick.rulesReason,
+        aiRank: pick.aiRank,
+        aiReason: pick.aiReason,
+        suggestedAction: pick.suggestedAction,
+        source: pick.source,
+      })),
+    });
+    return {
+      hour,
+      skipped: false as const,
+      candidateCount: candidates.length,
+      pickCount: result.count,
+    };
+  }
+
   async materializeCultivatePicksForIntegration(
     organizationId: string,
     integrationId: string,
     now = new Date()
   ) {
     const day = utcDayKey(now);
+    const config = await this.resolveTriageMaterializationConfig(
+      organizationId,
+      integrationId
+    );
     const candidates = await this._repository.listCultivateCandidates({
       organizationId,
       integrationId,
       now,
-      take: CULTIVATE_CANDIDATE_POOL_SIZE,
+      take: config.profile.cultivate.candidatePoolSize,
+      warmGradeThreshold: config.profile.cultivate.warmGradeThreshold,
+      staleDays: config.profile.cultivate.staleDays,
     });
     const ranked = this._repository
       .rankCultivateCandidates(candidates, day, now)
-      .slice(0, CULTIVATE_DAILY_PICK_LIMIT);
-    // AI re-rank fields are schema-ready but intentionally unused here.
-    const picks = ranked.map((row) => ({
+      .map((row) => ({
+        ...row,
+        rulesReason: row.rulesReason,
+      }));
+    const reranked = await this.rerankTriageCandidates({
+      organizationId,
+      integrationId,
+      triage: 'cultivate',
+      strategyId: config.strategyId,
+      pickLimit: config.profile.cultivate.pickLimit,
+      candidates: ranked,
+    });
+    const picks = reranked.picks.map((row) => ({
       counterpartyExternalId: row.externalId,
       rulesRank: row.rulesRank,
       finalRank: row.finalRank,
       rulesReason: row.rulesReason,
-      source: 'rules',
+      ...(row.aiRank != null ? { aiRank: row.aiRank } : {}),
+      ...(row.aiReason ? { aiReason: row.aiReason } : {}),
+      ...(row.suggestedAction ? { suggestedAction: row.suggestedAction } : {}),
+      source: row.source,
     }));
     const result = await this._repository.upsertCultivatePicks({
       organizationId,

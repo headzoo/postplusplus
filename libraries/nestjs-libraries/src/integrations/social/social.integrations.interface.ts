@@ -430,6 +430,9 @@ export type Follower = {
   }>;
   isCultivate?: boolean;
   cultivateReason?: string;
+  isHot?: boolean;
+  triageReason?: string;
+  triageSource?: string;
   suggestedAction?: string;
 };
 

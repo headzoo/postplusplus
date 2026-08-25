@@ -82,6 +82,44 @@ export type StrategyScoreResult = {
   triage: RelationshipTriage;
 };
 
+export const TRIAGE_PIPELINE_KINDS = ['hot', 'lead', 'cultivate'] as const;
+
+export type TriagePipelineKind = (typeof TRIAGE_PIPELINE_KINDS)[number];
+
+export type HotMaterializationConfig = {
+  candidatePoolSize: number;
+  pickLimit: number;
+  nearFullRatio: number;
+  recentEventLookbackHours: number;
+};
+
+export type LeadMaterializationConfig = {
+  fitBackfillLimit: number;
+  fitMinScore: number;
+  feedbackExampleLimit: number;
+};
+
+export type CultivateMaterializationConfig = {
+  candidatePoolSize: number;
+  pickLimit: number;
+  warmGradeThreshold: number;
+  staleDays: number;
+};
+
+export type StrategyMaterializationProfile = {
+  version: number;
+  hot: HotMaterializationConfig;
+  lead: LeadMaterializationConfig;
+  cultivate: CultivateMaterializationConfig;
+};
+
+export type ResolvedMaterializationConfig = {
+  strategyId: ChannelStrategyId;
+  strategyVersion: number;
+  materializationVersion: number;
+  profile: StrategyMaterializationProfile;
+};
+
 export type ChannelStrategy = {
   readonly id: ChannelStrategyId;
   readonly version: number;
@@ -90,6 +128,7 @@ export type ChannelStrategy = {
   readonly ui: ChannelStrategyUi;
   readonly agent: ChannelStrategyAgent;
   getScoringProfile(): RelationshipScoringProfile;
+  getMaterializationProfile(): StrategyMaterializationProfile;
   prepare?: (input: unknown) => unknown;
   scoreRelationship?: (input: StrategyScoringInput) => StrategyScoreResult;
   triage?: (input: StrategyScoringInput) => RelationshipTriage;

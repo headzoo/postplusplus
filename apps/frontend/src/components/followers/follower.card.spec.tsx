@@ -600,6 +600,23 @@ describe('FollowerCard', () => {
     ).toBeTruthy();
   });
 
+  it('renders hot reason and suggested action for materialized hot picks', () => {
+    render(
+      <FollowerCard
+        follower={{
+          ...baseFollower,
+          isHot: true,
+          triageReason: 'Inbound effort exceeds reciprocation',
+          suggestedAction: 'Reply to their latest mention',
+          relationshipTriage: 'hot_lead',
+        }}
+      />
+    );
+
+    expect(screen.getByText('Inbound effort exceeds reciprocation')).toBeTruthy();
+    expect(screen.getByText('Reply to their latest mention')).toBeTruthy();
+  });
+
   it('renders cultivate reason and dismissible Cultivate badge', async () => {
     const onDismissTriage = jest.fn();
     triageDismissOpen.mockResolvedValue('remove');

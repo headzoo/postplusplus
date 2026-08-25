@@ -12,6 +12,7 @@ import { ChannelRelationshipGradeActivity } from '@gitroom/orchestrator/activiti
 import { ChannelFollowerBotScoreActivity } from '@gitroom/orchestrator/activities/channel-follower-bot-score.activity';
 import { ChannelLeadBridgeActivity } from '@gitroom/orchestrator/activities/channel-lead-bridge.activity';
 import { ChannelCultivateActivity } from '@gitroom/orchestrator/activities/channel-cultivate.activity';
+import { ChannelHotMaterializationActivity } from '@gitroom/orchestrator/activities/channel-hot-materialization.activity';
 import { ChannelAnalyticsSnapshotActivity } from '@gitroom/orchestrator/activities/channel-analytics-snapshot.activity';
 import { AutopostActivity } from '@gitroom/orchestrator/activities/autopost.activity';
 
@@ -26,6 +27,7 @@ const activities = [
   ChannelFollowerBotScoreActivity,
   ChannelLeadBridgeActivity,
   ChannelCultivateActivity,
+  ChannelHotMaterializationActivity,
   ChannelAnalyticsSnapshotActivity,
 ];
 @Module({

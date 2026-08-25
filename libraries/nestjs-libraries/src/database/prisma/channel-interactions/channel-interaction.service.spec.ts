@@ -130,6 +130,10 @@ const createRepository = () => ({
   listCultivateCandidates: jest.fn().mockResolvedValue([]),
   rankCultivateCandidates: jest.fn().mockReturnValue([]),
   upsertCultivatePicks: jest.fn().mockResolvedValue({ count: 0 }),
+  countVisibleHotPicks: jest.fn().mockResolvedValue(0),
+  listHotRefreshExternalIds: jest.fn().mockResolvedValue([]),
+  listHotRulesCandidates: jest.fn().mockResolvedValue([]),
+  replaceHotPickBatch: jest.fn().mockResolvedValue({ count: 0 }),
   listUnscoredLeadExternalIds: jest.fn().mockResolvedValue([]),
   listUnscoredLeadCandidatesForIntegration: jest.fn().mockResolvedValue([]),
   listLeadFitFeedbackExamples: jest.fn().mockResolvedValue({
@@ -2128,6 +2132,301 @@ describe('ChannelInteractionService', () => {
         },
       ],
     });
+  });
+
+  it('skips near-full Hot batches before refresh or AI, but refreshes a just-below-threshold batch before selecting candidates', async () => {
+    const repository = createRepository();
+    repository.countVisibleHotPicks.mockResolvedValueOnce(18).mockResolvedValueOnce(17);
+    repository.listHotRefreshExternalIds.mockResolvedValue(['hot-1']);
+    repository.listHotRulesCandidates.mockResolvedValue([
+      {
+        externalId: 'hot-1',
+        name: 'Hot One',
+        username: 'hotone',
+        bio: null,
+        relationshipNetGap: 12,
+        relationshipReciprocationScore: 18,
+        lastInboundAt: new Date('2026-08-12T11:00:00.000Z'),
+      },
+    ]);
+    repository.replaceHotPickBatch.mockResolvedValue({ count: 1 });
+    const service = new ChannelInteractionService(repository as any);
+
+    await expect(
+      service.materializeHotPicksForIntegration('org', 'integration')
+    ).resolves.toEqual({
+      hour: '2026-08-12T12',
+      skipped: 'near_full',
+      visibleCount: 18,
+    });
+    expect(repository.listHotRefreshExternalIds).not.toHaveBeenCalled();
+    expect(repository.replaceHotPickBatch).not.toHaveBeenCalled();
+
+    await service.materializeHotPicksForIntegration('org', 'integration');
+
+    expect(
+      repository.getRelationshipScoresForMembers.mock.invocationCallOrder[1]
+    ).toBeLessThan(
+      repository.listHotRulesCandidates.mock.invocationCallOrder[0]
+    );
+    expect(repository.updateCurrentRelationshipProjections).toHaveBeenCalledWith(
+      'org',
+      'integration',
+      expect.any(Date),
+      [],
+      { force: true }
+    );
+  });
+
+  it('passes the complete Hot rules pool to AI and persists only its validated reordered subset', async () => {
+    const previousEnabled = process.env.TRIAGE_AI_RERANK_ENABLED;
+    const previousApiKey = process.env.OPENAI_API_KEY;
+    process.env.TRIAGE_AI_RERANK_ENABLED = 'true';
+    process.env.OPENAI_API_KEY = 'test-key';
+    try {
+      const repository = createRepository();
+      repository.listHotRulesCandidates.mockResolvedValue([
+        {
+          externalId: 'hot-1',
+          name: 'Hot One',
+          username: 'hotone',
+          bio: null,
+          relationshipNetGap: 10,
+          relationshipReciprocationScore: 10,
+          lastInboundAt: null,
+        },
+        {
+          externalId: 'hot-2',
+          name: 'Hot Two',
+          username: 'hottwo',
+          bio: null,
+          relationshipNetGap: 20,
+          relationshipReciprocationScore: 20,
+          lastInboundAt: null,
+        },
+      ]);
+      repository.replaceHotPickBatch.mockResolvedValue({ count: 1 });
+      const openaiService = {
+        rerankTriageCandidates: jest.fn().mockResolvedValue([
+          {
+            externalId: 'hot-2',
+            reason: 'More recent reciprocal attention',
+            suggestedAction: 'Reply to their recent post.',
+          },
+        ]),
+      };
+      const contextDocumentService = {
+        listAttachedDocumentsForIntegration: jest.fn().mockResolvedValue([]),
+      };
+      const service = new ChannelInteractionService(
+        repository as any,
+        undefined,
+        undefined,
+        undefined,
+        openaiService as any,
+        contextDocumentService as any
+      );
+
+      await service.materializeHotPicksForIntegration('org', 'integration');
+
+      expect(openaiService.rerankTriageCandidates).toHaveBeenCalledWith(
+        expect.objectContaining({
+          triage: 'hot',
+          candidates: expect.arrayContaining([
+            expect.objectContaining({ externalId: 'hot-1' }),
+            expect.objectContaining({ externalId: 'hot-2' }),
+          ]),
+        })
+      );
+      expect(repository.replaceHotPickBatch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          source: 'ai',
+          picks: [
+            expect.objectContaining({
+              counterpartyExternalId: 'hot-2',
+              rulesRank: 2,
+              finalRank: 1,
+              aiRank: 1,
+              source: 'ai',
+            }),
+          ],
+        })
+      );
+    } finally {
+      if (previousEnabled === undefined) {
+        delete process.env.TRIAGE_AI_RERANK_ENABLED;
+      } else {
+        process.env.TRIAGE_AI_RERANK_ENABLED = previousEnabled;
+      }
+      if (previousApiKey === undefined) {
+        delete process.env.OPENAI_API_KEY;
+      } else {
+        process.env.OPENAI_API_KEY = previousApiKey;
+      }
+    }
+  });
+
+  it('falls back to rules when Hot AI is invalid or errors, and completes an empty AI batch', async () => {
+    const previousEnabled = process.env.TRIAGE_AI_RERANK_ENABLED;
+    const previousApiKey = process.env.OPENAI_API_KEY;
+    process.env.TRIAGE_AI_RERANK_ENABLED = 'true';
+    process.env.OPENAI_API_KEY = 'test-key';
+    try {
+      const repository = createRepository();
+      repository.listHotRulesCandidates.mockResolvedValue([
+        {
+          externalId: 'hot-1',
+          name: 'Hot One',
+          username: 'hotone',
+          bio: null,
+          relationshipNetGap: 10,
+          relationshipReciprocationScore: 10,
+          lastInboundAt: null,
+        },
+      ]);
+      repository.replaceHotPickBatch.mockResolvedValue({ count: 1 });
+      const openaiService = {
+        rerankTriageCandidates: jest
+          .fn()
+          .mockResolvedValueOnce([
+            {
+              externalId: 'unknown',
+              reason: 'Not in the rules pool',
+              suggestedAction: 'Do something.',
+            },
+          ])
+          .mockRejectedValueOnce(new Error('timeout'))
+          .mockResolvedValueOnce([]),
+      };
+      const service = new ChannelInteractionService(
+        repository as any,
+        undefined,
+        undefined,
+        undefined,
+        openaiService as any,
+        {
+          listAttachedDocumentsForIntegration: jest.fn().mockResolvedValue([]),
+        } as any
+      );
+
+      await service.materializeHotPicksForIntegration('org', 'integration');
+      await service.materializeHotPicksForIntegration('org', 'integration');
+      repository.replaceHotPickBatch.mockResolvedValueOnce({ count: 0 });
+      await service.materializeHotPicksForIntegration('org', 'integration');
+
+      expect(repository.replaceHotPickBatch.mock.calls[0][0]).toEqual(
+        expect.objectContaining({
+          source: 'rules',
+          picks: [expect.objectContaining({ counterpartyExternalId: 'hot-1' })],
+        })
+      );
+      expect(repository.replaceHotPickBatch.mock.calls[1][0]).toEqual(
+        expect.objectContaining({ source: 'rules' })
+      );
+      expect(repository.replaceHotPickBatch.mock.calls[2][0]).toEqual(
+        expect.objectContaining({ source: 'ai', picks: [] })
+      );
+    } finally {
+      if (previousEnabled === undefined) {
+        delete process.env.TRIAGE_AI_RERANK_ENABLED;
+      } else {
+        process.env.TRIAGE_AI_RERANK_ENABLED = previousEnabled;
+      }
+      if (previousApiKey === undefined) {
+        delete process.env.OPENAI_API_KEY;
+      } else {
+        process.env.OPENAI_API_KEY = previousApiKey;
+      }
+    }
+  });
+
+  it('records AI provenance on Cultivate picks', async () => {
+    const previousEnabled = process.env.TRIAGE_AI_RERANK_ENABLED;
+    const previousApiKey = process.env.OPENAI_API_KEY;
+    process.env.TRIAGE_AI_RERANK_ENABLED = 'true';
+    process.env.OPENAI_API_KEY = 'test-key';
+    try {
+      const repository = createRepository();
+      repository.listCultivateCandidates.mockResolvedValue([
+        {
+          externalId: 'warm-1',
+          name: 'n'.repeat(161),
+          username: 'u'.repeat(161),
+          bio: 'b'.repeat(1_001),
+        },
+      ]);
+      repository.rankCultivateCandidates.mockReturnValue([
+        {
+          externalId: 'warm-1',
+          name: 'n'.repeat(161),
+          username: 'u'.repeat(161),
+          bio: 'b'.repeat(1_001),
+          rulesRank: 1,
+          finalRank: 1,
+          rulesReason: 'r'.repeat(501),
+        },
+      ]);
+      repository.upsertCultivatePicks.mockResolvedValue({ count: 1 });
+      const openaiService = {
+        rerankTriageCandidates: jest.fn().mockResolvedValue([
+          {
+            externalId: 'warm-1',
+            reason: 'A warm mutual relationship needs attention',
+            suggestedAction: 'Reply to their latest update.',
+          },
+        ]),
+      };
+      const service = new ChannelInteractionService(
+        repository as any,
+        undefined,
+        undefined,
+        undefined,
+        openaiService as any,
+        {
+          listAttachedDocumentsForIntegration: jest.fn().mockResolvedValue([]),
+        } as any
+      );
+
+      await service.materializeCultivatePicksForIntegration('org', 'integration');
+
+      expect(openaiService.rerankTriageCandidates).toHaveBeenCalledWith(
+        expect.objectContaining({
+          candidates: [
+            {
+              externalId: 'warm-1',
+              name: 'n'.repeat(160),
+              username: 'u'.repeat(160),
+              bio: 'b'.repeat(1_000),
+              rulesReason: 'r'.repeat(500),
+            },
+          ],
+        })
+      );
+      expect(repository.upsertCultivatePicks).toHaveBeenCalledWith(
+        expect.objectContaining({
+          picks: [
+            expect.objectContaining({
+              counterpartyExternalId: 'warm-1',
+              aiRank: 1,
+              aiReason: 'A warm mutual relationship needs attention',
+              suggestedAction: 'Reply to their latest update.',
+              source: 'ai',
+            }),
+          ],
+        })
+      );
+    } finally {
+      if (previousEnabled === undefined) {
+        delete process.env.TRIAGE_AI_RERANK_ENABLED;
+      } else {
+        process.env.TRIAGE_AI_RERANK_ENABLED = previousEnabled;
+      }
+      if (previousApiKey === undefined) {
+        delete process.env.OPENAI_API_KEY;
+      } else {
+        process.env.OPENAI_API_KEY = previousApiKey;
+      }
+    }
   });
 
   it('scores unscored leads from attached channel documents', async () => {

@@ -17,6 +17,7 @@ import {
   CULTIVATE_WORKFLOW_ID,
   CULTIVATE_WORKFLOW_TYPE,
 } from './cultivate.schedule';
+import { HotMaterializationScheduleService } from './hot-triage.schedule.service';
 
 @Injectable()
 export class InfiniteWorkflowRegister implements OnModuleInit {
@@ -25,7 +26,8 @@ export class InfiniteWorkflowRegister implements OnModuleInit {
   constructor(
     private _temporalService: TemporalService,
     private _relationshipGradeScheduleService: RelationshipGradeScheduleService,
-    private _followerBotScoreScheduleService: FollowerBotScoreScheduleService
+    private _followerBotScoreScheduleService: FollowerBotScoreScheduleService,
+    private _hotMaterializationScheduleService: HotMaterializationScheduleService
   ) { }
 
   async onModuleInit(): Promise<void> {
@@ -45,6 +47,7 @@ export class InfiniteWorkflowRegister implements OnModuleInit {
       await this.startChannelLeadBridge();
       await this.startChannelCultivate();
       await this.startChannelAnalyticsSnapshot();
+      await this.startChannelHotMaterialization();
     }
   }
 
@@ -193,6 +196,10 @@ export class InfiniteWorkflowRegister implements OnModuleInit {
     }
   }
 
+  private async startChannelHotMaterialization() {
+    await this._hotMaterializationScheduleService.install();
+  }
+
   private async startChannelAnalyticsSnapshot() {
     const workflow = this._temporalService.client?.getRawClient()?.workflow;
     if (!workflow) {
@@ -265,6 +272,7 @@ export class InfiniteWorkflowRegister implements OnModuleInit {
   providers: [
     InfiniteWorkflowRegister,
     FollowerBotScoreScheduleService,
+    HotMaterializationScheduleService,
     AdminScheduleWorkflowService,
   ],
   get exports() {

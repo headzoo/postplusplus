@@ -181,6 +181,9 @@ export type Follower = {
   }>;
   isCultivate?: boolean;
   cultivateReason?: string;
+  isHot?: boolean;
+  triageReason?: string;
+  triageSource?: string;
   suggestedAction?: string;
 };
 
@@ -323,7 +326,7 @@ export type UseFollowersParams = {
   window?: ChannelInteractionWindow;
   search?: string;
   triage?: FollowerTriageFilter;
-  audience?: 'lead' | 'ignored' | 'cultivate';
+  audience?: 'lead' | 'ignored' | 'cultivate' | 'hot';
   listId?: string;
   isBot?: boolean;
 };
@@ -1020,11 +1023,11 @@ export const applyImportedMemberToFollowerPage = (
 export function getProfileLinkAutoSnoozeTriages(
   follower: Pick<
     Follower,
-    'relationshipTriage' | 'isCultivate'
+    'relationshipTriage' | 'isCultivate' | 'isHot'
   >
 ): ProfileLinkAutoSnoozeTriage[] {
   const triages: ProfileLinkAutoSnoozeTriage[] = [];
-  if (follower.relationshipTriage === 'hot_lead') {
+  if (follower.isHot || follower.relationshipTriage === 'hot_lead') {
     triages.push('hot_lead');
   }
   if (follower.isCultivate) {
@@ -1055,6 +1058,9 @@ export const applyTriageIgnoreToFollowerPage = (
       }
       if (options?.triage === 'cultivate') {
         return { ...item, isCultivate: false };
+      }
+      if (options?.triage === 'hot_lead') {
+        return { ...item, relationshipTriage: null, isHot: false };
       }
       return { ...item, relationshipTriage: null };
     });

@@ -5,9 +5,14 @@ import { resolve } from 'path';
 import {
   CHANNEL_STRATEGY_IDS,
   ChannelStrategyId,
+  TRIAGE_PIPELINE_KINDS,
+  TriagePipelineKind,
 } from './channel-strategy.types';
 
 const CANONICAL_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+export const MAX_EXPERTISE_PLAYBOOKS = 4;
+export const MAX_EXPERTISE_CONTENT_BYTES = 16_384;
 
 export type ExpertiseMetadata = Readonly<{
   id: string;
@@ -16,7 +21,19 @@ export type ExpertiseMetadata = Readonly<{
   description: string;
   tags: readonly string[];
   strategyTags: readonly ChannelStrategyId[];
+  triageTags: readonly TriagePipelineKind[];
   fileSize: number;
+}>;
+
+export type SelectedExpertise = Readonly<{
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  tags: readonly string[];
+  strategyTags: readonly ChannelStrategyId[];
+  triageTags: readonly TriagePipelineKind[];
+  content: string;
 }>;
 
 type ExpertiseDefinition = Readonly<
@@ -34,6 +51,7 @@ const expertiseDefinitions: readonly ExpertiseDefinition[] = [
       'Deepen audience-building relationships that show mutual interest.',
     tags: ['reciprocity', 'relationships', 'audience-growth'],
     strategyTags: ['grow_audience'],
+    triageTags: ['hot', 'cultivate'],
     filename: 'reciprocal-mutual-deepening.md',
   },
   {
@@ -43,6 +61,7 @@ const expertiseDefinitions: readonly ExpertiseDefinition[] = [
     description: 'Turn a first reply into a welcome, relevant conversation.',
     tags: ['replies', 'direct-messages', 'audience-growth'],
     strategyTags: ['grow_audience'],
+    triageTags: ['hot'],
     filename: 'first-reply-warm-dm.md',
   },
   {
@@ -52,6 +71,7 @@ const expertiseDefinitions: readonly ExpertiseDefinition[] = [
     description: 'Follow up with prospective customers while preserving trust.',
     tags: ['leads', 'follow-up', 'relationships'],
     strategyTags: ['lead_capture'],
+    triageTags: ['lead'],
     filename: 'lead-follow-up-without-pressure.md',
   },
   {
@@ -62,6 +82,7 @@ const expertiseDefinitions: readonly ExpertiseDefinition[] = [
       'Thank people who amplify the brand in a specific, useful way.',
     tags: ['mentions', 'amplification', 'gratitude'],
     strategyTags: ['brand_awareness'],
+    triageTags: ['hot', 'cultivate'],
     filename: 'amplification-mention-thank-yous.md',
   },
   {
@@ -72,6 +93,7 @@ const expertiseDefinitions: readonly ExpertiseDefinition[] = [
       'Re-engage a cooling relationship with relevance and restraint.',
     tags: ['re-engagement', 'relationships', 'retention'],
     strategyTags: ['community_retention'],
+    triageTags: ['cultivate'],
     filename: 'cooling-relationship-reengagement.md',
   },
   {
@@ -82,6 +104,7 @@ const expertiseDefinitions: readonly ExpertiseDefinition[] = [
       'Recognize when engagement would not serve the relationship or fit.',
     tags: ['boundaries', 'fit', 'disengagement'],
     strategyTags: ['lead_capture', 'customer_support'],
+    triageTags: ['hot', 'lead', 'cultivate'],
     filename: 'when-not-to-engage.md',
   },
   {
@@ -92,6 +115,7 @@ const expertiseDefinitions: readonly ExpertiseDefinition[] = [
       'Reduce one-sided effort while leaving space for healthy reciprocity.',
     tags: ['boundaries', 'one-sided', 'retention'],
     strategyTags: ['community_retention'],
+    triageTags: ['hot', 'cultivate'],
     filename: 'over-invested-one-sided-cooling.md',
   },
   {
@@ -102,6 +126,7 @@ const expertiseDefinitions: readonly ExpertiseDefinition[] = [
       'Bridge trusted relationships into relevant new audience and lead connections.',
     tags: ['networking', 'introductions', 'relationships'],
     strategyTags: ['grow_audience', 'lead_capture'],
+    triageTags: ['lead', 'cultivate'],
     filename: 'warm-network-bridging.md',
   },
   {
@@ -112,6 +137,7 @@ const expertiseDefinitions: readonly ExpertiseDefinition[] = [
       'Respond to public complaints with care, clarity, and a path to resolution.',
     tags: ['support', 'complaints', 'replies'],
     strategyTags: ['customer_support'],
+    triageTags: ['hot'],
     filename: 'support-complaint-replies.md',
   },
   {
@@ -128,6 +154,7 @@ const expertiseDefinitions: readonly ExpertiseDefinition[] = [
       'brand_awareness',
       'customer_support',
     ],
+    triageTags: ['hot', 'lead', 'cultivate'],
     filename: 'cadence-and-timing.md',
   },
   {
@@ -138,6 +165,7 @@ const expertiseDefinitions: readonly ExpertiseDefinition[] = [
       'Sustain relationships with advocates and recurring amplifiers.',
     tags: ['advocates', 'amplification', 'retention'],
     strategyTags: ['community_retention', 'brand_awareness'],
+    triageTags: ['cultivate'],
     filename: 'advocate-amplifier-stewardship.md',
   },
 ];
@@ -156,7 +184,8 @@ function assertRegistryInvariants(
       !definition.name ||
       !definition.description ||
       !definition.tags.length ||
-      !definition.strategyTags.length
+      !definition.strategyTags.length ||
+      !definition.triageTags.length
     ) {
       throw new Error(`Incomplete expertise definition: ${definition.slug}`);
     }
@@ -170,6 +199,9 @@ function assertRegistryInvariants(
       definition.tags.some((tag) => !tag.trim()) ||
       definition.strategyTags.some(
         (strategyTag) => !CHANNEL_STRATEGY_IDS.includes(strategyTag)
+      ) ||
+      definition.triageTags.some(
+        (triageTag) => !TRIAGE_PIPELINE_KINDS.includes(triageTag)
       )
     ) {
       throw new Error(`Invalid expertise tags: ${definition.slug}`);
@@ -196,6 +228,7 @@ export const expertiseRegistry: readonly ExpertiseDefinition[] = Object.freeze(
       ...definition,
       tags: Object.freeze([...definition.tags]),
       strategyTags: Object.freeze([...definition.strategyTags]),
+      triageTags: Object.freeze([...definition.triageTags]),
     })
   )
 );
@@ -256,8 +289,58 @@ export function listExpertise(): ExpertiseMetadata[] {
     description: definition.description,
     tags: [...definition.tags],
     strategyTags: [...definition.strategyTags],
+    triageTags: [...definition.triageTags],
     fileSize: statSync(resolveAssetPath(definition)).size,
   }));
+}
+
+export function selectExpertiseForTriage(params: {
+  strategyId: ChannelStrategyId;
+  triage: TriagePipelineKind;
+  maxPlaybooks?: number;
+  maxContentBytes?: number;
+}): readonly SelectedExpertise[] {
+  const maxPlaybooks = params.maxPlaybooks ?? MAX_EXPERTISE_PLAYBOOKS;
+  const maxContentBytes = params.maxContentBytes ?? MAX_EXPERTISE_CONTENT_BYTES;
+
+  const candidates = expertiseRegistry
+    .filter(
+      (definition) =>
+        definition.strategyTags.includes(params.strategyId) &&
+        definition.triageTags.includes(params.triage)
+    )
+    .sort((left, right) => left.slug.localeCompare(right.slug));
+
+  const selected: SelectedExpertise[] = [];
+  let contentBytes = 0;
+
+  for (const definition of candidates) {
+    if (selected.length >= maxPlaybooks) {
+      break;
+    }
+
+    const content = readFileSync(resolveAssetPath(definition), 'utf8');
+    const nextBytes = Buffer.byteLength(content, 'utf8');
+    if (contentBytes + nextBytes > maxContentBytes && selected.length > 0) {
+      break;
+    }
+
+    selected.push(
+      Object.freeze({
+        id: definition.id,
+        slug: definition.slug,
+        name: definition.name,
+        description: definition.description,
+        tags: Object.freeze([...definition.tags]),
+        strategyTags: Object.freeze([...definition.strategyTags]),
+        triageTags: Object.freeze([...definition.triageTags]),
+        content,
+      })
+    );
+    contentBytes += nextBytes;
+  }
+
+  return Object.freeze(selected);
 }
 
 export function readExpertise(slug: string): string {

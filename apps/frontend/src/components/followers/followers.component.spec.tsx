@@ -420,8 +420,8 @@ describe('follower page href helpers', () => {
     });
     expect(parseFollowerViewPath('/followers/hot')).toEqual({
       slug: 'hot',
-      triage: 'hot_lead',
-      audience: undefined,
+      triage: undefined,
+      audience: 'hot',
       isBot: undefined,
     });
     expect(parseFollowerViewPath('/followers/leads')).toEqual({
@@ -450,8 +450,8 @@ describe('follower page href helpers', () => {
     });
     expect(parseFollowerViewPath('/followers/engaged')).toEqual({
       slug: 'engaged',
-      triage: 'hot_lead',
-      audience: undefined,
+      triage: undefined,
+      audience: 'hot',
       isBot: undefined,
     });
     expect(
@@ -486,8 +486,8 @@ describe('follower page href helpers', () => {
     expect(parseFollowerPath('/followers/hot')).toEqual({
       type: 'list',
       slug: 'hot',
-      triage: 'hot_lead',
-      audience: undefined,
+      triage: undefined,
+      audience: 'hot',
       isBot: undefined,
     });
     expect(parseFollowerPath('/followers/cultivate')).toEqual({
@@ -717,8 +717,8 @@ describe('FollowersComponent', () => {
     expect(getFilterChipLabels()).toEqual([
       'Leads',
       'Hot',
-      'All',
       'Cultivate',
+      'All',
       'Mutual',
       'Quiet',
       'Costly',
@@ -824,7 +824,7 @@ describe('FollowersComponent', () => {
     expect(screen.getByRole('button', { name: 'Create list' })).toBeTruthy();
   });
 
-  it('hydrates triage from /followers/hot', () => {
+  it('hydrates hot audience from /followers/hot', () => {
     mockPathname = '/followers/hot';
     render(<FollowersComponent />);
 
@@ -832,7 +832,7 @@ describe('FollowersComponent', () => {
       'true'
     );
     expect(useFollowersMock).toHaveBeenLastCalledWith(
-      expect.objectContaining({ triage: 'hot_lead', audience: undefined })
+      expect.objectContaining({ audience: 'hot', triage: undefined, sort: undefined })
     );
   });
 

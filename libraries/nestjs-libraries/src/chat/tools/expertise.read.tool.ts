@@ -25,7 +25,7 @@ export class ExpertiseReadTool implements AgentToolInterface {
       id: 'readExpertise',
       description: `
 This tool reads the Markdown content of one built-in Post++ engagement expertise playbook.
-Use listExpertise first to see playbook metadata (slug, name, description, tags, strategyTags).
+Use listExpertise first to see playbook metadata (slug, name, description, tags, strategyTags, triageTags).
 Pass the canonical slug from listExpertise.
 Read only playbooks relevant to the user's request — do not read every playbook.
 `,
@@ -47,6 +47,7 @@ Read only playbooks relevant to the user's request — do not read every playboo
           description: z.string(),
           tags: z.array(z.string()),
           strategyTags: z.array(z.string()),
+          triageTags: z.array(z.string()),
           fileSize: z.number(),
           content: z.string(),
         }),

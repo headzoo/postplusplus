@@ -4,9 +4,16 @@ import {
   getChannelStrategy,
   isChannelStrategyId,
   resolveChannelStrategy,
+  resolveMaterializationConfig,
 } from './channel-strategy.registry';
-import { CHANNEL_STRATEGY_IDS } from './channel-strategy.types';
-import { GROW_AUDIENCE_PROFILE } from './strategies/strategy.shared';
+import {
+  CHANNEL_STRATEGY_IDS,
+  TRIAGE_PIPELINE_KINDS,
+} from './channel-strategy.types';
+import {
+  DEFAULT_MATERIALIZATION_PROFILE,
+  GROW_AUDIENCE_PROFILE,
+} from './strategies/strategy.shared';
 
 const EXPERTISE_THEME_NUDGES: Record<
   (typeof CHANNEL_STRATEGY_IDS)[number],
@@ -48,6 +55,7 @@ describe('channelStrategyRegistry', () => {
       expect(strategy.ui.defaultFilter).toBeTruthy();
       expect(strategy.ui.defaultSort).toBeTruthy();
       expect(strategy.getScoringProfile().scoreCap).toBeGreaterThan(0);
+      expect(strategy.getMaterializationProfile().version).toBeGreaterThan(0);
     }
   });
 
@@ -59,6 +67,55 @@ describe('channelStrategyRegistry', () => {
       expect(strategy.getScoringProfile().formulaVersion).toBe(
         GROW_AUDIENCE_PROFILE.formulaVersion
       );
+    }
+  });
+
+  it('provides validated immutable materialization profiles for every strategy', () => {
+    for (const strategy of Object.values(channelStrategyRegistry)) {
+      const profile = strategy.getMaterializationProfile();
+      const profileAgain = strategy.getMaterializationProfile();
+
+      expect(profile).toEqual(DEFAULT_MATERIALIZATION_PROFILE);
+      expect(profile).toBe(profileAgain);
+      expect(profile.hot).toEqual({
+        candidatePoolSize: 100,
+        pickLimit: 20,
+        nearFullRatio: 0.9,
+        recentEventLookbackHours: 24,
+      });
+      expect(profile.lead).toEqual({
+        fitBackfillLimit: 25,
+        fitMinScore: 50,
+        feedbackExampleLimit: 8,
+      });
+      expect(profile.cultivate).toEqual({
+        candidatePoolSize: 100,
+        pickLimit: 20,
+        warmGradeThreshold: 3.5,
+        staleDays: 14,
+      });
+    }
+  });
+
+  it('resolves materialization config from strategy selection with fallback', () => {
+    const resolved = resolveMaterializationConfig('lead_capture');
+    expect(resolved).toEqual({
+      strategyId: 'lead_capture',
+      strategyVersion: 1,
+      materializationVersion: 1,
+      profile: DEFAULT_MATERIALIZATION_PROFILE,
+    });
+
+    const fallback = resolveMaterializationConfig('legacy-unknown');
+    expect(fallback.strategyId).toBe('grow_audience');
+    expect(fallback.materializationVersion).toBe(1);
+    expect(Object.isFrozen(fallback)).toBe(true);
+  });
+
+  it('covers every triage pipeline kind in materialization profiles', () => {
+    for (const triage of TRIAGE_PIPELINE_KINDS) {
+      const profile = getChannelStrategy('grow_audience').getMaterializationProfile();
+      expect(profile[triage]).toBeDefined();
     }
   });
 });

@@ -2,6 +2,7 @@ import {
   ChannelStrategy,
   ChannelStrategyId,
   RelationshipScoringProfile,
+  StrategyMaterializationProfile,
 } from '../channel-strategy.types';
 
 export const GROW_AUDIENCE_PROFILE: RelationshipScoringProfile = {
@@ -29,14 +30,51 @@ const BASE_AGENT_DIRECTIVES = [
   'Keep recommendations actionable and concise.',
 ];
 
+export const DEFAULT_MATERIALIZATION_PROFILE: StrategyMaterializationProfile = {
+  version: 1,
+  hot: {
+    candidatePoolSize: 100,
+    pickLimit: 20,
+    nearFullRatio: 0.9,
+    recentEventLookbackHours: 24,
+  },
+  lead: {
+    fitBackfillLimit: 25,
+    fitMinScore: 50,
+    feedbackExampleLimit: 8,
+  },
+  cultivate: {
+    candidatePoolSize: 100,
+    pickLimit: 20,
+    warmGradeThreshold: 3.5,
+    staleDays: 14,
+  },
+};
+
+function freezeMaterializationProfile(
+  profile: StrategyMaterializationProfile
+): StrategyMaterializationProfile {
+  return Object.freeze({
+    version: profile.version,
+    hot: Object.freeze({ ...profile.hot }),
+    lead: Object.freeze({ ...profile.lead }),
+    cultivate: Object.freeze({ ...profile.cultivate }),
+  });
+}
+
 export function createStrategy(
   id: ChannelStrategyId,
   label: string,
   description: string,
   profile: RelationshipScoringProfile,
   ui?: Partial<ChannelStrategy['ui']>,
-  directives: string[] = []
+  directives: string[] = [],
+  materializationProfile?: StrategyMaterializationProfile
 ): ChannelStrategy {
+  const frozenMaterializationProfile = freezeMaterializationProfile(
+    materializationProfile ?? DEFAULT_MATERIALIZATION_PROFILE
+  );
+
   return {
     id,
     version: 1,
@@ -93,5 +131,6 @@ export function createStrategy(
       directives: [...directives, ...BASE_AGENT_DIRECTIVES],
     },
     getScoringProfile: () => profile,
+    getMaterializationProfile: () => frozenMaterializationProfile,
   };
 }

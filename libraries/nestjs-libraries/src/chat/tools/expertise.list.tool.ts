@@ -12,6 +12,7 @@ const expertiseMetadataSchema = z.object({
   description: z.string(),
   tags: z.array(z.string()),
   strategyTags: z.array(z.string()),
+  triageTags: z.array(z.string()),
   fileSize: z.number(),
 });
 
@@ -23,7 +24,7 @@ export class ExpertiseListTool implements AgentToolInterface {
     return createTool({
       id: 'listExpertise',
       description: `
-This tool lists Post++ engagement expertise playbooks as metadata only (id, slug, name, description, tags, strategyTags, fileSize).
+This tool lists Post++ engagement expertise playbooks as metadata only (id, slug, name, description, tags, strategyTags, triageTags, fileSize).
 Use it to discover built-in craft guidance before calling readExpertise.
 It never returns Markdown content.
 `,

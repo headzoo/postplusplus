@@ -57,6 +57,7 @@ describe('IntegrationService followers', () => {
       getRecentFollowers: jest.fn(),
       getAudienceLeads: jest.fn(),
       getAudienceCultivate: jest.fn(),
+      getAudienceHot: jest.fn(),
       getIgnoredAudienceFollowers: jest.fn(),
       getFollowerInteractionMetrics: jest.fn().mockResolvedValue(new Map()),
       getFollowerNoteCounts: jest.fn().mockResolvedValue(new Map()),
@@ -2547,6 +2548,311 @@ describe('IntegrationService followers', () => {
     ).not.toHaveBeenCalled();
   });
 
+  it('routes legacy hot triage through materialized hot picks', async () => {
+    const followers = jest.fn();
+    const service = createService([integration], {
+      supported: {
+        followers,
+        followerSorts: [{
+          key: 'recent',
+          label: 'Recent',
+          directions: ['desc'],
+          defaultDirection: 'desc',
+        }],
+      },
+    });
+    (
+      service as any
+    )._channelInteractionRepository.getAudienceHot.mockResolvedValue({
+      items: [
+        {
+          externalId: 'hot-1',
+          name: 'Hot One',
+          username: 'hotone',
+          picture: null,
+          profileUrl: null,
+          bio: null,
+          followersCount: null,
+          followingCount: null,
+          followedAt: null,
+          accountCreatedAt: null,
+          finalRank: 1,
+          rulesRank: 1,
+          hotReason: 'Inbound effort exceeds reciprocation',
+          suggestedAction: 'Reply to their latest mention',
+          hotSource: 'rules',
+        },
+      ],
+      hasMore: false,
+      source: 'materialized',
+      hour: '2026-08-25T14',
+    });
+
+    await expect(
+      service.getFollowers(org, user, 'channel-a', {
+        limit: 24,
+        triage: 'hot_lead',
+      })
+    ).resolves.toEqual({
+      items: [
+        expect.objectContaining({
+          id: 'hot-1',
+          name: 'Hot One',
+          isHot: true,
+          relationshipTriage: 'hot_lead',
+          triageReason: 'Inbound effort exceeds reciprocation',
+          suggestedAction: 'Reply to their latest mention',
+          triageSource: 'rules',
+        }),
+      ],
+      hasMore: false,
+    });
+    expect(followers).not.toHaveBeenCalled();
+    expect(
+      (service as any)._channelInteractionRepository.getAudienceHot
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: 'org-a',
+        integrationId: 'channel-a',
+        direction: 'asc',
+        limit: 24,
+      })
+    );
+    expect(
+      (service as any)._channelInteractionRepository.getAudienceFollowers
+    ).not.toHaveBeenCalled();
+  });
+
+  it('returns hot followers from the hot audience page', async () => {
+    const service = createService([integration], {
+      supported: {
+        followers: jest.fn(),
+        followerSorts: [{
+          key: 'recent',
+          label: 'Recent',
+          directions: ['desc'],
+          defaultDirection: 'desc',
+        }],
+      },
+    });
+    (
+      service as any
+    )._channelInteractionRepository.getAudienceHot.mockResolvedValue({
+      items: [
+        {
+          externalId: 'hot-1',
+          name: 'Hot One',
+          username: 'hotone',
+          picture: null,
+          profileUrl: null,
+          bio: null,
+          followersCount: null,
+          followingCount: null,
+          followedAt: null,
+          accountCreatedAt: null,
+          finalRank: 1,
+          rulesRank: 1,
+          hotReason: 'Strong inbound engagement',
+          suggestedAction: null,
+          hotSource: 'rules',
+        },
+      ],
+      hasMore: false,
+      source: 'materialized',
+      hour: '2026-08-25T14',
+    });
+
+    await expect(
+      service.getFollowers(org, user, 'channel-a', {
+        limit: 24,
+        audience: 'hot',
+      })
+    ).resolves.toEqual({
+      items: [
+        expect.objectContaining({
+          id: 'hot-1',
+          isHot: true,
+          triageReason: 'Strong inbound engagement',
+        }),
+      ],
+      hasMore: false,
+    });
+    expect(
+      (service as any)._channelInteractionRepository.getAudienceHot
+    ).toHaveBeenCalled();
+    expect(
+      (service as any)._channelInteractionRepository.getAudienceFollowers
+    ).not.toHaveBeenCalled();
+  });
+
+  it('returns an empty hot page when no materialized batch is available', async () => {
+    const service = createService([integration], {
+      supported: {
+        followers: jest.fn(),
+        followerSorts: [{
+          key: 'recent',
+          label: 'Recent',
+          directions: ['desc'],
+          defaultDirection: 'desc',
+        }],
+      },
+    });
+    (
+      service as any
+    )._channelInteractionRepository.getAudienceHot.mockResolvedValue({
+      items: [],
+      hasMore: false,
+      source: 'materialized',
+      hour: null,
+    });
+
+    await expect(
+      service.getFollowers(org, user, 'channel-a', {
+        limit: 24,
+        audience: 'hot',
+      })
+    ).resolves.toEqual({
+      items: [],
+      hasMore: false,
+    });
+    expect(
+      (service as any)._channelInteractionRepository.getAudienceFollowers
+    ).not.toHaveBeenCalled();
+  });
+
+  it('rejects incompatible hot sorting and interaction windows', async () => {
+    const service = createService([integration], {
+      supported: {
+        followers: jest.fn(),
+        followerSorts: [{
+          key: 'net_gap',
+          label: 'Net effort gap',
+          directions: ['desc'],
+          defaultDirection: 'desc',
+          scope: 'database',
+        }],
+      },
+    });
+
+    await expect(
+      service.getFollowers(org, user, 'channel-a', {
+        limit: 24,
+        audience: 'hot',
+        sort: 'net_gap',
+        direction: 'desc',
+      })
+    ).rejects.toMatchObject({ status: 400 });
+    await expect(
+      service.getFollowers(org, user, 'channel-a', {
+        limit: 24,
+        audience: 'hot',
+        window: 'month',
+      })
+    ).rejects.toMatchObject({ status: 400 });
+    expect(
+      (service as any)._channelInteractionRepository.getAudienceHot
+    ).not.toHaveBeenCalled();
+  });
+
+  it('rejects a tampered hot cursor hour', async () => {
+    const cursor = `follower-hot:v1:${Buffer.from(JSON.stringify({
+      version: 1,
+      organizationId: 'org-a',
+      integrationId: 'channel-a',
+      direction: 'asc',
+      audience: 'hot',
+      hour: '2099-01-01T00',
+      finalRank: 1,
+      externalId: 'hot-1',
+    })).toString('base64url')}`;
+    const service = createService([integration], {
+      supported: {
+        followers: jest.fn(),
+        followerSorts: [{
+          key: 'recent',
+          label: 'Recent',
+          directions: ['desc'],
+          defaultDirection: 'desc',
+        }],
+      },
+    });
+    (
+      service as any
+    )._channelInteractionRepository.getAudienceHot.mockResolvedValue({
+      items: [],
+      hasMore: false,
+      source: 'materialized',
+      hour: null,
+    });
+
+    await expect(
+      service.getFollowers(org, user, 'channel-a', {
+        limit: 24,
+        audience: 'hot',
+        cursor,
+      })
+    ).resolves.toEqual({ items: [], hasMore: false });
+    expect(
+      (service as any)._channelInteractionRepository.getAudienceHot
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        hour: '2099-01-01T00',
+        cursor: { finalRank: 1, externalId: 'hot-1' },
+      })
+    );
+  });
+
+  it('returns empty hot page when replaying a stale cursor hour', async () => {
+    const cursor = `follower-hot:v1:${Buffer.from(JSON.stringify({
+      version: 1,
+      organizationId: 'org-a',
+      integrationId: 'channel-a',
+      direction: 'asc',
+      audience: 'hot',
+      hour: '2020-01-01T00',
+      finalRank: 1,
+      externalId: 'hot-1',
+    })).toString('base64url')}`;
+    const service = createService([integration], {
+      supported: {
+        followers: jest.fn(),
+        followerSorts: [{
+          key: 'recent',
+          label: 'Recent',
+          directions: ['desc'],
+          defaultDirection: 'desc',
+        }],
+      },
+    });
+    (
+      service as any
+    )._channelInteractionRepository.getAudienceHot.mockResolvedValue({
+      items: [],
+      hasMore: false,
+      source: 'materialized',
+      hour: null,
+    });
+
+    await expect(
+      service.getFollowers(org, user, 'channel-a', {
+        limit: 24,
+        audience: 'hot',
+        cursor,
+      })
+    ).resolves.toEqual({ items: [], hasMore: false });
+    expect(
+      (service as any)._channelInteractionRepository.getAudienceHot
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        hour: '2020-01-01T00',
+        cursor: { finalRank: 1, externalId: 'hot-1' },
+      })
+    );
+    expect(
+      (service as any)._channelInteractionRepository.getAudienceFollowers
+    ).not.toHaveBeenCalled();
+  });
+
   it('routes a triage filter through the complete synced audience', async () => {
     const followers = jest.fn();
     const service = createService([integration], {
@@ -2571,14 +2877,14 @@ describe('IntegrationService followers', () => {
       limit: 24,
       sort: 'recent',
       direction: 'desc',
-      triage: 'hot_lead',
+      triage: 'mutual',
     });
 
     expect(followers).not.toHaveBeenCalled();
     expect(
       (service as any)._channelInteractionRepository.getAudienceFollowers
     ).toHaveBeenCalledWith(
-      expect.objectContaining({ triage: 'hot_lead' })
+      expect.objectContaining({ triage: 'mutual' })
     );
   });
 

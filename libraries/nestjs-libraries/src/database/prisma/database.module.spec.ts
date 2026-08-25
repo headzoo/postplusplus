@@ -24,6 +24,7 @@ import { ChannelAnalyticsService } from './channel-analytics/channel-analytics.s
 import { ChannelAnalyticsRepository } from './channel-analytics/channel-analytics.repository';
 import { AdminScheduleLogService } from './admin-schedule-logs/admin-schedule-log.service';
 import { RelationshipGradeScheduleService } from '@gitroom/nestjs-libraries/temporal/relationship-grade.schedule.service';
+import { HotMaterializationScheduleService } from '@gitroom/nestjs-libraries/temporal/hot-triage.schedule.service';
 import { InfiniteWorkflowRegisterModule } from '@gitroom/nestjs-libraries/temporal/infinite.workflow.register';
 
 const moduleProviders = (module: object) =>
@@ -33,6 +34,12 @@ describe('DatabaseModule dependency wiring', () => {
   it('does not register RelationshipGradeScheduleService in InfiniteWorkflowRegisterModule', () => {
     expect(moduleProviders(InfiniteWorkflowRegisterModule)).not.toContain(
       RelationshipGradeScheduleService
+    );
+  });
+
+  it('registers HotMaterializationScheduleService in InfiniteWorkflowRegisterModule', () => {
+    expect(moduleProviders(InfiniteWorkflowRegisterModule)).toContain(
+      HotMaterializationScheduleService
     );
   });
 

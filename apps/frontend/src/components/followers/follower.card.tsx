@@ -213,6 +213,8 @@ export const FollowerCard: FC<{
       ? `@${leadBridge.username.replace(/^@/, '')}`
       : null;
     const hasContextBadges =
+      !!(follower.isHot && follower.triageReason) ||
+      !!(follower.isHot && follower.suggestedAction) ||
       !!(follower.isCultivate && follower.cultivateReason) ||
       !!(follower.isCultivate && follower.suggestedAction) ||
       !!leadBridgeViaHandle;
@@ -439,6 +441,22 @@ export const FollowerCard: FC<{
                 ))}
               {hasContextBadges && (
                 <div className="mt-[4px] flex min-w-0 flex-wrap items-center gap-[8px]">
+                  {follower.isHot && follower.triageReason && (
+                    <span
+                      className="inline-flex max-w-[240px] shrink truncate rounded-full border border-newTableBorder px-[8px] py-[2px] text-[11px] font-[500] text-textItemBlur"
+                      title={follower.triageReason}
+                    >
+                      {follower.triageReason}
+                    </span>
+                  )}
+                  {follower.isHot && follower.suggestedAction && (
+                    <span
+                      className="inline-flex max-w-[200px] shrink truncate rounded-full border border-newTableBorder px-[8px] py-[2px] text-[11px] font-[500] text-textItemBlur"
+                      title={follower.suggestedAction}
+                    >
+                      {follower.suggestedAction}
+                    </span>
+                  )}
                   {follower.isCultivate && follower.cultivateReason && (
                     <span
                       className="inline-flex max-w-[240px] shrink truncate rounded-full border border-newTableBorder px-[8px] py-[2px] text-[11px] font-[500] text-textItemBlur"

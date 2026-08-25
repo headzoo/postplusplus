@@ -49,6 +49,14 @@ describe('getProfileLinkAutoSnoozeTriages', () => {
     ).toEqual([]);
   });
 
+  it('returns Hot when isHot is set', () => {
+    expect(
+      getProfileLinkAutoSnoozeTriages({
+        isHot: true,
+      })
+    ).toEqual(['hot_lead']);
+  });
+
   it('returns only the matching auto-snooze triages', () => {
     expect(
       getProfileLinkAutoSnoozeTriages({
@@ -126,6 +134,15 @@ describe('buildFollowersUrl', () => {
 
   it('omits triage when the filter is cleared', () => {
     expect(buildFollowersUrl(baseParams)).toBe('/followers/channel-1?limit=24');
+  });
+
+  it('serializes the hot audience into the follower endpoint URL', () => {
+    expect(
+      buildFollowersUrl({
+        ...baseParams,
+        audience: 'hot',
+      })
+    ).toBe('/followers/channel-1?limit=24&audience=hot');
   });
 
   it('serializes the lead audience into the follower endpoint URL', () => {
@@ -507,8 +524,35 @@ describe('follower list cache updates', () => {
       )
     ).toEqual({
       items: [
-        { id: 'follower-1', name: 'Alex', relationshipTriage: null },
+        { id: 'follower-1', name: 'Alex', relationshipTriage: null, isHot: false },
         { id: 'follower-2', name: 'Sam', relationshipTriage: 'hot_lead' },
+      ],
+      hasMore: false,
+    });
+    expect(
+      applyTriageIgnoreToFollowerPage(
+        {
+          items: [
+            {
+              id: 'hot-1',
+              name: 'Alex',
+              isHot: true,
+              relationshipTriage: 'hot_lead' as const,
+            },
+          ],
+          hasMore: false,
+        },
+        'hot-1',
+        { triage: 'hot_lead' }
+      )
+    ).toEqual({
+      items: [
+        {
+          id: 'hot-1',
+          name: 'Alex',
+          isHot: false,
+          relationshipTriage: null,
+        },
       ],
       hasMore: false,
     });

@@ -27,10 +27,11 @@ export const FOLLOWER_TRIAGE_FILTERS = [
 export type FollowerTriageFilterValue =
   (typeof FOLLOWER_TRIAGE_FILTERS)[number];
 
-export const FOLLOWER_AUDIENCES = ['lead', 'ignored', 'cultivate'] as const;
+export const FOLLOWER_AUDIENCES = ['lead', 'ignored', 'cultivate', 'hot'] as const;
 export type FollowerAudience = (typeof FOLLOWER_AUDIENCES)[number];
 
 export const FOLLOWER_CATEGORY_DESCRIPTIONS = {
+  hot: 'Hourly materialized picks for relationships that need reciprocation.',
   hot_lead:
     "Their effort exceeds the channel's, including unreciprocated inbound engagement.",
   over_invested: "The channel's effort exceeds theirs.",

@@ -87,6 +87,7 @@ import {
   AudienceLeadCursor,
   ChannelInteractionRepository,
   GradeFollowerCursor,
+  HotPickCursor,
   IgnoredAudienceFollowerCursor,
   LikesCountFollowerCursor,
   NoteCountFollowerCursor,
@@ -101,6 +102,7 @@ import {
   getChannelStrategy,
   isChannelStrategyId,
   resolveChannelStrategy,
+  resolveMaterializationConfig,
 } from '@gitroom/nestjs-libraries/channel-strategies/channel-strategy.registry';
 import { getRelationshipTriage as getStrategyRelationshipTriage } from '@gitroom/nestjs-libraries/channel-strategies/channel-strategy.scoring';
 import { RelationshipGradeScheduleService } from '@gitroom/nestjs-libraries/temporal/relationship-grade.schedule.service';
@@ -848,6 +850,25 @@ export class IntegrationService {
         'cultivate'
       );
       return this.getCultivateAudiencePage(
+        org.id,
+        actorUserId,
+        integration,
+        provider,
+        normalizedQuery
+      );
+    }
+    if (this.isHotMaterializedQuery(normalizedQuery)) {
+      if (normalizedQuery.cursor && this.isHttpUrl(normalizedQuery.cursor)) {
+        throw new HttpException('Invalid follower cursor', HttpStatus.BAD_REQUEST);
+      }
+      this.assertHotMaterializedQueryCompatible(normalizedQuery);
+      this.assertFollowerCursorQueryIdentity(
+        normalizedQuery.cursor,
+        search,
+        normalizedQuery.audience === 'hot' ? undefined : normalizedQuery.triage,
+        normalizedQuery.audience === 'hot' ? 'hot' : undefined
+      );
+      return this.getHotAudiencePage(
         org.id,
         actorUserId,
         integration,
@@ -2572,6 +2593,107 @@ export class IntegrationService {
     );
   }
 
+  private async getHotAudiencePage(
+    organizationId: string,
+    userId: string | undefined,
+    integration: Integration,
+    provider: SocialProvider,
+    query: FollowerQuery
+  ): Promise<FollowerPage> {
+    const materialization = resolveMaterializationConfig(integration.strategyId);
+    const direction = query.direction ?? 'asc';
+    const cursor = query.cursor
+      ? this.decodeHotAudienceCursor(
+        query.cursor,
+        organizationId,
+        integration.id,
+        direction,
+        query.search
+      )
+      : undefined;
+    const ranked = await this._channelInteractionRepository.getAudienceHot({
+      organizationId,
+      integrationId: integration.id,
+      strategyId: materialization.strategyId,
+      strategyVersion: materialization.strategyVersion,
+      materializationVersion: materialization.materializationVersion,
+      userId,
+      direction,
+      limit: query.limit,
+      ...(cursor
+        ? {
+          hour: cursor.hour,
+          cursor: {
+            finalRank: cursor.finalRank,
+            externalId: cursor.externalId,
+          },
+        }
+        : {}),
+      ...(query.search ? { search: query.search } : {}),
+    });
+    const items = ranked.items.map((row) => ({
+      ...this.mapAudienceMemberProfile(row),
+      isHot: true,
+      relationshipTriage: 'hot_lead' as const,
+      ...(row.hotReason ? { triageReason: row.hotReason } : {}),
+      ...(row.suggestedAction ? { suggestedAction: row.suggestedAction } : {}),
+      ...(row.hotSource ? { triageSource: row.hotSource } : {}),
+    }));
+    const last = ranked.items.at(-1);
+    const page: FollowerPage = {
+      items,
+      hasMore: ranked.hasMore,
+      ...(ranked.hasMore && last && ranked.hour
+        ? {
+          nextCursor: this.encodeHotAudienceCursor({
+            organizationId,
+            integrationId: integration.id,
+            direction,
+            search: query.search,
+            audience: 'hot',
+            hour: ranked.hour,
+            finalRank: last.finalRank,
+            externalId: last.externalId,
+          }),
+        }
+        : {}),
+    };
+    return this.enrichFollowerPageWithInteractionMetrics(
+      organizationId,
+      userId,
+      integration.id,
+      provider,
+      page
+    );
+  }
+
+  private isHotMaterializedQuery(query: FollowerQuery) {
+    return (
+      query.audience === 'hot' ||
+      query.triage === 'hot_lead' ||
+      query.triage === 'engaged_not_yet'
+    );
+  }
+
+  private assertHotMaterializedQueryCompatible(query: FollowerQuery) {
+    const incompatibleSorts = new Set([
+      FOLLOWER_DATABASE_INTERACTIONS_SORT.key,
+      FOLLOWER_DATABASE_NOTES_SORT.key,
+      FOLLOWER_DATABASE_LIKES_SORT.key,
+      FOLLOWER_DATABASE_RELATIONSHIP_GRADE_SORT.key,
+      FOLLOWER_DATABASE_MY_GRADE_SORT.key,
+      FOLLOWER_DATABASE_BOT_GRADE_SORT.key,
+      FOLLOWER_DATABASE_THEIR_EFFORT_SORT.key,
+      FOLLOWER_DATABASE_NET_GAP_SORT.key,
+    ]);
+    if (query.sort && incompatibleSorts.has(query.sort)) {
+      throw new HttpException('Invalid follower query', HttpStatus.BAD_REQUEST);
+    }
+    if (query.window) {
+      throw new HttpException('Invalid follower query', HttpStatus.BAD_REQUEST);
+    }
+  }
+
   private mapLeadBridges(
     bridges?: Array<{
       bridgeExternalId: string;
@@ -3391,6 +3513,59 @@ export class IntegrationService {
     ).toString('base64url')}`;
   }
 
+  private encodeHotAudienceCursor(cursor: {
+    organizationId: string;
+    integrationId: string;
+    direction: 'asc' | 'desc';
+    search?: string;
+    audience: 'hot';
+    hour: string;
+  } & HotPickCursor) {
+    return `follower-hot:v1:${Buffer.from(
+      JSON.stringify({ version: 1, ...cursor })
+    ).toString('base64url')}`;
+  }
+
+  private decodeHotAudienceCursor(
+    value: string,
+    organizationId: string,
+    integrationId: string,
+    direction: 'asc' | 'desc',
+    search: string | undefined
+  ): HotPickCursor & { hour: string } {
+    try {
+      if (!value.startsWith('follower-hot:v1:')) throw new Error();
+      const cursor = JSON.parse(
+        Buffer.from(
+          value.slice('follower-hot:v1:'.length),
+          'base64url'
+        ).toString('utf8')
+      );
+      if (
+        cursor?.version !== 1 ||
+        cursor.organizationId !== organizationId ||
+        cursor.integrationId !== integrationId ||
+        cursor.direction !== direction ||
+        cursor.search !== search ||
+        cursor.audience !== 'hot' ||
+        typeof cursor.hour !== 'string' ||
+        !/^\d{4}-\d{2}-\d{2}T\d{2}$/.test(cursor.hour) ||
+        !Number.isSafeInteger(cursor.finalRank) ||
+        cursor.finalRank < 1 ||
+        typeof cursor.externalId !== 'string'
+      ) {
+        throw new Error();
+      }
+      return {
+        hour: cursor.hour,
+        finalRank: cursor.finalRank,
+        externalId: cursor.externalId,
+      };
+    } catch {
+      throw new HttpException('Invalid follower cursor', HttpStatus.BAD_REQUEST);
+    }
+  }
+
   private decodeCultivateAudienceCursor(
     value: string,
     organizationId: string,
@@ -3759,6 +3934,7 @@ export class IntegrationService {
       'follower-lead:v2:',
       'follower-lead:v3:',
       'follower-cultivate:v1:',
+      'follower-hot:v1:',
       'follower-ignored:v1:',
     ];
     if (!value || !internalPrefixes.some((prefix) => value.startsWith(prefix))) {
@@ -4276,6 +4452,13 @@ export class IntegrationService {
       ...(follower.isCultivate === true ? { isCultivate: true } : {}),
       ...(typeof follower.cultivateReason === 'string'
         ? { cultivateReason: follower.cultivateReason }
+        : {}),
+      ...(follower.isHot === true ? { isHot: true } : {}),
+      ...(typeof follower.triageReason === 'string'
+        ? { triageReason: follower.triageReason }
+        : {}),
+      ...(typeof follower.triageSource === 'string'
+        ? { triageSource: follower.triageSource }
         : {}),
       ...(typeof follower.suggestedAction === 'string'
         ? { suggestedAction: follower.suggestedAction }

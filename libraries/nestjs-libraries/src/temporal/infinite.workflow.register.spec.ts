@@ -13,6 +13,9 @@ describe('InfiniteWorkflowRegister', () => {
     },
     followerBotScoreScheduleService = {
       install: jest.fn().mockResolvedValue(undefined),
+    },
+    hotMaterializationScheduleService = {
+      install: jest.fn().mockResolvedValue(undefined),
     }
   ) =>
     new InfiniteWorkflowRegister(
@@ -20,7 +23,8 @@ describe('InfiniteWorkflowRegister', () => {
         client: { getRawClient: () => ({ workflow }) },
       } as any,
       relationshipGradeScheduleService as any,
-      followerBotScoreScheduleService as any
+      followerBotScoreScheduleService as any,
+      hotMaterializationScheduleService as any
     );
 
   const steadyStateWorkflow = () => ({
@@ -51,10 +55,14 @@ describe('InfiniteWorkflowRegister', () => {
     const followerBotScoreScheduleService = {
       install: jest.fn().mockResolvedValue(undefined),
     };
+    const hotMaterializationScheduleService = {
+      install: jest.fn().mockResolvedValue(undefined),
+    };
     const register = createRegister(
       workflow,
       relationshipGradeScheduleService,
-      followerBotScoreScheduleService
+      followerBotScoreScheduleService,
+      hotMaterializationScheduleService
     );
     process.env.RUN_CRON = '1';
 
@@ -62,6 +70,7 @@ describe('InfiniteWorkflowRegister', () => {
 
     expect(relationshipGradeScheduleService.install).toHaveBeenCalled();
     expect(followerBotScoreScheduleService.install).toHaveBeenCalled();
+    expect(hotMaterializationScheduleService.install).toHaveBeenCalled();
     expect(workflow.start).not.toHaveBeenCalledWith(
       'channelRelationshipGradeWorkflowV1',
       expect.anything()
@@ -153,11 +162,20 @@ describe('InfiniteWorkflowRegister', () => {
 
   it('does not start maintenance workflows when cron execution is disabled', async () => {
     const workflow = steadyStateWorkflow();
-    const register = createRegister(workflow);
+    const hotMaterializationScheduleService = {
+      install: jest.fn().mockResolvedValue(undefined),
+    };
+    const register = createRegister(
+      workflow,
+      undefined,
+      undefined,
+      hotMaterializationScheduleService
+    );
     delete process.env.RUN_CRON;
 
     await register.onModuleInit();
 
     expect(workflow.start).not.toHaveBeenCalled();
+    expect(hotMaterializationScheduleService.install).not.toHaveBeenCalled();
   });
 });

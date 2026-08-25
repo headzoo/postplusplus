@@ -1,5 +1,7 @@
 import {
   compareFollowers,
+  FOLLOWER_AUDIENCES,
+  FOLLOWER_CATEGORY_DESCRIPTIONS,
   FOLLOWER_DATABASE_BOT_GRADE_SORT,
   FOLLOWER_DATABASE_MY_GRADE_SORT,
   FOLLOWER_DATABASE_NET_GAP_SORT,
@@ -11,6 +13,11 @@ import {
 } from '@gitroom/nestjs-libraries/integrations/social/follower.sorts';
 
 describe('follower.sorts', () => {
+  it('includes hot in follower audiences', () => {
+    expect(FOLLOWER_AUDIENCES).toContain('hot');
+    expect(FOLLOWER_CATEGORY_DESCRIPTIONS.hot).toContain('materialized');
+  });
+
   const followers = [
     {
       id: 'b',

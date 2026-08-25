@@ -5,7 +5,11 @@ import {
   ChannelInteractionKind,
   ChannelInteractionWindow,
 } from '@prisma/client';
-import { ChannelInteractionRepository } from './channel-interaction.repository';
+import {
+  ChannelInteractionRepository,
+  utcHourKey,
+} from './channel-interaction.repository';
+import { RELATIONSHIP_FORMULA_VERSION } from './channel-interaction.scoring';
 import { LEAD_FIT_MIN_SCORE } from '@gitroom/nestjs-libraries/temporal/lead-bridge.schedule';
 
 const leadFitVisibility = {
@@ -159,6 +163,16 @@ const createHarness = () => {
       deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
       createMany: jest.fn().mockResolvedValue({ count: 0 }),
     },
+    channelAudienceHotPickBatch: {
+      findUnique: jest.fn().mockResolvedValue(null),
+      upsert: jest.fn().mockResolvedValue({}),
+    },
+    channelAudienceHotPick: {
+      count: jest.fn().mockResolvedValue(0),
+      findMany: jest.fn().mockResolvedValue([]),
+      deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+      createMany: jest.fn().mockResolvedValue({ count: 0 }),
+    },
     channelAudienceMemberGrade: {
       findMany: jest.fn().mockResolvedValue([]),
       upsert: jest.fn(),
@@ -186,6 +200,8 @@ const createHarness = () => {
         channelAudienceNote: tx.channelAudienceNote,
         channelAudienceList: tx.channelAudienceList,
         channelAudienceListMember: tx.channelAudienceListMember,
+        channelAudienceHotPickBatch: tx.channelAudienceHotPickBatch,
+        channelAudienceHotPick: tx.channelAudienceHotPick,
         channelRelationshipGradeSnapshot: tx.channelRelationshipGradeSnapshot,
       },
     } as any,
@@ -208,6 +224,212 @@ const createHarness = () => {
 };
 
 describe('ChannelInteractionRepository', () => {
+  it('builds UTC hour keys and rejects invalid dates', () => {
+    expect(utcHourKey(new Date('2026-08-25T13:59:59.999Z'))).toBe(
+      '2026-08-25T13'
+    );
+    expect(utcHourKey(new Date('2026-08-25T13:00:00.000-04:00'))).toBe(
+      '2026-08-25T17'
+    );
+    expect(() => utcHourKey(new Date('invalid'))).toThrow(
+      'utcHourKey requires a valid Date'
+    );
+  });
+
+  it('bounds and deduplicates Hot refresh IDs from projections and inbound events', async () => {
+    const { repository, tx } = createHarness();
+    tx.channelAudienceMember.findMany
+      .mockResolvedValueOnce([
+        { externalId: 'net-gap' },
+        { externalId: 'shared' },
+        { externalId: 'stored-tail' },
+      ])
+      .mockResolvedValueOnce([
+        { externalId: 'shared' },
+        { externalId: 'recent' },
+        { externalId: 'recent-tail' },
+      ]);
+    tx.channelInteractionEvent.findMany.mockResolvedValue([
+      { counterpartyExternalId: 'shared' },
+      { counterpartyExternalId: 'recent' },
+      { counterpartyExternalId: 'recent-tail' },
+    ]);
+
+    await expect(
+      repository.listHotRefreshExternalIds({
+        organizationId: 'org',
+        integrationId: 'integration',
+        poolSize: 3,
+        recentEventSince: new Date('2026-08-25T12:00:00.000Z'),
+      })
+    ).resolves.toEqual(['shared', 'net-gap', 'recent']);
+    expect(tx.channelInteractionEvent.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        distinct: ['counterpartyExternalId'],
+        take: 3,
+        where: expect.objectContaining({
+          direction: ChannelInteractionDirection.INBOUND,
+        }),
+      })
+    );
+    expect(tx.channelAudienceMember.findMany).toHaveBeenLastCalledWith({
+      where: {
+        organizationId: 'org',
+        integrationId: 'integration',
+        membershipState: ChannelAudienceMembership.FOLLOWER,
+        externalId: { in: ['shared', 'recent', 'recent-tail'] },
+      },
+      select: { externalId: true },
+    });
+  });
+
+  it('completes an authoritative empty Hot batch without pick writes', async () => {
+    const { repository, tx } = createHarness();
+    await expect(
+      repository.replaceHotPickBatch({
+        organizationId: 'org',
+        integrationId: 'integration',
+        hour: '2026-08-25T13',
+        strategyId: 'grow_audience',
+        strategyVersion: 1,
+        materializationVersion: 1,
+        candidateCount: 0,
+        picks: [],
+      })
+    ).resolves.toEqual({ count: 0 });
+    expect(tx.channelAudienceHotPick.deleteMany).toHaveBeenCalledWith({
+      where: {
+        organizationId: 'org',
+        integrationId: 'integration',
+        hour: '2026-08-25T13',
+      },
+    });
+    expect(tx.channelAudienceHotPickBatch.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({ pickCount: 0 }),
+      })
+    );
+    expect(tx.channelAudienceHotPick.createMany).not.toHaveBeenCalled();
+  });
+
+  it('serves a completed empty current Hot batch without live fallback', async () => {
+    const { repository, tx } = createHarness();
+    tx.channelAudienceHotPickBatch.findUnique.mockResolvedValueOnce({
+      hour: '2026-08-25T13',
+      strategyId: 'grow_audience',
+      strategyVersion: 1,
+      materializationVersion: 1,
+      pickCount: 0,
+    });
+
+    await expect(
+      repository.getAudienceHot({
+        organizationId: 'org',
+        integrationId: 'integration',
+        strategyId: 'grow_audience',
+        strategyVersion: 1,
+        materializationVersion: 1,
+        direction: 'asc',
+        limit: 20,
+        now: new Date('2026-08-25T13:30:00.000Z'),
+      })
+    ).resolves.toEqual({
+      items: [],
+      hasMore: false,
+      source: 'materialized',
+      hour: '2026-08-25T13',
+    });
+    expect(tx.channelAudienceHotPick.findMany).toHaveBeenCalledTimes(1);
+    expect(tx.channelAudienceMember.findMany).not.toHaveBeenCalled();
+  });
+
+  it('returns empty materialized result for stale explicit hot hour without loading batch', async () => {
+    const { repository, tx } = createHarness();
+    const now = new Date('2026-08-25T13:30:00.000Z');
+
+    await expect(
+      repository.getAudienceHot({
+        organizationId: 'org',
+        integrationId: 'integration',
+        strategyId: 'grow_audience',
+        strategyVersion: 1,
+        materializationVersion: 1,
+        direction: 'asc',
+        limit: 20,
+        hour: '2026-08-25T11',
+        cursor: { finalRank: 1, externalId: 'hot-1' },
+        now,
+      })
+    ).resolves.toEqual({
+      items: [],
+      hasMore: false,
+      source: 'materialized',
+      hour: null,
+    });
+    expect(tx.channelAudienceHotPickBatch.findUnique).not.toHaveBeenCalled();
+    expect(tx.channelAudienceHotPick.findMany).not.toHaveBeenCalled();
+  });
+
+  it('returns empty materialized result for future explicit hot hour without loading batch', async () => {
+    const { repository, tx } = createHarness();
+    const now = new Date('2026-08-25T13:30:00.000Z');
+
+    await expect(
+      repository.getAudienceHot({
+        organizationId: 'org',
+        integrationId: 'integration',
+        strategyId: 'grow_audience',
+        strategyVersion: 1,
+        materializationVersion: 1,
+        direction: 'asc',
+        limit: 20,
+        hour: '2099-01-01T00',
+        cursor: { finalRank: 1, externalId: 'hot-1' },
+        now,
+      })
+    ).resolves.toEqual({
+      items: [],
+      hasMore: false,
+      source: 'materialized',
+      hour: null,
+    });
+    expect(tx.channelAudienceHotPickBatch.findUnique).not.toHaveBeenCalled();
+    expect(tx.channelAudienceHotPick.findMany).not.toHaveBeenCalled();
+  });
+
+  it('loads explicit hot hour when it matches the immediately previous UTC hour', async () => {
+    const { repository, tx } = createHarness();
+    const now = new Date('2026-08-25T13:30:00.000Z');
+    tx.channelAudienceHotPickBatch.findUnique.mockResolvedValueOnce({
+      hour: '2026-08-25T12',
+      strategyId: 'grow_audience',
+      strategyVersion: 1,
+      materializationVersion: 1,
+      pickCount: 0,
+    });
+
+    await expect(
+      repository.getAudienceHot({
+        organizationId: 'org',
+        integrationId: 'integration',
+        strategyId: 'grow_audience',
+        strategyVersion: 1,
+        materializationVersion: 1,
+        direction: 'asc',
+        limit: 20,
+        hour: '2026-08-25T12',
+        now,
+      })
+    ).resolves.toEqual({
+      items: [],
+      hasMore: false,
+      source: 'materialized',
+      hour: '2026-08-25T12',
+    });
+    expect(tx.channelAudienceHotPickBatch.findUnique).toHaveBeenCalledTimes(1);
+    expect(tx.channelAudienceHotPick.findMany).toHaveBeenCalledTimes(1);
+  });
+
   it('loads interaction metrics for follower ids from daily aggregates', async () => {
     const { repository, dailyAggregateGroupBy } = createHarness();
     dailyAggregateGroupBy.mockResolvedValue([
@@ -289,6 +511,7 @@ describe('ChannelInteractionRepository', () => {
       lead: 6,
       ignored: 7,
       cultivate: 8,
+      hot: 0,
     });
     expect(result.lists).toHaveLength(20);
     expect(result.lists[0]).toEqual({
@@ -297,7 +520,7 @@ describe('ChannelInteractionRepository', () => {
       total: 0,
     });
     expect(result.listsTruncated).toBe(true);
-    expect(tx.channelAudienceMember.count).toHaveBeenCalledTimes(28);
+    expect(tx.channelAudienceMember.count).toHaveBeenCalledTimes(29);
     expect(tx.channelAudienceMember.count).toHaveBeenCalledWith({
       where: expect.objectContaining({
         organizationId: 'org',
@@ -1079,7 +1302,7 @@ describe('ChannelInteractionRepository', () => {
         where: expect.objectContaining({
           gradeSnapshots: {
             none: {
-              formulaVersion: 3,
+              formulaVersion: RELATIONSHIP_FORMULA_VERSION,
               relationshipStrategyId: 'grow_audience',
               relationshipStrategyVersion: 1,
               snapshotAt: { gt: new Date('2026-08-09T12:00:00.000Z') },
@@ -1311,7 +1534,7 @@ describe('ChannelInteractionRepository', () => {
     });
   });
 
-  it('requires a recent formula-v3 snapshot for the selected strategy', async () => {
+  it('requires a recent current-formula snapshot for the selected strategy', async () => {
     const { repository, tx } = createHarness();
     const snapshotAt = new Date('2026-08-12T12:00:00.000Z');
 
@@ -1327,7 +1550,7 @@ describe('ChannelInteractionRepository', () => {
             integration: growIntegrationFilter,
             gradeSnapshots: {
               none: {
-                formulaVersion: 3,
+                formulaVersion: RELATIONSHIP_FORMULA_VERSION,
                 relationshipStrategyId: 'grow_audience',
                 relationshipStrategyVersion: 1,
                 snapshotAt: { gt: new Date('2026-08-09T12:00:00.000Z') },
@@ -1338,7 +1561,7 @@ describe('ChannelInteractionRepository', () => {
             integration: { is: { strategyId: { equals: 'lead_capture' } } },
             gradeSnapshots: {
               none: {
-                formulaVersion: 3,
+                formulaVersion: RELATIONSHIP_FORMULA_VERSION,
                 relationshipStrategyId: 'lead_capture',
                 relationshipStrategyVersion: 1,
                 snapshotAt: { gt: new Date('2026-08-09T12:00:00.000Z') },
@@ -1368,7 +1591,7 @@ describe('ChannelInteractionRepository', () => {
             expect.objectContaining({
               gradeSnapshots: {
                 none: expect.objectContaining({
-                  formulaVersion: 3,
+                  formulaVersion: RELATIONSHIP_FORMULA_VERSION,
                   snapshotAt: { gt: new Date('2026-08-12T11:00:00.000Z') },
                 }),
               },
@@ -1397,7 +1620,7 @@ describe('ChannelInteractionRepository', () => {
             expect.objectContaining({
               gradeSnapshots: {
                 none: expect.objectContaining({
-                  formulaVersion: 3,
+                  formulaVersion: RELATIONSHIP_FORMULA_VERSION,
                   snapshotAt: { gt: new Date('2026-07-12T12:00:00.000Z') },
                 }),
               },
@@ -1425,7 +1648,7 @@ describe('ChannelInteractionRepository', () => {
         membershipState: ChannelAudienceMembership.FOLLOWER,
         OR: [
           { relationshipFormulaVersion: null },
-          { relationshipFormulaVersion: { not: 3 } },
+          { relationshipFormulaVersion: { not: RELATIONSHIP_FORMULA_VERSION } },
           { relationshipStrategyId: null },
           { relationshipStrategyId: { not: 'lead_capture' } },
           { relationshipStrategyVersion: null },
@@ -1465,7 +1688,7 @@ describe('ChannelInteractionRepository', () => {
           membershipState: ChannelAudienceMembership.FOLLOWER,
           gradeSnapshots: {
             none: {
-              formulaVersion: 3,
+              formulaVersion: RELATIONSHIP_FORMULA_VERSION,
               relationshipStrategyId: 'grow_audience',
               relationshipStrategyVersion: 1,
               snapshotAt: { gt: new Date('2026-08-09T12:00:00.000Z') },
@@ -2110,6 +2333,39 @@ describe('ChannelInteractionRepository', () => {
     );
   });
 
+  it('removes orphan Hot picks before deleting demoted members', async () => {
+    const { repository, tx } = createHarness();
+    const orphanMemberKeys = [
+      { integrationId: 'integration-a', counterpartyExternalId: 'lead-1' },
+      { integrationId: 'integration-b', counterpartyExternalId: 'lead-2' },
+    ];
+    tx.channelAudienceLeadBridge.findMany.mockResolvedValue([
+      { integrationId: 'integration-a' },
+      { integrationId: 'integration-b' },
+    ]);
+    tx.channelAudienceLeadBridge.deleteMany.mockResolvedValue({ count: 2 });
+    tx.channelAudienceMember.findMany.mockResolvedValue([
+      { integrationId: 'integration-a', externalId: 'lead-1' },
+      { integrationId: 'integration-b', externalId: 'lead-2' },
+    ]);
+    tx.channelAudienceMember.deleteMany.mockResolvedValue({ count: 2 });
+    tx.channelAudienceHotPick.deleteMany.mockResolvedValue({ count: 3 });
+
+    await expect(repository.clearAllDiscoveredLeads()).resolves.toEqual({
+      bridgesDeleted: 2,
+      orphansDeleted: 2,
+      integrationIds: ['integration-a', 'integration-b'],
+    });
+
+    expect(tx.channelAudienceHotPick.deleteMany).toHaveBeenCalledWith({
+      where: { OR: orphanMemberKeys },
+    });
+    expect(tx.channelAudienceHotPick.deleteMany.mock.invocationCallOrder[0]).toBeLessThan(
+      tx.channelAudienceMember.deleteMany.mock.invocationCallOrder[0]
+    );
+    expect(tx.channelAudienceHotPick.deleteMany).toHaveBeenCalledTimes(1);
+  });
+
   it('filters leads by username or name when search is set', async () => {
     const { repository, audienceMemberFindMany } = createHarness();
     audienceMemberFindMany.mockResolvedValue([]);
@@ -2747,6 +3003,32 @@ describe('ChannelInteractionRepository', () => {
     async (triage) => {
       const { repository, audienceMemberFindMany } = createHarness();
       audienceMemberFindMany.mockResolvedValue([]);
+      const expectedTriageFilter =
+        triage === 'hot_lead'
+          ? {
+            OR: [
+              { relationshipTriage: 'hot_lead' },
+              {
+                relationshipReciprocationScore: { gt: 0 },
+                relationshipEffortScore: 0,
+              },
+            ],
+            triageIgnores: {
+              none: expect.objectContaining({
+                triage: { in: ['hot_lead', 'engaged_not_yet'] },
+                OR: expect.any(Array),
+              }),
+            },
+          }
+          : {
+            relationshipTriage: triage,
+            triageIgnores: {
+              none: expect.objectContaining({
+                triage,
+                OR: expect.any(Array),
+              }),
+            },
+          };
 
       await repository.getAudienceFollowers({
         organizationId: 'org',
@@ -2762,15 +3044,7 @@ describe('ChannelInteractionRepository', () => {
         expect.objectContaining({
           where: expect.objectContaining({
             AND: expect.arrayContaining([
-              {
-                relationshipTriage: triage,
-                triageIgnores: {
-                  none: expect.objectContaining({
-                    triage,
-                    OR: expect.any(Array),
-                  }),
-                },
-              },
+              expectedTriageFilter,
               { ignoredAt: null },
             ]),
           }),
@@ -3085,7 +3359,7 @@ describe('ChannelInteractionRepository', () => {
       expect.objectContaining({
         where: expect.objectContaining({
           AND: expect.arrayContaining([
-            { relationshipFormulaVersion: 3 },
+            { relationshipFormulaVersion: RELATIONSHIP_FORMULA_VERSION },
             { ignoredAt: null },
           ]),
         }),

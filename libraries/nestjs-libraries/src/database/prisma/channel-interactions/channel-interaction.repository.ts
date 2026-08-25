@@ -194,6 +194,61 @@ export type AudienceCultivateQuery = {
   search?: string;
 };
 
+export const utcHourKey = (now = new Date()) => {
+  if (!(now instanceof Date) || Number.isNaN(now.getTime())) {
+    throw new Error('utcHourKey requires a valid Date');
+  }
+  return now.toISOString().slice(0, 13);
+};
+
+export type HotPickCursor = {
+  finalRank: number;
+  externalId: string;
+};
+
+export type AudienceHotQuery = {
+  organizationId: string;
+  integrationId: string;
+  strategyId: ChannelStrategyId;
+  strategyVersion: number;
+  materializationVersion: number;
+  direction: 'asc' | 'desc';
+  limit: number;
+  cursor?: HotPickCursor;
+  hour?: string;
+  search?: string;
+  userId?: string;
+  now?: Date;
+};
+
+export type HotCandidate = {
+  externalId: string;
+  username: string | null;
+  name: string | null;
+  bio: string | null;
+  profileUrl: string | null;
+  followersCount: number | null;
+  followingCount: number | null;
+  relationshipNetGap: number | null;
+  relationshipReciprocationScore: number | null;
+  relationshipEffortScore: number | null;
+  relationshipTriage: string | null;
+  relationshipSnapshotAt: Date | null;
+  lastInboundAt: Date | null;
+  lastOutboundAt: Date | null;
+};
+
+export type HotPickInput = {
+  counterpartyExternalId: string;
+  rulesRank: number;
+  finalRank: number;
+  rulesReason: string;
+  aiRank?: number | null;
+  aiReason?: string | null;
+  suggestedAction?: string | null;
+  source?: string;
+};
+
 export type CultivateCandidate = {
   externalId: string;
   username: string | null;
@@ -402,6 +457,8 @@ export class ChannelInteractionRepository {
       | 'channelAudienceListMember'
       | 'channelAudienceLeadBridge'
       | 'channelAudienceCultivatePick'
+      | 'channelAudienceHotPickBatch'
+      | 'channelAudienceHotPick'
       | 'channelRelationshipGradeSnapshot'
     >,
     private _integration: PrismaRepository<'integration'>,
@@ -1951,6 +2008,9 @@ export class ChannelInteractionRepository {
         await tx.channelAudienceCultivatePick.deleteMany({
           where: { OR: memberKeys },
         });
+        await tx.channelAudienceHotPick.deleteMany({
+          where: { OR: memberKeys },
+        });
         await tx.channelInteractionWindowSummary.deleteMany({
           where: { OR: memberKeys },
         });
@@ -1984,9 +2044,13 @@ export class ChannelInteractionRepository {
   }
 
   private cultivateEligibilityWhere(
-    now = new Date()
+    now = new Date(),
+    config?: { warmGradeThreshold: number; staleDays: number }
   ): Prisma.ChannelAudienceMemberWhereInput {
-    const staleBefore = new Date(now.getTime() - CULTIVATE_STALE_MS);
+    const staleBefore = new Date(
+      now.getTime() -
+      (config ? config.staleDays * 24 * 60 * 60 * 1000 : CULTIVATE_STALE_MS)
+    );
     return {
       membershipState: ChannelAudienceMembership.FOLLOWER,
       ignoredAt: null,
@@ -1997,7 +2061,11 @@ export class ChannelInteractionRepository {
         {
           OR: [
             { relationshipTriage: 'mutual' },
-            { relationshipGrade: { gte: CULTIVATE_WARM_GRADE_THRESHOLD } },
+            {
+              relationshipGrade: {
+                gte: config?.warmGradeThreshold ?? CULTIVATE_WARM_GRADE_THRESHOLD,
+              },
+            },
           ],
         },
         {
@@ -2007,6 +2075,15 @@ export class ChannelInteractionRepository {
           ],
         },
       ],
+    };
+  }
+
+  private hotEligibilityWhere(): Prisma.ChannelAudienceMemberWhereInput {
+    return {
+      membershipState: ChannelAudienceMembership.FOLLOWER,
+      ignoredAt: null,
+      OR: [{ isBot: null }, { isBot: false }],
+      AND: [this.triageFilter('hot_lead')],
     };
   }
 
@@ -2050,6 +2127,8 @@ export class ChannelInteractionRepository {
     integrationId: string;
     now?: Date;
     take?: number;
+    warmGradeThreshold?: number;
+    staleDays?: number;
   }): Promise<CultivateCandidate[]> {
     const now = params.now ?? new Date();
     const take = params.take ?? CULTIVATE_CANDIDATE_POOL_SIZE;
@@ -2063,7 +2142,15 @@ export class ChannelInteractionRepository {
         where: {
           organizationId: params.organizationId,
           integrationId: params.integrationId,
-          ...this.cultivateEligibilityWhere(now),
+          ...this.cultivateEligibilityWhere(
+            now,
+            params.warmGradeThreshold != null && params.staleDays != null
+              ? {
+                warmGradeThreshold: params.warmGradeThreshold,
+                staleDays: params.staleDays,
+              }
+              : undefined
+          ),
         },
         orderBy: [{ lastOutboundAt: { sort: 'asc', nulls: 'first' } }, { externalId: 'asc' }],
         take,
@@ -2117,6 +2204,450 @@ export class ChannelInteractionRepository {
         })),
       });
       return { count: params.picks.length };
+    });
+  }
+
+  async countVisibleHotPicks(params: {
+    organizationId: string;
+    integrationId: string;
+    hour?: string;
+    strategyId: ChannelStrategyId;
+    strategyVersion: number;
+    materializationVersion: number;
+  }) {
+    const hour = params.hour ?? utcHourKey();
+    return this.withSerializableRetry(async (tx) => {
+      await this.assertOwnedIntegration(
+        tx,
+        params.organizationId,
+        params.integrationId
+      );
+      return tx.channelAudienceHotPick.count({
+        where: {
+          organizationId: params.organizationId,
+          integrationId: params.integrationId,
+          hour,
+          batch: {
+            is: {
+              strategyId: params.strategyId,
+              strategyVersion: params.strategyVersion,
+              materializationVersion: params.materializationVersion,
+            },
+          },
+          audienceMember: this.hotEligibilityWhere(),
+        },
+      });
+    });
+  }
+
+  async listHotRefreshExternalIds(params: {
+    organizationId: string;
+    integrationId: string;
+    poolSize: number;
+    recentEventSince: Date;
+  }) {
+    if (!Number.isInteger(params.poolSize) || params.poolSize < 1) {
+      throw new Error('poolSize must be a positive integer');
+    }
+    if (
+      !(params.recentEventSince instanceof Date) ||
+      Number.isNaN(params.recentEventSince.getTime())
+    ) {
+      throw new Error('recentEventSince must be a valid Date');
+    }
+    return this.withSerializableRetry(async (tx) => {
+      await this.assertOwnedIntegration(
+        tx,
+        params.organizationId,
+        params.integrationId
+      );
+      const [stored, recent] = await Promise.all([
+        tx.channelAudienceMember.findMany({
+          where: {
+            organizationId: params.organizationId,
+            integrationId: params.integrationId,
+            membershipState: ChannelAudienceMembership.FOLLOWER,
+          },
+          orderBy: [
+            { relationshipNetGap: { sort: 'desc', nulls: 'last' } },
+            { externalId: 'asc' },
+          ],
+          take: params.poolSize,
+          select: { externalId: true },
+        }),
+        tx.channelInteractionEvent.findMany({
+          where: {
+            organizationId: params.organizationId,
+            integrationId: params.integrationId,
+            direction: ChannelInteractionDirection.INBOUND,
+            eventAt: { gte: params.recentEventSince },
+          },
+          distinct: ['counterpartyExternalId'],
+          orderBy: [
+            { counterpartyExternalId: 'asc' },
+            { eventAt: 'desc' },
+          ],
+          take: params.poolSize,
+          select: { counterpartyExternalId: true },
+        }),
+      ]);
+      const recentFollowerIds = new Set(
+        (
+          await tx.channelAudienceMember.findMany({
+            where: {
+              organizationId: params.organizationId,
+              integrationId: params.integrationId,
+              membershipState: ChannelAudienceMembership.FOLLOWER,
+              externalId: {
+                in: recent.map((row) => row.counterpartyExternalId),
+              },
+            },
+            select: { externalId: true },
+          })
+        ).map((row) => row.externalId)
+      );
+      const storedIds = stored.map((row) => row.externalId);
+      const recentIds = recent
+        .map((row) => row.counterpartyExternalId)
+        .filter((externalId) => recentFollowerIds.has(externalId));
+      const externalIds: string[] = [];
+      const seen = new Set<string>();
+      let storedIndex = 0;
+      let recentIndex = 0;
+      while (
+        externalIds.length < params.poolSize &&
+        (recentIndex < recentIds.length || storedIndex < storedIds.length)
+      ) {
+        const externalId =
+          recentIndex < recentIds.length
+            ? recentIds[recentIndex++]
+            : storedIds[storedIndex++];
+        if (!seen.has(externalId)) {
+          seen.add(externalId);
+          externalIds.push(externalId);
+        }
+        if (
+          externalIds.length < params.poolSize &&
+          storedIndex < storedIds.length
+        ) {
+          const storedExternalId = storedIds[storedIndex++];
+          if (!seen.has(storedExternalId)) {
+            seen.add(storedExternalId);
+            externalIds.push(storedExternalId);
+          }
+        }
+      }
+      return externalIds;
+    });
+  }
+
+  async listHotRulesCandidates(params: {
+    organizationId: string;
+    integrationId: string;
+    strategyId: ChannelStrategyId;
+    strategyVersion: number;
+    poolSize: number;
+  }): Promise<HotCandidate[]> {
+    if (!Number.isInteger(params.poolSize) || params.poolSize < 1) {
+      throw new Error('poolSize must be a positive integer');
+    }
+    return this.withSerializableRetry(async (tx) => {
+      await this.assertOwnedIntegration(
+        tx,
+        params.organizationId,
+        params.integrationId
+      );
+      return tx.channelAudienceMember.findMany({
+        where: {
+          organizationId: params.organizationId,
+          integrationId: params.integrationId,
+          relationshipStrategyId: params.strategyId,
+          relationshipStrategyVersion: params.strategyVersion,
+          ...this.hotEligibilityWhere(),
+        },
+        orderBy: [
+          { relationshipNetGap: { sort: 'desc', nulls: 'last' } },
+          { relationshipReciprocationScore: { sort: 'desc', nulls: 'last' } },
+          { externalId: 'asc' },
+        ],
+        take: params.poolSize,
+        select: {
+          externalId: true,
+          username: true,
+          name: true,
+          bio: true,
+          profileUrl: true,
+          followersCount: true,
+          followingCount: true,
+          relationshipNetGap: true,
+          relationshipReciprocationScore: true,
+          relationshipEffortScore: true,
+          relationshipTriage: true,
+          relationshipSnapshotAt: true,
+          lastInboundAt: true,
+          lastOutboundAt: true,
+        },
+      });
+    });
+  }
+
+  async listHotMaterializeCandidates(after?: string, take = 1, hour = utcHourKey()) {
+    if (!Number.isInteger(take) || take < 1) {
+      throw new Error('take must be a positive integer');
+    }
+    const integrations = await this._integration.model.integration.findMany({
+      where: {
+        type: 'social',
+        disabled: false,
+        deletedAt: null,
+        channelFollowerSyncState: {
+          is: {
+            status: ChannelFollowerSyncStatus.COMPLETE,
+            completedAt: { not: null },
+          },
+        },
+        channelAudienceHotPickBatches: { none: { hour } },
+        ...(after ? { id: { gt: after } } : {}),
+      },
+      orderBy: { id: 'asc' },
+      take: take + 1,
+      select: {
+        id: true,
+        organizationId: true,
+        providerIdentifier: true,
+        strategyId: true,
+        strategyVersion: true,
+      },
+    });
+    return {
+      candidates: integrations.slice(0, take),
+      next: integrations.length > take ? integrations[take - 1]?.id : undefined,
+    };
+  }
+
+  async replaceHotPickBatch(params: {
+    organizationId: string;
+    integrationId: string;
+    hour: string;
+    strategyId: ChannelStrategyId;
+    strategyVersion: number;
+    materializationVersion: number;
+    candidateCount: number;
+    source?: string;
+    completedAt?: Date;
+    picks: HotPickInput[];
+  }) {
+    const parsedHour = new Date(`${params.hour}:00:00.000Z`);
+    if (
+      !/^\d{4}-\d{2}-\d{2}T\d{2}$/.test(params.hour) ||
+      Number.isNaN(parsedHour.getTime()) ||
+      utcHourKey(parsedHour) !== params.hour
+    ) {
+      throw new Error('hour must be a UTC hour key');
+    }
+    const externalIds = params.picks.map((pick) => pick.counterpartyExternalId);
+    const rulesRanks = params.picks.map((pick) => pick.rulesRank);
+    const finalRanks = params.picks.map((pick) => pick.finalRank);
+    if (
+      new Set(externalIds).size !== externalIds.length ||
+      new Set(rulesRanks).size !== rulesRanks.length ||
+      new Set(finalRanks).size !== finalRanks.length ||
+      params.picks.some(
+        (pick) =>
+          !Number.isInteger(pick.rulesRank) ||
+          !Number.isInteger(pick.finalRank) ||
+          pick.rulesRank < 1 ||
+          pick.finalRank < 1
+      )
+    ) {
+      throw new Error('Hot picks must have unique positive member and rank values');
+    }
+    return this.withSerializableRetry(async (tx) => {
+      await this.assertOwnedIntegration(
+        tx,
+        params.organizationId,
+        params.integrationId
+      );
+      if (externalIds.length) {
+        const members = await tx.channelAudienceMember.findMany({
+          where: {
+            organizationId: params.organizationId,
+            integrationId: params.integrationId,
+            externalId: { in: externalIds },
+          },
+          select: { externalId: true },
+        });
+        if (members.length !== externalIds.length) {
+          throw new Error('Hot picks must belong to the integration');
+        }
+      }
+      await tx.channelAudienceHotPick.deleteMany({
+        where: {
+          organizationId: params.organizationId,
+          integrationId: params.integrationId,
+          hour: params.hour,
+        },
+      });
+      await tx.channelAudienceHotPickBatch.upsert({
+        where: {
+          organizationId_integrationId_hour: {
+            organizationId: params.organizationId,
+            integrationId: params.integrationId,
+            hour: params.hour,
+          },
+        },
+        create: {
+          organizationId: params.organizationId,
+          integrationId: params.integrationId,
+          hour: params.hour,
+          strategyId: params.strategyId,
+          strategyVersion: params.strategyVersion,
+          materializationVersion: params.materializationVersion,
+          candidateCount: params.candidateCount,
+          pickCount: params.picks.length,
+          source: params.source ?? 'rules',
+          completedAt: params.completedAt ?? new Date(),
+        },
+        update: {
+          strategyId: params.strategyId,
+          strategyVersion: params.strategyVersion,
+          materializationVersion: params.materializationVersion,
+          candidateCount: params.candidateCount,
+          pickCount: params.picks.length,
+          source: params.source ?? 'rules',
+          completedAt: params.completedAt ?? new Date(),
+        },
+      });
+      if (params.picks.length) {
+        await tx.channelAudienceHotPick.createMany({
+          data: params.picks.map((pick) => ({
+            organizationId: params.organizationId,
+            integrationId: params.integrationId,
+            hour: params.hour,
+            counterpartyExternalId: pick.counterpartyExternalId,
+            rulesRank: pick.rulesRank,
+            finalRank: pick.finalRank,
+            rulesReason: pick.rulesReason,
+            aiRank: pick.aiRank ?? null,
+            aiReason: pick.aiReason ?? null,
+            suggestedAction: pick.suggestedAction ?? null,
+            source: pick.source ?? params.source ?? 'rules',
+          })),
+        });
+      }
+      return { count: params.picks.length };
+    });
+  }
+
+  async getAudienceHot(query: AudienceHotQuery) {
+    const now = query.now ?? new Date();
+    const currentHour = utcHourKey(now);
+    const previousHour = utcHourKey(new Date(now.getTime() - 60 * 60 * 1000));
+    return this.withSerializableRetry(async (tx) => {
+      await this.assertOwnedIntegration(tx, query.organizationId, query.integrationId);
+      if (
+        query.hour &&
+        query.hour !== currentHour &&
+        query.hour !== previousHour
+      ) {
+        return {
+          items: [],
+          hasMore: false,
+          source: 'materialized' as const,
+          hour: null,
+        };
+      }
+      const batch = query.hour
+        ? await tx.channelAudienceHotPickBatch.findUnique({
+          where: {
+            organizationId_integrationId_hour: {
+              organizationId: query.organizationId,
+              integrationId: query.integrationId,
+              hour: query.hour,
+            },
+          },
+        })
+        : await (async () => {
+          const current = await tx.channelAudienceHotPickBatch.findUnique({
+            where: {
+              organizationId_integrationId_hour: {
+                organizationId: query.organizationId,
+                integrationId: query.integrationId,
+                hour: currentHour,
+              },
+            },
+          });
+          return (
+            current ??
+            (await tx.channelAudienceHotPickBatch.findUnique({
+              where: {
+                organizationId_integrationId_hour: {
+                  organizationId: query.organizationId,
+                  integrationId: query.integrationId,
+                  hour: previousHour,
+                },
+              },
+            }))
+          );
+        })();
+      if (
+        !batch ||
+        batch.strategyId !== query.strategyId ||
+        batch.strategyVersion !== query.strategyVersion ||
+        batch.materializationVersion !== query.materializationVersion
+      ) {
+        return { items: [], hasMore: false, source: 'materialized' as const, hour: null };
+      }
+      const comparison = query.direction === 'desc' ? 'lt' : 'gt';
+      const rows = await tx.channelAudienceHotPick.findMany({
+        where: {
+          organizationId: query.organizationId,
+          integrationId: query.integrationId,
+          hour: batch.hour,
+          audienceMember: {
+            ...this.hotEligibilityWhere(),
+            ...(query.search ? this.audienceSearchFilter(query.search) : {}),
+          },
+          ...(query.cursor
+            ? {
+              OR: [
+                { finalRank: { [comparison]: query.cursor.finalRank } },
+                {
+                  finalRank: query.cursor.finalRank,
+                  counterpartyExternalId: { [comparison]: query.cursor.externalId },
+                },
+              ],
+            }
+            : {}),
+        },
+        orderBy: [
+          { finalRank: query.direction },
+          { counterpartyExternalId: query.direction },
+        ],
+        take: query.limit + 1,
+        select: {
+          finalRank: true,
+          rulesRank: true,
+          rulesReason: true,
+          aiReason: true,
+          suggestedAction: true,
+          source: true,
+          audienceMember: { select: this.audienceMemberListSelect(query.userId) },
+        },
+      });
+      return {
+        items: rows.slice(0, query.limit).map((row) => ({
+          ...row.audienceMember,
+          finalRank: row.finalRank,
+          rulesRank: row.rulesRank,
+          hotReason: row.aiReason || row.rulesReason,
+          suggestedAction: row.suggestedAction,
+          hotSource: row.source,
+        })),
+        hasMore: rows.length > query.limit,
+        source: 'materialized' as const,
+        hour: batch.hour,
+      };
     });
   }
 
@@ -3973,6 +4504,11 @@ export class ChannelInteractionRepository {
     if (category === 'cultivate') {
       return {
         ...this.cultivateEligibilityWhere(),
+      };
+    }
+    if (category === 'hot') {
+      return {
+        ...this.hotEligibilityWhere(),
       };
     }
     return {

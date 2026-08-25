@@ -65,6 +65,7 @@ describe('expertise agent tools', () => {
           description: expect.any(String),
           tags: expect.any(Array),
           strategyTags: expect.any(Array),
+          triageTags: expect.any(Array),
           fileSize: expect.any(Number),
         })
       );

@@ -17,6 +17,35 @@ const VoicePrompt = z.object({
   voice: z.string(),
 });
 
+const TriageRerankResponse = z.object({
+  candidates: z.array(
+    z.object({
+      externalId: z.string().min(1).max(512),
+      reason: z.string().min(1).max(280),
+      suggestedAction: z.string().min(1).max(280),
+    })
+  ),
+});
+
+export type TriageRerankInput = {
+  triage: 'hot' | 'cultivate';
+  strategy: {
+    id: string;
+    version: number;
+    summary: string;
+    directives: readonly string[];
+  };
+  channelDocuments: Array<{ name: string; content: string }>;
+  expertise: Array<{ name: string; content: string }>;
+  candidates: Array<{
+    externalId: string;
+    name?: string;
+    username?: string;
+    bio?: string;
+    rulesReason: string;
+  }>;
+};
+
 @Injectable()
 export class OpenaiService {
   async generateImage(prompt: string, isVertical = false) {
@@ -305,8 +334,45 @@ export class OpenaiService {
     return cleaned.slice(0, 125);
   }
 
+  async rerankTriageCandidates(input: TriageRerankInput) {
+    const parsed = (
+      await openai.chat.completions.parse({
+        model: 'gpt-4.1',
+        messages: [
+          {
+            role: 'system',
+            content: `You prioritize a bounded list of ${input.triage} relationship triage candidates.
+Use only supplied channel context, strategy directives, expertise playbooks, profile details, and rules reasons.
+Return an ordered subset of candidate IDs. Do not add IDs, scores, scoring thresholds, or configuration.
+Each reason must be concise and grounded in provided evidence. A suggestedAction is only a recommendation; never claim an action was performed.
+Do not infer private traits. Omit candidates when deferral or no engagement is appropriate.`,
+          },
+          {
+            role: 'user',
+            content: JSON.stringify(input),
+          },
+        ],
+        response_format: zodResponseFormat(
+          TriageRerankResponse,
+          'triageRerank'
+        ),
+      })
+    ).choices[0].message.parsed;
+    if (!parsed) {
+      throw new Error('Empty triage rerank');
+    }
+    return parsed.candidates;
+  }
+
   async scoreLeadFit(input: {
     channelDocuments: Array<{ name: string; content: string }>;
+    strategy?: {
+      id: string;
+      version: number;
+      summary: string;
+      directives: readonly string[];
+    };
+    expertise?: Array<{ name: string; content: string }>;
     candidate: {
       name?: string;
       username?: string;
@@ -352,7 +418,7 @@ export class OpenaiService {
           {
             role: 'system',
             content: `You score how well a social profile fits a channel's intended audience.
-Use only the channel Markdown documents, the candidate's public profile text, and the human feedback examples.
+Use only the strategy context, channel Markdown documents, expertise playbooks, candidate's public profile text, and human feedback examples.
 Score 0-100 where 100 is an excellent fit.
 Penalize clear conflicts with the channel's stated beliefs, politics, audience, or topics.
 Reward explicit topical alignment (for example tech) when the channel seeks that audience.
@@ -366,6 +432,8 @@ If channel documents are missing, score conservatively from general profile qual
             role: 'user',
             content: JSON.stringify({
               channelDocuments: documents,
+              strategy: input.strategy,
+              expertise: input.expertise || [],
               candidate: input.candidate,
               discoveredVia: input.bridges || [],
               rejectedExamples: input.rejectedExamples || [],
