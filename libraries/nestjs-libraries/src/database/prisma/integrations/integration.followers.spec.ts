@@ -3207,8 +3207,8 @@ describe('IntegrationService followers', () => {
         },
       ],
       hasMore: false,
-      source: 'picks',
-      day: '2026-08-21',
+      source: 'materialized',
+      hour: '2026-08-21T12',
     });
 
     await expect(

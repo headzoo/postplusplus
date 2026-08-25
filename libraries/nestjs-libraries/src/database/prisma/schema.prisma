@@ -62,6 +62,7 @@ model Organization {
   channelAudienceLeadFitFeedbacks     ChannelAudienceLeadFitFeedback[]
   channelRelationshipGradeSnapshots   ChannelRelationshipGradeSnapshot[]
   channelAudienceLeadBridges          ChannelAudienceLeadBridge[]
+  channelAudienceCultivatePickBatches ChannelAudienceCultivatePickBatch[]
   channelAudienceCultivatePicks       ChannelAudienceCultivatePick[]
   channelAudienceHotPickBatches       ChannelAudienceHotPickBatch[]
   channelAudienceHotPicks             ChannelAudienceHotPick[]
@@ -468,6 +469,7 @@ model Integration {
   channelAudienceLeadFitFeedbacks     ChannelAudienceLeadFitFeedback[]
   channelRelationshipGradeSnapshots   ChannelRelationshipGradeSnapshot[]
   channelAudienceLeadBridges          ChannelAudienceLeadBridge[]
+  channelAudienceCultivatePickBatches ChannelAudienceCultivatePickBatch[]
   channelAudienceCultivatePicks       ChannelAudienceCultivatePick[]
   channelAudienceHotPickBatches       ChannelAudienceHotPickBatch[]
   channelAudienceHotPicks             ChannelAudienceHotPick[]
@@ -1981,10 +1983,32 @@ model ChannelAudienceLeadBridge {
   @@index([organizationId])
 }
 
+model ChannelAudienceCultivatePickBatch {
+  organizationId         String
+  integrationId          String
+  hour                   String
+  strategyId             String
+  strategyVersion        Int
+  materializationVersion Int
+  candidateCount         Int
+  pickCount              Int
+  source                 String                         @default("rules")
+  completedAt            DateTime
+  createdAt              DateTime                       @default(now())
+  updatedAt              DateTime                       @updatedAt
+  organization           Organization                   @relation(fields: [organizationId], references: [id])
+  integration            Integration                    @relation(fields: [integrationId], references: [id])
+  picks                  ChannelAudienceCultivatePick[]
+
+  @@id([organizationId, integrationId, hour])
+  @@index([integrationId, hour])
+  @@index([organizationId])
+}
+
 model ChannelAudienceCultivatePick {
   organizationId         String
   integrationId          String
-  day                    String
+  hour                   String
   counterpartyExternalId String
   rulesRank              Int
   finalRank              Int
@@ -1992,35 +2016,36 @@ model ChannelAudienceCultivatePick {
   aiRank                 Int?
   aiReason               String?
   suggestedAction        String?
-  source                 String                @default("rules")
-  createdAt              DateTime              @default(now())
-  updatedAt              DateTime              @updatedAt
-  organization           Organization          @relation(fields: [organizationId], references: [id])
-  integration            Integration           @relation(fields: [integrationId], references: [id])
-  audienceMember         ChannelAudienceMember @relation("AudienceMemberCultivatePicks", fields: [integrationId, counterpartyExternalId], references: [integrationId, externalId])
+  source                 String                            @default("rules")
+  createdAt              DateTime                          @default(now())
+  updatedAt              DateTime                          @updatedAt
+  organization           Organization                      @relation(fields: [organizationId], references: [id])
+  integration            Integration                       @relation(fields: [integrationId], references: [id])
+  batch                  ChannelAudienceCultivatePickBatch @relation(fields: [organizationId, integrationId, hour], references: [organizationId, integrationId, hour])
+  audienceMember         ChannelAudienceMember             @relation("AudienceMemberCultivatePicks", fields: [integrationId, counterpartyExternalId], references: [integrationId, externalId])
 
-  @@id([organizationId, integrationId, day, counterpartyExternalId])
-  @@index([integrationId, day, finalRank])
-  @@index([organizationId, integrationId, day])
+  @@id([organizationId, integrationId, hour, counterpartyExternalId])
+  @@index([integrationId, hour, finalRank])
+  @@index([organizationId, integrationId, hour])
   @@index([organizationId])
 }
 
 model ChannelAudienceHotPickBatch {
-  organizationId           String
-  integrationId            String
-  hour                     String
-  strategyId               String
-  strategyVersion          Int
-  materializationVersion   Int
-  candidateCount           Int
-  pickCount                Int
-  source                   String                @default("rules")
-  completedAt              DateTime
-  createdAt                DateTime              @default(now())
-  updatedAt                DateTime              @updatedAt
-  organization             Organization          @relation(fields: [organizationId], references: [id])
-  integration              Integration           @relation(fields: [integrationId], references: [id])
-  picks                    ChannelAudienceHotPick[]
+  organizationId         String
+  integrationId          String
+  hour                   String
+  strategyId             String
+  strategyVersion        Int
+  materializationVersion Int
+  candidateCount         Int
+  pickCount              Int
+  source                 String                   @default("rules")
+  completedAt            DateTime
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  organization           Organization             @relation(fields: [organizationId], references: [id])
+  integration            Integration              @relation(fields: [integrationId], references: [id])
+  picks                  ChannelAudienceHotPick[]
 
   @@id([organizationId, integrationId, hour])
   @@index([integrationId, hour])
@@ -2028,23 +2053,23 @@ model ChannelAudienceHotPickBatch {
 }
 
 model ChannelAudienceHotPick {
-  organizationId           String
-  integrationId            String
-  hour                     String
-  counterpartyExternalId   String
-  rulesRank                Int
-  finalRank                Int
-  rulesReason              String
-  aiRank                   Int?
-  aiReason                 String?
-  suggestedAction          String?
-  source                   String                @default("rules")
-  createdAt                DateTime              @default(now())
-  updatedAt                DateTime              @updatedAt
-  organization             Organization          @relation(fields: [organizationId], references: [id])
-  integration              Integration           @relation(fields: [integrationId], references: [id])
-  batch                    ChannelAudienceHotPickBatch @relation(fields: [organizationId, integrationId, hour], references: [organizationId, integrationId, hour])
-  audienceMember           ChannelAudienceMember @relation("AudienceMemberHotPicks", fields: [integrationId, counterpartyExternalId], references: [integrationId, externalId])
+  organizationId         String
+  integrationId          String
+  hour                   String
+  counterpartyExternalId String
+  rulesRank              Int
+  finalRank              Int
+  rulesReason            String
+  aiRank                 Int?
+  aiReason               String?
+  suggestedAction        String?
+  source                 String                      @default("rules")
+  createdAt              DateTime                    @default(now())
+  updatedAt              DateTime                    @updatedAt
+  organization           Organization                @relation(fields: [organizationId], references: [id])
+  integration            Integration                 @relation(fields: [integrationId], references: [id])
+  batch                  ChannelAudienceHotPickBatch @relation(fields: [organizationId, integrationId, hour], references: [organizationId, integrationId, hour])
+  audienceMember         ChannelAudienceMember       @relation("AudienceMemberHotPicks", fields: [integrationId, counterpartyExternalId], references: [integrationId, externalId])
 
   @@id([organizationId, integrationId, hour, counterpartyExternalId])
   @@index([integrationId, hour, finalRank])
@@ -2111,6 +2136,8 @@ enum WebhookHttpLogSource {
 enum AdminScheduleLogKey {
   RELATIONSHIP_GRADES
   FOLLOWER_BOT_SCORES
+  HOT_TRIAGE
+  FOLLOWER_CULTIVATE
   LEAD_BRIDGE
   MISSING_POST_RECOVERY
   POST_WORKFLOWS

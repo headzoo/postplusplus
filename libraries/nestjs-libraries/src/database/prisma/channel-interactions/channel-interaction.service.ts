@@ -1718,11 +1718,27 @@ export class ChannelInteractionService {
     integrationId: string,
     now = new Date()
   ) {
-    const day = utcDayKey(now);
+    const hour = utcHourKey(now);
     const config = await this.resolveTriageMaterializationConfig(
       organizationId,
       integrationId
     );
+    const nearFullAt = Math.ceil(
+      config.profile.cultivate.pickLimit *
+      config.profile.cultivate.nearFullRatio
+    );
+    const visibleCount = await this._repository.countVisibleCultivatePicks({
+      organizationId,
+      integrationId,
+      hour,
+      strategyId: config.strategyId,
+      strategyVersion: config.strategyVersion,
+      materializationVersion: config.materializationVersion,
+    });
+    if (visibleCount >= nearFullAt) {
+      return { hour, skipped: 'near_full' as const, visibleCount };
+    }
+
     const candidates = await this._repository.listCultivateCandidates({
       organizationId,
       integrationId,
@@ -1732,7 +1748,7 @@ export class ChannelInteractionService {
       staleDays: config.profile.cultivate.staleDays,
     });
     const ranked = this._repository
-      .rankCultivateCandidates(candidates, day, now)
+      .rankCultivateCandidates(candidates, hour, now)
       .map((row) => ({
         ...row,
         rulesReason: row.rulesReason,
@@ -1755,14 +1771,21 @@ export class ChannelInteractionService {
       ...(row.suggestedAction ? { suggestedAction: row.suggestedAction } : {}),
       source: row.source,
     }));
-    const result = await this._repository.upsertCultivatePicks({
+    const result = await this._repository.replaceCultivatePickBatch({
       organizationId,
       integrationId,
-      day,
+      hour,
+      strategyId: config.strategyId,
+      strategyVersion: config.strategyVersion,
+      materializationVersion: config.materializationVersion,
+      candidateCount: candidates.length,
+      source: reranked.source,
+      completedAt: now,
       picks,
     });
     return {
-      day,
+      hour,
+      skipped: false as const,
       candidateCount: candidates.length,
       pickCount: result.count,
     };

@@ -15,9 +15,12 @@ import { AdminStatsService } from '@gitroom/nestjs-libraries/database/prisma/adm
 import { AdminUsersService } from '@gitroom/nestjs-libraries/database/prisma/admin-users/admin-users.service';
 import { RelationshipGradeScheduleService } from '@gitroom/nestjs-libraries/temporal/relationship-grade.schedule.service';
 import { FollowerBotScoreScheduleService } from '@gitroom/nestjs-libraries/temporal/follower-bot-score.schedule.service';
+import { HotMaterializationScheduleService } from '@gitroom/nestjs-libraries/temporal/hot-triage.schedule.service';
+import { CultivateMaterializationScheduleService } from '@gitroom/nestjs-libraries/temporal/cultivate.schedule.service';
 import { AdminScheduleWorkflowService } from '@gitroom/nestjs-libraries/temporal/admin-schedule.workflow.service';
 import { RelationshipGradeScheduleDto } from '@gitroom/nestjs-libraries/dtos/admin/relationship-grade.schedule.dto';
 import { FollowerBotScoreScheduleDto } from '@gitroom/nestjs-libraries/dtos/admin/follower-bot-score.schedule.dto';
+import { IntervalHoursScheduleDto } from '@gitroom/nestjs-libraries/dtos/admin/interval-hours.schedule.dto';
 import { AdminScheduleLogsQueryDto } from '@gitroom/nestjs-libraries/dtos/admin/admin-schedule-logs.query.dto';
 import { AdminScheduleLogService } from '@gitroom/nestjs-libraries/database/prisma/admin-schedule-logs/admin-schedule-log.service';
 import { RequireAdminStepUp } from '@gitroom/backend/services/auth/admin-step-up.decorator';
@@ -33,6 +36,8 @@ export class AdminController {
     private _adminUsersService: AdminUsersService,
     private _relationshipGradeScheduleService: RelationshipGradeScheduleService,
     private _followerBotScoreScheduleService: FollowerBotScoreScheduleService,
+    private _hotMaterializationScheduleService: HotMaterializationScheduleService,
+    private _cultivateMaterializationScheduleService: CultivateMaterializationScheduleService,
     private _adminScheduleWorkflowService: AdminScheduleWorkflowService,
     private _adminScheduleLogService: AdminScheduleLogService
   ) { }
@@ -169,6 +174,66 @@ export class AdminController {
   async triggerFollowerBotScoreSchedule(@GetUserFromRequest() user: User) {
     this.assertSuperAdmin(user);
     return this._followerBotScoreScheduleService.trigger();
+  }
+
+  @Get('/schedule/hot-triage')
+  async getHotTriageSchedule(@GetUserFromRequest() user: User) {
+    this.assertSuperAdmin(user);
+    return this._hotMaterializationScheduleService.getStatus();
+  }
+
+  @Put('/schedule/hot-triage')
+  @RequireAdminStepUp('fresh')
+  async updateHotTriageSchedule(
+    @GetUserFromRequest() user: User,
+    @Body() body: IntervalHoursScheduleDto
+  ) {
+    this.assertSuperAdmin(user);
+    try {
+      return await this._hotMaterializationScheduleService.update(body);
+    } catch (error) {
+      if (error instanceof RangeError) {
+        throw new HttpException(error.message, 400);
+      }
+      throw error;
+    }
+  }
+
+  @Post('/schedule/hot-triage/trigger')
+  @RequireAdminStepUp('fresh')
+  async triggerHotTriageSchedule(@GetUserFromRequest() user: User) {
+    this.assertSuperAdmin(user);
+    return this._hotMaterializationScheduleService.trigger();
+  }
+
+  @Get('/schedule/follower-cultivate')
+  async getFollowerCultivateSchedule(@GetUserFromRequest() user: User) {
+    this.assertSuperAdmin(user);
+    return this._cultivateMaterializationScheduleService.getStatus();
+  }
+
+  @Put('/schedule/follower-cultivate')
+  @RequireAdminStepUp('fresh')
+  async updateFollowerCultivateSchedule(
+    @GetUserFromRequest() user: User,
+    @Body() body: IntervalHoursScheduleDto
+  ) {
+    this.assertSuperAdmin(user);
+    try {
+      return await this._cultivateMaterializationScheduleService.update(body);
+    } catch (error) {
+      if (error instanceof RangeError) {
+        throw new HttpException(error.message, 400);
+      }
+      throw error;
+    }
+  }
+
+  @Post('/schedule/follower-cultivate/trigger')
+  @RequireAdminStepUp('fresh')
+  async triggerFollowerCultivateSchedule(@GetUserFromRequest() user: User) {
+    this.assertSuperAdmin(user);
+    return this._cultivateMaterializationScheduleService.trigger();
   }
 
   @Get('/schedule/missing-post-recovery')

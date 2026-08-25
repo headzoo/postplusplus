@@ -20,6 +20,18 @@ import {
 /** Max followers fetched per board column on the All overview. */
 export const FOLLOWER_BOARD_PREVIEW_LIMIT = 24;
 
+/** Target visible rows per board column before scrolling. */
+export const FOLLOWER_BOARD_VISIBLE_ROWS = 10;
+
+/** Matches FollowerBoardRow skeleton/row height (36px avatar + 16px vertical padding). */
+export const FOLLOWER_BOARD_ROW_HEIGHT_PX = 52;
+
+export const FOLLOWER_BOARD_ROW_GAP_PX = 6;
+
+export const FOLLOWER_BOARD_LIST_MIN_HEIGHT_PX =
+  FOLLOWER_BOARD_VISIBLE_ROWS * FOLLOWER_BOARD_ROW_HEIGHT_PX +
+  (FOLLOWER_BOARD_VISIBLE_ROWS - 1) * FOLLOWER_BOARD_ROW_GAP_PX;
+
 export type FollowerSegmentColor =
   | 'blue'
   | 'green'

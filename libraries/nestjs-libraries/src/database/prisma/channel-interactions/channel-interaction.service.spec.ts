@@ -129,6 +129,8 @@ const createRepository = () => ({
   }),
   listCultivateCandidates: jest.fn().mockResolvedValue([]),
   rankCultivateCandidates: jest.fn().mockReturnValue([]),
+  countVisibleCultivatePicks: jest.fn().mockResolvedValue(0),
+  replaceCultivatePickBatch: jest.fn().mockResolvedValue({ count: 0 }),
   upsertCultivatePicks: jest.fn().mockResolvedValue({ count: 0 }),
   countVisibleHotPicks: jest.fn().mockResolvedValue(0),
   listHotRefreshExternalIds: jest.fn().mockResolvedValue([]),
@@ -2108,30 +2110,33 @@ describe('ChannelInteractionService', () => {
         rulesReason: 'No outbound attention yet · mutual relationship',
       },
     ]);
-    repository.upsertCultivatePicks.mockResolvedValue({ count: 1 });
+    repository.replaceCultivatePickBatch.mockResolvedValue({ count: 1 });
     const service = new ChannelInteractionService(repository as any);
 
     await expect(
       service.materializeCultivatePicksForIntegration('org', 'integration')
     ).resolves.toEqual({
-      day: '2026-08-12',
+      hour: '2026-08-12T12',
+      skipped: false,
       candidateCount: 1,
       pickCount: 1,
     });
-    expect(repository.upsertCultivatePicks).toHaveBeenCalledWith({
-      organizationId: 'org',
-      integrationId: 'integration',
-      day: '2026-08-12',
-      picks: [
-        {
-          counterpartyExternalId: 'warm-1',
-          rulesRank: 1,
-          finalRank: 1,
-          rulesReason: 'No outbound attention yet · mutual relationship',
-          source: 'rules',
-        },
-      ],
-    });
+    expect(repository.replaceCultivatePickBatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: 'org',
+        integrationId: 'integration',
+        hour: '2026-08-12T12',
+        picks: [
+          {
+            counterpartyExternalId: 'warm-1',
+            rulesRank: 1,
+            finalRank: 1,
+            rulesReason: 'No outbound attention yet · mutual relationship',
+            source: 'rules',
+          },
+        ],
+      })
+    );
   });
 
   it('skips near-full Hot batches before refresh or AI, but refreshes a just-below-threshold batch before selecting candidates', async () => {
@@ -2366,7 +2371,7 @@ describe('ChannelInteractionService', () => {
           rulesReason: 'r'.repeat(501),
         },
       ]);
-      repository.upsertCultivatePicks.mockResolvedValue({ count: 1 });
+      repository.replaceCultivatePickBatch.mockResolvedValue({ count: 1 });
       const openaiService = {
         rerankTriageCandidates: jest.fn().mockResolvedValue([
           {
@@ -2402,7 +2407,7 @@ describe('ChannelInteractionService', () => {
           ],
         })
       );
-      expect(repository.upsertCultivatePicks).toHaveBeenCalledWith(
+      expect(repository.replaceCultivatePickBatch).toHaveBeenCalledWith(
         expect.objectContaining({
           picks: [
             expect.objectContaining({

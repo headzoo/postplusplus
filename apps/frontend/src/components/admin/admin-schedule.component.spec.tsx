@@ -57,6 +57,20 @@ const scheduleByKey: Record<string, unknown> = {
     cadence: { intervalHours: 6 },
     nextRunTimes: ['2026-08-21T12:00:00.000Z'],
   },
+  '/admin/schedule/hot-triage': {
+    scheduleId: 'channel-hot-materialization-schedule-v1',
+    exists: true,
+    paused: false,
+    cadence: { intervalHours: 1 },
+    nextRunTimes: ['2026-08-21T13:00:00.000Z'],
+  },
+  '/admin/schedule/follower-cultivate': {
+    scheduleId: 'channel-cultivate-materialization-schedule-v1',
+    exists: true,
+    paused: false,
+    cadence: { intervalHours: 1 },
+    nextRunTimes: ['2026-08-21T13:00:00.000Z'],
+  },
   '/admin/schedule/missing-post-recovery': {
     workflowId: 'missing-post-workflow',
     exists: true,

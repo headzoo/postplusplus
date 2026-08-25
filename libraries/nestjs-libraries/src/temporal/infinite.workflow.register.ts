@@ -13,11 +13,8 @@ import {
   LEAD_BRIDGE_WORKFLOW_ID,
   LEAD_BRIDGE_WORKFLOW_TYPE,
 } from './lead-bridge.schedule';
-import {
-  CULTIVATE_WORKFLOW_ID,
-  CULTIVATE_WORKFLOW_TYPE,
-} from './cultivate.schedule';
 import { HotMaterializationScheduleService } from './hot-triage.schedule.service';
+import { CultivateMaterializationScheduleService } from './cultivate.schedule.service';
 
 @Injectable()
 export class InfiniteWorkflowRegister implements OnModuleInit {
@@ -27,7 +24,8 @@ export class InfiniteWorkflowRegister implements OnModuleInit {
     private _temporalService: TemporalService,
     private _relationshipGradeScheduleService: RelationshipGradeScheduleService,
     private _followerBotScoreScheduleService: FollowerBotScoreScheduleService,
-    private _hotMaterializationScheduleService: HotMaterializationScheduleService
+    private _hotMaterializationScheduleService: HotMaterializationScheduleService,
+    private _cultivateMaterializationScheduleService: CultivateMaterializationScheduleService
   ) { }
 
   async onModuleInit(): Promise<void> {
@@ -166,34 +164,7 @@ export class InfiniteWorkflowRegister implements OnModuleInit {
   }
 
   private async startChannelCultivate() {
-    const workflow = this._temporalService.client?.getRawClient()?.workflow;
-    if (!workflow) {
-      throw new Error(
-        'Temporal workflow client unavailable during cultivate start'
-      );
-    }
-    try {
-      await workflow.start(CULTIVATE_WORKFLOW_TYPE, {
-        workflowId: CULTIVATE_WORKFLOW_ID,
-        taskQueue: 'main',
-        args: [{}],
-      });
-    } catch (error) {
-      if (!this.isAlreadyStarted(error)) {
-        this._logger.error('Failed to start Channel cultivate daily picks', error);
-        throw error;
-      }
-    }
-    try {
-      await workflow
-        .getHandle(CULTIVATE_WORKFLOW_ID)
-        .signal('channelCultivate');
-    } catch (error) {
-      this._logger.warn(
-        'Channel cultivate daily picks were not poked after start',
-        error
-      );
-    }
+    await this._cultivateMaterializationScheduleService.install();
   }
 
   private async startChannelHotMaterialization() {
@@ -273,6 +244,7 @@ export class InfiniteWorkflowRegister implements OnModuleInit {
     InfiniteWorkflowRegister,
     FollowerBotScoreScheduleService,
     HotMaterializationScheduleService,
+    CultivateMaterializationScheduleService,
     AdminScheduleWorkflowService,
   ],
   get exports() {

@@ -5,7 +5,7 @@ jest.mock('@gitroom/nestjs-libraries/redis/redis.service', () => ({
   },
 }));
 jest.mock('@gitroom/nestjs-libraries/integrations/integration.manager', () => ({
-  IntegrationManager: class IntegrationManager {},
+  IntegrationManager: class IntegrationManager { },
 }));
 
 import { Test } from '@nestjs/testing';
@@ -25,6 +25,7 @@ import { ChannelAnalyticsRepository } from './channel-analytics/channel-analytic
 import { AdminScheduleLogService } from './admin-schedule-logs/admin-schedule-log.service';
 import { RelationshipGradeScheduleService } from '@gitroom/nestjs-libraries/temporal/relationship-grade.schedule.service';
 import { HotMaterializationScheduleService } from '@gitroom/nestjs-libraries/temporal/hot-triage.schedule.service';
+import { CultivateMaterializationScheduleService } from '@gitroom/nestjs-libraries/temporal/cultivate.schedule.service';
 import { InfiniteWorkflowRegisterModule } from '@gitroom/nestjs-libraries/temporal/infinite.workflow.register';
 
 const moduleProviders = (module: object) =>
@@ -40,6 +41,12 @@ describe('DatabaseModule dependency wiring', () => {
   it('registers HotMaterializationScheduleService in InfiniteWorkflowRegisterModule', () => {
     expect(moduleProviders(InfiniteWorkflowRegisterModule)).toContain(
       HotMaterializationScheduleService
+    );
+  });
+
+  it('registers CultivateMaterializationScheduleService in InfiniteWorkflowRegisterModule', () => {
+    expect(moduleProviders(InfiniteWorkflowRegisterModule)).toContain(
+      CultivateMaterializationScheduleService
     );
   });
 

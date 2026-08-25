@@ -23,7 +23,7 @@ export type AppendAdminScheduleLogInput = {
 
 @Injectable()
 export class AdminScheduleLogService {
-  constructor(private _repository: AdminScheduleLogRepository) {}
+  constructor(private _repository: AdminScheduleLogRepository) { }
 
   async append(input: AppendAdminScheduleLogInput) {
     try {
@@ -57,6 +57,8 @@ export class AdminScheduleLogService {
     if (
       value === 'relationship-grades' ||
       value === 'follower-bot-scores' ||
+      value === 'hot-triage' ||
+      value === 'follower-cultivate' ||
       value === 'lead-bridge' ||
       value === 'missing-post-recovery' ||
       value === 'post-workflows' ||

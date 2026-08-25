@@ -157,6 +157,10 @@ const createHarness = () => {
         _max: { bridgeRelationshipGrade: null },
       }),
     },
+    channelAudienceCultivatePickBatch: {
+      findUnique: jest.fn().mockResolvedValue(null),
+      upsert: jest.fn().mockResolvedValue({}),
+    },
     channelAudienceCultivatePick: {
       count: jest.fn().mockResolvedValue(0),
       findMany: jest.fn().mockResolvedValue([]),
@@ -202,6 +206,8 @@ const createHarness = () => {
         channelAudienceListMember: tx.channelAudienceListMember,
         channelAudienceHotPickBatch: tx.channelAudienceHotPickBatch,
         channelAudienceHotPick: tx.channelAudienceHotPick,
+        channelAudienceCultivatePickBatch: tx.channelAudienceCultivatePickBatch,
+        channelAudienceCultivatePick: tx.channelAudienceCultivatePick,
         channelRelationshipGradeSnapshot: tx.channelRelationshipGradeSnapshot,
       },
     } as any,
@@ -2513,7 +2519,7 @@ describe('ChannelInteractionRepository', () => {
     );
   });
 
-  it('ranks cultivate candidates by stale age then grade with day-seeded rotation', () => {
+  it('ranks cultivate candidates by stale age then grade with hour-seeded rotation', () => {
     const { repository } = createHarness();
     const now = new Date('2026-08-21T12:00:00.000Z');
     const ranked = repository.rankCultivateCandidates(
@@ -2531,7 +2537,7 @@ describe('ChannelInteractionRepository', () => {
           relationshipTriage: 'mutual',
         },
       ],
-      '2026-08-21',
+      '2026-08-21T12',
       now
     );
 
@@ -2542,9 +2548,14 @@ describe('ChannelInteractionRepository', () => {
     expect(ranked[1].finalRank).toBe(2);
   });
 
-  it('reads materialized cultivate picks when present for the day', async () => {
+  it('reads materialized cultivate picks when present for the hour', async () => {
     const { repository, tx } = createHarness();
-    tx.channelAudienceCultivatePick.count.mockResolvedValue(1);
+    tx.channelAudienceCultivatePickBatch.findUnique.mockResolvedValue({
+      hour: '2026-08-21T12',
+      strategyId: 'grow_audience',
+      strategyVersion: 1,
+      materializationVersion: 1,
+    });
     tx.channelAudienceCultivatePick.findMany.mockResolvedValue([
       {
         finalRank: 1,
@@ -2573,9 +2584,12 @@ describe('ChannelInteractionRepository', () => {
       repository.getAudienceCultivate({
         organizationId: 'org',
         integrationId: 'integration',
-        day: '2026-08-21',
+        strategyId: 'grow_audience',
+        strategyVersion: 1,
+        materializationVersion: 1,
         direction: 'asc',
         limit: 24,
+        now: new Date('2026-08-21T12:30:00.000Z'),
       })
     ).resolves.toEqual({
       items: [
@@ -2588,8 +2602,8 @@ describe('ChannelInteractionRepository', () => {
         }),
       ],
       hasMore: false,
-      source: 'picks',
-      day: '2026-08-21',
+      source: 'materialized',
+      hour: '2026-08-21T12',
     });
   });
 

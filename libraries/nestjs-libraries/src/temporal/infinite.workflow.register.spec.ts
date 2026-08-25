@@ -16,6 +16,9 @@ describe('InfiniteWorkflowRegister', () => {
     },
     hotMaterializationScheduleService = {
       install: jest.fn().mockResolvedValue(undefined),
+    },
+    cultivateMaterializationScheduleService = {
+      install: jest.fn().mockResolvedValue(undefined),
     }
   ) =>
     new InfiniteWorkflowRegister(
@@ -24,7 +27,8 @@ describe('InfiniteWorkflowRegister', () => {
       } as any,
       relationshipGradeScheduleService as any,
       followerBotScoreScheduleService as any,
-      hotMaterializationScheduleService as any
+      hotMaterializationScheduleService as any,
+      cultivateMaterializationScheduleService as any
     );
 
   const steadyStateWorkflow = () => ({
@@ -47,7 +51,7 @@ describe('InfiniteWorkflowRegister', () => {
     }
   });
 
-  it('installs the relationship grade and bot score Temporal schedules when cron execution is enabled', async () => {
+  it('installs Temporal schedules when cron execution is enabled', async () => {
     const workflow = steadyStateWorkflow();
     const relationshipGradeScheduleService = {
       install: jest.fn().mockResolvedValue(undefined),
@@ -58,11 +62,15 @@ describe('InfiniteWorkflowRegister', () => {
     const hotMaterializationScheduleService = {
       install: jest.fn().mockResolvedValue(undefined),
     };
+    const cultivateMaterializationScheduleService = {
+      install: jest.fn().mockResolvedValue(undefined),
+    };
     const register = createRegister(
       workflow,
       relationshipGradeScheduleService,
       followerBotScoreScheduleService,
-      hotMaterializationScheduleService
+      hotMaterializationScheduleService,
+      cultivateMaterializationScheduleService
     );
     process.env.RUN_CRON = '1';
 
@@ -71,8 +79,9 @@ describe('InfiniteWorkflowRegister', () => {
     expect(relationshipGradeScheduleService.install).toHaveBeenCalled();
     expect(followerBotScoreScheduleService.install).toHaveBeenCalled();
     expect(hotMaterializationScheduleService.install).toHaveBeenCalled();
+    expect(cultivateMaterializationScheduleService.install).toHaveBeenCalled();
     expect(workflow.start).not.toHaveBeenCalledWith(
-      'channelRelationshipGradeWorkflowV1',
+      'channelCultivateWorkflowV1',
       expect.anything()
     );
     expect(workflow.start).toHaveBeenCalledWith(
@@ -99,31 +108,17 @@ describe('InfiniteWorkflowRegister', () => {
         args: [{}],
       })
     );
-    expect(workflow.start).toHaveBeenCalledWith(
-      'channelCultivateWorkflowV1',
-      expect.objectContaining({
-        workflowId: 'channel-cultivate-workflow-v1',
-        taskQueue: 'main',
-        args: [{}],
-      })
-    );
     expect(workflow.getHandle).toHaveBeenCalledWith(
       'channel-analytics-snapshot-workflow-v2'
     );
     expect(workflow.getHandle).toHaveBeenCalledWith(
       'channel-lead-bridge-workflow-v1'
     );
-    expect(workflow.getHandle).toHaveBeenCalledWith(
-      'channel-cultivate-workflow-v1'
-    );
     expect(workflow.getHandle().signal).toHaveBeenCalledWith(
       'channelAnalyticsSnapshot'
     );
     expect(workflow.getHandle().signal).toHaveBeenCalledWith(
       'channelLeadBridge'
-    );
-    expect(workflow.getHandle().signal).toHaveBeenCalledWith(
-      'channelCultivate'
     );
   });
 
@@ -146,11 +141,9 @@ describe('InfiniteWorkflowRegister', () => {
         workflowId: 'channel-lead-bridge-workflow-v1',
       })
     );
-    expect(workflow.start).toHaveBeenCalledWith(
+    expect(workflow.start).not.toHaveBeenCalledWith(
       'channelCultivateWorkflowV1',
-      expect.objectContaining({
-        workflowId: 'channel-cultivate-workflow-v1',
-      })
+      expect.anything()
     );
     expect(workflow.start).toHaveBeenCalledWith(
       'channelAnalyticsSnapshotWorkflowV2',

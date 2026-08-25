@@ -12,9 +12,12 @@ describe('HotMaterializationScheduleService', () => {
     create: jest.Mock;
     getHandle: jest.Mock;
   }) =>
-    new HotMaterializationScheduleService({
-      client: { getRawClient: () => ({ schedule }) },
-    } as any);
+    new HotMaterializationScheduleService(
+      {
+        client: { getRawClient: () => ({ schedule }) },
+      } as any,
+      { append: jest.fn() } as any
+    );
 
   it('creates an hourly schedule with overlap skipped when none exists', async () => {
     const create = jest.fn().mockResolvedValue(undefined);

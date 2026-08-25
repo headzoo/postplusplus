@@ -2,28 +2,31 @@ import { Injectable, Logger } from '@nestjs/common';
 import { TemporalService } from 'nestjs-temporal-core';
 import { ScheduleOverlapPolicy } from '@temporalio/client';
 import {
-  DEFAULT_HOT_MATERIALIZATION_SCHEDULE,
-  HOT_MATERIALIZATION_SCHEDULE_ID,
-  HOT_MATERIALIZATION_WORKFLOW_ID,
-  HOT_MATERIALIZATION_WORKFLOW_TYPE,
-  HotMaterializationScheduleConfig,
-  normalizeHotMaterializationSchedule,
-  toHotMaterializationScheduleSpec,
-} from './hot-triage.schedule';
+  CULTIVATE_LEGACY_WORKFLOW_ID,
+  CULTIVATE_MATERIALIZATION_SCHEDULE_ID,
+  CULTIVATE_MATERIALIZATION_WORKFLOW_ID,
+  CULTIVATE_MATERIALIZATION_WORKFLOW_TYPE,
+  CultivateMaterializationScheduleConfig,
+  DEFAULT_CULTIVATE_MATERIALIZATION_SCHEDULE,
+  normalizeCultivateMaterializationSchedule,
+  toCultivateMaterializationScheduleSpec,
+} from './cultivate.schedule';
 import { AdminScheduleLogService } from '@gitroom/nestjs-libraries/database/prisma/admin-schedule-logs/admin-schedule-log.service';
 
-export type HotMaterializationScheduleStatus = {
+export type CultivateMaterializationScheduleStatus = {
   scheduleId: string;
   exists: boolean;
   paused: boolean;
-  cadence: HotMaterializationScheduleConfig;
+  cadence: CultivateMaterializationScheduleConfig;
   nextRunTimes: string[];
   note?: string;
 };
 
 @Injectable()
-export class HotMaterializationScheduleService {
-  private readonly _logger = new Logger(HotMaterializationScheduleService.name);
+export class CultivateMaterializationScheduleService {
+  private readonly _logger = new Logger(
+    CultivateMaterializationScheduleService.name
+  );
 
   constructor(
     private _temporalService: TemporalService,
@@ -31,17 +34,18 @@ export class HotMaterializationScheduleService {
   ) { }
 
   async install() {
+    await this.terminateLegacyWorkflow();
     try {
       await this.describe();
     } catch (error) {
       if (!this.isMissing(error)) {
         throw error;
       }
-      await this.create(DEFAULT_HOT_MATERIALIZATION_SCHEDULE);
+      await this.create(DEFAULT_CULTIVATE_MATERIALIZATION_SCHEDULE);
     }
   }
 
-  async getStatus(): Promise<HotMaterializationScheduleStatus> {
+  async getStatus(): Promise<CultivateMaterializationScheduleStatus> {
     try {
       return this.mapStatus(await this.describe(), true);
     } catch (error) {
@@ -49,25 +53,25 @@ export class HotMaterializationScheduleService {
         throw error;
       }
       return {
-        scheduleId: HOT_MATERIALIZATION_SCHEDULE_ID,
+        scheduleId: CULTIVATE_MATERIALIZATION_SCHEDULE_ID,
         exists: false,
         paused: false,
-        cadence: DEFAULT_HOT_MATERIALIZATION_SCHEDULE,
+        cadence: DEFAULT_CULTIVATE_MATERIALIZATION_SCHEDULE,
         nextRunTimes: [],
       };
     }
   }
 
-  async update(cadence: HotMaterializationScheduleConfig) {
-    const config = normalizeHotMaterializationSchedule(cadence);
+  async update(cadence: CultivateMaterializationScheduleConfig) {
+    const config = normalizeCultivateMaterializationSchedule(cadence);
     try {
       await this.getHandle().update((previous) => ({
-        spec: toHotMaterializationScheduleSpec(config),
+        spec: toCultivateMaterializationScheduleSpec(config),
         action: {
           type: 'startWorkflow',
-          workflowType: HOT_MATERIALIZATION_WORKFLOW_TYPE,
+          workflowType: CULTIVATE_MATERIALIZATION_WORKFLOW_TYPE,
           taskQueue: 'main',
-          workflowId: HOT_MATERIALIZATION_WORKFLOW_ID,
+          workflowId: CULTIVATE_MATERIALIZATION_WORKFLOW_ID,
           args: [{}],
         },
         policies: {
@@ -85,9 +89,9 @@ export class HotMaterializationScheduleService {
     } catch (error) {
       if (!this.isMissing(error)) {
         await this._adminScheduleLogService.append({
-          scheduleKey: 'hot-triage',
+          scheduleKey: 'follower-cultivate',
           level: 'ERROR',
-          message: 'Failed to update Hot triage schedule',
+          message: 'Failed to update follower cultivate schedule',
           meta: {
             error: error instanceof Error ? error.message : String(error),
           },
@@ -97,8 +101,8 @@ export class HotMaterializationScheduleService {
       await this.create(config);
     }
     await this._adminScheduleLogService.append({
-      scheduleKey: 'hot-triage',
-      message: 'Hot triage schedule updated',
+      scheduleKey: 'follower-cultivate',
+      message: 'Follower cultivate schedule updated',
       meta: { cadence: config },
     });
     return this.getStatus();
@@ -110,36 +114,36 @@ export class HotMaterializationScheduleService {
     } catch (error) {
       if (!this.isMissing(error)) {
         await this._adminScheduleLogService.append({
-          scheduleKey: 'hot-triage',
+          scheduleKey: 'follower-cultivate',
           level: 'ERROR',
-          message: 'Failed to trigger Hot triage schedule',
+          message: 'Failed to trigger follower cultivate schedule',
           meta: {
             error: error instanceof Error ? error.message : String(error),
           },
         });
         throw error;
       }
-      await this.create(DEFAULT_HOT_MATERIALIZATION_SCHEDULE);
+      await this.create(DEFAULT_CULTIVATE_MATERIALIZATION_SCHEDULE);
       await this.getHandle().trigger(ScheduleOverlapPolicy.SKIP);
     }
     await this._adminScheduleLogService.append({
-      scheduleKey: 'hot-triage',
-      message: 'Hot triage schedule triggered',
+      scheduleKey: 'follower-cultivate',
+      message: 'Follower cultivate schedule triggered',
     });
     return this.getStatus();
   }
 
-  private async create(cadence: HotMaterializationScheduleConfig) {
-    const config = normalizeHotMaterializationSchedule(cadence);
+  private async create(cadence: CultivateMaterializationScheduleConfig) {
+    const config = normalizeCultivateMaterializationSchedule(cadence);
     try {
       await this.scheduleClient().create({
-        scheduleId: HOT_MATERIALIZATION_SCHEDULE_ID,
-        spec: toHotMaterializationScheduleSpec(config),
+        scheduleId: CULTIVATE_MATERIALIZATION_SCHEDULE_ID,
+        spec: toCultivateMaterializationScheduleSpec(config),
         action: {
           type: 'startWorkflow',
-          workflowType: HOT_MATERIALIZATION_WORKFLOW_TYPE,
+          workflowType: CULTIVATE_MATERIALIZATION_WORKFLOW_TYPE,
           taskQueue: 'main',
-          workflowId: HOT_MATERIALIZATION_WORKFLOW_ID,
+          workflowId: CULTIVATE_MATERIALIZATION_WORKFLOW_ID,
           args: [{}],
         },
         policies: {
@@ -149,15 +153,49 @@ export class HotMaterializationScheduleService {
       });
     } catch (error) {
       if (!this.isAlreadyRunning(error)) {
-        this._logger.error('Failed to create Hot materialization schedule', error);
+        this._logger.error(
+          'Failed to create follower cultivate materialization schedule',
+          error
+        );
         await this._adminScheduleLogService.append({
-          scheduleKey: 'hot-triage',
+          scheduleKey: 'follower-cultivate',
           level: 'ERROR',
-          message: 'Failed to create Hot triage schedule',
+          message: 'Failed to create follower cultivate schedule',
           meta: {
             error: error instanceof Error ? error.message : String(error),
           },
         });
+        throw error;
+      }
+    }
+  }
+
+  private async terminateLegacyWorkflow() {
+    const workflow = this.rawClient()?.workflow;
+    if (!workflow) {
+      throw new Error(
+        'Temporal workflow client unavailable during cultivate schedule install'
+      );
+    }
+    try {
+      const handle = workflow.getHandle(CULTIVATE_LEGACY_WORKFLOW_ID);
+      const description = await handle.describe();
+      if (description.status.name === 'RUNNING') {
+        await handle.terminate(
+          'Migrating Channel cultivate daily picks to hourly Temporal Schedule v2'
+        );
+      }
+    } catch (error) {
+      const value = error as { name?: string; message?: string };
+      const message = value?.message?.toLowerCase() || '';
+      if (
+        value?.name !== 'WorkflowNotFoundError' &&
+        value?.name !== 'WorkflowExecutionAlreadyCompletedError' &&
+        !message.includes('not found') &&
+        !message.includes('already completed') &&
+        !message.includes('already closed')
+      ) {
+        this._logger.error('Failed to stop Channel cultivate V1', error);
         throw error;
       }
     }
@@ -169,12 +207,14 @@ export class HotMaterializationScheduleService {
 
   private mapStatus(
     description: Awaited<
-      ReturnType<ReturnType<HotMaterializationScheduleService['getHandle']>['describe']>
+      ReturnType<
+        ReturnType<CultivateMaterializationScheduleService['getHandle']>['describe']
+      >
     >,
     exists: boolean
-  ): HotMaterializationScheduleStatus {
+  ): CultivateMaterializationScheduleStatus {
     return {
-      scheduleId: HOT_MATERIALIZATION_SCHEDULE_ID,
+      scheduleId: CULTIVATE_MATERIALIZATION_SCHEDULE_ID,
       exists,
       paused: description.state.paused,
       cadence: this.cadenceFromDescription(description),
@@ -189,17 +229,17 @@ export class HotMaterializationScheduleService {
     memo?: Record<string, unknown>;
   }) {
     try {
-      return normalizeHotMaterializationSchedule(
+      return normalizeCultivateMaterializationSchedule(
         this.cadenceFromUnknown(description.memo?.cadence)
       );
     } catch {
-      return DEFAULT_HOT_MATERIALIZATION_SCHEDULE;
+      return DEFAULT_CULTIVATE_MATERIALIZATION_SCHEDULE;
     }
   }
 
   private cadenceFromUnknown(
     value: unknown
-  ): Partial<HotMaterializationScheduleConfig> | undefined {
+  ): Partial<CultivateMaterializationScheduleConfig> | undefined {
     if (!value || typeof value !== 'object') {
       return undefined;
     }
@@ -208,11 +248,11 @@ export class HotMaterializationScheduleService {
         (value as { cadence?: unknown }).cadence
       );
     }
-    return value as Partial<HotMaterializationScheduleConfig>;
+    return value as Partial<CultivateMaterializationScheduleConfig>;
   }
 
   private getHandle() {
-    return this.scheduleClient().getHandle(HOT_MATERIALIZATION_SCHEDULE_ID);
+    return this.scheduleClient().getHandle(CULTIVATE_MATERIALIZATION_SCHEDULE_ID);
   }
 
   private scheduleClient() {

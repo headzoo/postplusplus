@@ -6,9 +6,13 @@ import React from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import {
   FollowerBoard,
+  FollowerBoardColumn,
   FollowerBoardRow,
 } from './follower.board';
-import { FOLLOWER_BOARD_SEGMENTS } from './follower.segments';
+import {
+  FOLLOWER_BOARD_LIST_MIN_HEIGHT_PX,
+  FOLLOWER_BOARD_SEGMENTS,
+} from './follower.segments';
 import { Follower } from './use.followers';
 
 jest.mock('@gitroom/react/translation/get.transation.service.client', () => ({
@@ -43,6 +47,20 @@ jest.mock('next/link', () => ({
 jest.mock('@gitroom/react/helpers/image.with.fallback', () => ({
   __esModule: true,
   default: ({ alt }: { alt: string }) => <img alt={alt} />,
+}));
+
+jest.mock('@gitroom/frontend/components/ui/custom.scroll.area', () => ({
+  CustomScrollArea: ({
+    children,
+    className,
+  }: {
+    children: React.ReactNode;
+    className?: string;
+  }) => (
+    <div data-testid="custom-scroll-area" className={className}>
+      {children}
+    </div>
+  ),
 }));
 
 const follower = (overrides: Partial<Follower> = {}): Follower =>
@@ -87,6 +105,42 @@ describe('FollowerBoard', () => {
     expect(onOpen).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'Leads User' })
     );
+  });
+
+  it('renders a scroll wrapper with min height when a column has items', () => {
+    const segment = FOLLOWER_BOARD_SEGMENTS[0];
+    render(
+      <FollowerBoardColumn
+        segment={segment}
+        items={[follower()]}
+        total={12}
+        viewAllHref="/followers/leads"
+        onOpenFollower={jest.fn()}
+      />
+    );
+
+    const scrollWrapper = screen.getByTestId('followers-board-column-scroll');
+    expect(scrollWrapper).toBeTruthy();
+    expect(scrollWrapper.style.minHeight).toBe(
+      `${FOLLOWER_BOARD_LIST_MIN_HEIGHT_PX}px`
+    );
+    expect(screen.getByTestId('custom-scroll-area')).toBeTruthy();
+  });
+
+  it('omits the scroll wrapper when a column is empty', () => {
+    const segment = FOLLOWER_BOARD_SEGMENTS[0];
+    render(
+      <FollowerBoardColumn
+        segment={segment}
+        items={[]}
+        total={0}
+        viewAllHref="/followers/leads"
+        onOpenFollower={jest.fn()}
+      />
+    );
+
+    expect(screen.queryByTestId('followers-board-column-scroll')).toBeNull();
+    expect(screen.getByText('No people in this segment yet.')).toBeTruthy();
   });
 });
 

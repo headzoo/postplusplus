@@ -7,11 +7,13 @@ import ImageWithFallback from '@gitroom/react/helpers/image.with.fallback';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import {
   FOLLOWER_BOARD_SEGMENTS,
-  FOLLOWER_BOARD_PREVIEW_LIMIT,
+  FOLLOWER_BOARD_LIST_MIN_HEIGHT_PX,
+  FOLLOWER_BOARD_VISIBLE_ROWS,
   FOLLOWER_SEGMENT_COLOR_CLASSES,
   FollowerSegmentDefinition,
   formatSegmentCount,
 } from '@gitroom/frontend/components/followers/follower.segments';
+import { CustomScrollArea } from '@gitroom/frontend/components/ui/custom.scroll.area';
 import {
   DismissibleTriage,
   Follower,
@@ -202,7 +204,8 @@ export const FollowerBoardColumn: FC<{
   const Icon = segment.icon;
   const countLabel = formatSegmentCount(total);
   const preview = items;
-  const skeletonCount = Math.min(6, FOLLOWER_BOARD_PREVIEW_LIMIT);
+  const hasScrollableContent = isLoading || preview.length > 0;
+  const skeletonCount = FOLLOWER_BOARD_VISIBLE_ROWS;
 
   return (
     <div
@@ -235,35 +238,45 @@ export const FollowerBoardColumn: FC<{
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-[6px] overflow-hidden">
-        {isLoading &&
-          Array.from({ length: skeletonCount }).map((_, index) => (
-            <div
-              key={index}
-              className="h-[52px] animate-pulse rounded-[8px] bg-newTableHeader"
-            />
-          ))}
-        {!isLoading &&
-          preview.map((follower) => (
-            <FollowerBoardRow
-              key={follower.id}
-              follower={follower}
-              color={segment.color}
-              onOpen={() => onOpenFollower(follower)}
-              onDismissTriage={
-                onDismissTriage
-                  ? (triage, reasons, options) =>
-                      onDismissTriage(follower, triage, reasons, options)
-                  : undefined
-              }
-            />
-          ))}
-        {!isLoading && preview.length === 0 && (
-          <p className="px-[6px] py-[16px] text-[12px] text-textItemBlur">
-            {t('followers_board_empty', 'No people in this segment yet.')}
-          </p>
-        )}
-      </div>
+      {hasScrollableContent ? (
+        <div
+          className="flex min-h-0 flex-1 flex-col"
+          data-testid="followers-board-column-scroll"
+          style={{ minHeight: FOLLOWER_BOARD_LIST_MIN_HEIGHT_PX }}
+        >
+          <CustomScrollArea
+            className="min-h-0 w-full flex-1"
+            contentClassName="flex flex-col gap-[6px]"
+          >
+            {isLoading &&
+              Array.from({ length: skeletonCount }).map((_, index) => (
+                <div
+                  key={index}
+                  className="h-[52px] animate-pulse rounded-[8px] bg-newTableHeader"
+                />
+              ))}
+            {!isLoading &&
+              preview.map((follower) => (
+                <FollowerBoardRow
+                  key={follower.id}
+                  follower={follower}
+                  color={segment.color}
+                  onOpen={() => onOpenFollower(follower)}
+                  onDismissTriage={
+                    onDismissTriage
+                      ? (triage, reasons, options) =>
+                          onDismissTriage(follower, triage, reasons, options)
+                      : undefined
+                  }
+                />
+              ))}
+          </CustomScrollArea>
+        </div>
+      ) : (
+        <p className="px-[6px] py-[16px] text-[12px] text-textItemBlur">
+          {t('followers_board_empty', 'No people in this segment yet.')}
+        </p>
+      )}
 
       <Link
         href={viewAllHref}

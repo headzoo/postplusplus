@@ -2286,7 +2286,8 @@ export class IntegrationService {
       query.cursor?.startsWith('follower-lead:v1:') ||
       query.cursor?.startsWith('follower-lead:v2:') ||
       query.cursor?.startsWith('follower-lead:v3:') ||
-      query.cursor?.startsWith('follower-cultivate:v1:')
+      query.cursor?.startsWith('follower-cultivate:v1:') ||
+      query.cursor?.startsWith('follower-cultivate:v2:')
     ) {
       throw new HttpException('Invalid follower cursor', HttpStatus.BAD_REQUEST);
     }
@@ -2577,6 +2578,7 @@ export class IntegrationService {
     provider: SocialProvider,
     query: FollowerQuery
   ): Promise<FollowerPage> {
+    const materialization = resolveMaterializationConfig(integration.strategyId);
     const direction = query.direction ?? 'asc';
     const cursor = query.cursor
       ? this.decodeCultivateAudienceCursor(
@@ -2590,10 +2592,21 @@ export class IntegrationService {
     const ranked = await this._channelInteractionRepository.getAudienceCultivate({
       organizationId,
       integrationId: integration.id,
+      strategyId: materialization.strategyId,
+      strategyVersion: materialization.strategyVersion,
+      materializationVersion: materialization.materializationVersion,
       userId,
       direction,
       limit: query.limit,
-      ...(cursor ? { cursor } : {}),
+      ...(cursor
+        ? {
+          hour: cursor.hour,
+          cursor: {
+            finalRank: cursor.finalRank,
+            externalId: cursor.externalId,
+          },
+        }
+        : {}),
       ...(query.search ? { search: query.search } : {}),
     });
     const items = ranked.items.map((row) => ({
@@ -2601,12 +2614,13 @@ export class IntegrationService {
       isCultivate: true,
       ...(row.cultivateReason ? { cultivateReason: row.cultivateReason } : {}),
       ...(row.suggestedAction ? { suggestedAction: row.suggestedAction } : {}),
+      ...(row.cultivateSource ? { cultivateSource: row.cultivateSource } : {}),
     }));
     const last = ranked.items.at(-1);
     const page: FollowerPage = {
       items,
       hasMore: ranked.hasMore,
-      ...(ranked.hasMore && last
+      ...(ranked.hasMore && last && ranked.hour
         ? {
           nextCursor: this.encodeCultivateAudienceCursor({
             organizationId,
@@ -2614,6 +2628,7 @@ export class IntegrationService {
             direction,
             search: query.search,
             audience: 'cultivate',
+            hour: ranked.hour,
             finalRank: last.finalRank,
             externalId: last.externalId,
           }),
@@ -3543,9 +3558,10 @@ export class IntegrationService {
     direction: 'asc' | 'desc';
     search?: string;
     audience: 'cultivate';
+    hour: string;
   } & AudienceCultivateCursor) {
-    return `follower-cultivate:v1:${Buffer.from(
-      JSON.stringify({ version: 1, ...cursor })
+    return `follower-cultivate:v2:${Buffer.from(
+      JSON.stringify({ version: 2, ...cursor })
     ).toString('base64url')}`;
   }
 
@@ -3608,22 +3624,24 @@ export class IntegrationService {
     integrationId: string,
     direction: 'asc' | 'desc',
     search: string | undefined
-  ): AudienceCultivateCursor {
+  ): AudienceCultivateCursor & { hour: string } {
     try {
-      if (!value.startsWith('follower-cultivate:v1:')) throw new Error();
+      if (!value.startsWith('follower-cultivate:v2:')) throw new Error();
       const cursor = JSON.parse(
         Buffer.from(
-          value.slice('follower-cultivate:v1:'.length),
+          value.slice('follower-cultivate:v2:'.length),
           'base64url'
         ).toString('utf8')
       );
       if (
-        cursor?.version !== 1 ||
+        cursor?.version !== 2 ||
         cursor.organizationId !== organizationId ||
         cursor.integrationId !== integrationId ||
         cursor.direction !== direction ||
         cursor.search !== search ||
         cursor.audience !== 'cultivate' ||
+        typeof cursor.hour !== 'string' ||
+        !/^\d{4}-\d{2}-\d{2}T\d{2}$/.test(cursor.hour) ||
         !Number.isSafeInteger(cursor.finalRank) ||
         cursor.finalRank < 1 ||
         typeof cursor.externalId !== 'string'
@@ -3631,6 +3649,7 @@ export class IntegrationService {
         throw new Error();
       }
       return {
+        hour: cursor.hour,
         finalRank: cursor.finalRank,
         externalId: cursor.externalId,
       };
@@ -3970,6 +3989,7 @@ export class IntegrationService {
       'follower-lead:v2:',
       'follower-lead:v3:',
       'follower-cultivate:v1:',
+      'follower-cultivate:v2:',
       'follower-hot:v1:',
       'follower-ignored:v1:',
     ];

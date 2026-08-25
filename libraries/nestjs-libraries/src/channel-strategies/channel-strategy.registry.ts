@@ -94,10 +94,17 @@ export function assertMaterializationProfile(
     'cultivate pick limit'
   );
   if (
+    !Number.isFinite(profile.cultivate.nearFullRatio) ||
+    profile.cultivate.nearFullRatio < MATERIALIZATION_LIMITS.minNearFullRatio ||
+    profile.cultivate.nearFullRatio > MATERIALIZATION_LIMITS.maxNearFullRatio
+  ) {
+    throw new RangeError('Invalid cultivate near-full ratio');
+  }
+  if (
     !Number.isFinite(profile.cultivate.warmGradeThreshold) ||
     profile.cultivate.warmGradeThreshold <= 0 ||
     profile.cultivate.warmGradeThreshold >
-      MATERIALIZATION_LIMITS.maxWarmGradeThreshold
+    MATERIALIZATION_LIMITS.maxWarmGradeThreshold
   ) {
     throw new RangeError('Invalid cultivate warm grade threshold');
   }

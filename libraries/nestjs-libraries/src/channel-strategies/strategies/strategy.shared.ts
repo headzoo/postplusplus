@@ -46,6 +46,7 @@ export const DEFAULT_MATERIALIZATION_PROFILE: StrategyMaterializationProfile = {
   cultivate: {
     candidatePoolSize: 100,
     pickLimit: 20,
+    nearFullRatio: 0.9,
     warmGradeThreshold: 3.5,
     staleDays: 14,
   },

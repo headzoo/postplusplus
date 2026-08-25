@@ -39,6 +39,15 @@ interface BotScoreScheduleResponse {
   note?: string;
 }
 
+interface IntervalHoursScheduleResponse {
+  scheduleId: string;
+  exists: boolean;
+  paused: boolean;
+  cadence: { intervalHours: number };
+  nextRunTimes: string[];
+  note?: string;
+}
+
 interface WorkflowCadence {
   unit: 'second' | 'hour';
   interval: number;
@@ -77,6 +86,42 @@ const useFollowerBotScoreSchedule = () => {
   const fetch = useFetch();
   return useSWR<BotScoreScheduleResponse>(
     '/admin/schedule/follower-bot-scores',
+    async (url: string) => {
+      const res = await fetch(url);
+      if (!res.ok) {
+        throw new Error('Failed to load schedule');
+      }
+      return res.json();
+    },
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+    }
+  );
+};
+
+const useHotTriageSchedule = () => {
+  const fetch = useFetch();
+  return useSWR<IntervalHoursScheduleResponse>(
+    '/admin/schedule/hot-triage',
+    async (url: string) => {
+      const res = await fetch(url);
+      if (!res.ok) {
+        throw new Error('Failed to load schedule');
+      }
+      return res.json();
+    },
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+    }
+  );
+};
+
+const useFollowerCultivateSchedule = () => {
+  const fetch = useFetch();
+  return useSWR<IntervalHoursScheduleResponse>(
+    '/admin/schedule/follower-cultivate',
     async (url: string) => {
       const res = await fetch(url);
       if (!res.ok) {
@@ -190,6 +235,8 @@ export const AdminScheduleComponent: FC = () => {
   const modal = useModals();
   const relationship = useRelationshipGradeSchedule();
   const botScores = useFollowerBotScoreSchedule();
+  const hotTriage = useHotTriageSchedule();
+  const followerCultivate = useFollowerCultivateSchedule();
   const missingPosts = useMissingPostRecoverySchedule();
   const postWorkflows = usePostWorkflowSchedule();
   const autopostWorkflows = useAutopostWorkflowSchedule();
@@ -200,10 +247,17 @@ export const AdminScheduleComponent: FC = () => {
   const [timeOfDay, setTimeOfDay] = useState('00:00');
   const [dayOfMonth, setDayOfMonth] = useState(1);
   const [botIntervalHours, setBotIntervalHours] = useState(6);
+  const [hotIntervalHours, setHotIntervalHours] = useState(1);
+  const [cultivateIntervalHours, setCultivateIntervalHours] = useState(1);
   const [savingGrades, setSavingGrades] = useState(false);
   const [savingBotScores, setSavingBotScores] = useState(false);
+  const [savingHotTriage, setSavingHotTriage] = useState(false);
+  const [savingFollowerCultivate, setSavingFollowerCultivate] = useState(false);
   const [triggeringGrades, setTriggeringGrades] = useState(false);
   const [triggeringBotScores, setTriggeringBotScores] = useState(false);
+  const [triggeringHotTriage, setTriggeringHotTriage] = useState(false);
+  const [triggeringFollowerCultivate, setTriggeringFollowerCultivate] =
+    useState(false);
   const [triggeringMissing, setTriggeringMissing] = useState(false);
   const [triggeringPosts, setTriggeringPosts] = useState(false);
   const [triggeringAutopost, setTriggeringAutopost] = useState(false);
@@ -243,6 +297,20 @@ export const AdminScheduleComponent: FC = () => {
     }
     setBotIntervalHours(botScores.data.cadence.intervalHours);
   }, [botScores.data]);
+
+  useEffect(() => {
+    if (!hotTriage.data?.cadence) {
+      return;
+    }
+    setHotIntervalHours(hotTriage.data.cadence.intervalHours);
+  }, [hotTriage.data]);
+
+  useEffect(() => {
+    if (!followerCultivate.data?.cadence) {
+      return;
+    }
+    setCultivateIntervalHours(followerCultivate.data.cadence.intervalHours);
+  }, [followerCultivate.data]);
 
   const saveGrades = useCallback(async () => {
     setFormError('');
@@ -350,6 +418,108 @@ export const AdminScheduleComponent: FC = () => {
       setTriggeringBotScores(false);
     }
   }, [botScores, fetch, t, toaster]);
+
+  const saveHotTriage = useCallback(async () => {
+    setFormError('');
+    setSavingHotTriage(true);
+    try {
+      const res = await fetch('/admin/schedule/hot-triage', {
+        method: 'PUT',
+        body: JSON.stringify({ intervalHours: hotIntervalHours }),
+      });
+      if (!res.ok) {
+        throw new Error('Failed to save schedule');
+      }
+      await hotTriage.mutate(await res.json(), false);
+    } catch {
+      setFormError(
+        t('admin_schedule_save_error', 'Could not save this schedule. Try again.')
+      );
+    } finally {
+      setSavingHotTriage(false);
+    }
+  }, [fetch, hotIntervalHours, hotTriage, t]);
+
+  const triggerHotTriage = useCallback(async () => {
+    setFormError('');
+    setTriggeringHotTriage(true);
+    try {
+      const res = await fetch('/admin/schedule/hot-triage/trigger', {
+        method: 'POST',
+      });
+      if (!res.ok) {
+        throw new Error('Failed to trigger schedule');
+      }
+      await hotTriage.mutate(await res.json(), false);
+      toaster.show(
+        t(
+          'admin_schedule_hot_trigger_success',
+          'Hot triage materialization triggered. The workflow is now running.'
+        ),
+        'success'
+      );
+    } catch {
+      const message = t(
+        'admin_schedule_hot_trigger_error',
+        'Could not trigger Hot triage materialization. Try again.'
+      );
+      setFormError(message);
+      toaster.show(message, 'warning');
+    } finally {
+      setTriggeringHotTriage(false);
+    }
+  }, [fetch, hotTriage, t, toaster]);
+
+  const saveFollowerCultivate = useCallback(async () => {
+    setFormError('');
+    setSavingFollowerCultivate(true);
+    try {
+      const res = await fetch('/admin/schedule/follower-cultivate', {
+        method: 'PUT',
+        body: JSON.stringify({ intervalHours: cultivateIntervalHours }),
+      });
+      if (!res.ok) {
+        throw new Error('Failed to save schedule');
+      }
+      await followerCultivate.mutate(await res.json(), false);
+    } catch {
+      setFormError(
+        t('admin_schedule_save_error', 'Could not save this schedule. Try again.')
+      );
+    } finally {
+      setSavingFollowerCultivate(false);
+    }
+  }, [cultivateIntervalHours, fetch, followerCultivate, t]);
+
+  const triggerFollowerCultivate = useCallback(async () => {
+    setFormError('');
+    setTriggeringFollowerCultivate(true);
+    try {
+      const res = await fetch('/admin/schedule/follower-cultivate/trigger', {
+        method: 'POST',
+      });
+      if (!res.ok) {
+        throw new Error('Failed to trigger schedule');
+      }
+      await followerCultivate.mutate(await res.json(), false);
+      toaster.show(
+        t(
+          'admin_schedule_cultivate_trigger_success',
+          'Follower cultivate materialization triggered. The workflow is now running.'
+        ),
+        'success'
+      );
+    } catch {
+      const message = t(
+        'admin_schedule_cultivate_trigger_error',
+        'Could not trigger follower cultivate materialization. Try again.'
+      );
+      setFormError(message);
+      toaster.show(message, 'warning');
+    } finally {
+      setTriggeringFollowerCultivate(false);
+    }
+  }, [fetch, followerCultivate, t, toaster]);
 
   const triggerMissing = useCallback(async () => {
     setFormError('');
@@ -482,6 +652,8 @@ export const AdminScheduleComponent: FC = () => {
   if (
     relationship.isLoading ||
     botScores.isLoading ||
+    hotTriage.isLoading ||
+    followerCultivate.isLoading ||
     missingPosts.isLoading ||
     postWorkflows.isLoading ||
     autopostWorkflows.isLoading ||
@@ -493,6 +665,8 @@ export const AdminScheduleComponent: FC = () => {
   if (
     relationship.error ||
     botScores.error ||
+    hotTriage.error ||
+    followerCultivate.error ||
     missingPosts.error ||
     postWorkflows.error ||
     autopostWorkflows.error ||
@@ -675,6 +849,120 @@ export const AdminScheduleComponent: FC = () => {
             secondary
             onClick={() => openLogs('follower-bot-scores')}
           >
+            {t('admin_schedule_logs', 'Logs')}
+          </Button>
+        </div>
+      </div>
+
+      <div className="border border-newTableBorder rounded-[8px] p-[16px] bg-newBgColorInner flex flex-col gap-[12px]">
+        <div className="text-[16px] font-[600]">
+          {t('admin_schedule_hot_title', 'Hot triage materialization')}
+        </div>
+        <div className="text-[13px] opacity-70">
+          {hotTriage.data?.exists
+            ? t('admin_schedule_active', 'Temporal schedule is active.')
+            : t(
+              'admin_schedule_missing',
+              'No Temporal schedule exists yet. Saving will create one.'
+            )}
+        </div>
+        {hotTriage.data?.cadence ? (
+          <div className="text-[13px]">
+            {formatBotScoreCadence(hotTriage.data.cadence.intervalHours)}
+          </div>
+        ) : null}
+        {hotTriage.data?.nextRunTimes?.length ? (
+          <div className="text-[13px]">
+            {t('admin_schedule_next_run', 'Next run')}:{' '}
+            {new Date(hotTriage.data.nextRunTimes[0]).toLocaleString()}
+          </div>
+        ) : null}
+
+        <div className="flex flex-wrap gap-[12px] items-end">
+          <label className="flex flex-col gap-[6px] w-[160px]" htmlFor="admin-schedule-hot-interval">
+            <span className="text-[12px] opacity-70">
+              {t('admin_schedule_interval_hours', 'Interval (hours)')}
+            </span>
+            <input
+              id="admin-schedule-hot-interval"
+              type="number"
+              min={1}
+              max={168}
+              value={hotIntervalHours}
+              onChange={(event) => setHotIntervalHours(Number(event.target.value))}
+              className="bg-newBgColorInner h-[38px] border border-newTableBorder rounded-[8px] px-[10px] text-[14px] text-textColor"
+            />
+          </label>
+        </div>
+
+        <div className="flex flex-wrap gap-[12px]">
+          <Button disabled={savingHotTriage} onClick={saveHotTriage}>
+            {t('save', 'Save')}
+          </Button>
+          <Button secondary disabled={triggeringHotTriage} onClick={triggerHotTriage}>
+            {t('admin_schedule_trigger_now', 'Trigger now')}
+          </Button>
+          <Button secondary onClick={() => openLogs('hot-triage')}>
+            {t('admin_schedule_logs', 'Logs')}
+          </Button>
+        </div>
+      </div>
+
+      <div className="border border-newTableBorder rounded-[8px] p-[16px] bg-newBgColorInner flex flex-col gap-[12px]">
+        <div className="text-[16px] font-[600]">
+          {t('admin_schedule_cultivate_title', 'Follower cultivate')}
+        </div>
+        <div className="text-[13px] opacity-70">
+          {followerCultivate.data?.exists
+            ? t('admin_schedule_active', 'Temporal schedule is active.')
+            : t(
+              'admin_schedule_missing',
+              'No Temporal schedule exists yet. Saving will create one.'
+            )}
+        </div>
+        {followerCultivate.data?.cadence ? (
+          <div className="text-[13px]">
+            {formatBotScoreCadence(followerCultivate.data.cadence.intervalHours)}
+          </div>
+        ) : null}
+        {followerCultivate.data?.nextRunTimes?.length ? (
+          <div className="text-[13px]">
+            {t('admin_schedule_next_run', 'Next run')}:{' '}
+            {new Date(followerCultivate.data.nextRunTimes[0]).toLocaleString()}
+          </div>
+        ) : null}
+
+        <div className="flex flex-wrap gap-[12px] items-end">
+          <label className="flex flex-col gap-[6px] w-[160px]" htmlFor="admin-schedule-cultivate-interval">
+            <span className="text-[12px] opacity-70">
+              {t('admin_schedule_interval_hours', 'Interval (hours)')}
+            </span>
+            <input
+              id="admin-schedule-cultivate-interval"
+              type="number"
+              min={1}
+              max={168}
+              value={cultivateIntervalHours}
+              onChange={(event) =>
+                setCultivateIntervalHours(Number(event.target.value))
+              }
+              className="bg-newBgColorInner h-[38px] border border-newTableBorder rounded-[8px] px-[10px] text-[14px] text-textColor"
+            />
+          </label>
+        </div>
+
+        <div className="flex flex-wrap gap-[12px]">
+          <Button disabled={savingFollowerCultivate} onClick={saveFollowerCultivate}>
+            {t('save', 'Save')}
+          </Button>
+          <Button
+            secondary
+            disabled={triggeringFollowerCultivate}
+            onClick={triggerFollowerCultivate}
+          >
+            {t('admin_schedule_trigger_now', 'Trigger now')}
+          </Button>
+          <Button secondary onClick={() => openLogs('follower-cultivate')}>
             {t('admin_schedule_logs', 'Logs')}
           </Button>
         </div>

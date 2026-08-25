@@ -14,6 +14,8 @@ export const HOT_MATERIALIZATION_WORKFLOW_ID =
   'channel-hot-materialization-workflow-v1';
 
 export const HOT_MATERIALIZATION_SCHEDULE_INTERVAL_HOURS = 1;
+export const HOT_MATERIALIZATION_SCHEDULE_MIN_HOURS = 1;
+export const HOT_MATERIALIZATION_SCHEDULE_MAX_HOURS = 168;
 
 /** Max candidates scanned when listing due integrations for one sweep pass. */
 export const HOT_MATERIALIZATION_LIST_SCAN = 8;
@@ -36,9 +38,9 @@ export type HotMaterializationScheduleConfig = {
 };
 
 export const DEFAULT_HOT_MATERIALIZATION_SCHEDULE: HotMaterializationScheduleConfig =
-  {
-    intervalHours: HOT_MATERIALIZATION_SCHEDULE_INTERVAL_HOURS,
-  };
+{
+  intervalHours: HOT_MATERIALIZATION_SCHEDULE_INTERVAL_HOURS,
+};
 
 export function normalizeHotMaterializationSchedule(
   value: Partial<HotMaterializationScheduleConfig> | null | undefined
@@ -48,6 +50,11 @@ export function normalizeHotMaterializationSchedule(
   );
   if (!Number.isInteger(intervalHours) || intervalHours < 1) {
     throw new RangeError('intervalHours must be an integer of at least 1');
+  }
+  if (intervalHours > HOT_MATERIALIZATION_SCHEDULE_MAX_HOURS) {
+    throw new RangeError(
+      `intervalHours cannot exceed ${HOT_MATERIALIZATION_SCHEDULE_MAX_HOURS}`
+    );
   }
   return { intervalHours };
 }

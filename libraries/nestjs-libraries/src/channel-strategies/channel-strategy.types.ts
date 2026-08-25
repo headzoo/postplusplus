@@ -102,6 +102,7 @@ export type LeadMaterializationConfig = {
 export type CultivateMaterializationConfig = {
   candidatePoolSize: number;
   pickLimit: number;
+  nearFullRatio: number;
   warmGradeThreshold: number;
   staleDays: number;
 };

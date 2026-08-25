@@ -15,6 +15,8 @@ import clsx from 'clsx';
 const TITLES: Record<AdminScheduleLogSlug, string> = {
   'relationship-grades': 'Relationship grades',
   'follower-bot-scores': 'Follower bot scores',
+  'hot-triage': 'Hot triage',
+  'follower-cultivate': 'Follower cultivate',
   'lead-bridge': 'Lead discovery',
   'missing-post-recovery': 'Missing post recovery',
   'post-workflows': 'Post workflows',
