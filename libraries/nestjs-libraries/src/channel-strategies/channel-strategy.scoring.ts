@@ -55,7 +55,7 @@ export function scoreInteractionCounts(
     (score, kind) =>
       score +
       (counts?.[kind]?.[direction] ?? 0) *
-        getInteractionScore(profile, kind, direction),
+      getInteractionScore(profile, kind, direction),
     0
   );
 }
@@ -66,19 +66,20 @@ export function getRelationshipTriage(
 ): RelationshipTriage {
   assertRelationshipScores(input);
   const { effortScore, reciprocationScore } = input;
+  // Unreciprocated inbound engagement is Hot (formerly engaged_not_yet).
+  if (effortScore === 0 && reciprocationScore > 0) {
+    return 'hot_lead';
+  }
   if (
     Math.max(effortScore, reciprocationScore) <
     profile.meaningfulActivityThreshold
   ) {
     return 'quiet';
   }
-  const hotRatio =
-    effortScore > 0
-      ? profile.touchedHotDirectionalRatio
-      : profile.hotDirectionalRatio;
+  const hotRatio = profile.touchedHotDirectionalRatio;
   if (
     reciprocationScore >= profile.meaningfulActivityThreshold &&
-    (effortScore === 0 || reciprocationScore >= hotRatio * effortScore)
+    reciprocationScore >= hotRatio * effortScore
   ) {
     return 'hot_lead';
   }
@@ -86,7 +87,7 @@ export function getRelationshipTriage(
     effortScore >= profile.meaningfulActivityThreshold &&
     (reciprocationScore === 0 ||
       effortScore >=
-        profile.overInvestedDirectionalRatio * reciprocationScore)
+      profile.overInvestedDirectionalRatio * reciprocationScore)
   ) {
     return 'over_invested';
   }
@@ -122,10 +123,10 @@ export function calculateRelationshipGrade(
     Math.max(
       0,
       profile.inboundPriorityWeight * reciprocation +
-        profile.reciprocityRewardWeight * Math.min(effort, reciprocation) +
-        profile.selectedOutboundContributionWeight * effort -
-        profile.outboundExcessPenaltyWeight *
-          Math.max(effort - reciprocation, 0)
+      profile.reciprocityRewardWeight * Math.min(effort, reciprocation) +
+      profile.selectedOutboundContributionWeight * effort -
+      profile.outboundExcessPenaltyWeight *
+      Math.max(effort - reciprocation, 0)
     )
   );
   return {

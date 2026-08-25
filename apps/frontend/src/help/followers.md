@@ -31,22 +31,21 @@ Empty search: **No followers match this search**.
 
 Use the chips above the grid:
 
-| Filter        | Meaning                                                |
-| ------------- | ------------------------------------------------------ |
-| **All**       | Everyone in the current view                           |
-| **Engaged**   | They engaged; the channel hasn’t reciprocated much     |
-| **Hot**       | Their effort exceeds the channel’s                     |
-| **Mutual**    | Effort is balanced                                     |
-| **Costly**    | The channel’s effort exceeds theirs                    |
-| **Quiet**     | Little activity either way                             |
-| **Cultivate** | Warm relationship that needs outbound attention        |
-| **Leads**     | Interacting non-followers (and warm-network prospects) |
-| **Bots**      | Likely automated accounts                              |
-| **Ignored**   | People you’ve hidden from other views                  |
+| Filter        | Meaning                                                                         |
+| ------------- | ------------------------------------------------------------------------------- |
+| **All**       | Everyone in the current view                                                    |
+| **Hot**       | Their effort exceeds the channel’s, including unreciprocated inbound engagement |
+| **Mutual**    | Effort is balanced                                                              |
+| **Costly**    | The channel’s effort exceeds theirs                                             |
+| **Quiet**     | Little activity either way                                                      |
+| **Cultivate** | Warm relationship that needs outbound attention                                 |
+| **Leads**     | Interacting non-followers (and warm-network prospects)                          |
+| **Bots**      | Likely automated accounts                                                       |
+| **Ignored**   | People you’ve hidden from other views                                           |
 
-**Hot** defaults sort to **Net effort gap**; **Engaged** defaults to **Their effort**. Empty triage: **No followers match this triage filter**.
+**Hot** defaults sort to **Net effort gap**. Empty triage: **No followers match this triage filter**.
 
-## Leads and Cultivate
+## Leads, Hot, and Cultivate
 
 ### Leads
 
@@ -104,13 +103,13 @@ Each follower-capable channel has a **Channel strategy** in [Settings → Channe
 
 Strategy affects **initial navigation only** when you have not already chosen a filter, sort, direction, custom list, or search:
 
-| Strategy | Default view | Default sort emphasis |
-| -------- | ------------ | --------------------- |
-| **Grow audience** | **All** | **Recent** (existing chip order) |
-| **Capture leads** | **Leads** | Lead **Fit** ordering |
-| **Retain community** | **Cultivate** | **Recent** |
-| **Build awareness** | **All** | **Interactions** |
-| **Support customers** | **Costly** | **Recent** |
+| Strategy              | Default view  | Default sort emphasis            |
+| --------------------- | ------------- | -------------------------------- |
+| **Grow audience**     | **All**       | **Recent** (existing chip order) |
+| **Capture leads**     | **Leads**     | Lead **Fit** ordering            |
+| **Retain community**  | **Cultivate** | **Recent**                       |
+| **Build awareness**   | **All**       | **Interactions**                 |
+| **Support customers** | **Costly**    | **Recent**                       |
 
 Strategy also adjusts filter chip order and emphasis, the compact strategy summary above the grid, empty-state copy for the active filter, and the Followers assistant opening message and suggested question chips.
 
@@ -125,3 +124,5 @@ To return to shipped defaults, re-select **Grow audience** in Settings.
 ## Followers assistant
 
 A floating chat helper can answer questions using the page you’re on. Its opening copy and suggested question chips follow the selected channel’s strategy. Server-side guidance uses trusted strategy directives; it never overrides confirmation rules or authorization boundaries. Prefer refreshing or re-checking the list for authoritative counts after changes.
+
+The assistant can also consult built-in Post++ engagement playbooks on demand. It first discovers short summaries with `listExpertise`, then reads only the playbooks that seem relevant with `readExpertise`. Those playbooks are optional craft guidance—they do not replace live follower data, your channel strategy, or confirmation before writes.

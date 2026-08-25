@@ -193,12 +193,12 @@ describe('ChannelInteractionService', () => {
     [20, 20, 1, 5],
     [80, 40, 0.5, 5],
   ])(
-    'calculates formula-v3 relationship grade for effort %i and reciprocation %i',
+    'calculates formula-v4 relationship grade for effort %i and reciprocation %i',
     (effortScore, reciprocationScore, reciprocity, grade) => {
       expect(calculateRelationshipGrade(effortScore, reciprocationScore)).toEqual({
         reciprocity,
         grade,
-        formulaVersion: 3,
+        formulaVersion: 4,
       });
     }
   );
@@ -216,6 +216,7 @@ describe('ChannelInteractionService', () => {
   it.each([
     [0, 0, 'quiet'],
     [7, 7, 'quiet'],
+    [0, 3, 'hot_lead'],
     [0, 8, 'hot_lead'],
     [4, 12, 'hot_lead'],
     [5, 9, 'mutual'],
@@ -795,6 +796,32 @@ describe('ChannelInteractionService', () => {
       'NOT_FOLLOWER'
     );
     expect(repository.recordNormalizedEvent).not.toHaveBeenCalled();
+  });
+
+  it('stamps followedAt from inbound follow webhook event time', async () => {
+    const repository = createRepository();
+    const service = new ChannelInteractionService(repository as any);
+
+    await service.recordNormalizedDelivery('org', 'integration', [
+      interaction({
+        kind: 'follow',
+        membershipUpdate: 'follower',
+        eventAt: '2026-08-12T11:30:00.000Z',
+      }),
+    ] as any);
+
+    expect(repository.recordNormalizedEvent).toHaveBeenCalledWith(
+      'org',
+      'integration',
+      expect.objectContaining({
+        kind: 'FOLLOW',
+        membershipUpdate: 'FOLLOWER',
+        counterparty: expect.objectContaining({
+          externalId: 'person-1',
+          followedAt: new Date('2026-08-12T11:30:00.000Z'),
+        }),
+      })
+    );
   });
 
   it('does not let an unknown membership signal demote a known follower', async () => {

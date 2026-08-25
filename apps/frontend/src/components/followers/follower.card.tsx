@@ -390,12 +390,6 @@ export const FollowerCard: FC<{
                     })}
                   </span>
                 )}
-                {follower.engagedNotYet && (
-                  <RelationshipTriageBadge
-                    triage="engaged_not_yet"
-                    onRemove={onDismissTriage}
-                  />
-                )}
                 {follower.relationshipTriage && (
                   <RelationshipTriageBadge
                     triage={follower.relationshipTriage}

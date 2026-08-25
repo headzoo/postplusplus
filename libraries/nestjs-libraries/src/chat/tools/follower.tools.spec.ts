@@ -42,6 +42,9 @@ jest.mock('@gitroom/nestjs-libraries/chat/tools/tool.list', () => {
     FollowersListTool,
   } = require('@gitroom/nestjs-libraries/chat/tools/followers.list.tool');
   const {
+    FollowersRecentTool,
+  } = require('@gitroom/nestjs-libraries/chat/tools/followers.recent.tool');
+  const {
     FollowerDetailTool,
   } = require('@gitroom/nestjs-libraries/chat/tools/follower.detail.tool');
   const {
@@ -76,6 +79,7 @@ jest.mock('@gitroom/nestjs-libraries/chat/tools/tool.list', () => {
     toolList: [
       FollowerChannelsTool,
       FollowersListTool,
+      FollowersRecentTool,
       FollowerDetailTool,
       FollowerTimelineTool,
       FollowerListsTool,
@@ -102,6 +106,7 @@ import {
 } from '@gitroom/nestjs-libraries/chat/load.tools.service';
 import { FollowerChannelsTool } from '@gitroom/nestjs-libraries/chat/tools/follower.channels.tool';
 import { FollowersListTool } from '@gitroom/nestjs-libraries/chat/tools/followers.list.tool';
+import { FollowersRecentTool } from '@gitroom/nestjs-libraries/chat/tools/followers.recent.tool';
 import { FollowerDetailTool } from '@gitroom/nestjs-libraries/chat/tools/follower.detail.tool';
 import { FollowerTimelineTool } from '@gitroom/nestjs-libraries/chat/tools/follower.timeline.tool';
 import { FollowerListsTool } from '@gitroom/nestjs-libraries/chat/tools/follower.lists.tool';
@@ -126,6 +131,7 @@ import { toolList } from '@gitroom/nestjs-libraries/chat/tools/tool.list';
 const FOLLOWER_READ_TOOL_NAMES = [
   'listFollowerChannels',
   'listFollowers',
+  'listRecentFollowers',
   'getFollowerDetail',
   'getFollowerTimeline',
   'listFollowerLists',
@@ -149,6 +155,7 @@ const FOLLOWER_TOOL_NAMES = [
 const FOLLOWER_READ_TOOL_CLASSES = [
   FollowerChannelsTool,
   FollowersListTool,
+  FollowersRecentTool,
   FollowerDetailTool,
   FollowerTimelineTool,
   FollowerListsTool,
@@ -209,6 +216,7 @@ describe('follower tools cross-surface contracts', () => {
   const createIntegrationService = () => ({
     getFollowerChannels: jest.fn(),
     getFollowers: jest.fn(),
+    getRecentFollowers: jest.fn(),
     getFollowerMemberDetails: jest.fn(),
     getFollowerMemberTimeline: jest.fn(),
     listFollowerLists: jest.fn(),
@@ -353,6 +361,8 @@ describe('follower tools cross-surface contracts', () => {
       });
 
       expect(instructions).toContain('follower tools');
+      expect(instructions).toContain('listRecentFollowers');
+      expect(instructions).toContain('withoutOutboundSinceFollow');
       expect(instructions).toContain('actorless personal-grade limits');
       expect(instructions).toContain('follower statistics');
       expect(instructions).toContain('removeFollowerListMembers');
@@ -475,6 +485,57 @@ describe('follower tools cross-surface contracts', () => {
       expect(result.output.followers).toEqual([
         expect.objectContaining({ id: 'follower-1', myGrade: 4 }),
       ]);
+    });
+
+    it('lists recent followers through listRecentFollowers', async () => {
+      integrationService.getRecentFollowers.mockResolvedValue({
+        items: [
+          {
+            id: 'follower-new',
+            name: 'New Follower',
+            username: 'newbie',
+            followedAt: '2026-08-20T12:00:00.000Z',
+            lastOutboundAt: undefined,
+            relationshipTriage: 'hot_lead',
+          },
+        ],
+        hasMore: false,
+        tracking: { state: 'active' },
+      });
+      const tool = new FollowersRecentTool(
+        integrationService as unknown as IntegrationService
+      ).run();
+      const result = await tool.execute!(
+        {
+          channelId,
+          sinceDays: 14,
+          withoutOutboundSinceFollow: true,
+          limit: 10,
+        },
+        createUiContext()
+      );
+
+      expect(integrationService.getRecentFollowers).toHaveBeenCalledWith(
+        { id: organizationId },
+        { userId },
+        channelId,
+        {
+          sinceDays: 14,
+          limit: 10,
+          withoutOutboundSinceFollow: true,
+        }
+      );
+      expect(result.output).toMatchObject({
+        followers: [
+          expect.objectContaining({
+            id: 'follower-new',
+            username: 'newbie',
+            followedAt: '2026-08-20T12:00:00.000Z',
+          }),
+        ],
+        hasMore: false,
+        tracking: { state: 'active' },
+      });
     });
 
     it('compares effort using their_effort database sorting', async () => {

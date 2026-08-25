@@ -21,7 +21,7 @@ export const leadCaptureStrategy = createStrategy(
   {
     defaultFilter: 'leads',
     defaultSort: 'fit',
-    filterPriority: ['leads', 'hot', 'engaged', 'all'],
+    filterPriority: ['leads', 'hot', 'all'],
     filterEmphasis: 'leads',
     emptyState: {
       key: 'channelStrategies.lead_capture.emptyState',
@@ -49,6 +49,7 @@ export const leadCaptureStrategy = createStrategy(
     ],
   },
   [
+    'Prefer relevant, non-salesy follow-up and warm-network context; disengage from poor fits.',
     'Prioritize high-intent inbound signals: leads, mentions, replies, and new follows.',
     'Treat lead grades as a ranking hint; verify the person with follower tools before recommending outreach.',
   ]

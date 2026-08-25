@@ -27,7 +27,9 @@ export const growAudienceStrategy = createStrategy(
     ],
   },
   [
+    'Prefer reciprocal mutual deepening and timely first replies over broad one-sided outreach.',
     'Prioritize reciprocal relationships that can expand reach over one-sided activity.',
     'Name the relationship signal (mutual, hot lead, quiet) behind every suggestion.',
+    'For “Who followed recently that I have not replied to?”, call listRecentFollowers with withoutOutboundSinceFollow: true.',
   ]
 );

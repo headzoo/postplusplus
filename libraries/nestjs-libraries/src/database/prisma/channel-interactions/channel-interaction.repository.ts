@@ -24,7 +24,6 @@ import {
 import {
   BOT_FORMULA_VERSION,
   getChannelInteractionScore,
-  isEngagedNotYet,
   RELATIONSHIP_FORMULA_VERSION,
   RELATIONSHIP_HOT_SNOOZE_MS,
   RELATIONSHIP_TRIAGE_SNOOZE_MS,
@@ -255,6 +254,20 @@ export type AudienceFollowersQuery = {
   limit: number;
   cursor?: AudienceFollowerCursor;
   ignoredVisibility?: AudienceIgnoredVisibility;
+};
+
+export type RecentFollowerCursor = {
+  followedAt: string;
+  externalId: string;
+};
+
+export type RecentFollowersQuery = {
+  organizationId: string;
+  integrationId: string;
+  userId?: string;
+  since: Date;
+  limit: number;
+  cursor?: RecentFollowerCursor;
 };
 
 export type StoredFollowerAudienceCounts = {
@@ -3040,15 +3053,15 @@ export class ChannelInteractionRepository {
 
     const remaining = options.onlyFollowing
       ? await this._dailyAggregate.model.channelAudienceListMember.count({
-          where: {
-            organizationId,
-            integrationId,
-            listId,
-            audienceMember: {
-              membershipState: ChannelAudienceMembership.FOLLOWER,
-            },
+        where: {
+          organizationId,
+          integrationId,
+          listId,
+          audienceMember: {
+            membershipState: ChannelAudienceMembership.FOLLOWER,
           },
-        })
+        },
+      })
       : 0;
 
     return {
@@ -3466,6 +3479,35 @@ export class ChannelInteractionRepository {
     });
   }
 
+  async getRecentFollowers(query: RecentFollowersQuery) {
+    return this.withSerializableRetry(async (tx) => {
+      await this.assertOwnedIntegration(
+        tx,
+        query.organizationId,
+        query.integrationId
+      );
+
+      const rows = await tx.channelAudienceMember.findMany({
+        where: {
+          organizationId: query.organizationId,
+          integrationId: query.integrationId,
+          membershipState: ChannelAudienceMembership.FOLLOWER,
+          ignoredAt: null,
+          followedAt: { gte: query.since },
+          ...this.recentFollowerKeyset(query.cursor),
+        },
+        orderBy: [{ followedAt: 'desc' }, { externalId: 'desc' }],
+        take: query.limit + 1,
+        select: this.audienceMemberListSelect(query.userId),
+      });
+
+      return {
+        items: rows.slice(0, query.limit),
+        hasMore: rows.length > query.limit,
+      };
+    });
+  }
+
   async getIgnoredAudienceFollowers(query: IgnoredAudienceFollowersQuery) {
     return this.withSerializableRetry(async (tx) => {
       await this.assertOwnedIntegration(
@@ -3859,11 +3901,19 @@ export class ChannelInteractionRepository {
     if (!triage) {
       return {};
     }
-    if (triage === 'engaged_not_yet') {
+    // engaged_not_yet is a legacy alias of Hot (unreciprocated inbound).
+    if (triage === 'hot_lead' || triage === 'engaged_not_yet') {
       return {
-        relationshipReciprocationScore: { gt: 0 },
-        relationshipEffortScore: 0,
-        triageIgnores: { none: this.activeTriageIgnoreWhere('engaged_not_yet') },
+        OR: [
+          { relationshipTriage: 'hot_lead' },
+          {
+            relationshipReciprocationScore: { gt: 0 },
+            relationshipEffortScore: 0,
+          },
+        ],
+        triageIgnores: {
+          none: this.activeTriageIgnoreWhere(['hot_lead', 'engaged_not_yet']),
+        },
       };
     }
     return {
@@ -3873,11 +3923,11 @@ export class ChannelInteractionRepository {
   }
 
   private activeTriageIgnoreWhere(
-    triage: string
+    triage: string | string[]
   ): Prisma.ChannelAudienceMemberTriageIgnoreWhereInput {
     const now = new Date();
     return {
-      triage,
+      triage: Array.isArray(triage) ? { in: triage } : triage,
       OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
     };
   }
@@ -4064,6 +4114,24 @@ export class ChannelInteractionRepository {
     };
   }
 
+  private recentFollowerKeyset(
+    cursor: RecentFollowerCursor | undefined
+  ): Prisma.ChannelAudienceMemberWhereInput {
+    if (!cursor) {
+      return {};
+    }
+    const followedAt = new Date(cursor.followedAt);
+    return {
+      OR: [
+        { followedAt: { lt: followedAt } },
+        {
+          followedAt,
+          externalId: { lt: cursor.externalId },
+        },
+      ],
+    };
+  }
+
   private audienceCursorFieldValue(
     field: AudienceFollowerSortField,
     value: string | number | null
@@ -4093,6 +4161,7 @@ export class ChannelInteractionRepository {
       likesCount: true,
       inboundInteractionCount: true,
       lastInboundAt: true,
+      lastOutboundAt: true,
       relationshipGrade: true,
       relationshipEffortScore: true,
       relationshipReciprocationScore: true,
@@ -4880,7 +4949,10 @@ export class ChannelInteractionRepository {
       ...(profile.followingCount !== undefined
         ? { followingCount: profile.followingCount }
         : {}),
-      ...(profile.followedAt !== undefined ? { followedAt: profile.followedAt } : {}),
+      // Sync pages must not overwrite webhook-precise followedAt on refresh.
+      ...(!followerSyncGeneration && profile.followedAt !== undefined
+        ? { followedAt: profile.followedAt }
+        : {}),
       ...(profile.accountCreatedAt !== undefined
         ? { accountCreatedAt: profile.accountCreatedAt }
         : {}),
@@ -4896,6 +4968,16 @@ export class ChannelInteractionRepository {
         ? { botGradedAt: profile.botGradedAt }
         : {}),
     };
+    // Sync pages rarely include a provider follow date. Stamp followedAt only
+    // on create so hourly refreshes do not overwrite webhook-precise times.
+    const syncCreateFollowedAt = followerSyncGeneration
+      ? {
+        followedAt:
+          profile.followedAt !== undefined
+            ? profile.followedAt
+            : new Date(),
+      }
+      : {};
     return tx.channelAudienceMember.upsert({
       where: {
         integrationId_externalId: {
@@ -4908,6 +4990,7 @@ export class ChannelInteractionRepository {
         integrationId,
         externalId: profile.externalId,
         ...profileData,
+        ...syncCreateFollowedAt,
         ...(membership && !followerSyncGeneration
           ? {
             membershipState: membership,

@@ -21,7 +21,7 @@ export const customerSupportStrategy = createStrategy(
   {
     defaultFilter: 'costly',
     defaultSort: 'recent',
-    filterPriority: ['costly', 'engaged', 'all'],
+    filterPriority: ['costly', 'hot', 'all'],
     filterEmphasis: 'costly',
     emptyState: {
       key: 'channelStrategies.customer_support.emptyState',
@@ -49,6 +49,7 @@ export const customerSupportStrategy = createStrategy(
     ],
   },
   [
+    'Use calm complaint-reply patterns, protect sensitive details, and know when to disengage or escalate.',
     'Prioritize unanswered inbound conversations and people the channel already invests effort in.',
     'Treat unresolved support threads as more urgent than growth opportunities.',
   ]

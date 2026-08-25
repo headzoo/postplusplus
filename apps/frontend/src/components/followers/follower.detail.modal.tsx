@@ -506,12 +506,6 @@ const FollowerDetailContent: FC<{
                   onRemove={handleDismissTriage}
                 />
               )}
-              {follower.engagedNotYet && (
-                <RelationshipTriageBadge
-                  triage="engaged_not_yet"
-                  onRemove={handleDismissTriage}
-                />
-              )}
             </div>
             {handle &&
               (follower.profileUrl ? (
@@ -588,49 +582,49 @@ const FollowerDetailContent: FC<{
       {(follower.botGrade != null ||
         follower.isBot != null ||
         follower.botConfidence != null) && (
-        <section className="flex flex-col gap-[8px] text-[13px] text-textItemBlur">
-          <h4 className="text-[16px] font-[600] text-newTextColor">
-            {t('followers_bot_classification', 'Bot classification')}
-          </h4>
-          <div className="flex max-w-full flex-wrap items-center gap-x-[8px] gap-y-[4px]">
-            <span className="min-w-0 max-w-full break-words">
-              {follower.isBot === true
-                ? t('followers_bot_status_likely', 'Likely bot')
-                : follower.isBot === false
-                  ? t('followers_bot_status_unlikely', 'Likely human')
-                  : t('followers_bot_status_uncertain', 'Not enough data')}
-            </span>
-            {follower.botGrade != null && (
-              <>
-                <span aria-hidden="true" className="shrink-0">
-                  ·
-                </span>
-                <span className="min-w-0 max-w-full break-words">
-                  {t('followers_bot_grade_label', 'Grade {{grade}} of 5', {
-                    grade: String(follower.botGrade),
-                  })}
-                </span>
-              </>
-            )}
-            {follower.botConfidence != null && (
-              <>
-                <span aria-hidden="true" className="shrink-0">
-                  ·
-                </span>
-                <span className="min-w-0 max-w-full break-words">
-                  {t(
-                    'followers_bot_confidence_label',
-                    'Confidence {{pct}}%',
-                    {
-                      pct: String(Math.round(follower.botConfidence * 100)),
-                    }
-                  )}
-                </span>
-              </>
-            )}
-          </div>
-        </section>
-      )}
+          <section className="flex flex-col gap-[8px] text-[13px] text-textItemBlur">
+            <h4 className="text-[16px] font-[600] text-newTextColor">
+              {t('followers_bot_classification', 'Bot classification')}
+            </h4>
+            <div className="flex max-w-full flex-wrap items-center gap-x-[8px] gap-y-[4px]">
+              <span className="min-w-0 max-w-full break-words">
+                {follower.isBot === true
+                  ? t('followers_bot_status_likely', 'Likely bot')
+                  : follower.isBot === false
+                    ? t('followers_bot_status_unlikely', 'Likely human')
+                    : t('followers_bot_status_uncertain', 'Not enough data')}
+              </span>
+              {follower.botGrade != null && (
+                <>
+                  <span aria-hidden="true" className="shrink-0">
+                    ·
+                  </span>
+                  <span className="min-w-0 max-w-full break-words">
+                    {t('followers_bot_grade_label', 'Grade {{grade}} of 5', {
+                      grade: String(follower.botGrade),
+                    })}
+                  </span>
+                </>
+              )}
+              {follower.botConfidence != null && (
+                <>
+                  <span aria-hidden="true" className="shrink-0">
+                    ·
+                  </span>
+                  <span className="min-w-0 max-w-full break-words">
+                    {t(
+                      'followers_bot_confidence_label',
+                      'Confidence {{pct}}%',
+                      {
+                        pct: String(Math.round(follower.botConfidence * 100)),
+                      }
+                    )}
+                  </span>
+                </>
+              )}
+            </div>
+          </section>
+        )}
 
       <section className="flex min-w-0 flex-col gap-[12px]">
         <div className="grid grid-cols-1 gap-[16px] sm:grid-cols-3">

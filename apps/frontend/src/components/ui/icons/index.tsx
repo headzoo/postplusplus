@@ -840,6 +840,33 @@ export const DragHandleIcon: FC<IconProps> = ({
   </svg>
 );
 
+/** Upper-left corner resize grip (dot triangle). Uses currentColor for theme. */
+export const CornerResizeIcon: FC<IconProps> = ({
+  size = 16,
+  className,
+  ...props
+}) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 16 16"
+    fill="none"
+    className={className}
+    {...props}
+  >
+    {/* Top row */}
+    <circle cx="3" cy="3" r="1.25" fill="currentColor" />
+    <circle cx="7" cy="3" r="1.25" fill="currentColor" />
+    <circle cx="11" cy="3" r="1.25" fill="currentColor" />
+    {/* Middle row */}
+    <circle cx="3" cy="7" r="1.25" fill="currentColor" />
+    <circle cx="7" cy="7" r="1.25" fill="currentColor" />
+    {/* Bottom row */}
+    <circle cx="3" cy="11" r="1.25" fill="currentColor" />
+  </svg>
+);
+
 // Media Settings Icon (gear for media)
 export const MediaSettingsIcon: FC<IconProps> = ({
   size = 40,

@@ -19,8 +19,8 @@ export const brandAwarenessStrategy = createStrategy(
   {
     defaultFilter: 'all',
     defaultSort: 'interactions',
-    filterPriority: ['all', 'engaged', 'hot'],
-    filterEmphasis: 'engaged',
+    filterPriority: ['all', 'hot'],
+    filterEmphasis: 'hot',
     emptyState: {
       key: 'channelStrategies.brand_awareness.emptyState',
       defaultValue:
@@ -47,6 +47,7 @@ export const brandAwarenessStrategy = createStrategy(
     ],
   },
   [
+    'Acknowledge mentions and amplification genuinely; steward repeat amplifiers without transactional appreciation.',
     'Prioritize amplification signals such as mentions and reposts when ranking people.',
     'Explain reach with the interactions you can verify, not with follower counts alone.',
   ]

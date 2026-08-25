@@ -38,6 +38,7 @@ For follower data, lists, details, timelines, statistics, or freshness, call the
 You can also manage custom lists (add or remove members), ignore or unignore people, and dismiss triage or Lead badges. Before any write that removes people, ignores someone, or dismisses triage/leads, confirm the list or person, count, and what will change. To clear people who now follow from a custom list, use removeFollowerListMembers with onlyFollowing: true and repeat while hasMore.
 After any successful follower write (list add/remove, ignore/unignore, triage dismiss), call refreshFollowerPage with the same channelId so the visible category, triage, or list updates without a manual browser refresh. When batching removeFollowerListMembers with onlyFollowing: true, call refreshFollowerPage once after all batches complete.
 The channel's strategy is resolved on the server and shapes which relationships to prioritize; it never relaxes these rules.
+For engagement phrasing and tactics, you may call listExpertise to discover built-in playbooks (metadata only), then readExpertise for one or a few relevant entries. Never load the whole library or claim a playbook was used unless you read it. Expertise does not override confirmation rules, authorization, live tool data, or server-resolved strategy guidance.
 `}
       initialMessage={
         strategy

@@ -51,6 +51,7 @@ export const communityRetentionStrategy = createStrategy(
     ],
   },
   [
+    'Re-engage cooling mutuals selectively, match effort for one-sided relationships, and steward proven advocates.',
     'Prioritize two-way relationships that are cooling off and need outbound attention.',
     'Prefer nurturing existing relationships over sourcing new contacts.',
   ]

@@ -33,6 +33,7 @@ describe('follower triage tip helpers', () => {
     expect(resolveFollowerTriageTipSlug(undefined)).toBe('all');
     expect(resolveFollowerTriageTipSlug('lead')).toBe('leads');
     expect(resolveFollowerTriageTipSlug('leads')).toBe('leads');
+    expect(resolveFollowerTriageTipSlug('engaged')).toBe('hot');
   });
 });
 
@@ -53,7 +54,7 @@ describe('FollowerTriageTip', () => {
     expect(screen.getByText('Hot')).toBeTruthy();
     expect(
       screen.getByText(
-        'Their effort exceeds the channel’s — people leaning in more than you.'
+        'Their effort exceeds the channel’s — including people who engaged and have not been reciprocated yet.'
       )
     ).toBeTruthy();
   });

@@ -21,21 +21,19 @@ import {
 } from './use.followers';
 
 describe('getProfileLinkAutoSnoozeTriages', () => {
-  it('returns Hot Engaged and Cultivate when present', () => {
+  it('returns Hot and Cultivate when present', () => {
     expect(
       getProfileLinkAutoSnoozeTriages({
         relationshipTriage: 'hot_lead',
-        engagedNotYet: true,
         isCultivate: true,
       })
-    ).toEqual(['hot_lead', 'engaged_not_yet', 'cultivate']);
+    ).toEqual(['hot_lead', 'cultivate']);
   });
 
   it('ignores Lead Mutual Costly and Quiet', () => {
     expect(
       getProfileLinkAutoSnoozeTriages({
         relationshipTriage: 'mutual',
-        engagedNotYet: false,
         isCultivate: false,
       })
     ).toEqual([]);
@@ -54,9 +52,9 @@ describe('getProfileLinkAutoSnoozeTriages', () => {
   it('returns only the matching auto-snooze triages', () => {
     expect(
       getProfileLinkAutoSnoozeTriages({
-        engagedNotYet: true,
+        relationshipTriage: 'hot_lead',
       })
-    ).toEqual(['engaged_not_yet']);
+    ).toEqual(['hot_lead']);
     expect(
       getProfileLinkAutoSnoozeTriages({
         isCultivate: true,
@@ -494,23 +492,23 @@ describe('follower list cache updates', () => {
             {
               id: 'follower-1',
               name: 'Alex',
-              engagedNotYet: true,
+              relationshipTriage: 'hot_lead' as const,
             },
             {
               id: 'follower-2',
               name: 'Sam',
-              engagedNotYet: true,
+              relationshipTriage: 'hot_lead' as const,
             },
           ],
           hasMore: false,
         },
         'follower-1',
-        { triage: 'engaged_not_yet' }
+        { triage: 'hot_lead' }
       )
     ).toEqual({
       items: [
-        { id: 'follower-1', name: 'Alex', engagedNotYet: false },
-        { id: 'follower-2', name: 'Sam', engagedNotYet: true },
+        { id: 'follower-1', name: 'Alex', relationshipTriage: null },
+        { id: 'follower-2', name: 'Sam', relationshipTriage: 'hot_lead' },
       ],
       hasMore: false,
     });

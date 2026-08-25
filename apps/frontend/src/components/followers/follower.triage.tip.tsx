@@ -9,7 +9,6 @@ export const FOLLOWER_TRIAGE_TIP_SLUGS = [
   'all',
   'leads',
   'hot',
-  'engaged',
   'cultivate',
   'mutual',
   'quiet',
@@ -43,13 +42,7 @@ const FOLLOWER_TRIAGE_TIP_COPY: Record<
     defaultTitle: 'Hot',
     bodyKey: 'followers_triage_tip_hot_body',
     defaultBody:
-      'Their effort exceeds the channel’s — people leaning in more than you.',
-  },
-  engaged: {
-    titleKey: 'followers_triage_tip_engaged_title',
-    defaultTitle: 'Engaged',
-    bodyKey: 'followers_triage_tip_engaged_body',
-    defaultBody: 'They engaged; the channel hasn’t reciprocated much.',
+      'Their effort exceeds the channel’s — including people who engaged and have not been reciprocated yet.',
   },
   cultivate: {
     titleKey: 'followers_triage_tip_cultivate_title',
@@ -99,6 +92,10 @@ export const resolveFollowerTriageTipSlug = (
   // Legacy bookmark slug; canonicalize to leads (same as /followers/lead → /followers/leads).
   if (slug === 'lead') {
     return 'leads';
+  }
+  // Legacy bookmark slug; Engaged merged into Hot.
+  if (slug === 'engaged') {
+    return 'hot';
   }
   if (
     slug &&

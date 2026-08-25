@@ -49,7 +49,6 @@ import {
   applyPersonalRelationshipGrade,
   calculateRelationshipGrade,
   getRelationshipTriage,
-  isEngagedNotYet,
   RELATIONSHIP_CADENCE_DAYS,
   RELATIONSHIP_FORMULA_VERSION,
   RELATIONSHIP_WINDOW_DAYS,
@@ -93,6 +92,7 @@ import {
   NoteCountFollowerCursor,
   ProjectedFollowerCursor,
   RankedFollowerCursor,
+  RecentFollowerCursor,
 } from '@gitroom/nestjs-libraries/database/prisma/channel-interactions/channel-interaction.repository';
 import { ChannelAnalyticsService } from '@gitroom/nestjs-libraries/database/prisma/channel-analytics/channel-analytics.service';
 import { ChannelAnalyticsRepository } from '@gitroom/nestjs-libraries/database/prisma/channel-analytics/channel-analytics.repository';
@@ -108,6 +108,16 @@ import { RelationshipGradeScheduleService } from '@gitroom/nestjs-libraries/temp
 dayjs.extend(utc);
 
 const FOLLOWER_IGNORED_BACKFILL_MAX_PAGES = 5;
+const RECENT_FOLLOWERS_DEFAULT_SINCE_DAYS = 30;
+const RECENT_FOLLOWERS_MAX_SINCE_DAYS = 90;
+const RECENT_FOLLOWERS_OUTBOUND_BACKFILL_MAX_PAGES = 5;
+
+export type RecentFollowersQuery = {
+  sinceDays?: number;
+  limit?: number;
+  cursor?: string;
+  withoutOutboundSinceFollow?: boolean;
+};
 
 @Injectable()
 export class IntegrationService {
@@ -887,6 +897,184 @@ export class IntegrationService {
     }
   }
 
+  async getRecentFollowers(
+    org: Organization,
+    actor: FollowerReadActor | User | undefined,
+    integrationId: string,
+    query: RecentFollowersQuery = {}
+  ): Promise<FollowerPage> {
+    const actorUserId = actor && 'userId' in actor
+      ? actor.userId
+      : actor && 'id' in actor
+        ? actor.id
+        : undefined;
+    const integration = await this._integrationRepository.getIntegrationById(
+      org.id,
+      integrationId
+    );
+
+    if (!integration) {
+      throw new HttpException('Integration not found', HttpStatus.NOT_FOUND);
+    }
+
+    if (
+      integration.disabled ||
+      integration.deletedAt ||
+      integration.type !== 'social'
+    ) {
+      throw new HttpException('Followers are unavailable', HttpStatus.BAD_REQUEST);
+    }
+
+    let provider: SocialProvider;
+    try {
+      provider = this._integrationManager.getSocialIntegration(
+        integration.providerIdentifier
+      );
+    } catch {
+      throw new HttpException('Followers are unavailable', HttpStatus.BAD_REQUEST);
+    }
+
+    if (!provider?.followers) {
+      throw new HttpException('Followers are unavailable', HttpStatus.BAD_REQUEST);
+    }
+
+    const sinceDays = Math.min(
+      Math.max(
+        1,
+        Number.isSafeInteger(query.sinceDays)
+          ? (query.sinceDays as number)
+          : RECENT_FOLLOWERS_DEFAULT_SINCE_DAYS
+      ),
+      RECENT_FOLLOWERS_MAX_SINCE_DAYS
+    );
+    const limit = Math.min(
+      Math.max(1, Number.isSafeInteger(query.limit) ? (query.limit as number) : 20),
+      100
+    );
+    const withoutOutboundSinceFollow = query.withoutOutboundSinceFollow === true;
+    const since = dayjs.utc().subtract(sinceDays, 'day').toDate();
+    let cursor = query.cursor
+      ? this.decodeRecentFollowerCursor(
+        query.cursor,
+        org.id,
+        integration.id,
+        sinceDays,
+        withoutOutboundSinceFollow
+      )
+      : undefined;
+
+    const accumulated: Follower[] = [];
+    let hasMore = false;
+    let dbHasMore = false;
+    let lastFetchedCursor: RecentFollowerCursor | undefined;
+
+    for (
+      let pageIndex = 0;
+      pageIndex <
+      (withoutOutboundSinceFollow
+        ? RECENT_FOLLOWERS_OUTBOUND_BACKFILL_MAX_PAGES
+        : 1);
+      pageIndex++
+    ) {
+      const ranked = await this._channelInteractionRepository.getRecentFollowers({
+        organizationId: org.id,
+        integrationId: integration.id,
+        userId: actorUserId,
+        since,
+        limit,
+        ...(cursor ? { cursor } : {}),
+      });
+
+      const mapped = ranked.items.map((row) =>
+        this.mapAudienceMemberProfile(row)
+      );
+      const filtered = withoutOutboundSinceFollow
+        ? mapped.filter((follower) =>
+          this.isWithoutOutboundSinceFollow(follower)
+        )
+        : mapped;
+
+      let took = 0;
+      for (const follower of filtered) {
+        if (accumulated.length >= limit) {
+          break;
+        }
+        accumulated.push(follower);
+        took++;
+      }
+
+      const lastFetched = ranked.items.at(-1);
+      if (lastFetched?.followedAt) {
+        lastFetchedCursor = {
+          followedAt: lastFetched.followedAt.toISOString(),
+          externalId: lastFetched.externalId,
+        };
+        cursor = lastFetchedCursor;
+      }
+
+      dbHasMore = ranked.hasMore;
+      if (!withoutOutboundSinceFollow) {
+        hasMore = ranked.hasMore;
+        break;
+      }
+
+      if (accumulated.length >= limit) {
+        hasMore = took < filtered.length || ranked.hasMore;
+        break;
+      }
+      if (!ranked.hasMore) {
+        hasMore = false;
+        break;
+      }
+    }
+
+    if (
+      withoutOutboundSinceFollow &&
+      accumulated.length < limit &&
+      dbHasMore
+    ) {
+      hasMore = true;
+    }
+
+    const lastReturned = accumulated.at(-1);
+    const cursorForNext =
+      withoutOutboundSinceFollow &&
+        accumulated.length < limit &&
+        lastFetchedCursor
+        ? lastFetchedCursor
+        : lastReturned?.followedAt
+          ? {
+            followedAt: lastReturned.followedAt,
+            externalId: lastReturned.id,
+          }
+          : undefined;
+    const tracking = provider.channelInteractionWebhooks
+      ? await this.getInteractionTracking(
+        org.id,
+        integration.id,
+        provider.channelInteractionWebhooks.getInteractionCoverage()
+      )
+      : undefined;
+
+    return {
+      items: accumulated,
+      hasMore,
+      ...(hasMore && cursorForNext
+        ? {
+          nextCursor: this.encodeRecentFollowerCursor({
+            organizationId: org.id,
+            integrationId: integration.id,
+            sinceDays,
+            withoutOutboundSinceFollow,
+            followedAt: cursorForNext.followedAt,
+            externalId: cursorForNext.externalId,
+          }),
+        }
+        : {}),
+      ...(tracking ? { tracking } : {}),
+    };
+  }
+
   async getFollowerMemberDetails(
     org: Organization,
     actor: FollowerReadActor | User | undefined,
@@ -1653,6 +1841,9 @@ export class IntegrationService {
     accountCreatedAt: Date | null;
     noteCount?: number;
     likesCount?: number;
+    inboundInteractionCount?: number;
+    lastInboundAt?: Date | null;
+    lastOutboundAt?: Date | null;
     relationshipGrade?: number | null;
     relationshipEffortScore?: number | null;
     relationshipReciprocationScore?: number | null;
@@ -1698,6 +1889,16 @@ export class IntegrationService {
       ...(Number.isSafeInteger(member.likesCount) && member.likesCount! >= 0
         ? { likesCount: member.likesCount }
         : {}),
+      ...(Number.isSafeInteger(member.inboundInteractionCount) &&
+        member.inboundInteractionCount! >= 0
+        ? { interactionCount: member.inboundInteractionCount }
+        : {}),
+      ...(member.lastInboundAt
+        ? { lastInboundAt: member.lastInboundAt.toISOString() }
+        : {}),
+      ...(member.lastOutboundAt
+        ? { lastOutboundAt: member.lastOutboundAt.toISOString() }
+        : {}),
       ...this.followerGradeFields(member),
       ...this.followerBotFields(member),
       ...this.followerRelationshipFields(member),
@@ -1709,6 +1910,19 @@ export class IntegrationService {
       })(),
       ...(member.ignoredAt ? { isIgnored: true } : {}),
     });
+  }
+
+  private isWithoutOutboundSinceFollow(follower: Follower) {
+    if (!follower.followedAt) {
+      return false;
+    }
+    if (!follower.lastOutboundAt) {
+      return true;
+    }
+    return (
+      new Date(follower.lastOutboundAt).getTime() <
+      new Date(follower.followedAt).getTime()
+    );
   }
 
   private followerGradeFields(member?: {
@@ -1795,9 +2009,9 @@ export class IntegrationService {
         )
         .map((ignore) => ignore.triage) ?? []),
     ]);
-    const engagedNotYet =
-      isEngagedNotYet(effortScore!, reciprocationScore!) &&
-      !ignored.has('engaged_not_yet');
+    const hotIgnored =
+      computedTriage === 'hot_lead' &&
+      (ignored.has('hot_lead') || ignored.has('engaged_not_yet'));
     return {
       effortScore,
       reciprocationScore,
@@ -1805,10 +2019,8 @@ export class IntegrationService {
         reciprocationScore! - effortScore!,
       effortStars: scoreToStars(effortScore!),
       reciprocationStars: scoreToStars(reciprocationScore!),
-      relationshipTriage: ignored.has(computedTriage!)
-        ? null
-        : computedTriage,
-      ...(engagedNotYet ? { engagedNotYet: true } : {}),
+      relationshipTriage:
+        hotIgnored || ignored.has(computedTriage!) ? null : computedTriage,
       relationshipFormulaVersion: member?.relationshipFormulaVersion ?? null,
       relationshipSnapshotAt:
         member?.relationshipSnapshotAt?.toISOString() ?? null,
@@ -3074,6 +3286,53 @@ export class IntegrationService {
     ).toString('base64url')}`;
   }
 
+  private encodeRecentFollowerCursor(cursor: {
+    organizationId: string;
+    integrationId: string;
+    sinceDays: number;
+    withoutOutboundSinceFollow: boolean;
+  } & RecentFollowerCursor) {
+    return `follower-recent:v1:${Buffer.from(
+      JSON.stringify({ version: 1, ...cursor })
+    ).toString('base64url')}`;
+  }
+
+  private decodeRecentFollowerCursor(
+    value: string,
+    organizationId: string,
+    integrationId: string,
+    sinceDays: number,
+    withoutOutboundSinceFollow: boolean
+  ): RecentFollowerCursor {
+    try {
+      if (!value.startsWith('follower-recent:v1:')) throw new Error();
+      const cursor = JSON.parse(
+        Buffer.from(
+          value.slice('follower-recent:v1:'.length),
+          'base64url'
+        ).toString('utf8')
+      );
+      if (
+        cursor?.version !== 1 ||
+        cursor.organizationId !== organizationId ||
+        cursor.integrationId !== integrationId ||
+        cursor.sinceDays !== sinceDays ||
+        cursor.withoutOutboundSinceFollow !== withoutOutboundSinceFollow ||
+        typeof cursor.followedAt !== 'string' ||
+        Number.isNaN(Date.parse(cursor.followedAt)) ||
+        typeof cursor.externalId !== 'string'
+      ) {
+        throw new Error();
+      }
+      return {
+        followedAt: cursor.followedAt,
+        externalId: cursor.externalId,
+      };
+    } catch {
+      throw new HttpException('Invalid follower cursor', HttpStatus.BAD_REQUEST);
+    }
+  }
+
   private decodeNoteCountFollowerCursor(
     value: string,
     organizationId: string,
@@ -3938,6 +4197,12 @@ export class IntegrationService {
       ...(typeof follower.lastInteractionAt === 'string'
         ? { lastInteractionAt: follower.lastInteractionAt }
         : {}),
+      ...(typeof follower.lastInboundAt === 'string'
+        ? { lastInboundAt: follower.lastInboundAt }
+        : {}),
+      ...(typeof follower.lastOutboundAt === 'string'
+        ? { lastOutboundAt: follower.lastOutboundAt }
+        : {}),
       ...(Number.isSafeInteger(follower.noteCount) && follower.noteCount >= 0
         ? { noteCount: follower.noteCount }
         : {}),
@@ -4007,7 +4272,6 @@ export class IntegrationService {
         }
         : {}),
       ...(follower.isLead === true ? { isLead: true } : {}),
-      ...(follower.engagedNotYet === true ? { engagedNotYet: true } : {}),
       ...(follower.isIgnored === true ? { isIgnored: true } : {}),
       ...(follower.isCultivate === true ? { isCultivate: true } : {}),
       ...(typeof follower.cultivateReason === 'string'

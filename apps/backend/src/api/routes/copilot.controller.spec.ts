@@ -28,11 +28,11 @@ jest.mock('@mastra/core/di', () => ({
 
 jest.mock(
   '@gitroom/nestjs-libraries/database/prisma/subscriptions/subscription.service',
-  () => ({ SubscriptionService: class SubscriptionService {} })
+  () => ({ SubscriptionService: class SubscriptionService { } })
 );
 
 jest.mock('@gitroom/nestjs-libraries/chat/mastra.service', () => ({
-  MastraService: class MastraService {},
+  MastraService: class MastraService { },
 }));
 
 import { CopilotController } from './copilot.controller';
@@ -70,7 +70,7 @@ describe('CopilotController', () => {
             category: {
               key: 'hot_lead',
               label: 'Hot',
-              meaning: "Their effort exceeds the channel's.",
+              meaning: "Their effort exceeds the channel's, including unreciprocated inbound engagement.",
             },
             pagination: { size: 24, number: 1 },
           },
@@ -129,7 +129,7 @@ describe('CopilotController', () => {
       category: expect.objectContaining({
         key: 'hot_lead',
         label: 'Hot',
-        meaning: "Their effort exceeds the channel's.",
+        meaning: "Their effort exceeds the channel's, including unreciprocated inbound engagement.",
       }),
       pagination: { size: 24, number: 1 },
     }));

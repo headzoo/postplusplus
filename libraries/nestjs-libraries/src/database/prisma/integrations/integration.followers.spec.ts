@@ -54,6 +54,7 @@ describe('IntegrationService followers', () => {
       getFollowersByMyGrade: jest.fn(),
       getFollowersByProjectedField: jest.fn(),
       getAudienceFollowers: jest.fn(),
+      getRecentFollowers: jest.fn(),
       getAudienceLeads: jest.fn(),
       getAudienceCultivate: jest.fn(),
       getIgnoredAudienceFollowers: jest.fn(),
@@ -3133,5 +3134,148 @@ describe('IntegrationService followers', () => {
         cursor: 'follower-audience:v1:abc',
       })
     ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('lists recent followers from stored audience data', async () => {
+    const service = createService([integration], {
+      supported: {
+        followers: jest.fn(),
+        channelInteractionWebhooks: {
+          getInteractionCoverage: () => [
+            { kind: 'follow', inbound: 'supported', outbound: 'supported' },
+          ],
+        },
+      },
+    });
+    (
+      service as any
+    )._channelInteractionRepository.getRecentFollowers.mockResolvedValue({
+      items: [
+        {
+          externalId: 'follower-a',
+          name: 'Alice',
+          username: 'alice',
+          picture: null,
+          profileUrl: null,
+          bio: null,
+          followersCount: null,
+          followingCount: null,
+          followedAt: new Date('2026-08-20T12:00:00.000Z'),
+          accountCreatedAt: null,
+          inboundInteractionCount: 2,
+          lastInboundAt: new Date('2026-08-21T12:00:00.000Z'),
+          lastOutboundAt: null,
+          noteCount: 0,
+          likesCount: 0,
+          relationshipEffortScore: 0,
+          relationshipReciprocationScore: 4,
+          relationshipNetGap: 4,
+          relationshipTriage: null,
+          relationshipGrade: null,
+          relationshipFormulaVersion: null,
+          relationshipSnapshotAt: null,
+          triageIgnores: [],
+        },
+      ],
+      hasMore: false,
+    });
+    (
+      service as any
+    )._channelInteractionRepository.getInteractionTracking.mockResolvedValue({
+      followerSync: {
+        activeGeneration: 'gen-1',
+        status: 'COMPLETE',
+        completedAt: new Date('2026-08-15T16:00:00.000Z'),
+      },
+      subscriptions: [{ state: 'ACTIVE' }],
+    });
+
+    await expect(
+      service.getRecentFollowers(org, user, 'channel-a', {
+        sinceDays: 30,
+        limit: 20,
+      })
+    ).resolves.toMatchObject({
+      items: [
+        {
+          id: 'follower-a',
+          username: 'alice',
+          followedAt: '2026-08-20T12:00:00.000Z',
+          lastInboundAt: '2026-08-21T12:00:00.000Z',
+          relationshipTriage: 'hot_lead',
+        },
+      ],
+      hasMore: false,
+      tracking: expect.objectContaining({ state: 'active' }),
+    });
+    expect(
+      (service as any)._channelInteractionRepository.getRecentFollowers
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: 'org-a',
+        integrationId: 'channel-a',
+        userId: 'user-a',
+        limit: 20,
+      })
+    );
+  });
+
+  it('filters recent followers without outbound since follow in the service layer', async () => {
+    const service = createService([integration], {
+      supported: { followers: jest.fn() },
+    });
+    (
+      service as any
+    )._channelInteractionRepository.getRecentFollowers.mockResolvedValue({
+      items: [
+        {
+          externalId: 'replied',
+          name: 'Replied',
+          username: 'replied',
+          picture: null,
+          profileUrl: null,
+          bio: null,
+          followersCount: null,
+          followingCount: null,
+          followedAt: new Date('2026-08-20T12:00:00.000Z'),
+          accountCreatedAt: null,
+          lastOutboundAt: new Date('2026-08-21T12:00:00.000Z'),
+          lastInboundAt: null,
+          inboundInteractionCount: 0,
+          noteCount: 0,
+          likesCount: 0,
+          triageIgnores: [],
+        },
+        {
+          externalId: 'waiting',
+          name: 'Waiting',
+          username: 'waiting',
+          picture: null,
+          profileUrl: null,
+          bio: null,
+          followersCount: null,
+          followingCount: null,
+          followedAt: new Date('2026-08-19T12:00:00.000Z'),
+          accountCreatedAt: null,
+          lastOutboundAt: null,
+          lastInboundAt: null,
+          inboundInteractionCount: 0,
+          noteCount: 0,
+          likesCount: 0,
+          triageIgnores: [],
+        },
+      ],
+      hasMore: false,
+    });
+
+    await expect(
+      service.getRecentFollowers(org, user, 'channel-a', {
+        withoutOutboundSinceFollow: true,
+        limit: 20,
+      })
+    ).resolves.toMatchObject({
+      items: [{ id: 'waiting', username: 'waiting' }],
+      hasMore: false,
+    });
   });
 });

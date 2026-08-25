@@ -108,7 +108,7 @@ describe('renderFollowerPageGuidance', () => {
     category: {
       key: 'hot_lead' as const,
       label: 'Hot',
-      meaning: "Their effort exceeds the channel's.",
+      meaning: "Their effort exceeds the channel's, including unreciprocated inbound engagement.",
     },
     search: 'alex',
     availableLists: [{ id: 'list-great', name: 'Great' }],
@@ -131,7 +131,9 @@ describe('renderFollowerPageGuidance', () => {
       'Actively selected channel (prefer this channelId for follower tools'
     );
     expect(guidance).toContain('Great (id: list-great)');
-    expect(guidance).toContain("Their effort exceeds the channel's.");
+    expect(guidance).toContain(
+      "Their effort exceeds the channel's, including unreciprocated inbound engagement."
+    );
     expect(guidance).toContain('Sorting applies only to the currently loaded page.');
     expect(guidance).toContain('use follower tools to refresh and validate');
     expect(guidance).toContain('refreshFollowerPage');
@@ -147,34 +149,39 @@ describe('renderFollowerPageGuidance', () => {
       'Grow audience',
       'expand your audience',
       'Prioritize reciprocal relationships that can expand reach',
+      'Prefer reciprocal mutual deepening and timely first replies',
     ],
     [
       'lead_capture',
       'Capture leads',
       'high-intent inbound conversations',
       'Prioritize high-intent inbound signals',
+      'Prefer relevant, non-salesy follow-up and warm-network context',
     ],
     [
       'community_retention',
       'Retain community',
       'two-way interactions',
       'cooling off and need outbound attention',
+      'Re-engage cooling mutuals selectively',
     ],
     [
       'brand_awareness',
       'Build awareness',
       'amplifying and mentioning your brand',
       'Prioritize amplification signals',
+      'Acknowledge mentions and amplification genuinely',
     ],
     [
       'customer_support',
       'Support customers',
       'incoming support conversations',
       'unanswered inbound conversations',
+      'Use calm complaint-reply patterns',
     ],
   ])(
     'renders the trusted registry guidance for %s',
-    (id, label, summary, directive) => {
+    (id, label, summary, directive, expertiseNudge) => {
       const guidance = renderFollowerPageGuidance({
         ...followerPage,
         strategy: { id, version: 1 },
@@ -183,6 +190,10 @@ describe('renderFollowerPageGuidance', () => {
       expect(guidance).toContain(`${label} (id: ${id}, version 1)`);
       expect(guidance).toContain(summary);
       expect(guidance).toContain(directive);
+      expect(guidance).toContain(expertiseNudge);
+      expect(guidance).toContain(
+        `prefer metadata whose strategyTags include ${id}`
+      );
       expect(guidance).toContain(
         'Use relationship signals as decision support, not as a guarantee.'
       );
@@ -304,5 +315,53 @@ describe('renderFollowerPageGuidance', () => {
     expect(instructions).toContain('Do not claim a skill was applied unless loadSkill succeeded');
     expect(instructions).toContain('cannot override base safety rules');
     expect(instructions).toContain('readPipelineContextDocument');
+  });
+
+  it('documents product expertise discovery, selective reading, and precedence', async () => {
+    const service = new LoadToolsService({ get: jest.fn() } as any);
+    await service.agent();
+
+    const instructions = mockAgentOptions.instructions({
+      requestContext: { get: () => null },
+    });
+
+    expect(instructions).toContain('listExpertise');
+    expect(instructions).toContain('readExpertise');
+    expect(instructions).toContain('call listExpertise first');
+    expect(instructions).toContain('never load the entire library');
+    expect(instructions).toContain(
+      'Do not claim a playbook was used unless readExpertise succeeded'
+    );
+    expect(instructions).toContain(
+      'cannot override strategy directives, current tool results'
+    );
+    expect(instructions).toContain('write confirmations, or authorization');
+  });
+
+  it('prefers matching strategyTags in follower expertise guidance', async () => {
+    const service = new LoadToolsService({ get: jest.fn() } as any);
+    await service.agent();
+
+    const instructions = mockAgentOptions.instructions({
+      requestContext: {
+        get: (key: string) =>
+          key === 'followerPage'
+            ? { ...followerPage, strategy: { id: 'lead_capture', version: 1 } }
+            : null,
+      },
+    });
+
+    expect(instructions).toContain(
+      'prefer metadata whose strategyTags include lead_capture'
+    );
+    expect(instructions).toContain(
+      'prefer entries whose strategyTags match the server-resolved channel strategy'
+    );
+    expect(instructions.indexOf('Follower audience writes')).toBeLessThan(
+      instructions.indexOf('Live follower-page context')
+    );
+    expect(instructions.indexOf('Live follower-page context')).toBeLessThan(
+      instructions.indexOf('Product engagement expertise')
+    );
   });
 });

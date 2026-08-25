@@ -20,6 +20,7 @@ describe('channel strategy scoring', () => {
     [0, 0, null, null, 'quiet'],
     [8, 0, 1, 0, 'over_invested'],
     [0, 8, 2, 0, 'hot_lead'],
+    [0, 3, 1.5, 0, 'hot_lead'],
     [10, 10, 3, 1, 'mutual'],
     [40, 40, 5, 1, 'mutual'],
     [30, 10, 1, 1 / 3, 'over_invested'],
@@ -30,7 +31,7 @@ describe('channel strategy scoring', () => {
       expect(result).toMatchObject({
         grade,
         reciprocity,
-        formulaVersion: 3,
+        formulaVersion: 4,
         strategyId: 'grow_audience',
         strategyVersion: 1,
         triage,

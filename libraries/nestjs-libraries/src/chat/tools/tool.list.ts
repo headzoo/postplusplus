@@ -17,6 +17,7 @@ import { ContextDocumentsListTool } from '@gitroom/nestjs-libraries/chat/tools/c
 import { ContextDocumentReadTool } from '@gitroom/nestjs-libraries/chat/tools/context-documents.read.tool';
 import { FollowerChannelsTool } from '@gitroom/nestjs-libraries/chat/tools/follower.channels.tool';
 import { FollowersListTool } from '@gitroom/nestjs-libraries/chat/tools/followers.list.tool';
+import { FollowersRecentTool } from '@gitroom/nestjs-libraries/chat/tools/followers.recent.tool';
 import { FollowerDetailTool } from '@gitroom/nestjs-libraries/chat/tools/follower.detail.tool';
 import { FollowerTimelineTool } from '@gitroom/nestjs-libraries/chat/tools/follower.timeline.tool';
 import { FollowerListsTool } from '@gitroom/nestjs-libraries/chat/tools/follower.lists.tool';
@@ -29,6 +30,8 @@ import { FollowerUnignoreTool } from '@gitroom/nestjs-libraries/chat/tools/follo
 import { FollowerTriageIgnoreTool } from '@gitroom/nestjs-libraries/chat/tools/follower.triage.ignore.tool';
 import { AgentSkillsListTool } from '@gitroom/nestjs-libraries/chat/tools/agent-skills.list.tool';
 import { AgentSkillLoadTool } from '@gitroom/nestjs-libraries/chat/tools/agent-skill.load.tool';
+import { ExpertiseListTool } from '@gitroom/nestjs-libraries/chat/tools/expertise.list.tool';
+import { ExpertiseReadTool } from '@gitroom/nestjs-libraries/chat/tools/expertise.read.tool';
 
 export const toolList = [
   IntegrationListTool,
@@ -36,6 +39,7 @@ export const toolList = [
   PostsListTool,
   FollowerChannelsTool,
   FollowersListTool,
+  FollowersRecentTool,
   FollowerDetailTool,
   FollowerTimelineTool,
   FollowerListsTool,
@@ -54,6 +58,8 @@ export const toolList = [
   ContextDocumentReadTool,
   AgentSkillsListTool,
   AgentSkillLoadTool,
+  ExpertiseListTool,
+  ExpertiseReadTool,
   IntegrationValidationTool,
   IntegrationTriggerTool,
   IntegrationSchedulePostTool,

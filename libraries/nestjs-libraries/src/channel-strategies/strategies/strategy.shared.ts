@@ -5,7 +5,7 @@ import {
 } from '../channel-strategy.types';
 
 export const GROW_AUDIENCE_PROFILE: RelationshipScoringProfile = {
-  formulaVersion: 3,
+  formulaVersion: 4,
   scoreCap: 40,
   meaningfulActivityThreshold: 8,
   hotDirectionalRatio: 1.5,
@@ -52,7 +52,6 @@ export function createStrategy(
         'all',
         'leads',
         'hot',
-        'engaged',
         'cultivate',
         'mutual',
         'quiet',

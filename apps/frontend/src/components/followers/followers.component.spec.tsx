@@ -448,14 +448,20 @@ describe('follower page href helpers', () => {
       audience: undefined,
       isBot: true,
     });
+    expect(parseFollowerViewPath('/followers/engaged')).toEqual({
+      slug: 'engaged',
+      triage: 'hot_lead',
+      audience: undefined,
+      isBot: undefined,
+    });
     expect(
       buildFollowersPageHref({
-        slug: 'engaged',
+        slug: 'hot',
         search: 'alex',
         sort: 'their_effort',
         direction: 'asc',
       })
-    ).toBe('/followers/engaged?search=alex&sort=their_effort&direction=asc');
+    ).toBe('/followers/hot?search=alex&sort=their_effort&direction=asc');
     expect(
       buildFollowersPageHref({
         listId: 'list-1',
@@ -695,7 +701,6 @@ describe('FollowersComponent', () => {
       'All',
       'Leads',
       'Hot',
-      'Engaged',
       'Cultivate',
       'Mutual',
       'Quiet',
@@ -712,7 +717,6 @@ describe('FollowersComponent', () => {
     expect(getFilterChipLabels()).toEqual([
       'Leads',
       'Hot',
-      'Engaged',
       'All',
       'Cultivate',
       'Mutual',
@@ -742,6 +746,11 @@ describe('FollowersComponent', () => {
     expect(vipChip.className).toContain('border-indigo-500/40');
     expect(
       screen.getByRole('group', { name: 'Opportunities' }).contains(hotChip)
+    ).toBe(true);
+    expect(
+      screen
+        .getByRole('group', { name: 'Opportunities' })
+        .contains(screen.getByRole('link', { name: 'Cultivate' }))
     ).toBe(true);
     expect(
       screen.getByRole('group', { name: 'Exclusions' }).contains(costlyChip)
@@ -785,11 +794,11 @@ describe('FollowersComponent', () => {
     expect(screen.getByRole('link', { name: 'All' }).getAttribute('href')).toBe(
       '/followers'
     );
-    expect(screen.getByRole('link', { name: 'Engaged' }).getAttribute('href')).toBe(
-      '/followers/engaged'
-    );
     expect(screen.getByRole('link', { name: 'Hot' }).getAttribute('href')).toBe(
       '/followers/hot'
+    );
+    expect(screen.getByRole('link', { name: 'Cultivate' }).getAttribute('href')).toBe(
+      '/followers/cultivate'
     );
     expect(screen.getByRole('link', { name: 'Mutual' }).getAttribute('href')).toBe(
       '/followers/mutual'
@@ -859,6 +868,13 @@ describe('FollowersComponent', () => {
     render(<FollowersComponent />);
 
     expect(replace).toHaveBeenCalledWith('/followers/leads');
+  });
+
+  it('redirects legacy /followers/engaged to /followers/hot', () => {
+    mockPathname = '/followers/engaged';
+    render(<FollowersComponent />);
+
+    expect(replace).toHaveBeenCalledWith('/followers/hot');
   });
 
   it('hydrates the ignored audience from /followers/ignored', () => {

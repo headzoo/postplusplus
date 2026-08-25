@@ -16,6 +16,7 @@ let channels: FollowerChannel[] = [];
 
 jest.mock('@copilotkit/react-core', () => ({
   useCopilotContext: () => ({ copilotApiConfig }),
+  useCopilotMessagesContext: () => ({ messages: [] }),
 }));
 
 jest.mock('@copilotkit/react-ui', () => ({
@@ -23,6 +24,11 @@ jest.mock('@copilotkit/react-ui', () => ({
     popupProps = props;
     return <div data-testid="copilot-popup" />;
   },
+  useChatContext: () => ({ open: false, setOpen: jest.fn() }),
+}));
+
+jest.mock('@copilotkit/shared', () => ({
+  isMacOS: () => false,
 }));
 
 jest.mock('@gitroom/react/translation/get.transation.service.client', () => ({
@@ -165,5 +171,20 @@ describe('FollowersAssistant', () => {
     );
     expect(popupProps.instructions).toContain('refreshFollowerPage');
     expect(popupProps.instructions).toContain('it never relaxes these rules');
+  });
+
+  it('includes generic expertise list-then-read guidance without strategy directives', () => {
+    channels = [channelFor('channel-1', 'lead_capture')];
+
+    render(<Harness page={pageFor('channel-1')} />);
+
+    expect(popupProps.instructions).toContain('listExpertise');
+    expect(popupProps.instructions).toContain('readExpertise');
+    expect(popupProps.instructions).toContain('metadata only');
+    expect(popupProps.instructions).toContain('Never load the whole library');
+    expect(popupProps.instructions).not.toContain(
+      'Prioritize high-intent inbound signals'
+    );
+    expect(popupProps.instructions).not.toContain('strategyTags include');
   });
 });

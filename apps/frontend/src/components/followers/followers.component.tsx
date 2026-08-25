@@ -65,7 +65,8 @@ const FOLLOWER_VIEW_BY_SLUG: Record<
   string,
   { triage?: FollowerTriageFilter; audience?: 'lead' | 'ignored' | 'cultivate'; isBot?: true }
 > = {
-  engaged: { triage: 'engaged_not_yet' },
+  // Legacy bookmark slug; canonicalize to /followers/hot.
+  engaged: { triage: 'hot_lead' },
   hot: { triage: 'hot_lead' },
   mutual: { triage: 'mutual' },
   costly: { triage: 'over_invested' },
@@ -124,10 +125,10 @@ const FOLLOWER_FILTER_GROUPS: FollowerFilterGroup[] = [
         defaultLabel: 'Hot',
       },
       {
-        slug: 'engaged',
-        value: 'engaged_not_yet',
-        key: 'followers_triage_filter_engaged_not_yet',
-        defaultLabel: 'Engaged',
+        slug: 'cultivate',
+        audience: 'cultivate',
+        key: 'followers_audience_cultivate',
+        defaultLabel: 'Cultivate',
       },
     ],
   },
@@ -137,12 +138,6 @@ const FOLLOWER_FILTER_GROUPS: FollowerFilterGroup[] = [
     labelKey: 'followers_filter_group_relationships',
     defaultLabel: 'Relationships',
     items: [
-      {
-        slug: 'cultivate',
-        audience: 'cultivate',
-        key: 'followers_audience_cultivate',
-        defaultLabel: 'Cultivate',
-      },
       {
         slug: 'mutual',
         value: 'mutual',
@@ -227,7 +222,6 @@ const TRIAGE_DEFAULT_SORTS: Partial<
   >
 > = {
   hot_lead: { key: 'net_gap', direction: 'desc' },
-  engaged_not_yet: { key: 'their_effort', direction: 'desc' },
 };
 
 const decodeFollowerPathSegment = (value: string) => {
@@ -747,7 +741,7 @@ export const FollowersComponent: FC = () => {
 
   const strategyDefaults =
     selectedIntegrationId &&
-    !appliedStrategyDefaultChannelRef.current.has(selectedIntegrationId)
+      !appliedStrategyDefaultChannelRef.current.has(selectedIntegrationId)
       ? resolveFollowerStrategyDefaults({
         pathname: historyPath || '/followers',
         search: urlSearch,
@@ -945,6 +939,15 @@ export const FollowersComponent: FC = () => {
       const legacyQuery = legacyParams.toString();
       router.replace(
         legacyQuery ? `/followers/leads?${legacyQuery}` : '/followers/leads'
+      );
+      return;
+    }
+    // Legacy bookmarks used /followers/engaged; Engaged merged into Hot.
+    if (slug === 'engaged') {
+      const legacyParams = new URLSearchParams(searchParams.toString());
+      const legacyQuery = legacyParams.toString();
+      router.replace(
+        legacyQuery ? `/followers/hot?${legacyQuery}` : '/followers/hot'
       );
       return;
     }
@@ -1843,9 +1846,9 @@ export const FollowersComponent: FC = () => {
                       FILTER_CHIP_BASE,
                       getFilterChipClasses(group.color, isSelected),
                       selectedChannel?.strategy?.ui.filterEmphasis ===
-                        (option.slug || 'all') &&
-                        !isSelected &&
-                        'ring-1 ring-current'
+                      (option.slug || 'all') &&
+                      !isSelected &&
+                      'ring-1 ring-current'
                     )}
                     aria-pressed={isSelected}
                     aria-current={isSelected ? 'page' : undefined}

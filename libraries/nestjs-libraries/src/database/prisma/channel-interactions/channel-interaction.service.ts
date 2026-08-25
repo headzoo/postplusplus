@@ -2026,12 +2026,20 @@ export class ChannelInteractionService {
       mappedMembership === PrismaAudienceMembership.UNKNOWN
         ? undefined
         : mappedMembership;
+    // Providers that omit follow dates (e.g. X) still need a stored followedAt
+    // so "recent followers" queries work after tracking starts.
+    const stampFollowedAt =
+      kind === PrismaInteractionKind.FOLLOW &&
+      direction === PrismaInteractionDirection.INBOUND &&
+      membershipUpdate === PrismaAudienceMembership.FOLLOWER;
     return {
       providerEventKey: event.providerEventKey,
       kind,
       direction,
       eventAt,
-      counterparty,
+      counterparty: stampFollowedAt
+        ? { ...counterparty, followedAt: eventAt }
+        : counterparty,
       relatedObjectId: event.relatedObjectId,
       metadata: event.metadata,
       normalizationVersion: event.normalizationVersion,

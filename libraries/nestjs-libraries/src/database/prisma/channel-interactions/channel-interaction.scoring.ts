@@ -16,7 +16,7 @@ export type {
   RelationshipTriage,
 } from '../../../channel-strategies/channel-strategy.types';
 
-export const RELATIONSHIP_FORMULA_VERSION = 3;
+export const RELATIONSHIP_FORMULA_VERSION = 4;
 export const RELATIONSHIP_SCORE_CAP = 40;
 export const RELATIONSHIP_MEANINGFUL_ACTIVITY_THRESHOLD = 8;
 export const RELATIONSHIP_DIRECTIONAL_RATIO = 1.5;
@@ -281,10 +281,10 @@ function engagementSignal(input: BotScoreInput) {
   const hasRelationship =
     (Number.isSafeInteger(input.relationshipEffortScore) &&
       input.relationshipEffortScore! >=
-        RELATIONSHIP_MEANINGFUL_ACTIVITY_THRESHOLD) ||
+      RELATIONSHIP_MEANINGFUL_ACTIVITY_THRESHOLD) ||
     (Number.isSafeInteger(input.relationshipReciprocationScore) &&
       input.relationshipReciprocationScore! >=
-        RELATIONSHIP_MEANINGFUL_ACTIVITY_THRESHOLD);
+      RELATIONSHIP_MEANINGFUL_ACTIVITY_THRESHOLD);
   return hasInbound || hasNotes || hasLikes || hasRelationship ? 1 : 0;
 }
 

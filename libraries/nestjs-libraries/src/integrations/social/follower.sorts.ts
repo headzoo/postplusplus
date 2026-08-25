@@ -31,11 +31,13 @@ export const FOLLOWER_AUDIENCES = ['lead', 'ignored', 'cultivate'] as const;
 export type FollowerAudience = (typeof FOLLOWER_AUDIENCES)[number];
 
 export const FOLLOWER_CATEGORY_DESCRIPTIONS = {
-  hot_lead: "Their effort exceeds the channel's.",
+  hot_lead:
+    "Their effort exceeds the channel's, including unreciprocated inbound engagement.",
   over_invested: "The channel's effort exceeds theirs.",
   mutual: 'Balanced activity between both sides.',
   quiet: 'Neither direction has meaningful activity.',
-  engaged_not_yet: "They engaged, but the channel has not reciprocated.",
+  engaged_not_yet:
+    'Legacy alias of Hot: they engaged, but the channel has not reciprocated.',
   lead: 'An interacting non-follower.',
   ignored: 'An organization-managed visibility state, not a relationship score.',
   cultivate:

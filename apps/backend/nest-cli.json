@@ -13,7 +13,12 @@
     "tsConfigPath": "./tsconfig.build.json",
     "webpack": false,
     "deleteOutDir": false,
-    "assets": [],
+    "assets": [
+      {
+        "include": "../../../libraries/nestjs-libraries/src/channel-strategies/expertise/**/*.md",
+        "outDir": "dist/libraries/nestjs-libraries/src"
+      }
+    ],
     "watchAssets": false,
     "plugins": []
   }

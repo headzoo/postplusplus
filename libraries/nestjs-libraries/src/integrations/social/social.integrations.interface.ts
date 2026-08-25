@@ -418,6 +418,8 @@ export type Follower = {
   isLead?: boolean;
   engagedNotYet?: boolean;
   isIgnored?: boolean;
+  lastInboundAt?: string;
+  lastOutboundAt?: string;
   leadBridgeScore?: number | null;
   leadFitScore?: number | null;
   leadFitReason?: string | null;

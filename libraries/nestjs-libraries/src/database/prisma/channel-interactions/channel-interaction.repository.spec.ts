@@ -488,6 +488,7 @@ describe('ChannelInteractionRepository', () => {
       expect.objectContaining({
         create: expect.objectContaining({
           followerSyncGeneration: 'generation-2',
+          followedAt: expect.any(Date),
         }),
         update: expect.objectContaining({
           followerSyncGeneration: 'generation-2',
@@ -498,6 +499,29 @@ describe('ChannelInteractionRepository', () => {
       .not.toHaveProperty('membershipState');
     expect(tx.channelAudienceMember.upsert.mock.calls[0][0].update)
       .not.toHaveProperty('membershipState');
+    expect(tx.channelAudienceMember.upsert.mock.calls[0][0].update)
+      .not.toHaveProperty('followedAt');
+  });
+
+  it('keeps a provider followedAt on sync create and never stamps it on update', async () => {
+    const { repository, tx } = createHarness();
+    const followedAt = new Date('2026-01-01T00:00:00.000Z');
+
+    await repository.applyFollowerSyncPage(
+      'org',
+      'integration',
+      'generation-2',
+      [{ externalId: 'person-1', followedAt }]
+    );
+
+    expect(tx.channelAudienceMember.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({ followedAt }),
+        update: expect.not.objectContaining({ followedAt: expect.anything() }),
+      })
+    );
+    expect(tx.channelAudienceMember.upsert.mock.calls[0][0].update)
+      .not.toHaveProperty('followedAt');
   });
 
   it('prevents stale completion from demoting the active generation', async () => {
@@ -2429,6 +2453,93 @@ describe('ChannelInteractionRepository', () => {
     });
   });
 
+  it('queries recent followers by followedAt window with keyset pagination', async () => {
+    const { repository, audienceMemberFindMany } = createHarness();
+    const since = new Date('2026-07-15T00:00:00.000Z');
+    audienceMemberFindMany.mockResolvedValue([
+      {
+        externalId: 'person-2',
+        followedAt: new Date('2026-08-12T12:00:00.000Z'),
+        lastOutboundAt: null,
+      },
+      {
+        externalId: 'person-1',
+        followedAt: new Date('2026-08-11T12:00:00.000Z'),
+        lastOutboundAt: new Date('2026-08-10T12:00:00.000Z'),
+      },
+      {
+        externalId: 'person-0',
+        followedAt: new Date('2026-08-10T12:00:00.000Z'),
+        lastOutboundAt: null,
+      },
+    ]);
+
+    await expect(
+      repository.getRecentFollowers({
+        organizationId: 'org',
+        integrationId: 'integration',
+        userId: 'user-a',
+        since,
+        limit: 2,
+      })
+    ).resolves.toEqual({
+      items: [
+        expect.objectContaining({ externalId: 'person-2' }),
+        expect.objectContaining({ externalId: 'person-1' }),
+      ],
+      hasMore: true,
+    });
+
+    expect(audienceMemberFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          organizationId: 'org',
+          integrationId: 'integration',
+          membershipState: ChannelAudienceMembership.FOLLOWER,
+          ignoredAt: null,
+          followedAt: { gte: since },
+        },
+        orderBy: [{ followedAt: 'desc' }, { externalId: 'desc' }],
+        take: 3,
+        select: expect.objectContaining({
+          followedAt: true,
+          lastInboundAt: true,
+          lastOutboundAt: true,
+        }),
+      })
+    );
+  });
+
+  it('applies recent-follower keyset when a cursor is provided', async () => {
+    const { repository, audienceMemberFindMany } = createHarness();
+    audienceMemberFindMany.mockResolvedValue([]);
+
+    await repository.getRecentFollowers({
+      organizationId: 'org',
+      integrationId: 'integration',
+      since: new Date('2026-07-01T00:00:00.000Z'),
+      limit: 24,
+      cursor: {
+        followedAt: '2026-08-11T12:00:00.000Z',
+        externalId: 'person-1',
+      },
+    });
+
+    expect(audienceMemberFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          OR: [
+            { followedAt: { lt: new Date('2026-08-11T12:00:00.000Z') } },
+            {
+              followedAt: new Date('2026-08-11T12:00:00.000Z'),
+              externalId: { lt: 'person-1' },
+            },
+          ],
+        }),
+      })
+    );
+  });
+
   it('loads note, like, and grade fields for a follower page in one member query', async () => {
     const { repository, audienceMemberFindMany } = createHarness();
     audienceMemberFindMany.mockResolvedValue([
@@ -2834,7 +2945,7 @@ describe('ChannelInteractionRepository', () => {
     expect(tx.channelAudienceMemberTriageIgnore.upsert).not.toHaveBeenCalled();
   });
 
-  it('defines engaged-not-yet as positive reciprocation and zero effort', async () => {
+  it('treats engaged-not-yet as a Hot alias including unreciprocated inbound', async () => {
     const { repository, audienceMemberFindMany } = createHarness();
     audienceMemberFindMany.mockResolvedValue([]);
 
@@ -2853,11 +2964,56 @@ describe('ChannelInteractionRepository', () => {
         where: expect.objectContaining({
           AND: expect.arrayContaining([
             {
-              relationshipReciprocationScore: { gt: 0 },
-              relationshipEffortScore: 0,
+              OR: [
+                { relationshipTriage: 'hot_lead' },
+                {
+                  relationshipReciprocationScore: { gt: 0 },
+                  relationshipEffortScore: 0,
+                },
+              ],
               triageIgnores: {
                 none: expect.objectContaining({
-                  triage: 'engaged_not_yet',
+                  triage: { in: ['hot_lead', 'engaged_not_yet'] },
+                  OR: expect.any(Array),
+                }),
+              },
+            },
+            { ignoredAt: null },
+          ]),
+        }),
+      })
+    );
+  });
+
+  it('filters Hot with stored hot_lead or unreciprocated inbound scores', async () => {
+    const { repository, audienceMemberFindMany } = createHarness();
+    audienceMemberFindMany.mockResolvedValue([]);
+
+    await repository.getAudienceFollowers({
+      organizationId: 'org',
+      integrationId: 'integration',
+      userId: 'user-a',
+      sortField: 'followedAt',
+      direction: 'desc',
+      limit: 24,
+      triage: 'hot_lead',
+    });
+
+    expect(audienceMemberFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          AND: expect.arrayContaining([
+            {
+              OR: [
+                { relationshipTriage: 'hot_lead' },
+                {
+                  relationshipReciprocationScore: { gt: 0 },
+                  relationshipEffortScore: 0,
+                },
+              ],
+              triageIgnores: {
+                none: expect.objectContaining({
+                  triage: { in: ['hot_lead', 'engaged_not_yet'] },
                   OR: expect.any(Array),
                 }),
               },
