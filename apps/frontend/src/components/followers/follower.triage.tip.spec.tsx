@@ -19,6 +19,11 @@ jest.mock('@gitroom/react/translation/get.transation.service.client', () => ({
   useT: () => (key: string, fallback: string) => fallback,
 }));
 
+jest.mock('next/navigation', () => ({
+  usePathname: () => '/followers',
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 jest.mock('@gitroom/frontend/components/layout/use.dismissed.alerts', () => ({
   useDismissedAlerts: () => ({
     data: hasData ? { keys: dismissedKeys } : undefined,
@@ -55,6 +60,23 @@ describe('FollowerTriageTip', () => {
     expect(
       screen.getByText(
         'Their effort exceeds the channel’s — including people who engaged and have not been reciprocated yet.'
+      )
+    ).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Learn more' })).toBeTruthy();
+    expect(
+      screen.getByRole('link', { name: 'View engagement guide' })
+    ).toBeTruthy();
+  });
+
+  it('renders the All tip with Hot/Mutual guidance', () => {
+    render(<FollowerTriageTip slug="all" />);
+
+    expect(
+      screen.getByTestId('followers-triage-tip').getAttribute('data-triage-tip')
+    ).toBe('all');
+    expect(
+      screen.getByText(
+        /Focus on Hot and Mutual users first/
       )
     ).toBeTruthy();
   });

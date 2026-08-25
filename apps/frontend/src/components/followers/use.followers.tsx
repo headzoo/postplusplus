@@ -904,6 +904,50 @@ export const useFollowerRelationshipScoreMutation = (
 export const followerListsKey = (integrationId: string) =>
   `/followers/${integrationId}/lists`;
 
+export const followerAudienceKey = (integrationId: string) =>
+  `/followers/${integrationId}/audience`;
+
+export type FollowerAudienceSummary = {
+  total: number | null;
+  totalAsOf: string | null;
+  totalSource: 'snapshot' | 'list' | null;
+  categories: Record<string, number | null>;
+  lists: Array<{ id: string; name: string; total: number | null }>;
+  listsTruncated: boolean;
+  tracking: FollowerPageTracking | null;
+};
+
+export const useFollowerAudienceSummary = (integrationId?: string) => {
+  const fetch = useFetch();
+
+  const url = useMemo(() => {
+    if (!integrationId) {
+      return null;
+    }
+    return followerAudienceKey(integrationId);
+  }, [integrationId]);
+
+  const load = useCallback(
+    async (path: string) => {
+      const response = await fetch(path);
+      if (!response.ok) {
+        throw new Error('Failed to load follower audience summary');
+      }
+      return (await response.json()) as FollowerAudienceSummary;
+    },
+    [fetch]
+  );
+
+  return useSWR<FollowerAudienceSummary>(url, load, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    revalidateIfStale: false,
+    revalidateOnMount: true,
+    refreshWhenHidden: false,
+    refreshWhenOffline: false,
+  });
+};
+
 export const isFollowerChannelCacheKey = (
   integrationId: string,
   key: unknown
@@ -911,7 +955,8 @@ export const isFollowerChannelCacheKey = (
   typeof key === 'string' &&
   (isFollowerListCacheKey(integrationId, key) ||
     key.startsWith(`/followers/${integrationId}/member`) ||
-    key === followerListsKey(integrationId));
+    key === followerListsKey(integrationId) ||
+    key === followerAudienceKey(integrationId));
 
 export const revalidateFollowerChannelCaches = (
   mutateCache: ReturnType<typeof useSWRConfig>['mutate'],

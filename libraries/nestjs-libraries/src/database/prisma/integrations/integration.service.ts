@@ -1298,6 +1298,42 @@ export class IntegrationService {
     );
   }
 
+  /**
+   * Platform follower total (snapshot preferred, else list page total) plus
+   * stored CRM category and named-list counts. Category counts must not be
+   * summed as a follower total.
+   */
+  async getFollowerAudienceSummary(
+    org: Organization,
+    actor: FollowerReadActor | User | undefined,
+    integrationId: string
+  ) {
+    const [all, stored, snapshot] = await Promise.all([
+      this.getFollowers(org, actor, integrationId, { limit: 1 }),
+      this.getStoredFollowerAudienceCounts(org, integrationId),
+      this.getLatestAccountAudienceTotal(org, integrationId).catch(() => null),
+    ]);
+
+    const listTotal = all.total ?? null;
+    const total = snapshot?.value ?? listTotal;
+    const totalSource =
+      snapshot != null
+        ? ('snapshot' as const)
+        : listTotal != null
+          ? ('list' as const)
+          : null;
+
+    return {
+      total,
+      totalAsOf: snapshot?.asOf ?? null,
+      totalSource,
+      categories: stored.categories,
+      lists: stored.lists,
+      listsTruncated: stored.listsTruncated,
+      tracking: all.tracking ?? null,
+    };
+  }
+
   async createFollowerList(
     org: Organization,
     user: User,

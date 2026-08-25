@@ -8,20 +8,27 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useCopilotReadable } from '@copilotkit/react-core';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { Button } from '@gitroom/react/form/button';
-import { Input } from '@gitroom/react/form/input';
-import { Select } from '@gitroom/react/form/select';
 import { LoadingComponent } from '@gitroom/frontend/components/layout/loading';
 import { FollowerCard } from '@gitroom/frontend/components/followers/follower.card';
 import { FollowerDetailModal } from '@gitroom/frontend/components/followers/follower.detail.modal';
 import { FollowerListCreateModal } from '@gitroom/frontend/components/followers/follower.list.create.modal';
 import { FollowerListAddModal } from '@gitroom/frontend/components/followers/follower.list.add.modal';
 import { FollowerTriageTip } from '@gitroom/frontend/components/followers/follower.triage.tip';
+import { FollowerSummaryCards } from '@gitroom/frontend/components/followers/follower.summary.cards';
+import { FollowerBoard } from '@gitroom/frontend/components/followers/follower.board';
+import { FollowerFiltersMenu } from '@gitroom/frontend/components/followers/follower.filters.menu';
+import {
+  FOLLOWER_BOARD_SEGMENTS,
+  FOLLOWER_SEGMENT_COLOR_CLASSES,
+  FOLLOWER_TAB_SEGMENTS,
+  categoryCount,
+} from '@gitroom/frontend/components/followers/follower.segments';
 import { useCopilotFollowerPageProperties } from '@gitroom/frontend/components/followers/use.copilot.follower.page';
 import {
   useDecisionModal,
   useModals,
 } from '@gitroom/frontend/components/layout/new-modal';
-import { PlusIcon } from '@gitroom/frontend/components/ui/icons';
+import { PlusIcon, SearchIcon } from '@gitroom/frontend/components/ui/icons';
 import {
   ChannelMenu,
   ChannelsSidebar,
@@ -41,7 +48,6 @@ import {
   ChannelInteractionKindCoverage,
   ChannelInteractionWindow,
   DEFAULT_FOLLOWER_INTERACTION_WINDOW,
-  FOLLOWER_INTERACTION_WINDOWS,
   FollowerChannel,
   FollowerPageTracking,
   FollowerStrategyMetadata,
@@ -52,14 +58,13 @@ import {
   applyTriageIgnoreToFollowerPage,
   buildFollowerDetailHref,
   buildFollowerTimelineHref,
+  useFollowerAudienceSummary,
   useFollowerChannels,
   useFollowerDetail,
   useFollowerListMutations,
   useFollowerLists,
   useFollowers,
 } from '@gitroom/frontend/components/followers/use.followers';
-
-const PAGE_SIZE_OPTIONS = [12, 24, 48] as const;
 
 const FOLLOWER_VIEW_BY_SLUG: Record<
   string,
@@ -79,8 +84,6 @@ const FOLLOWER_VIEW_BY_SLUG: Record<
   bots: { isBot: true },
 };
 
-type FollowerFilterColor = 'neutral' | 'orange' | 'teal' | 'amber' | 'indigo';
-
 type FollowerFilterOption = {
   slug?: string;
   value?: FollowerTriageFilter;
@@ -90,129 +93,29 @@ type FollowerFilterOption = {
   defaultLabel: string;
 };
 
-type FollowerFilterGroup = {
-  id: string;
-  color: FollowerFilterColor;
-  labelKey: string;
-  defaultLabel: string;
-  items: FollowerFilterOption[];
-};
-
-const FOLLOWER_FILTER_GROUPS: FollowerFilterGroup[] = [
-  {
-    id: 'all',
-    color: 'neutral',
-    labelKey: 'followers_filter_group_all',
-    defaultLabel: 'All',
-    items: [{ key: 'followers_triage_filter_all', defaultLabel: 'All' }],
-  },
-  {
-    id: 'opportunities',
-    color: 'orange',
-    labelKey: 'followers_filter_group_opportunities',
-    defaultLabel: 'Opportunities',
-    items: [
-      {
-        slug: 'leads',
-        audience: 'lead',
-        key: 'followers_audience_leads',
-        defaultLabel: 'Leads',
-      },
-      {
-        slug: 'hot',
-        audience: 'hot',
-        key: 'followers_triage_hot_lead',
-        defaultLabel: 'Hot',
-      },
-      {
-        slug: 'cultivate',
-        audience: 'cultivate',
-        key: 'followers_audience_cultivate',
-        defaultLabel: 'Cultivate',
-      },
-    ],
-  },
-  {
-    id: 'relationships',
-    color: 'teal',
-    labelKey: 'followers_filter_group_relationships',
-    defaultLabel: 'Relationships',
-    items: [
-      {
-        slug: 'mutual',
-        value: 'mutual',
-        key: 'followers_triage_mutual',
-        defaultLabel: 'Mutual',
-      },
-      {
-        slug: 'quiet',
-        value: 'quiet',
-        key: 'followers_triage_quiet',
-        defaultLabel: 'Quiet',
-      },
-    ],
-  },
-  {
-    id: 'exclusions',
-    color: 'amber',
-    labelKey: 'followers_filter_group_exclusions',
-    defaultLabel: 'Exclusions',
-    items: [
-      {
-        slug: 'costly',
-        value: 'over_invested',
-        key: 'followers_triage_over_invested',
-        defaultLabel: 'Costly',
-      },
-      {
-        slug: 'bots',
-        isBot: true,
-        key: 'followers_bot_filter',
-        defaultLabel: 'Bots',
-      },
-      {
-        slug: 'ignored',
-        audience: 'ignored',
-        key: 'followers_ignored_list',
-        defaultLabel: 'Ignored',
-      },
-    ],
-  },
-];
-
-const TRIAGE_FILTER_OPTIONS: FollowerFilterOption[] =
-  FOLLOWER_FILTER_GROUPS.flatMap((group) => group.items);
+const TRIAGE_FILTER_OPTIONS: FollowerFilterOption[] = FOLLOWER_TAB_SEGMENTS.map(
+  (tab) => ({
+    slug: tab.slug,
+    value: tab.triage,
+    audience: tab.audience,
+    isBot: tab.isBot,
+    key: tab.key,
+    defaultLabel: tab.defaultLabel,
+  })
+);
 
 const FILTER_CHIP_BASE =
-  'rounded-[8px] border px-[10px] py-[6px] text-[13px] transition-colors bg-newBgColorInner';
+  'rounded-full border px-[12px] py-[6px] text-[13px] transition-colors bg-newBgColorInner';
 
-const getFilterChipClasses = (
-  color: FollowerFilterColor,
+const getTabChipClasses = (
+  color: (typeof FOLLOWER_TAB_SEGMENTS)[number]['color'],
   isSelected: boolean
 ) => {
-  if (color === 'neutral') {
-    return isSelected
-      ? 'border-newTableText bg-newTableHeader text-newTextColor'
-      : 'border-newBorder text-textItemBlur hover:bg-newTableHeader hover:text-newTextColor';
+  const colors = FOLLOWER_SEGMENT_COLOR_CLASSES[color];
+  if (isSelected) {
+    return colors.borderSelected;
   }
-  if (color === 'orange') {
-    return isSelected
-      ? 'border-orange-600 bg-orange-600/10 text-orange-400'
-      : 'border-orange-600/50 text-textItemBlur hover:border-orange-600/70 hover:text-orange-400';
-  }
-  if (color === 'teal') {
-    return isSelected
-      ? 'border-teal-500 bg-teal-500/10 text-teal-400'
-      : 'border-teal-500/40 text-textItemBlur hover:border-teal-500/60 hover:text-teal-400';
-  }
-  if (color === 'amber') {
-    return isSelected
-      ? 'border-amber-400 bg-amber-400/10 text-amber-300'
-      : 'border-amber-400/50 text-textItemBlur hover:border-amber-400/70 hover:text-amber-300';
-  }
-  return isSelected
-    ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400'
-    : 'border-indigo-500/40 text-textItemBlur hover:border-indigo-500/60 hover:text-indigo-400';
+  return `${colors.border} text-textItemBlur hover:bg-newTableHeader hover:text-newTextColor`;
 };
 
 const decodeFollowerPathSegment = (value: string) => {
@@ -984,13 +887,21 @@ export const FollowersComponent: FC = () => {
       : activeSort.defaultDirection
     : undefined;
 
+  const showBoard =
+    !urlListId &&
+    !urlIsBot &&
+    !trimmedSearch &&
+    !resolvedTriage &&
+    !resolvedAudience &&
+    !slug;
+
   const {
     data: followersPage,
     isLoading: isLoadingFollowers,
     error: followersError,
     mutate: mutateFollowers,
   } = useFollowers({
-    integrationId: selectedIntegrationId,
+    integrationId: showBoard ? undefined : selectedIntegrationId,
     cursor: currentCursor,
     limit,
     sort: resolvedAudience === 'hot' ? undefined : effectiveSort,
@@ -1002,6 +913,46 @@ export const FollowersComponent: FC = () => {
     listId: urlListId,
     isBot: urlIsBot || undefined,
   });
+
+  const boardIntegrationId = showBoard ? selectedIntegrationId : undefined;
+  const leadsPreview = useFollowers({
+    integrationId: boardIntegrationId,
+    limit: 3,
+    audience: 'lead',
+  });
+  const hotPreview = useFollowers({
+    integrationId: boardIntegrationId,
+    limit: 3,
+    audience: 'hot',
+  });
+  const mutualPreview = useFollowers({
+    integrationId: boardIntegrationId,
+    limit: 3,
+    triage: 'mutual',
+  });
+  const cultivatePreview = useFollowers({
+    integrationId: boardIntegrationId,
+    limit: 3,
+    audience: 'cultivate',
+  });
+  const quietPreview = useFollowers({
+    integrationId: boardIntegrationId,
+    limit: 3,
+    triage: 'quiet',
+  });
+
+  const {
+    data: audienceSummary,
+    isLoading: isLoadingAudienceSummary,
+  } = useFollowerAudienceSummary(selectedIntegrationId);
+
+  const boardPreviewBySlug = {
+    leads: leadsPreview,
+    hot: hotPreview,
+    mutual: mutualPreview,
+    cultivate: cultivatePreview,
+    quiet: quietPreview,
+  } as const;
 
   useEffect(() => {
     if (!followersPage || !selectedIntegrationId) {
@@ -1337,21 +1288,44 @@ export const FollowersComponent: FC = () => {
     urlListId,
   ]);
 
-  const orderedFollowerFilterGroups = useMemo(() => {
+  const orderedFollowerTabs = useMemo(() => {
     const priority = selectedChannel?.strategy?.ui.filterPriority || [];
-    const rank = (slug?: string) => {
-      const index = slug ? priority.indexOf(slug) : priority.indexOf('all');
+    const rank = (tabSlug?: string) => {
+      const index = tabSlug ? priority.indexOf(tabSlug) : priority.indexOf('all');
       return index === -1 ? Number.MAX_SAFE_INTEGER : index;
     };
-    return FOLLOWER_FILTER_GROUPS.map((group) => ({
-      ...group,
-      items: [...group.items].sort((left, right) => rank(left.slug) - rank(right.slug)),
-    })).sort(
-      (left, right) =>
-        Math.min(...left.items.map((item) => rank(item.slug))) -
-        Math.min(...right.items.map((item) => rank(item.slug)))
+    return [...FOLLOWER_TAB_SEGMENTS].sort(
+      (left, right) => rank(left.slug) - rank(right.slug)
     );
   }, [selectedChannel?.strategy?.ui.filterPriority]);
+
+  const boardColumns = useMemo(() => {
+    if (!showBoard) {
+      return [];
+    }
+    return FOLLOWER_BOARD_SEGMENTS.map((segment) => {
+      const preview =
+        boardPreviewBySlug[segment.slug as keyof typeof boardPreviewBySlug];
+      const countKey = segment.categoryKey || segment.slug;
+      return {
+        segment,
+        items: preview?.data?.items ?? [],
+        total: categoryCount(audienceSummary?.categories, countKey),
+        isLoading: !!preview?.isLoading,
+        viewAllHref: buildFollowersPageHref({
+          slug: segment.slug,
+          sort: querySort,
+          direction: querySort ? queryDirection : undefined,
+        }),
+      };
+    });
+  }, [
+    audienceSummary?.categories,
+    boardPreviewBySlug,
+    queryDirection,
+    querySort,
+    showBoard,
+  ]);
 
   if (isLoadingChannels || isLoadingIntegrations) {
     return (
@@ -1671,134 +1645,69 @@ export const FollowersComponent: FC = () => {
       </ChannelsSidebar>
 
       <div className="bg-newBgColorInner flex-1 flex-col flex p-[20px] gap-[16px] min-w-0">
-        <div className="flex flex-col gap-[12px]">
-          {selectedChannel?.strategy && (
-            <div className="flex flex-wrap items-center gap-x-[12px] gap-y-[4px] text-[13px]">
-              <span className="font-medium text-newTextColor">
-                {t(
-                  selectedChannel.strategy.summary.key,
-                  selectedChannel.strategy.summary.defaultValue
-                )}
-              </span>
-              {Number.isFinite(followersPage?.total) && (
-                <span className="text-textItemBlur">
-                  {t('followers_total', '{{count}} total', {
-                    count: followersPage!.total!,
-                  })}
-                </span>
+        {selectedChannel?.strategy && (
+          <div className="flex flex-wrap items-center gap-x-[12px] gap-y-[4px] text-[13px]">
+            <span className="font-medium text-newTextColor">
+              {t(
+                selectedChannel.strategy.summary.key,
+                selectedChannel.strategy.summary.defaultValue
               )}
-            </div>
-          )}
-          {!selectedChannel?.strategy && Number.isFinite(followersPage?.total) && (
-            <p className="text-[13px] text-textItemBlur">
-              {t('followers_total', '{{count}} total', {
-                count: followersPage!.total!,
-              })}
-            </p>
-          )}
-
-          <div className="flex flex-wrap items-end justify-start gap-[12px]">
-            <div className="w-[220px] max-w-full">
-              <Input
-                label={t('followers_search', 'Search')}
-                name="followers-search"
-                disableForm={true}
-                removeError={true}
-                value={search}
-                placeholder={t(
-                  'followers_search_placeholder',
-                  'Search by username or name'
-                )}
-                onChange={(event) => {
-                  lastSyncedSearchRef.current = event.target.value.trim();
-                  setSearch(event.target.value);
-                }}
-              />
-            </div>
-            {showSortSelector && (
-              <div className="w-[160px] max-w-full">
-                <Select
-                  label={t('followers_sort_by', 'Sort by')}
-                  name="followers-sort"
-                  disableForm={true}
-                  hideErrors={true}
-                  value={effectiveSort ?? ''}
-                  onChange={(event) => handleSortChange(event.target.value)}
-                >
-                  {selectedChannel?.sorts.map((sortOption) => (
-                    <option key={sortOption.key} value={sortOption.key}>
-                      {sortOption.label}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-            )}
-            {requiresWindow && (
-              <div className="w-[140px] max-w-full">
-                <Select
-                  label={t('followers_time_window', 'Time window')}
-                  name="followers-window"
-                  disableForm={true}
-                  hideErrors={true}
-                  value={window}
-                  onChange={(event) =>
-                    handleWindowChange(
-                      event.target.value as ChannelInteractionWindow
-                    )
-                  }
-                >
-                  {FOLLOWER_INTERACTION_WINDOWS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {t(option.labelKey, option.defaultLabel)}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-            )}
-            {showDirectionSelector && (
-              <div className="w-[140px] max-w-full">
-                <Select
-                  label={t('followers_direction', 'Direction')}
-                  name="followers-direction"
-                  disableForm={true}
-                  hideErrors={true}
-                  value={effectiveDirection ?? 'desc'}
-                  onChange={(event) =>
-                    handleDirectionChange(
-                      event.target.value as FollowerSortDirection
-                    )
-                  }
-                >
-                  {activeSort?.directions.map((sortDirection) => (
-                    <option key={sortDirection} value={sortDirection}>
-                      {sortDirection === 'asc'
-                        ? t('followers_direction_asc', 'Ascending')
-                        : t('followers_direction_desc', 'Descending')}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-            )}
-            <div className="w-[120px] max-w-full">
-              <Select
-                label={t('followers_page_size', 'Per page')}
-                name="followers-limit"
-                disableForm={true}
-                hideErrors={true}
-                value={String(limit)}
-                onChange={(event) => handleLimitChange(Number(event.target.value))}
-              >
-                {PAGE_SIZE_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </Select>
-            </div>
+            </span>
           </div>
+        )}
+
+        <FollowerSummaryCards
+          summary={audienceSummary}
+          isLoading={isLoadingAudienceSummary}
+          buildHref={(segmentSlug) =>
+            buildFollowersPageHref({
+              slug: segmentSlug,
+              search: trimmedSearch || undefined,
+              sort: querySort,
+              direction: querySort ? queryDirection : undefined,
+            })
+          }
+        />
+
+        <div className="flex flex-col gap-[12px] sm:flex-row sm:items-center">
+          <div className="relative min-w-0 flex-1">
+            <SearchIcon
+              size={16}
+              className="pointer-events-none absolute start-[14px] top-1/2 -translate-y-1/2 text-textItemBlur"
+            />
+            <input
+              name="followers-search"
+              value={search}
+              placeholder={t(
+                'followers_search_placeholder',
+                'Search followers or @username...'
+              )}
+              onChange={(event) => {
+                lastSyncedSearchRef.current = event.target.value.trim();
+                setSearch(event.target.value);
+              }}
+              className="h-[42px] w-full rounded-[10px] border border-newBorder bg-newBgColorInner pe-[14px] ps-[40px] text-[14px] text-newTextColor outline-none placeholder:text-textItemBlur focus:border-newTextColor/40"
+              aria-label={t('followers_search', 'Search')}
+              data-testid="followers-search-input"
+            />
+          </div>
+          <FollowerFiltersMenu
+            sorts={selectedChannel?.sorts}
+            sort={effectiveSort}
+            direction={effectiveDirection}
+            window={window}
+            limit={limit}
+            showSort={showSortSelector}
+            showDirection={showDirectionSelector}
+            showWindow={requiresWindow}
+            onSortChange={handleSortChange}
+            onDirectionChange={handleDirectionChange}
+            onWindowChange={handleWindowChange}
+            onLimitChange={handleLimitChange}
+          />
         </div>
 
-        {isPageScopedSort && (
+        {isPageScopedSort && !showBoard && (
           <p className="text-[13px] text-textItemBlur">
             {t(
               'followers_page_sort_hint',
@@ -1808,59 +1717,51 @@ export const FollowersComponent: FC = () => {
         )}
 
         <div
-          className="flex flex-wrap items-center gap-x-[16px] gap-y-[8px]"
+          className="flex flex-wrap items-center gap-[8px]"
           role="group"
           aria-label={t('followers_triage_filter_group', 'Triage filter')}
           data-testid="followers-filter-bar"
         >
-          {orderedFollowerFilterGroups.map((group) => (
-            <div
-              key={group.id}
-              className="flex flex-wrap gap-[8px]"
-              role="group"
-              aria-label={t(group.labelKey, group.defaultLabel)}
-              data-filter-group={group.id}
-            >
-              {group.items.map((option) => {
-                const isSelected = option.isBot
-                  ? urlIsBot
-                  : urlListId || urlIsBot
-                    ? false
-                    : option.audience
-                      ? resolvedAudience === option.audience
-                      : !resolvedAudience && resolvedTriage === option.value;
-                const hrefSlug = option.isBot
-                  ? urlIsBot
-                    ? undefined
-                    : 'bots'
-                  : option.slug;
-                return (
-                  <Link
-                    key={option.key}
-                    href={buildFollowersPageHref({
-                      slug: hrefSlug,
-                      search: trimmedSearch || undefined,
-                      sort: querySort,
-                      direction: querySort ? queryDirection : undefined,
-                    })}
-                    scroll={false}
-                    className={clsx(
-                      FILTER_CHIP_BASE,
-                      getFilterChipClasses(group.color, isSelected),
-                      selectedChannel?.strategy?.ui.filterEmphasis ===
-                      (option.slug || 'all') &&
-                      !isSelected &&
-                      'ring-1 ring-current'
-                    )}
-                    aria-pressed={isSelected}
-                    aria-current={isSelected ? 'page' : undefined}
-                  >
-                    {t(option.key, option.defaultLabel)}
-                  </Link>
-                );
-              })}
-            </div>
-          ))}
+          {orderedFollowerTabs.map((option) => {
+            const isSelected = option.isBot
+              ? urlIsBot
+              : urlListId || urlIsBot
+                ? false
+                : option.audience
+                  ? resolvedAudience === option.audience
+                  : option.triage
+                    ? !resolvedAudience && resolvedTriage === option.triage
+                    : !resolvedAudience && !resolvedTriage && !urlIsBot;
+            const hrefSlug = option.isBot
+              ? urlIsBot
+                ? undefined
+                : 'bots'
+              : option.slug;
+            return (
+              <Link
+                key={option.key}
+                href={buildFollowersPageHref({
+                  slug: hrefSlug,
+                  search: trimmedSearch || undefined,
+                  sort: querySort,
+                  direction: querySort ? queryDirection : undefined,
+                })}
+                scroll={false}
+                className={clsx(
+                  FILTER_CHIP_BASE,
+                  getTabChipClasses(option.color, isSelected),
+                  selectedChannel?.strategy?.ui.filterEmphasis ===
+                    (option.slug || 'all') &&
+                    !isSelected &&
+                    'ring-1 ring-current'
+                )}
+                aria-pressed={isSelected}
+                aria-current={isSelected ? 'page' : undefined}
+              >
+                {t(option.key, option.defaultLabel)}
+              </Link>
+            );
+          })}
           <div
             className="flex flex-wrap gap-[8px]"
             role="group"
@@ -1881,7 +1782,7 @@ export const FollowersComponent: FC = () => {
                   scroll={false}
                   className={clsx(
                     FILTER_CHIP_BASE,
-                    getFilterChipClasses('indigo', isSelected)
+                    getTabChipClasses('neutral', isSelected)
                   )}
                   aria-pressed={isSelected}
                   aria-current={isSelected ? 'page' : undefined}
@@ -1896,7 +1797,7 @@ export const FollowersComponent: FC = () => {
               className={clsx(
                 'inline-flex items-center justify-center',
                 FILTER_CHIP_BASE,
-                getFilterChipClasses('indigo', false)
+                getTabChipClasses('neutral', false)
               )}
               aria-label={t('followers_create_list', 'Create list')}
             >
@@ -1927,10 +1828,17 @@ export const FollowersComponent: FC = () => {
           </div>
         )}
 
-        {isInteractionsSort && (
+        {showBoard && (
+          <FollowerBoard
+            columns={boardColumns}
+            onOpenFollower={openFollowerDetail}
+          />
+        )}
+
+        {isInteractionsSort && !showBoard && (
           <TrackingNotice tracking={tracking} showFreshness={isTrackingReady} />
         )}
-        {selectedChannel?.recomputing && (
+        {!showBoard && selectedChannel?.recomputing && (
           <div className="rounded-[10px] border border-amber-500/30 bg-amber-500/10 px-[14px] py-[10px] text-[13px] text-amber-400">
             {t(
               'followers_strategy_recomputing',
@@ -1939,7 +1847,7 @@ export const FollowersComponent: FC = () => {
           </div>
         )}
 
-        {followersError && (
+        {!showBoard && followersError && (
           <div className="flex flex-col items-center justify-center gap-[12px] rounded-[12px] border border-newTableBorder bg-newTableHeader p-[24px] text-center">
             <p className="text-[16px] text-newTextColor">
               {t(
@@ -1953,7 +1861,7 @@ export const FollowersComponent: FC = () => {
           </div>
         )}
 
-        {!followersError && isLoadingFollowers && (
+        {!showBoard && !followersError && isLoadingFollowers && (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-[16px]">
             {Array.from({ length: limit > 12 ? 6 : 3 }).map((_, index) => (
               <FollowerCardSkeleton key={index} />
@@ -1961,11 +1869,11 @@ export const FollowersComponent: FC = () => {
           </div>
         )}
 
-        {!followersError && !isLoadingFollowers && !followersPage?.items.length && (
+        {!showBoard && !followersError && !isLoadingFollowers && !followersPage?.items.length && (
           renderEmptyState()
         )}
 
-        {!followersError && !isLoadingFollowers && !!followersPage?.items.length && (
+        {!showBoard && !followersError && !isLoadingFollowers && !!followersPage?.items.length && (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-[16px]">
               {followersPage.items.map((follower) => (

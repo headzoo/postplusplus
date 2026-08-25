@@ -17,6 +17,7 @@ describe('FollowersController', () => {
   const service = {
     getFollowerChannels: jest.fn(),
     getFollowers: jest.fn(),
+    getFollowerAudienceSummary: jest.fn(),
     getFollowerMemberDetails: jest.fn(),
     getFollowerMemberTimeline: jest.fn(),
     createFollowerMemberNote: jest.fn(),
@@ -44,6 +45,28 @@ describe('FollowersController', () => {
       { id: 'channel-a' },
     ]);
     expect(service.getFollowerChannels).toHaveBeenCalledWith(org);
+  });
+
+  it('delegates audience summary for an owned channel', async () => {
+    const summary = {
+      total: 1256,
+      totalAsOf: '2026-08-25T12:00:00.000Z',
+      totalSource: 'snapshot' as const,
+      categories: { lead: 12, hot: 5 },
+      lists: [],
+      listsTruncated: false,
+      tracking: null,
+    };
+    service.getFollowerAudienceSummary.mockResolvedValue(summary);
+
+    await expect(
+      controller.getFollowerAudienceSummary(org, user, 'channel-a')
+    ).resolves.toEqual(summary);
+    expect(service.getFollowerAudienceSummary).toHaveBeenCalledWith(
+      org,
+      user,
+      'channel-a'
+    );
   });
 
   it('forwards a validated follower page query and scoped organization', async () => {

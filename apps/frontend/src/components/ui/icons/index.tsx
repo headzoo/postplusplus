@@ -1083,6 +1083,213 @@ export const RobotIcon: FC<IconProps> = ({
   </svg>
 );
 
+export const UsersIcon: FC<IconProps> = ({
+  size = 20,
+  className,
+  ...props
+}) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    className={className}
+    aria-hidden="true"
+    {...props}
+  >
+    <path
+      d="M16 21V19C16 17.9391 15.5786 16.9217 14.8284 16.1716C14.0783 15.4214 13.0609 15 12 15H6C4.93913 15 3.92172 15.4214 3.17157 16.1716C2.42143 16.9217 2 17.9391 2 19V21M16 3.128C16.8499 3.3503 17.6031 3.85128 18.145 4.5541C18.6868 5.25692 18.9879 6.12305 19.0022 7.02103C19.0166 7.91901 18.7434 8.79434 18.2239 9.51396C17.7044 10.2336 16.9673 10.7578 16.12 11.006M22 21V19C21.9993 18.1137 21.7044 17.2528 21.1614 16.5523C20.6184 15.8519 19.8581 15.3516 19 15.13M12 11C14.2091 11 16 9.20914 16 7C16 4.79086 14.2091 3 12 3C9.79086 3 8 4.79086 8 7C8 9.20914 9.79086 11 12 11Z"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+export const UsersGroupIcon: FC<IconProps> = ({
+  size = 20,
+  className,
+  ...props
+}) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    className={className}
+    aria-hidden="true"
+    {...props}
+  >
+    <path
+      d="M17 21V19C17 17.9391 16.5786 16.9217 15.8284 16.1716C15.0783 15.4214 14.0609 15 13 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21M23 21V19C22.9993 18.1137 22.7044 17.2528 22.1614 16.5523C21.6184 15.8519 20.8581 15.3516 20 15.13M16 3.13C16.8604 3.35031 17.623 3.85071 18.1676 4.55232C18.7122 5.25392 19.0078 6.11683 19.0078 7.005C19.0078 7.89318 18.7122 8.75608 18.1676 9.45769C17.623 10.1593 16.8604 10.6597 16 10.88M12 11C14.2091 11 16 9.20914 16 7C16 4.79086 14.2091 3 12 3C9.79086 3 8 4.79086 8 7C8 9.20914 9.79086 11 12 11Z"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+export const HandshakeIcon: FC<IconProps> = ({
+  size = 20,
+  className,
+  ...props
+}) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    className={className}
+    aria-hidden="true"
+    {...props}
+  >
+    <path
+      d="M11 17L13 15M11.5 11.5L14 9C14.7956 8.20435 15.8749 7.75736 17 7.75736C18.1251 7.75736 19.2044 8.20435 20 9L22 11M2 11L4 9C4.79565 8.20435 5.87489 7.75736 7 7.75736C8.12511 7.75736 9.20435 8.20435 10 9L12.5 11.5M7 15L9.5 12.5L12 15L14.5 12.5L17 15"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+export const FlameIcon: FC<IconProps> = ({
+  size = 20,
+  className,
+  ...props
+}) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    className={className}
+    aria-hidden="true"
+    {...props}
+  >
+    <path
+      d="M12 22C15.866 22 19 18.866 19 15C19 11.5 16.5 9.5 15 7.5C14.5 10 12.5 11 11 11C12 8.5 12 5.5 10 3C7.5 5.5 5 9 5 13C5 17.9706 8.02944 22 12 22Z"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+export const SeedlingIcon: FC<IconProps> = ({
+  size = 20,
+  className,
+  ...props
+}) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    className={className}
+    aria-hidden="true"
+    {...props}
+  >
+    <path
+      d="M12 22V12M12 12C12 8.5 9.5 5 5 5C5 9.5 8 12 12 12ZM12 12C12 8.5 14.5 5 19 5C19 9.5 16 12 12 12Z"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+export const SadFaceIcon: FC<IconProps> = ({
+  size = 20,
+  className,
+  ...props
+}) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    className={className}
+    aria-hidden="true"
+    {...props}
+  >
+    <path
+      d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M8 15C8.5 13.5 10 12.5 12 12.5C14 12.5 15.5 13.5 16 15M9 9H9.01M15 9H15.01"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+export const EyeSlashIcon: FC<IconProps> = ({
+  size = 20,
+  className,
+  ...props
+}) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    className={className}
+    aria-hidden="true"
+    {...props}
+  >
+    <path
+      d="M3 3L21 21M10.5858 10.5858C10.2107 10.9609 10 11.4696 10 12C10 13.1046 10.8954 14 12 14C12.5304 14 13.0391 13.7893 13.4142 13.4142M10.5858 10.5858L13.4142 13.4142M10.5858 10.5858L7.5 7.5M13.4142 13.4142L16.5 16.5M9.36396 5.36396C10.2072 5.12449 11.0947 5 12 5C16.5 5 20.3333 8 22 12C21.4444 13.3333 20.5556 14.5556 19.4167 15.5556M6.5 6.5C5.05556 7.55556 3.88889 8.88889 3 12C4.66667 16 8.5 19 13 19C13.9053 19 14.7928 18.8755 15.636 18.636"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+export const FilterFunnelIcon: FC<IconProps> = ({
+  size = 16,
+  className,
+  ...props
+}) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    className={className}
+    aria-hidden="true"
+    {...props}
+  >
+    <path
+      d="M4 4H20L14 12V19L10 21V12L4 4Z"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 export const NoMediaIcon: FC = () => {
   const [mode, setMode] = useCookie('mode', 'dark');
 

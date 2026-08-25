@@ -73,6 +73,9 @@ describe('IntegrationService followers', () => {
       refreshFollowerRelationshipScore: jest.fn(),
       getStoredFollowerAudienceCounts: jest.fn(),
     };
+    (service as any)._channelAnalyticsService = {
+      getLatestAccountAudienceTotal: jest.fn().mockResolvedValue(null),
+    };
     (service as any)._relationshipGradeScheduleService = {
       trigger: jest.fn(),
     };
@@ -138,6 +141,94 @@ describe('IntegrationService followers', () => {
     await expect(
       service.getStoredFollowerAudienceCounts({ id: 'other-org' } as any, integration.id)
     ).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('summarizes platform total from snapshot over list total and returns category counts', async () => {
+    const followers = jest.fn().mockResolvedValue({
+      items: [{ id: 'follower-1', name: 'Follower 1' }],
+      hasMore: true,
+      total: 900,
+      tracking: { status: 'ready' },
+    });
+    const service = createService([integration], {
+      supported: {
+        followers,
+        followerSorts: [
+          {
+            key: 'recent',
+            label: 'Recent',
+            directions: ['desc'],
+            defaultDirection: 'desc',
+          },
+        ],
+      },
+    });
+    (service as any)._channelInteractionService
+      .getStoredFollowerAudienceCounts
+      .mockResolvedValue({
+        categories: { lead: 12, hot: 5, quiet: 3 },
+        lists: [{ id: 'list-1', name: 'VIP', total: 2 }],
+        listsTruncated: false,
+      });
+    (service as any)._channelAnalyticsService.getLatestAccountAudienceTotal
+      .mockResolvedValue({
+        value: 1256,
+        asOf: '2026-08-25T12:00:00.000Z',
+      });
+
+    await expect(
+      service.getFollowerAudienceSummary(org, user, integration.id)
+    ).resolves.toEqual(
+      expect.objectContaining({
+        total: 1256,
+        totalAsOf: '2026-08-25T12:00:00.000Z',
+        totalSource: 'snapshot',
+        categories: { lead: 12, hot: 5, quiet: 3 },
+        lists: [{ id: 'list-1', name: 'VIP', total: 2 }],
+        listsTruncated: false,
+      })
+    );
+  });
+
+  it('falls back to list total when no analytics snapshot exists', async () => {
+    const followers = jest.fn().mockResolvedValue({
+      items: [],
+      hasMore: false,
+      total: 42,
+    });
+    const service = createService([integration], {
+      supported: {
+        followers,
+        followerSorts: [
+          {
+            key: 'recent',
+            label: 'Recent',
+            directions: ['desc'],
+            defaultDirection: 'desc',
+          },
+        ],
+      },
+    });
+    (service as any)._channelInteractionService
+      .getStoredFollowerAudienceCounts
+      .mockResolvedValue({
+        categories: { mutual: 8 },
+        lists: [],
+        listsTruncated: false,
+      });
+
+    await expect(
+      service.getFollowerAudienceSummary(org, user, integration.id)
+    ).resolves.toEqual(
+      expect.objectContaining({
+        total: 42,
+        totalAsOf: null,
+        totalSource: 'list',
+        categories: { mutual: 8 },
+        lists: [],
+        listsTruncated: false,
+      })
+    );
   });
 
   it('returns only eligible, sanitized social channels', async () => {

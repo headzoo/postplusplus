@@ -193,6 +193,19 @@ export class FollowersController {
     );
   }
 
+  @Get('/:integrationId/audience')
+  getFollowerAudienceSummary(
+    @GetOrgFromRequest() org: Organization,
+    @GetUserFromRequest() user: User,
+    @Param('integrationId') integrationId: string
+  ) {
+    return this._integrationService.getFollowerAudienceSummary(
+      org,
+      user,
+      integrationId
+    );
+  }
+
   @Get('/:integrationId/lists')
   listFollowerLists(
     @GetOrgFromRequest() org: Organization,

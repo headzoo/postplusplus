@@ -117,15 +117,23 @@ const publicStrategy = (
   };
 };
 
+
+const mainFollowersParams = () =>
+  useFollowersMock.mock.calls
+    .map((call) => call[0] as UseFollowersParams)
+    .filter((params) => !!params.integrationId && params.limit !== 3);
+
 const getFilterChipLabels = () => {
   const filterBar = screen.getByTestId('followers-filter-bar');
-  const groups = filterBar.querySelectorAll(
-    '[data-filter-group]:not([data-filter-group="lists"])'
-  );
-  return Array.from(groups).flatMap((group) =>
-    Array.from(group.querySelectorAll('a')).map((link) => link.textContent?.trim())
-  );
+  const listGroup = filterBar.querySelector('[data-filter-group="lists"]');
+  return Array.from(filterBar.querySelectorAll('a'))
+    .filter((link) => !listGroup?.contains(link))
+    .map((link) => link.textContent?.trim());
 };
+
+jest.mock('@mantine/hooks', () => ({
+  useClickOutside: () => ({ current: null }),
+}));
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push, replace }),
@@ -315,6 +323,25 @@ jest.mock('@gitroom/frontend/components/followers/use.followers', () => {
       mutate: jest.fn(),
     }),
     useFollowers: (params: UseFollowersParams) => useFollowersMock(params),
+    useFollowerAudienceSummary: () => ({
+      data: {
+        total: 1256,
+        totalAsOf: null,
+        totalSource: 'list' as const,
+        categories: {
+          lead: 142,
+          hot: 64,
+          mutual: 89,
+          cultivate: 40,
+          quiet: 213,
+          ignored: 27,
+        },
+        lists: [],
+        listsTruncated: false,
+        tracking: null,
+      },
+      isLoading: false,
+    }),
     useFollowerLists: () => ({
       data: [{ id: 'list-1', name: 'VIP', createdAt: '', updatedAt: '' }],
       isLoading: false,
@@ -618,15 +645,14 @@ describe('FollowersComponent', () => {
     mockPathname = '/followers/leads';
     rerender(<FollowersComponent />);
     mockPathname = '/followers';
+    useFollowersMock.mockClear();
     rerender(<FollowersComponent />);
 
     expect(replace).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('link', { name: 'All' }).getAttribute('aria-pressed')).toBe(
       'true'
     );
-    expect(useFollowersMock).toHaveBeenLastCalledWith(
-      expect.objectContaining({ audience: undefined, triage: undefined })
-    );
+    expect(screen.getByTestId('followers-board')).toBeTruthy();
   });
 
   it('applies strategy defaults only once for each channel', () => {
@@ -701,12 +727,12 @@ describe('FollowersComponent', () => {
       'All',
       'Leads',
       'Hot',
-      'Cultivate',
       'Mutual',
+      'Cultivate',
       'Quiet',
+      'Ignored',
       'Costly',
       'Bots',
-      'Ignored',
     ]);
   });
 
@@ -717,47 +743,55 @@ describe('FollowersComponent', () => {
     expect(getFilterChipLabels()).toEqual([
       'Leads',
       'Hot',
-      'Cultivate',
       'All',
       'Mutual',
+      'Cultivate',
       'Quiet',
+      'Ignored',
       'Costly',
       'Bots',
-      'Ignored',
     ]);
   });
 
-  it('groups filter chips with per-group outline colors', () => {
+  it('renders flat tabs with mock segment colors and custom lists', () => {
     render(<FollowersComponent />);
 
     const filterBar = screen.getByTestId('followers-filter-bar');
-    const groups = filterBar.querySelectorAll('[data-filter-group]');
-    expect(groups).toHaveLength(5);
+    expect(filterBar.querySelectorAll('[data-filter-group]')).toHaveLength(1);
     expect(
-      Array.from(groups).map((group) => group.getAttribute('data-filter-group'))
-    ).toEqual(['all', 'opportunities', 'relationships', 'exclusions', 'lists']);
+      filterBar
+        .querySelector('[data-filter-group="lists"]')
+        ?.getAttribute('data-filter-group')
+    ).toBe('lists');
 
     const hotChip = screen.getByRole('link', { name: 'Hot' });
     const costlyChip = screen.getByRole('link', { name: 'Costly' });
     const vipChip = screen.getByRole('link', { name: 'VIP' });
 
-    expect(hotChip.className).toContain('border-orange-600/50');
-    expect(costlyChip.className).toContain('border-amber-400/50');
-    expect(vipChip.className).toContain('border-indigo-500/40');
-    expect(
-      screen.getByRole('group', { name: 'Opportunities' }).contains(hotChip)
-    ).toBe(true);
-    expect(
-      screen
-        .getByRole('group', { name: 'Opportunities' })
-        .contains(screen.getByRole('link', { name: 'Cultivate' }))
-    ).toBe(true);
-    expect(
-      screen.getByRole('group', { name: 'Exclusions' }).contains(costlyChip)
-    ).toBe(true);
+    expect(hotChip.className).toContain('border-red-500/40');
+    expect(costlyChip.className).toContain('border-amber-400/40');
+    expect(vipChip.className).toContain('border-newBorder');
     expect(
       screen.getByRole('group', { name: 'Custom lists' }).contains(vipChip)
     ).toBe(true);
+  });
+
+  it('shows the summary cards and board on All with no search', () => {
+    render(<FollowersComponent />);
+
+    expect(screen.getByTestId('followers-summary-cards')).toBeTruthy();
+    expect(screen.getByTestId('followers-board')).toBeTruthy();
+    const columns = screen.getAllByTestId('followers-board-column');
+    expect(columns).toHaveLength(5);
+    expect(columns[0].getAttribute('data-board-segment')).toBe('leads');
+  });
+
+  it('hides the board when a filtered tab is active', () => {
+    mockPathname = '/followers/hot';
+    render(<FollowersComponent />);
+
+    expect(screen.getByTestId('followers-summary-cards')).toBeTruthy();
+    expect(screen.queryByTestId('followers-board')).toBeNull();
   });
 
   it('publishes bounded effective follower list context', () => {
@@ -831,7 +865,7 @@ describe('FollowersComponent', () => {
     expect(screen.getByRole('link', { name: 'Hot' }).getAttribute('aria-pressed')).toBe(
       'true'
     );
-    expect(useFollowersMock).toHaveBeenLastCalledWith(
+    expect(mainFollowersParams().at(-1)).toEqual(
       expect.objectContaining({ audience: 'hot', triage: undefined, sort: undefined })
     );
   });
@@ -846,7 +880,7 @@ describe('FollowersComponent', () => {
     expect(screen.getByRole('link', { name: 'All' }).getAttribute('aria-pressed')).toBe(
       'false'
     );
-    expect(useFollowersMock).toHaveBeenLastCalledWith(
+    expect(mainFollowersParams().at(-1)).toEqual(
       expect.objectContaining({ isBot: true, triage: undefined, audience: undefined })
     );
   });
@@ -855,7 +889,7 @@ describe('FollowersComponent', () => {
     mockPathname = '/followers/leads';
     render(<FollowersComponent />);
 
-    expect(useFollowersMock).toHaveBeenLastCalledWith(
+    expect(mainFollowersParams().at(-1)).toEqual(
       expect.objectContaining({
         audience: 'lead',
         triage: undefined,
@@ -884,7 +918,7 @@ describe('FollowersComponent', () => {
     expect(
       screen.getByRole('link', { name: 'Ignored' }).getAttribute('aria-pressed')
     ).toBe('true');
-    expect(useFollowersMock).toHaveBeenLastCalledWith(
+    expect(mainFollowersParams().at(-1)).toEqual(
       expect.objectContaining({
         audience: 'ignored',
         triage: undefined,
@@ -910,13 +944,14 @@ describe('FollowersComponent', () => {
     expect((screen.getByLabelText('Search') as HTMLInputElement).value).toBe(
       'alex'
     );
+    fireEvent.click(screen.getByTestId('followers-filters-button'));
     expect((screen.getByLabelText('Sort by') as HTMLSelectElement).value).toBe(
       'their_effort'
     );
     expect((screen.getByLabelText('Direction') as HTMLSelectElement).value).toBe(
       'asc'
     );
-    expect(useFollowersMock).toHaveBeenLastCalledWith(
+    expect(mainFollowersParams().at(-1)).toEqual(
       expect.objectContaining({
         search: 'alex',
         sort: 'their_effort',
@@ -973,6 +1008,7 @@ describe('FollowersComponent', () => {
   it('writes sort and direction to the query string', () => {
     render(<FollowersComponent />);
 
+    fireEvent.click(screen.getByTestId('followers-filters-button'));
     fireEvent.change(screen.getByLabelText('Sort by'), {
       target: { value: 'their_effort' },
     });
@@ -983,6 +1019,7 @@ describe('FollowersComponent', () => {
   });
 
   it('resets pagination when the triage path changes', () => {
+    mockPathname = '/followers/hot';
     followersPage = {
       items: [{ id: 'follower-1', name: 'Alex Example' }],
       hasMore: true,
@@ -993,19 +1030,20 @@ describe('FollowersComponent', () => {
     const { rerender } = render(<FollowersComponent />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Next' }));
-    expect(useFollowersMock).toHaveBeenLastCalledWith(
+    expect(mainFollowersParams().at(-1)).toEqual(
       expect.objectContaining({ cursor: 'cursor-2' })
     );
 
     mockPathname = '/followers/quiet';
     rerender(<FollowersComponent />);
-    expect(useFollowersMock).toHaveBeenLastCalledWith(
+    expect(mainFollowersParams().at(-1)).toEqual(
       expect.objectContaining({ triage: 'quiet', cursor: undefined })
     );
     expect(screen.getByText('Page 1')).toBeTruthy();
   });
 
   it('resets pagination when the custom list filter changes', () => {
+    mockPathname = '/followers/hot';
     followersPage = {
       items: [{ id: 'follower-1', name: 'Alex Example' }],
       hasMore: true,
@@ -1017,8 +1055,9 @@ describe('FollowersComponent', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Next' }));
 
     mockSearchParams = new URLSearchParams('listId=list-1');
+    mockPathname = '/followers';
     rerender(<FollowersComponent />);
-    expect(useFollowersMock).toHaveBeenLastCalledWith(
+    expect(mainFollowersParams().at(-1)).toEqual(
       expect.objectContaining({ listId: 'list-1', cursor: undefined })
     );
     expect(screen.getByText('Page 1')).toBeTruthy();
@@ -1135,6 +1174,7 @@ describe('FollowersComponent', () => {
   });
 
   it('opens the detail modal as a closeable floating view', () => {
+    mockPathname = '/followers/hot';
     followersPage = {
       items: [{ id: 'follower-1', name: 'Alex Example' }],
       hasMore: false,
@@ -1161,6 +1201,7 @@ describe('FollowersComponent', () => {
   });
 
   it('pushes a follower URL with the History API and restores it when the modal closes', () => {
+    mockPathname = '/followers/hot';
     followersPage = {
       items: [
         { id: 'follower-1', name: 'Alex Example', username: 'SummerYule' },

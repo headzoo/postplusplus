@@ -19,9 +19,10 @@ Only channels that expose follower identities show in the left sidebar—not eve
 ## Browse, search, and sort
 
 1. Select a channel in the left list.
-2. Use **Search** for username or display name.
-3. Set **Sort by**, **Direction**, **Time window** (**Week**, **Month**, **90 Day**, **Year**), and **Per page** (12 / 24 / 48).
-4. Move with **Previous** / **Next**.
+2. On **All**, review the summary cards and five-column board (**Leads**, **Hot**, **Mutual**, **Cultivate**, **Quiet**). Each column shows a few people; **View all** opens the full card grid for that segment.
+3. Use **Search** for username or display name (searching on All switches from the board to the card grid).
+4. Open **Filters** for **Sort by**, **Direction**, **Time window** (**Week**, **Month**, **90 Day**, **Year**), and **Per page** (12 / 24 / 48).
+5. On a filtered tab or after **View all**, move with **Previous** / **Next**.
 
 **Sort by** options depend on the channel (for example **Recent**, **Interactions**, **Notes**, **Likes**, **Priority grade**, **Your grade**, **Bot grade**, **Their effort**, **Net effort gap**). Some sorts only reorder the **current page**—prefer **Recent** when you need consistent order across pages.
 
@@ -29,19 +30,21 @@ Empty search: **No followers match this search**.
 
 ## Relationship filters
 
-Use the chips above the grid:
+Use the pill tabs above the board or grid:
 
 | Filter        | Meaning                                                                         |
 | ------------- | ------------------------------------------------------------------------------- |
-| **All**       | Everyone in the current view                                                    |
+| **All**       | Overview board plus everyone when searching                                     |
+| **Leads**     | Interacting non-followers (and warm-network prospects)                          |
 | **Hot**       | Hourly materialized picks for relationships that need reciprocation             |
 | **Mutual**    | Effort is balanced                                                              |
-| **Costly**    | The channel’s effort exceeds theirs                                             |
-| **Quiet**     | Little activity either way                                                      |
 | **Cultivate** | Warm relationship that needs outbound attention                                 |
-| **Leads**     | Interacting non-followers (and warm-network prospects)                          |
-| **Bots**      | Likely automated accounts                                                       |
+| **Quiet**     | Little activity either way                                                      |
 | **Ignored**   | People you’ve hidden from other views                                           |
+| **Costly**    | The channel’s effort exceeds theirs                                             |
+| **Bots**      | Likely automated accounts                                                       |
+
+Summary cards show counts for **All Followers**, **Leads**, **Mutual**, **Hot**, **Cultivate**, **Quiet**, and **Ignored**. Category counts are CRM segments—not a sum of platform followers.
 
 **Hot** uses hourly materialized picks (not live net-gap sorting). Cards can show a reason and suggested action when available. Empty Hot view: **No hot picks right now**. Other triage filters still use live relationship scores.
 

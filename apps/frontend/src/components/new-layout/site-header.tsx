@@ -49,7 +49,7 @@ export const SiteHeader: FC<{
         >
           <MenuIcon size={24} />
         </button>
-        <div className="text-[24px] font-[600] flex flex-1 items-center gap-[12px] min-w-0 mobile:text-[20px]">
+        <div className="text-[24px] font-[600] flex flex-1 items-center gap-[12px] min-w-0 mobile:text-[20px] mobile:items-start">
           <Title />
         </div>
         <div className="flex items-center gap-[20px] text-textItemBlur mobile:hidden">

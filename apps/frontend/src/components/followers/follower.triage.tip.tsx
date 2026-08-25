@@ -1,6 +1,8 @@
 'use client';
 
 import { FC, useCallback, useMemo } from 'react';
+import Link from 'next/link';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { CloseIconSmall, NotificationIcon } from '@gitroom/frontend/components/ui/icons';
 import { useDismissedAlerts } from '@gitroom/frontend/components/layout/use.dismissed.alerts';
@@ -25,10 +27,10 @@ const FOLLOWER_TRIAGE_TIP_COPY: Record<
 > = {
   all: {
     titleKey: 'followers_triage_tip_all_title',
-    defaultTitle: 'All',
+    defaultTitle: 'Tip',
     bodyKey: 'followers_triage_tip_all_body',
     defaultBody:
-      'Everyone in this channel. Use the chips to focus on opportunities, relationships, or exclusions.',
+      'Focus on Hot and Mutual users first. Respond to their comments, ask questions, and share valuable content to grow meaningful connections.',
   },
   leads: {
     titleKey: 'followers_triage_tip_leads_title',
@@ -106,15 +108,28 @@ export const resolveFollowerTriageTipSlug = (
   return 'all';
 };
 
+const buildHelpHref = (pathname: string, searchParams: URLSearchParams) => {
+  const params = new URLSearchParams(searchParams.toString());
+  params.set('help', 'followers');
+  const query = params.toString();
+  return query ? `${pathname}?${query}` : `${pathname}?help=followers`;
+};
+
 export const FollowerTriageTip: FC<{
   slug?: string;
   hidden?: boolean;
 }> = ({ slug, hidden = false }) => {
   const t = useT();
+  const pathname = usePathname() || '/followers';
+  const searchParams = useSearchParams();
   const { data, isLoading, dismissAlert } = useDismissedAlerts();
   const tipSlug = useMemo(() => resolveFollowerTriageTipSlug(slug), [slug]);
   const alertKey = followerTriageTipAlertKey(tipSlug);
   const copy = FOLLOWER_TRIAGE_TIP_COPY[tipSlug];
+  const helpHref = useMemo(
+    () => buildHelpHref(pathname, searchParams),
+    [pathname, searchParams]
+  );
 
   const isDismissed = data?.keys.includes(alertKey) ?? false;
 
@@ -128,34 +143,61 @@ export const FollowerTriageTip: FC<{
 
   return (
     <div
-      className="flex items-start gap-[12px] rounded-[10px] border border-sky-500/40 bg-sky-500/10 px-[14px] py-[12px] shadow-[inset_0_0_0_1px_rgba(14,165,233,0.08)]"
+      className="flex flex-col gap-[12px] rounded-[12px] border border-sky-500/40 bg-sky-500/10 px-[16px] py-[14px] sm:flex-row sm:items-center"
       data-testid="followers-triage-tip"
       data-triage-tip={tipSlug}
       role="status"
     >
       <div
-        className="mt-[1px] inline-flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-full bg-sky-500/20 text-sky-300"
+        className="inline-flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-full bg-sky-500/20 text-sky-300"
         aria-hidden="true"
       >
         <NotificationIcon size={15} />
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-[2px]">
-        <p className="text-[13px] font-medium text-sky-100">
-          {t(copy.titleKey, copy.defaultTitle)}
-        </p>
-        <p className="text-[13px] text-sky-100/75">
-          {t(copy.bodyKey, copy.defaultBody)}
+        {tipSlug !== 'all' && (
+          <p className="text-[13px] font-medium text-sky-100">
+            {t(copy.titleKey, copy.defaultTitle)}
+          </p>
+        )}
+        <p className="text-[13px] text-sky-100/80">
+          {tipSlug === 'all' ? (
+            <>
+              <span className="font-medium text-sky-100">
+                {t(copy.titleKey, copy.defaultTitle)}:{' '}
+              </span>
+              {t(copy.bodyKey, copy.defaultBody)}
+            </>
+          ) : (
+            t(copy.bodyKey, copy.defaultBody)
+          )}
         </p>
       </div>
-      <button
-        type="button"
-        onClick={onDismiss}
-        className="mt-[2px] inline-flex shrink-0 items-center justify-center rounded-[6px] p-[4px] text-sky-200/70 hover:bg-sky-500/20 hover:text-sky-100"
-        aria-label={t('followers_triage_tip_dismiss', 'Dismiss tip')}
-        data-testid="followers-triage-tip-dismiss"
-      >
-        <CloseIconSmall size={10} />
-      </button>
+      <div className="flex shrink-0 flex-wrap items-center gap-[8px]">
+        <Link
+          href={helpHref}
+          scroll={false}
+          className="inline-flex items-center justify-center rounded-[8px] border border-sky-200/50 px-[12px] py-[6px] text-[13px] text-sky-100 hover:bg-sky-500/20"
+        >
+          {t('followers_triage_tip_learn_more', 'Learn more')}
+        </Link>
+        <Link
+          href={helpHref}
+          scroll={false}
+          className="inline-flex items-center justify-center rounded-[8px] bg-btnPrimary px-[12px] py-[6px] text-[13px] text-white hover:opacity-90"
+        >
+          {t('followers_triage_tip_engagement_guide', 'View engagement guide')}
+        </Link>
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="inline-flex shrink-0 items-center justify-center rounded-[6px] p-[4px] text-sky-200/70 hover:bg-sky-500/20 hover:text-sky-100"
+          aria-label={t('followers_triage_tip_dismiss', 'Dismiss tip')}
+          data-testid="followers-triage-tip-dismiss"
+        >
+          <CloseIconSmall size={10} />
+        </button>
+      </div>
     </div>
   );
 };
