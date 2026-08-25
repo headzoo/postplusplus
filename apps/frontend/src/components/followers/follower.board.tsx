@@ -1,17 +1,25 @@
 'use client';
 
-import { FC, KeyboardEvent } from 'react';
+import { FC, KeyboardEvent, MouseEvent } from 'react';
 import clsx from 'clsx';
 import Link from 'next/link';
 import ImageWithFallback from '@gitroom/react/helpers/image.with.fallback';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import {
   FOLLOWER_BOARD_SEGMENTS,
+  FOLLOWER_BOARD_PREVIEW_LIMIT,
   FOLLOWER_SEGMENT_COLOR_CLASSES,
   FollowerSegmentDefinition,
   formatSegmentCount,
 } from '@gitroom/frontend/components/followers/follower.segments';
-import { Follower } from '@gitroom/frontend/components/followers/use.followers';
+import {
+  DismissibleTriage,
+  Follower,
+  getProfileLinkAutoSnoozeTriages,
+} from '@gitroom/frontend/components/followers/use.followers';
+import { LeadFitDismissReason } from '@gitroom/nestjs-libraries/dtos/integrations/lead-fit-feedback.types';
+
+type DismissTriageOptions = { snooze?: boolean };
 
 const formatCompactCount = (value: number) => {
   const count = Math.abs(Math.round(value));
@@ -29,7 +37,12 @@ export const FollowerBoardRow: FC<{
   follower: Follower;
   color: FollowerSegmentDefinition['color'];
   onOpen: () => void;
-}> = ({ follower, color, onOpen }) => {
+  onDismissTriage?: (
+    triage: DismissibleTriage,
+    reasons?: LeadFitDismissReason[],
+    options?: DismissTriageOptions
+  ) => Promise<void> | void;
+}> = ({ follower, color, onOpen, onDismissTriage }) => {
   const t = useT();
   const colors = FOLLOWER_SEGMENT_COLOR_CLASSES[color];
   const handle = follower.username
@@ -40,45 +53,111 @@ export const FollowerBoardRow: FC<{
   const interactions = Number.isFinite(follower.interactionCount)
     ? formatCompactCount(follower.interactionCount!)
     : null;
+  const displayName =
+    follower.name || handle || t('followers_unknown', 'Unknown');
 
-  const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+  const handleRowClick = () => {
+    onOpen();
+  };
+
+  const handleRowKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (
+      event.target instanceof HTMLElement &&
+      event.target.closest('a[href]')
+    ) {
+      return;
+    }
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       onOpen();
     }
   };
 
+  const handleProfileLinkClick = async (
+    event: MouseEvent<HTMLAnchorElement>
+  ) => {
+    event.stopPropagation();
+    if (!onDismissTriage) {
+      return;
+    }
+    const triages = getProfileLinkAutoSnoozeTriages(follower);
+    for (const triage of triages) {
+      await onDismissTriage(triage, undefined, { snooze: true });
+    }
+  };
+
+  const stopProfileKeyboard = (event: KeyboardEvent<HTMLAnchorElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.stopPropagation();
+    }
+  };
+
+  const avatar = follower.picture ? (
+    <ImageWithFallback
+      fallbackSrc="/no-picture.jpg"
+      src={follower.picture}
+      alt=""
+      width={36}
+      height={36}
+      className="h-full w-full object-cover"
+    />
+  ) : (
+    <div className="flex h-full w-full items-center justify-center text-[12px] text-textItemBlur">
+      {displayName.slice(0, 1).toUpperCase()}
+    </div>
+  );
+
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      onKeyDown={onKeyDown}
-      className="flex w-full items-center gap-[10px] rounded-[10px] px-[6px] py-[8px] text-start transition-colors hover:bg-newTableHeader"
+    <article
+      role="button"
+      tabIndex={0}
+      onClick={handleRowClick}
+      onKeyDown={handleRowKeyDown}
+      className={clsx(
+        'flex w-full cursor-pointer items-center gap-[10px] rounded-[8px] border border-newTableBorder bg-newTableHeader px-[6px] py-[8px] text-start transition-colors hover:border-newTextColor/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-newTextColor/30'
+      )}
       data-testid="followers-board-row"
     >
-      <div className="h-[36px] w-[36px] shrink-0 overflow-hidden rounded-full bg-newTableHeader">
-        {follower.picture ? (
-          <ImageWithFallback
-            fallbackSrc="/no-picture.jpg"
-            src={follower.picture}
-            alt=""
-            width={36}
-            height={36}
-            className="h-full w-full object-cover"
-          />
+      <div className="h-[36px] w-[36px] shrink-0 overflow-hidden rounded-full bg-newBgColorInner">
+        {follower.profileUrl ? (
+          <a
+            href={follower.profileUrl}
+            target="_blank"
+            rel="noreferrer noopener"
+            onClick={handleProfileLinkClick}
+            onKeyDown={stopProfileKeyboard}
+            className="block h-full w-full hover:opacity-80"
+            aria-label={t(
+              'followers_view_profile_for',
+              'View profile for {{name}}',
+              { name: displayName }
+            )}
+          >
+            {avatar}
+          </a>
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-[12px] text-textItemBlur">
-            {(follower.name || follower.username || '?').slice(0, 1).toUpperCase()}
-          </div>
+          avatar
         )}
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-[13px] font-medium text-newTextColor">
-          {follower.name || handle || t('followers_unknown', 'Unknown')}
+          {displayName}
         </p>
-        {handle && (
-          <p className="truncate text-[12px] text-textItemBlur">{handle}</p>
-        )}
+        {handle &&
+          (follower.profileUrl ? (
+            <a
+              href={follower.profileUrl}
+              target="_blank"
+              rel="noreferrer noopener"
+              onClick={handleProfileLinkClick}
+              onKeyDown={stopProfileKeyboard}
+              className="block truncate text-[12px] text-textItemBlur hover:underline hover:opacity-80"
+            >
+              {handle}
+            </a>
+          ) : (
+            <p className="truncate text-[12px] text-textItemBlur">{handle}</p>
+          ))}
       </div>
       <div className="flex shrink-0 items-center gap-[6px] text-[12px] text-textItemBlur">
         {interactions != null && (
@@ -92,7 +171,7 @@ export const FollowerBoardRow: FC<{
           aria-hidden="true"
         />
       </div>
-    </button>
+    </article>
   );
 };
 
@@ -103,6 +182,12 @@ export const FollowerBoardColumn: FC<{
   isLoading?: boolean;
   viewAllHref: string;
   onOpenFollower: (follower: Follower) => void;
+  onDismissTriage?: (
+    follower: Follower,
+    triage: DismissibleTriage,
+    reasons?: LeadFitDismissReason[],
+    options?: DismissTriageOptions
+  ) => Promise<void> | void;
 }> = ({
   segment,
   items,
@@ -110,20 +195,22 @@ export const FollowerBoardColumn: FC<{
   isLoading,
   viewAllHref,
   onOpenFollower,
+  onDismissTriage,
 }) => {
   const t = useT();
   const colors = FOLLOWER_SEGMENT_COLOR_CLASSES[segment.color];
   const Icon = segment.icon;
   const countLabel = formatSegmentCount(total);
-  const preview = items.slice(0, 3);
+  const preview = items;
+  const skeletonCount = Math.min(6, FOLLOWER_BOARD_PREVIEW_LIMIT);
 
   return (
     <div
-      className="flex min-w-[240px] flex-1 flex-col gap-[12px] rounded-[12px] border border-newTableBorder bg-newBgColorInner p-[14px]"
+      className="flex h-full min-h-0 min-w-[240px] flex-1 flex-col gap-[12px] overflow-hidden rounded-[12px] border border-newTableBorder bg-newBgColorInner p-[14px]"
       data-testid="followers-board-column"
       data-board-segment={segment.slug}
     >
-      <div className="flex items-start gap-[10px]">
+      <div className="flex shrink-0 items-start gap-[10px]">
         <span
           className={clsx(
             'inline-flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-[8px]',
@@ -142,18 +229,18 @@ export const FollowerBoardColumn: FC<{
               {`${countLabel} ${t('followers_board_users_label', 'users')}`}
             </span>
           </div>
-          <p className="mt-[4px] text-[12px] leading-[1.4] text-textItemBlur">
+          <p className="mt-[4px] min-h-[34px] text-[12px] leading-[1.4] text-textItemBlur line-clamp-2">
             {t(segment.descriptionKey, segment.defaultDescription)}
           </p>
         </div>
       </div>
 
-      <div className="flex min-h-[156px] flex-col gap-[2px]">
+      <div className="flex min-h-0 flex-1 flex-col gap-[6px] overflow-hidden">
         {isLoading &&
-          Array.from({ length: 3 }).map((_, index) => (
+          Array.from({ length: skeletonCount }).map((_, index) => (
             <div
               key={index}
-              className="h-[52px] animate-pulse rounded-[10px] bg-newTableHeader"
+              className="h-[52px] animate-pulse rounded-[8px] bg-newTableHeader"
             />
           ))}
         {!isLoading &&
@@ -163,6 +250,12 @@ export const FollowerBoardColumn: FC<{
               follower={follower}
               color={segment.color}
               onOpen={() => onOpenFollower(follower)}
+              onDismissTriage={
+                onDismissTriage
+                  ? (triage, reasons, options) =>
+                      onDismissTriage(follower, triage, reasons, options)
+                  : undefined
+              }
             />
           ))}
         {!isLoading && preview.length === 0 && (
@@ -176,7 +269,7 @@ export const FollowerBoardColumn: FC<{
         href={viewAllHref}
         scroll={false}
         className={clsx(
-          'mt-auto inline-flex items-center justify-center rounded-[10px] border px-[12px] py-[8px] text-[13px] transition-colors',
+          'mt-auto inline-flex shrink-0 items-center justify-center rounded-[10px] border px-[12px] py-[8px] text-[13px] transition-colors',
           colors.outlineButton
         )}
         data-testid="followers-board-view-all"
@@ -196,10 +289,16 @@ export const FollowerBoard: FC<{
     viewAllHref: string;
   }>;
   onOpenFollower: (follower: Follower) => void;
-}> = ({ columns, onOpenFollower }) => {
+  onDismissTriage?: (
+    follower: Follower,
+    triage: DismissibleTriage,
+    reasons?: LeadFitDismissReason[],
+    options?: DismissTriageOptions
+  ) => Promise<void> | void;
+}> = ({ columns, onOpenFollower, onDismissTriage }) => {
   return (
     <div
-      className="flex gap-[12px] overflow-x-auto pb-[4px]"
+      className="flex h-full min-h-0 flex-1 items-stretch gap-[12px] overflow-x-auto overflow-y-hidden pb-[4px]"
       data-testid="followers-board"
     >
       {columns.map((column) => (
@@ -211,6 +310,7 @@ export const FollowerBoard: FC<{
           isLoading={column.isLoading}
           viewAllHref={column.viewAllHref}
           onOpenFollower={onOpenFollower}
+          onDismissTriage={onDismissTriage}
         />
       ))}
     </div>

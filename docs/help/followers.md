@@ -19,7 +19,7 @@ Only channels that expose follower identities show in the left sidebar—not eve
 ## Browse, search, and sort
 
 1. Select a channel in the left list.
-2. On **All**, review the summary cards and five-column board (**Leads**, **Hot**, **Mutual**, **Cultivate**, **Quiet**). Each column shows a few people; **View all** opens the full card grid for that segment.
+2. On **All**, review the summary cards and five-column board (**Leads**, **Hot**, **Mutual**, **Cultivate**, **Quiet**). Each column lists people in that segment (scroll within a column when needed); **View all** opens the full card grid for that segment.
 3. Use **Search** for username or display name (searching on All switches from the board to the card grid).
 4. Open **Filters** for **Sort by**, **Direction**, **Time window** (**Week**, **Month**, **90 Day**, **Year**), and **Per page** (12 / 24 / 48).
 5. On a filtered tab or after **View all**, move with **Previous** / **Next**.
@@ -106,13 +106,13 @@ Each follower-capable channel has a **Channel strategy** in [Settings → Channe
 
 Strategy affects **initial navigation only** when you have not already chosen a filter, sort, direction, custom list, or search:
 
-| Strategy | Default view | Default sort emphasis |
-| -------- | ------------ | --------------------- |
-| **Grow audience** | **All** | **Recent** (existing chip order) |
-| **Capture leads** | **Leads** | Lead **Fit** ordering |
-| **Retain community** | **Cultivate** | **Recent** |
-| **Build awareness** | **All** | **Interactions** |
-| **Support customers** | **Costly** | **Recent** |
+| Strategy              | Default view  | Default sort emphasis            |
+| --------------------- | ------------- | -------------------------------- |
+| **Grow audience**     | **All**       | **Recent** (existing chip order) |
+| **Capture leads**     | **Leads**     | Lead **Fit** ordering            |
+| **Retain community**  | **Cultivate** | **Recent**                       |
+| **Build awareness**   | **All**       | **Interactions**                 |
+| **Support customers** | **Costly**    | **Recent**                       |
 
 Strategy also adjusts filter chip order and emphasis, the compact strategy summary above the grid, empty-state copy for the active filter, and the Followers assistant opening message and suggested question chips.
 

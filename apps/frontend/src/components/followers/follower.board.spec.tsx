@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import {
   FollowerBoard,
   FollowerBoardRow,
@@ -52,11 +52,12 @@ const follower = (overrides: Partial<Follower> = {}): Follower =>
     username: 'alex',
     picture: '/alex.png',
     interactionCount: 12,
+    profileUrl: 'https://example.com/alex',
     ...overrides,
   }) as Follower;
 
 describe('FollowerBoard', () => {
-  it('renders five columns with view-all links and opens rows', () => {
+  it('renders five columns with cultivate before mutual and opens rows', () => {
     const onOpen = jest.fn();
     render(
       <FollowerBoard
@@ -71,12 +72,13 @@ describe('FollowerBoard', () => {
     );
 
     expect(screen.getByTestId('followers-board')).toBeTruthy();
-    expect(screen.getAllByTestId('followers-board-column')).toHaveLength(5);
-    expect(
-      screen.getAllByTestId('followers-board-column')[0].getAttribute(
-        'data-board-segment'
-      )
-    ).toBe('leads');
+    const columns = screen.getAllByTestId('followers-board-column');
+    expect(columns).toHaveLength(5);
+    expect(columns[0].getAttribute('data-board-segment')).toBe('leads');
+    expect(columns[1].getAttribute('data-board-segment')).toBe('hot');
+    expect(columns[2].getAttribute('data-board-segment')).toBe('cultivate');
+    expect(columns[3].getAttribute('data-board-segment')).toBe('mutual');
+    expect(columns[4].getAttribute('data-board-segment')).toBe('quiet');
     expect(
       screen.getByRole('link', { name: 'View all (10)' }).getAttribute('href')
     ).toBe('/followers/leads');
@@ -102,5 +104,68 @@ describe('FollowerBoardRow', () => {
     expect(screen.getByText('@alex')).toBeTruthy();
     expect(screen.getByText(/12/)).toBeTruthy();
     expect(screen.getByText(/Interactions/)).toBeTruthy();
+  });
+
+  it('does not open the modal when avatar or username profile links are clicked', () => {
+    const onOpen = jest.fn();
+    render(
+      <FollowerBoardRow
+        follower={follower()}
+        color="red"
+        onOpen={onOpen}
+      />
+    );
+
+    fireEvent.click(
+      screen.getByRole('link', { name: 'View profile for Alex Rivera' })
+    );
+    fireEvent.click(screen.getByText('@alex'));
+
+    expect(onOpen).not.toHaveBeenCalled();
+  });
+
+  it('snoozes Hot and Cultivate triages when a profile link is clicked', async () => {
+    const onOpen = jest.fn();
+    const onDismissTriage = jest.fn();
+    render(
+      <FollowerBoardRow
+        follower={follower({
+          isHot: true,
+          isCultivate: true,
+          relationshipTriage: 'hot_lead',
+        })}
+        color="red"
+        onOpen={onOpen}
+        onDismissTriage={onDismissTriage}
+      />
+    );
+
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('link', { name: 'View profile for Alex Rivera' })
+      );
+    });
+
+    expect(onOpen).not.toHaveBeenCalled();
+    expect(onDismissTriage).toHaveBeenCalledWith('hot_lead', undefined, {
+      snooze: true,
+    });
+    expect(onDismissTriage).toHaveBeenCalledWith('cultivate', undefined, {
+      snooze: true,
+    });
+  });
+
+  it('opens the modal when the row is clicked outside profile links', () => {
+    const onOpen = jest.fn();
+    render(
+      <FollowerBoardRow
+        follower={follower()}
+        color="red"
+        onOpen={onOpen}
+      />
+    );
+
+    fireEvent.click(screen.getByText('Alex Rivera'));
+    expect(onOpen).toHaveBeenCalled();
   });
 });

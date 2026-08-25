@@ -19,6 +19,7 @@ import { FollowerBoard } from '@gitroom/frontend/components/followers/follower.b
 import { FollowerFiltersMenu } from '@gitroom/frontend/components/followers/follower.filters.menu';
 import {
   FOLLOWER_BOARD_SEGMENTS,
+  FOLLOWER_BOARD_PREVIEW_LIMIT,
   FOLLOWER_SEGMENT_COLOR_CLASSES,
   FOLLOWER_TAB_SEGMENTS,
   categoryCount,
@@ -917,27 +918,27 @@ export const FollowersComponent: FC = () => {
   const boardIntegrationId = showBoard ? selectedIntegrationId : undefined;
   const leadsPreview = useFollowers({
     integrationId: boardIntegrationId,
-    limit: 3,
+    limit: FOLLOWER_BOARD_PREVIEW_LIMIT,
     audience: 'lead',
   });
   const hotPreview = useFollowers({
     integrationId: boardIntegrationId,
-    limit: 3,
+    limit: FOLLOWER_BOARD_PREVIEW_LIMIT,
     audience: 'hot',
   });
   const mutualPreview = useFollowers({
     integrationId: boardIntegrationId,
-    limit: 3,
+    limit: FOLLOWER_BOARD_PREVIEW_LIMIT,
     triage: 'mutual',
   });
   const cultivatePreview = useFollowers({
     integrationId: boardIntegrationId,
-    limit: 3,
+    limit: FOLLOWER_BOARD_PREVIEW_LIMIT,
     audience: 'cultivate',
   });
   const quietPreview = useFollowers({
     integrationId: boardIntegrationId,
-    limit: 3,
+    limit: FOLLOWER_BOARD_PREVIEW_LIMIT,
     triage: 'quiet',
   });
 
@@ -1624,7 +1625,7 @@ export const FollowersComponent: FC = () => {
   };
 
   return (
-    <>
+    <div className="flex h-full min-h-0 min-w-0 flex-1 overflow-hidden">
       <ChannelsSidebar
         integrationCount={followerIntegrations.length}
         showAddProvider={false}
@@ -1644,7 +1645,18 @@ export const FollowersComponent: FC = () => {
         )}
       </ChannelsSidebar>
 
-      <div className="bg-newBgColorInner flex-1 flex-col flex p-[20px] gap-[16px] min-w-0">
+      <div
+        className={clsx(
+          'bg-newBgColorInner flex min-h-0 min-w-0 flex-1 flex-col p-[20px]',
+          showBoard ? 'overflow-hidden' : 'min-h-0 gap-[16px] overflow-y-auto'
+        )}
+      >
+        <div
+          className={clsx(
+            'flex flex-col gap-[16px]',
+            showBoard && 'shrink-0'
+          )}
+        >
         {selectedChannel?.strategy && (
           <div className="flex flex-wrap items-center gap-x-[12px] gap-y-[4px] text-[13px]">
             <span className="font-medium text-newTextColor">
@@ -1827,12 +1839,18 @@ export const FollowersComponent: FC = () => {
             </button>
           </div>
         )}
+        </div>
 
         {showBoard && (
-          <FollowerBoard
-            columns={boardColumns}
-            onOpenFollower={openFollowerDetail}
-          />
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden pt-[16px]">
+            <FollowerBoard
+              columns={boardColumns}
+              onOpenFollower={openFollowerDetail}
+              onDismissTriage={async (follower, triageValue, reasons, options) => {
+                await ignoreTriage(follower.id, triageValue, reasons, options);
+              }}
+            />
+          </div>
         )}
 
         {isInteractionsSort && !showBoard && (
@@ -2001,6 +2019,6 @@ export const FollowersComponent: FC = () => {
           </>
         )}
       </div>
-    </>
+    </div>
   );
 };

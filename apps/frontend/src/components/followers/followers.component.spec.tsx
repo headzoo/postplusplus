@@ -18,6 +18,7 @@ import {
   FollowerChannel,
   UseFollowersParams,
 } from './use.followers';
+import { FOLLOWER_BOARD_PREVIEW_LIMIT } from './follower.segments';
 
 const openModal = jest.fn();
 const closeById = jest.fn();
@@ -118,10 +119,28 @@ const publicStrategy = (
 };
 
 
-const mainFollowersParams = () =>
-  useFollowersMock.mock.calls
+const isBoardPreviewParams = (params: UseFollowersParams) =>
+  params.limit === FOLLOWER_BOARD_PREVIEW_LIMIT &&
+  !params.cursor &&
+  !params.listId &&
+  !params.search &&
+  !params.isBot &&
+  (params.audience === 'lead' ||
+    params.audience === 'hot' ||
+    params.audience === 'cultivate' ||
+    params.triage === 'mutual' ||
+    params.triage === 'quiet');
+
+const mainFollowersParams = () => {
+  const withIntegration = useFollowersMock.mock.calls
     .map((call) => call[0] as UseFollowersParams)
-    .filter((params) => !!params.integrationId && params.limit !== 3);
+    .filter((params) => !!params.integrationId);
+  const boardStyle = withIntegration.filter(isBoardPreviewParams);
+  if (boardStyle.length >= 5) {
+    return withIntegration.filter((params) => !boardStyle.includes(params));
+  }
+  return withIntegration;
+};
 
 const getFilterChipLabels = () => {
   const filterBar = screen.getByTestId('followers-filter-bar');
@@ -727,11 +746,11 @@ describe('FollowersComponent', () => {
       'All',
       'Leads',
       'Hot',
-      'Mutual',
       'Cultivate',
+      'Mutual',
       'Quiet',
-      'Ignored',
       'Costly',
+      'Ignored',
       'Bots',
     ]);
   });
@@ -744,11 +763,11 @@ describe('FollowersComponent', () => {
       'Leads',
       'Hot',
       'All',
-      'Mutual',
       'Cultivate',
+      'Mutual',
       'Quiet',
-      'Ignored',
       'Costly',
+      'Ignored',
       'Bots',
     ]);
   });
@@ -764,12 +783,24 @@ describe('FollowersComponent', () => {
         ?.getAttribute('data-filter-group')
     ).toBe('lists');
 
+    const leadsChip = screen.getByRole('link', { name: 'Leads' });
     const hotChip = screen.getByRole('link', { name: 'Hot' });
+    const cultivateChip = screen.getByRole('link', { name: 'Cultivate' });
+    const mutualChip = screen.getByRole('link', { name: 'Mutual' });
+    const quietChip = screen.getByRole('link', { name: 'Quiet' });
     const costlyChip = screen.getByRole('link', { name: 'Costly' });
+    const ignoredChip = screen.getByRole('link', { name: 'Ignored' });
+    const botsChip = screen.getByRole('link', { name: 'Bots' });
     const vipChip = screen.getByRole('link', { name: 'VIP' });
 
+    expect(leadsChip.className).toContain('border-red-500/40');
     expect(hotChip.className).toContain('border-red-500/40');
+    expect(cultivateChip.className).toContain('border-red-500/40');
+    expect(mutualChip.className).toContain('border-emerald-500/40');
+    expect(quietChip.className).toContain('border-emerald-500/40');
     expect(costlyChip.className).toContain('border-amber-400/40');
+    expect(ignoredChip.className).toContain('border-amber-400/40');
+    expect(botsChip.className).toContain('border-amber-400/40');
     expect(vipChip.className).toContain('border-newBorder');
     expect(
       screen.getByRole('group', { name: 'Custom lists' }).contains(vipChip)
@@ -784,6 +815,26 @@ describe('FollowersComponent', () => {
     const columns = screen.getAllByTestId('followers-board-column');
     expect(columns).toHaveLength(5);
     expect(columns[0].getAttribute('data-board-segment')).toBe('leads');
+    expect(columns[2].getAttribute('data-board-segment')).toBe('cultivate');
+
+    const summaryCards = screen
+      .getByTestId('followers-summary-cards')
+      .querySelectorAll('[data-summary-segment]');
+    expect(
+      Array.from(summaryCards).map((card) =>
+        card.getAttribute('data-summary-segment')
+      )
+    ).toEqual([
+      'all',
+      'leads',
+      'hot',
+      'cultivate',
+      'mutual',
+      'quiet',
+      'costly',
+      'ignored',
+      'bots',
+    ]);
   });
 
   it('hides the board when a filtered tab is active', () => {

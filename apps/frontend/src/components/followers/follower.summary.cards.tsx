@@ -21,7 +21,7 @@ export const FollowerSummaryCards: FC<{
 
   return (
     <div
-      className="grid grid-cols-2 gap-[12px] sm:grid-cols-3 xl:grid-cols-7"
+      className="grid grid-cols-2 gap-[12px] sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9"
       data-testid="followers-summary-cards"
     >
       {FOLLOWER_SUMMARY_SEGMENTS.map((segment) => {
@@ -30,10 +30,12 @@ export const FollowerSummaryCards: FC<{
         const count =
           segment.slug === 'all'
             ? summary?.total ?? null
-            : categoryCount(
-                summary?.categories,
-                segment.categoryKey || segment.slug
-              );
+            : segment.isBot
+              ? categoryCount(summary?.categories, 'bots')
+              : categoryCount(
+                  summary?.categories,
+                  segment.categoryKey || segment.slug
+                );
         const href = buildHref(
           segment.slug === 'all' ? undefined : segment.slug
         );
@@ -44,7 +46,7 @@ export const FollowerSummaryCards: FC<{
             href={href}
             scroll={false}
             className={clsx(
-              'flex flex-col gap-[10px] rounded-[12px] border border-newTableBorder bg-newBgColorInner p-[14px] transition-colors hover:bg-newTableHeader',
+              'flex flex-col gap-[10px] rounded-[8px] border border-newTableBorder bg-newTableHeader p-[14px] transition-colors hover:border-newTextColor/20',
               isLoading && 'animate-pulse'
             )}
             data-summary-segment={segment.slug}

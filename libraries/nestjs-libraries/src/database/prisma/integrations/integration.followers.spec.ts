@@ -183,7 +183,7 @@ describe('IntegrationService followers', () => {
         total: 1256,
         totalAsOf: '2026-08-25T12:00:00.000Z',
         totalSource: 'snapshot',
-        categories: { lead: 12, hot: 5, quiet: 3 },
+        categories: { lead: 12, hot: 5, quiet: 3, bots: 900 },
         lists: [{ id: 'list-1', name: 'VIP', total: 2 }],
         listsTruncated: false,
       })
@@ -224,7 +224,7 @@ describe('IntegrationService followers', () => {
         total: 42,
         totalAsOf: null,
         totalSource: 'list',
-        categories: { mutual: 8 },
+        categories: { mutual: 8, bots: 42 },
         lists: [],
         listsTruncated: false,
       })

@@ -99,7 +99,7 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
             <ContinueProvider />
             <div
               className={clsx(
-                'flex flex-col min-h-screen min-w-screen text-newTextColor p-[12px] mobile:p-[8px]',
+                'flex h-dvh max-h-dvh min-h-0 min-w-screen flex-col overflow-hidden text-newTextColor p-[12px] mobile:p-[8px]',
                 jakartaSans.className
               )}
             >
@@ -119,9 +119,9 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                     triggerRef={activeHelpTriggerRef}
                     locationKey={helpLocationKey}
                   />
-                  <div className="flex-1 flex gap-[8px]">
+                  <div className="flex min-h-0 flex-1 gap-[8px] overflow-hidden">
                     <Support />
-                    <div className="flex flex-col bg-newBgColorInner w-[80px] rounded-[12px] mobile:hidden">
+                    <div className="flex w-[80px] flex-col rounded-[12px] bg-newBgColorInner mobile:hidden">
                       <div
                         id="left-menu"
                         className={clsx(
@@ -132,18 +132,20 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                         <SidebarNav />
                       </div>
                     </div>
-                    <div className="flex-1 bg-newBgLineColor rounded-[12px] overflow-hidden flex flex-col gap-[1px] blurMe">
-                      <SiteHeader
-                        showNewPost={integrations.length > 0}
-                        onOpenSidebar={() => setSidebarOpen(true)}
-                        onOpenHelp={(trigger) => {
-                          activeHelpTriggerRef.current = trigger;
-                          setHelpOpen(true);
-                        }}
-                        desktopHelpTriggerRef={desktopHelpTriggerRef}
-                        mobileHelpTriggerRef={mobileHelpTriggerRef}
-                      />
-                      <div className="flex flex-1 gap-[1px] min-w-0 overflow-hidden">
+                    <div className="blurMe flex min-h-0 flex-1 flex-col gap-[1px] overflow-hidden rounded-[12px] bg-newBgLineColor">
+                      <div className="shrink-0">
+                        <SiteHeader
+                          showNewPost={integrations.length > 0}
+                          onOpenSidebar={() => setSidebarOpen(true)}
+                          onOpenHelp={(trigger) => {
+                            activeHelpTriggerRef.current = trigger;
+                            setHelpOpen(true);
+                          }}
+                          desktopHelpTriggerRef={desktopHelpTriggerRef}
+                          mobileHelpTriggerRef={mobileHelpTriggerRef}
+                        />
+                      </div>
+                      <div className="flex min-h-0 min-w-0 flex-1 gap-[1px] overflow-x-hidden overflow-y-auto">
                         {children}
                       </div>
                     </div>

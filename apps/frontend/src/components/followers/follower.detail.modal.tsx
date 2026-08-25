@@ -697,8 +697,8 @@ const FollowerDetailContent: FC<{
           <p className="text-[13px] text-red-400">{scoreError}</p>
         )}
         {current && (
-          <div className="flex flex-col gap-[8px] text-[13px] text-textItemBlur">
-            <div className="flex flex-wrap items-center gap-x-[12px] gap-y-[6px]">
+          <div className="flex flex-col gap-[8px]">
+            <div className="flex flex-wrap items-center gap-x-[12px] gap-y-[6px] text-[13px] text-textItemBlur">
               <p>
                 {t(
                   'followers_grade_snapshot',
@@ -721,7 +721,10 @@ const FollowerDetailContent: FC<{
                 />
               )}
             </div>
-            <p>
+            <h4 className="text-[16px] font-[600] text-newTextColor">
+              {t('followers_relationship_grade', 'Relationship grade')}
+            </h4>
+            <p className="text-[13px] text-textItemBlur">
               {t(
                 'followers_grade_score_metadata',
                 'E: {{effort}} · R: {{reciprocation}} · Gap: {{gap}}',

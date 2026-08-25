@@ -273,7 +273,9 @@ describe('FollowerDetailModal', () => {
     expect(screen.getByText('Their effort')).toBeTruthy();
     expect(screen.getByText('Your effort')).toBeTruthy();
     expect(screen.getByText('Your grade')).toBeTruthy();
-    expect(screen.queryByText('Relationship grade')).toBeNull();
+    expect(
+      screen.getByRole('heading', { name: 'Relationship grade' })
+    ).toBeTruthy();
     expect(screen.queryByText('My grade')).toBeNull();
     expect(screen.getByRole('img', { name: '1.5 out of 5' })).toBeTruthy();
     expect(screen.getByRole('img', { name: '2 out of 5' })).toBeTruthy();

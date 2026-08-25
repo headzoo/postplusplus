@@ -1,9 +1,11 @@
 import { FC } from 'react';
 import {
+  ChevronUpIcon,
   EyeSlashIcon,
   FlameIcon,
   HandshakeIcon,
   IconProps,
+  RobotIcon,
   SadFaceIcon,
   SeedlingIcon,
   UsersGroupIcon,
@@ -14,6 +16,9 @@ import {
   FollowerSortDirection,
   FollowerTriageFilter,
 } from '@gitroom/frontend/components/followers/use.followers';
+
+/** Max followers fetched per board column on the All overview. */
+export const FOLLOWER_BOARD_PREVIEW_LIMIT = 24;
 
 export type FollowerSegmentColor =
   | 'blue'
@@ -134,21 +139,10 @@ export const FOLLOWER_SUMMARY_SEGMENTS: FollowerSegmentDefinition[] = [
     defaultLabel: 'Leads',
     descriptionKey: 'followers_board_leads_description',
     defaultDescription: FOLLOWER_CATEGORY_DESCRIPTIONS.lead,
-    color: 'green',
+    color: 'red',
     icon: UsersGroupIcon,
     categoryKey: 'lead',
     audience: 'lead',
-  },
-  {
-    slug: 'mutual',
-    key: 'followers_triage_mutual',
-    defaultLabel: 'Mutual',
-    descriptionKey: 'followers_board_mutual_description',
-    defaultDescription: FOLLOWER_CATEGORY_DESCRIPTIONS.mutual,
-    color: 'green',
-    icon: HandshakeIcon,
-    categoryKey: 'mutual',
-    triage: 'mutual',
   },
   {
     slug: 'hot',
@@ -167,10 +161,21 @@ export const FOLLOWER_SUMMARY_SEGMENTS: FollowerSegmentDefinition[] = [
     defaultLabel: 'Cultivate',
     descriptionKey: 'followers_board_cultivate_description',
     defaultDescription: FOLLOWER_CATEGORY_DESCRIPTIONS.cultivate,
-    color: 'green',
+    color: 'red',
     icon: SeedlingIcon,
     categoryKey: 'cultivate',
     audience: 'cultivate',
+  },
+  {
+    slug: 'mutual',
+    key: 'followers_triage_mutual',
+    defaultLabel: 'Mutual',
+    descriptionKey: 'followers_board_mutual_description',
+    defaultDescription: FOLLOWER_CATEGORY_DESCRIPTIONS.mutual,
+    color: 'green',
+    icon: HandshakeIcon,
+    categoryKey: 'mutual',
+    triage: 'mutual',
   },
   {
     slug: 'quiet',
@@ -178,10 +183,21 @@ export const FOLLOWER_SUMMARY_SEGMENTS: FollowerSegmentDefinition[] = [
     defaultLabel: 'Quiet',
     descriptionKey: 'followers_board_quiet_description',
     defaultDescription: FOLLOWER_CATEGORY_DESCRIPTIONS.quiet,
-    color: 'purple',
+    color: 'green',
     icon: SadFaceIcon,
     categoryKey: 'quiet',
     triage: 'quiet',
+  },
+  {
+    slug: 'costly',
+    key: 'followers_triage_over_invested',
+    defaultLabel: 'Costly',
+    descriptionKey: 'followers_board_costly_description',
+    defaultDescription: FOLLOWER_CATEGORY_DESCRIPTIONS.over_invested,
+    color: 'yellow',
+    icon: ChevronUpIcon,
+    categoryKey: 'over_invested',
+    triage: 'over_invested',
   },
   {
     slug: 'ignored',
@@ -194,14 +210,24 @@ export const FOLLOWER_SUMMARY_SEGMENTS: FollowerSegmentDefinition[] = [
     categoryKey: 'ignored',
     audience: 'ignored',
   },
+  {
+    slug: 'bots',
+    key: 'followers_bot_filter',
+    defaultLabel: 'Bots',
+    descriptionKey: 'followers_board_bots_description',
+    defaultDescription: 'Likely automated accounts.',
+    color: 'yellow',
+    icon: RobotIcon,
+    isBot: true,
+  },
 ];
 
 /** Board columns on the All overview (no Ignored column). */
 export const FOLLOWER_BOARD_SEGMENTS: FollowerSegmentDefinition[] = [
   FOLLOWER_SUMMARY_SEGMENTS.find((s) => s.slug === 'leads')!,
   FOLLOWER_SUMMARY_SEGMENTS.find((s) => s.slug === 'hot')!,
-  FOLLOWER_SUMMARY_SEGMENTS.find((s) => s.slug === 'mutual')!,
   FOLLOWER_SUMMARY_SEGMENTS.find((s) => s.slug === 'cultivate')!,
+  FOLLOWER_SUMMARY_SEGMENTS.find((s) => s.slug === 'mutual')!,
   FOLLOWER_SUMMARY_SEGMENTS.find((s) => s.slug === 'quiet')!,
 ];
 
@@ -223,7 +249,7 @@ export const FOLLOWER_TAB_SEGMENTS: Array<{
     slug: 'leads',
     key: 'followers_audience_leads',
     defaultLabel: 'Leads',
-    color: 'green',
+    color: 'red',
     audience: 'lead',
   },
   {
@@ -234,6 +260,13 @@ export const FOLLOWER_TAB_SEGMENTS: Array<{
     audience: 'hot',
   },
   {
+    slug: 'cultivate',
+    key: 'followers_audience_cultivate',
+    defaultLabel: 'Cultivate',
+    color: 'red',
+    audience: 'cultivate',
+  },
+  {
     slug: 'mutual',
     key: 'followers_triage_mutual',
     defaultLabel: 'Mutual',
@@ -241,25 +274,11 @@ export const FOLLOWER_TAB_SEGMENTS: Array<{
     triage: 'mutual',
   },
   {
-    slug: 'cultivate',
-    key: 'followers_audience_cultivate',
-    defaultLabel: 'Cultivate',
-    color: 'green',
-    audience: 'cultivate',
-  },
-  {
     slug: 'quiet',
     key: 'followers_triage_quiet',
     defaultLabel: 'Quiet',
-    color: 'purple',
+    color: 'green',
     triage: 'quiet',
-  },
-  {
-    slug: 'ignored',
-    key: 'followers_ignored_list',
-    defaultLabel: 'Ignored',
-    color: 'yellow',
-    audience: 'ignored',
   },
   {
     slug: 'costly',
@@ -269,10 +288,17 @@ export const FOLLOWER_TAB_SEGMENTS: Array<{
     triage: 'over_invested',
   },
   {
+    slug: 'ignored',
+    key: 'followers_ignored_list',
+    defaultLabel: 'Ignored',
+    color: 'yellow',
+    audience: 'ignored',
+  },
+  {
     slug: 'bots',
     key: 'followers_bot_filter',
     defaultLabel: 'Bots',
-    color: 'neutral',
+    color: 'yellow',
     isBot: true,
   },
 ];
