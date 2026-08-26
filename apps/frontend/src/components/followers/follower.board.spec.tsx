@@ -10,6 +10,7 @@ import {
   FollowerBoardRow,
 } from './follower.board';
 import {
+  FOLLOWER_BOARD_LIST_MIN_HEIGHT_PX,
   FOLLOWER_BOARD_SEGMENTS,
 } from './follower.segments';
 import { Follower } from './use.followers';
@@ -69,14 +70,20 @@ jest.mock('@gitroom/frontend/components/ui/custom.scroll.area', () => ({
     children,
     className,
     contentClassName,
+    maxHeight,
     'data-testid': dataTestId,
   }: {
     children: React.ReactNode;
     className?: string;
     contentClassName?: string;
+    maxHeight?: string | number;
     'data-testid'?: string;
   }) => (
-    <div data-testid={dataTestId ?? 'custom-scroll-area'} className={className}>
+    <div
+      data-testid={dataTestId ?? 'custom-scroll-area'}
+      className={className}
+      data-max-height={maxHeight}
+    >
       {contentClassName ? (
         <div className={contentClassName}>{children}</div>
       ) : (
@@ -85,6 +92,17 @@ jest.mock('@gitroom/frontend/components/ui/custom.scroll.area', () => ({
     </div>
   ),
 }));
+
+jest.mock('@gitroom/frontend/components/followers/use.followers', () => {
+  const actual = jest.requireActual('./use.followers');
+  return {
+    ...actual,
+    useFollowers: () => ({
+      data: { items: [], hasMore: false },
+      isLoading: false,
+    }),
+  };
+});
 
 const follower = (overrides: Partial<Follower> = {}): Follower =>
   ({
@@ -99,6 +117,7 @@ const follower = (overrides: Partial<Follower> = {}): Follower =>
 
 const leadsSegment = FOLLOWER_BOARD_SEGMENTS.find((segment) => segment.slug === 'leads')!;
 const followedSegment = FOLLOWER_BOARD_SEGMENTS.find((segment) => segment.slug === 'followed')!;
+const unfollowedSegment = FOLLOWER_BOARD_SEGMENTS.find((segment) => segment.slug === 'unfollowed')!;
 
 describe('FollowerBoard', () => {
   beforeEach(() => {
@@ -106,7 +125,7 @@ describe('FollowerBoard', () => {
     unfollowConfirmOpen.mockClear();
   });
 
-  it('renders six columns with followed before mutual and opens rows', () => {
+  it('renders a responsive grid of built-in columns with followed before mutual', () => {
     const onOpen = jest.fn();
     render(
       <FollowerBoard
@@ -121,15 +140,22 @@ describe('FollowerBoard', () => {
       />
     );
 
-    expect(screen.getByTestId('followers-board')).toBeTruthy();
+    const board = screen.getByTestId('followers-board');
+    expect(board.className).toContain('grid-cols-1');
+    expect(board.className).toContain('2xl:grid-cols-5');
+
     const columns = screen.getAllByTestId('followers-board-column');
-    expect(columns).toHaveLength(6);
+    expect(columns).toHaveLength(FOLLOWER_BOARD_SEGMENTS.length);
     expect(columns[0].getAttribute('data-board-segment')).toBe('leads');
     expect(columns[1].getAttribute('data-board-segment')).toBe('hot');
     expect(columns[2].getAttribute('data-board-segment')).toBe('cultivate');
     expect(columns[3].getAttribute('data-board-segment')).toBe('followed');
     expect(columns[4].getAttribute('data-board-segment')).toBe('mutual');
     expect(columns[5].getAttribute('data-board-segment')).toBe('quiet');
+    expect(columns[6].getAttribute('data-board-segment')).toBe('costly');
+    expect(columns[7].getAttribute('data-board-segment')).toBe('ignored');
+    expect(columns[8].getAttribute('data-board-segment')).toBe('unfollowed');
+    expect(columns[9].getAttribute('data-board-segment')).toBe('bots');
     expect(
       screen.getByRole('link', { name: 'View all (10)' }).getAttribute('href')
     ).toBe('/followers/leads');
@@ -201,7 +227,53 @@ describe('FollowerBoard', () => {
 
     const viewAllLinks = screen.getAllByTestId('followers-board-view-all');
     expect(viewAllLinks).toHaveLength(FOLLOWER_BOARD_SEGMENTS.length);
-    expect(screen.getAllByTestId('followers-board-column-scroll')).toHaveLength(3);
+    expect(screen.getAllByTestId('followers-board-column-scroll')).toHaveLength(5);
+  });
+
+  it('renders custom list columns in the board grid', () => {
+    render(
+      <FollowerBoard
+        columns={[]}
+        listColumns={[
+          {
+            list: {
+              id: 'list-1',
+              name: 'VIP',
+              color: 'orange',
+              createdAt: '',
+              updatedAt: '',
+            },
+            total: 4,
+            viewAllHref: '/followers?listId=list-1',
+          },
+        ]}
+        integrationId="channel-1"
+        onOpenFollower={jest.fn()}
+      />
+    );
+
+    const listColumn = screen.getByTestId('followers-board-column');
+    expect(listColumn.getAttribute('data-board-list')).toBe('list-1');
+    expect(screen.getByText('VIP')).toBeTruthy();
+  });
+
+  it('uses a fixed list height for six visible rows', () => {
+    render(
+      <FollowerBoardColumn
+        segment={leadsSegment}
+        items={[follower()]}
+        total={12}
+        viewAllHref="/followers/leads"
+        onOpenFollower={jest.fn()}
+        onDismissTriage={jest.fn()}
+      />
+    );
+
+    const listArea = screen.getByTestId('followers-board-column-list');
+    expect(listArea.style.height).toBe(`${FOLLOWER_BOARD_LIST_MIN_HEIGHT_PX}px`);
+    expect(screen.getByTestId('custom-scroll-area').getAttribute('data-max-height')).toBe(
+      String(FOLLOWER_BOARD_LIST_MIN_HEIGHT_PX)
+    );
   });
 
   it('omits the scroll wrapper when a column is empty', () => {
@@ -321,6 +393,30 @@ describe('FollowerBoardRow', () => {
       <FollowerBoardRow
         follower={follower()}
         segment={followedSegment}
+        canUnfollow={true}
+        onOpen={onOpen}
+        onUnfollow={onUnfollow}
+      />
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('followers-board-row-menu'));
+    });
+
+    expect(onOpen).not.toHaveBeenCalled();
+    expect(unfollowConfirmOpen).toHaveBeenCalled();
+    expect(onUnfollow).toHaveBeenCalled();
+  });
+
+  it('opens unfollow flow from the menu in the unfollowed column', async () => {
+    const onOpen = jest.fn();
+    const onUnfollow = jest.fn();
+    unfollowConfirmOpen.mockResolvedValue('unfollow');
+
+    render(
+      <FollowerBoardRow
+        follower={follower()}
+        segment={unfollowedSegment}
         canUnfollow={true}
         onOpen={onOpen}
         onUnfollow={onUnfollow}

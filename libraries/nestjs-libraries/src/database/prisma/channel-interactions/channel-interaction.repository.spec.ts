@@ -2288,12 +2288,58 @@ describe('ChannelInteractionRepository', () => {
       expect.objectContaining({
         where: expect.objectContaining({
           weFollowedAt: { not: null },
+          followedAt: null,
           membershipState: {
             in: [
               ChannelAudienceMembership.UNKNOWN,
               ChannelAudienceMembership.NOT_FOLLOWER,
             ],
           },
+        }),
+        orderBy: [{ weFollowedAt: 'desc' }, { externalId: 'desc' }],
+      })
+    );
+  });
+
+  it('lists unfollowed audience members who used to follow and no longer do', async () => {
+    const { repository, tx, audienceMemberFindMany } = createHarness();
+    audienceMemberFindMany.mockResolvedValue([
+      {
+        externalId: 'unfollowed-1',
+        name: 'Unfollowed One',
+        weFollowedAt: new Date('2026-08-20T12:00:00.000Z'),
+        followedAt: new Date('2026-08-01T12:00:00.000Z'),
+      },
+    ]);
+
+    await expect(
+      repository.getAudienceUnfollowed({
+        organizationId: 'org',
+        integrationId: 'integration',
+        userId: 'user-a',
+        direction: 'desc',
+        limit: 24,
+      })
+    ).resolves.toEqual({
+      items: [
+        {
+          externalId: 'unfollowed-1',
+          name: 'Unfollowed One',
+          weFollowedAt: new Date('2026-08-20T12:00:00.000Z'),
+          followedAt: new Date('2026-08-01T12:00:00.000Z'),
+        },
+      ],
+      hasMore: false,
+    });
+
+    expect(tx.integration.findFirst).toHaveBeenCalled();
+    expect(audienceMemberFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          weFollowedAt: { not: null },
+          followedAt: { not: null },
+          membershipState: ChannelAudienceMembership.NOT_FOLLOWER,
+          ignoredAt: null,
         }),
         orderBy: [{ weFollowedAt: 'desc' }, { externalId: 'desc' }],
       })

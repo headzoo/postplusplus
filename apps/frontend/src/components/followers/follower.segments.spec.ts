@@ -20,6 +20,9 @@ describe('follower.segments', () => {
     expect(getFollowerBoardColumnAction('followed')).toEqual({
       type: 'unfollow',
     });
+    expect(getFollowerBoardColumnAction('unfollowed')).toEqual({
+      type: 'unfollow',
+    });
     expect(getFollowerBoardColumnAction('all')).toBeNull();
   });
 
@@ -38,6 +41,18 @@ describe('follower.segments', () => {
     expect(tabSlugs.indexOf('followed')).toBeLessThan(tabSlugs.indexOf('mutual'));
 
     const boardSlugs = FOLLOWER_BOARD_SEGMENTS.map((segment) => segment.slug);
+    expect(boardSlugs).toEqual([
+      'leads',
+      'hot',
+      'cultivate',
+      'followed',
+      'mutual',
+      'quiet',
+      'costly',
+      'ignored',
+      'unfollowed',
+      'bots',
+    ]);
     expect(boardSlugs.indexOf('followed')).toBeLessThan(
       boardSlugs.indexOf('mutual')
     );

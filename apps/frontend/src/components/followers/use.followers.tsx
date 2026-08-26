@@ -330,7 +330,7 @@ export type UseFollowersParams = {
   window?: ChannelInteractionWindow;
   search?: string;
   triage?: FollowerTriageFilter;
-  audience?: 'lead' | 'followed' | 'ignored' | 'cultivate' | 'hot';
+  audience?: 'lead' | 'followed' | 'unfollowed' | 'ignored' | 'cultivate' | 'hot';
   listId?: string;
   isBot?: boolean;
 };
@@ -1508,7 +1508,8 @@ export const useFollowerListMutations = (integrationId?: string) => {
           (key) =>
             isFollowerListCacheKey(integrationId, key) &&
             typeof key === 'string' &&
-            key.includes('audience=followed'),
+            (key.includes('audience=followed') ||
+              key.includes('audience=unfollowed')),
           (page: FollowerPage | undefined) =>
             applyUnfollowToFollowerPage(page, externalId, {
               removeFromPage: true,
@@ -1518,7 +1519,9 @@ export const useFollowerListMutations = (integrationId?: string) => {
         mutateCache(
           (key) =>
             isFollowerListCacheKey(integrationId, key) &&
-            (typeof key !== 'string' || !key.includes('audience=followed')),
+            (typeof key !== 'string' ||
+              (!key.includes('audience=followed') &&
+                !key.includes('audience=unfollowed'))),
           (page: FollowerPage | undefined) =>
             applyUnfollowToFollowerPage(page, externalId, {
               removeFromPage: false,

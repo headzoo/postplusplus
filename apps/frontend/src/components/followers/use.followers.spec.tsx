@@ -10,6 +10,7 @@ import {
   applyMyGradeToFollowerPage,
   applyRelationshipSnapshotToFollowerPage,
   applyTriageIgnoreToFollowerPage,
+  applyUnfollowToFollowerPage,
   buildFollowerDetailHref,
   buildFollowerDetailUrl,
   buildFollowersUrl,
@@ -599,6 +600,23 @@ describe('follower list cache updates', () => {
       applyIgnoreToFollowerPage(page, 'follower-1', { removeFromPage: true })
     ).toEqual({
       items: [{ id: 'follower-2', name: 'Sam' }],
+      hasMore: false,
+    });
+  });
+
+  it('removes unfollowed followers from a page when unfollowing', () => {
+    const page = {
+      items: [
+        { id: 'follower-1', name: 'Alex', isFollowed: true },
+        { id: 'follower-2', name: 'Sam', isFollowed: true },
+      ],
+      hasMore: false,
+    };
+
+    expect(
+      applyUnfollowToFollowerPage(page, 'follower-1', { removeFromPage: true })
+    ).toEqual({
+      items: [{ id: 'follower-2', name: 'Sam', isFollowed: true }],
       hasMore: false,
     });
   });

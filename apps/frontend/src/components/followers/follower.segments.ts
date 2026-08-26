@@ -9,6 +9,7 @@ import {
   SadFaceIcon,
   SeedlingIcon,
   UserIcon,
+  UserMinusIcon,
   UsersGroupIcon,
   UsersIcon,
 } from '@gitroom/frontend/components/ui/icons';
@@ -23,7 +24,7 @@ import {
 export const FOLLOWER_BOARD_PREVIEW_LIMIT = 24;
 
 /** Target visible rows per board column before scrolling. */
-export const FOLLOWER_BOARD_VISIBLE_ROWS = 10;
+export const FOLLOWER_BOARD_VISIBLE_ROWS = 6;
 
 /** Matches FollowerBoardRow skeleton/row height (36px avatar + 16px vertical padding). */
 export const FOLLOWER_BOARD_ROW_HEIGHT_PX = 52;
@@ -63,7 +64,8 @@ export type FollowerSegmentSlug =
   | 'quiet'
   | 'ignored'
   | 'costly'
-  | 'bots';
+  | 'bots'
+  | 'unfollowed';
 
 export type FollowerSegmentDefinition = {
   slug: FollowerSegmentSlug;
@@ -74,7 +76,7 @@ export type FollowerSegmentDefinition = {
   color: FollowerSegmentColor;
   icon: FC<IconProps>;
   categoryKey?: keyof typeof FOLLOWER_CATEGORY_DESCRIPTIONS;
-  audience?: 'lead' | 'followed' | 'ignored' | 'cultivate' | 'hot';
+  audience?: 'lead' | 'followed' | 'unfollowed' | 'ignored' | 'cultivate' | 'hot';
   triage?: FollowerTriageFilter;
   isBot?: true;
 };
@@ -247,6 +249,17 @@ export const FOLLOWER_SUMMARY_SEGMENTS: FollowerSegmentDefinition[] = [
     audience: 'ignored',
   },
   {
+    slug: 'unfollowed',
+    key: 'followers_audience_unfollowed',
+    defaultLabel: 'Unfollowed',
+    descriptionKey: 'followers_board_unfollowed_description',
+    defaultDescription: FOLLOWER_CATEGORY_DESCRIPTIONS.unfollowed,
+    color: 'yellow',
+    icon: UserMinusIcon,
+    categoryKey: 'unfollowed',
+    audience: 'unfollowed',
+  },
+  {
     slug: 'bots',
     key: 'followers_bot_filter',
     defaultLabel: 'Bots',
@@ -274,7 +287,7 @@ export const isFollowerSegmentVisible = (
   return !hidden.has(slug);
 };
 
-/** Board columns on the All overview (no Ignored column). */
+/** Board columns on the All overview (excludes All). */
 export const FOLLOWER_BOARD_SEGMENTS: FollowerSegmentDefinition[] = [
   FOLLOWER_SUMMARY_SEGMENTS.find((s) => s.slug === 'leads')!,
   FOLLOWER_SUMMARY_SEGMENTS.find((s) => s.slug === 'hot')!,
@@ -282,6 +295,10 @@ export const FOLLOWER_BOARD_SEGMENTS: FollowerSegmentDefinition[] = [
   FOLLOWER_SUMMARY_SEGMENTS.find((s) => s.slug === 'followed')!,
   FOLLOWER_SUMMARY_SEGMENTS.find((s) => s.slug === 'mutual')!,
   FOLLOWER_SUMMARY_SEGMENTS.find((s) => s.slug === 'quiet')!,
+  FOLLOWER_SUMMARY_SEGMENTS.find((s) => s.slug === 'costly')!,
+  FOLLOWER_SUMMARY_SEGMENTS.find((s) => s.slug === 'ignored')!,
+  FOLLOWER_SUMMARY_SEGMENTS.find((s) => s.slug === 'unfollowed')!,
+  FOLLOWER_SUMMARY_SEGMENTS.find((s) => s.slug === 'bots')!,
 ];
 
 export type FollowerBoardColumnAction =
@@ -304,6 +321,8 @@ export const getFollowerBoardColumnAction = (
       return { type: 'triage', triage: 'quiet' };
     case 'followed':
       return { type: 'unfollow' };
+    case 'unfollowed':
+      return { type: 'unfollow' };
     default:
       return null;
   }
@@ -314,7 +333,7 @@ export const FOLLOWER_TAB_SEGMENTS: Array<{
   key: string;
   defaultLabel: string;
   color: FollowerSegmentColor;
-  audience?: 'lead' | 'followed' | 'ignored' | 'cultivate' | 'hot';
+  audience?: 'lead' | 'followed' | 'unfollowed' | 'ignored' | 'cultivate' | 'hot';
   triage?: FollowerTriageFilter;
   isBot?: true;
 }> = [
@@ -378,6 +397,13 @@ export const FOLLOWER_TAB_SEGMENTS: Array<{
       defaultLabel: 'Ignored',
       color: 'yellow',
       audience: 'ignored',
+    },
+    {
+      slug: 'unfollowed',
+      key: 'followers_audience_unfollowed',
+      defaultLabel: 'Unfollowed',
+      color: 'yellow',
+      audience: 'unfollowed',
     },
     {
       slug: 'bots',

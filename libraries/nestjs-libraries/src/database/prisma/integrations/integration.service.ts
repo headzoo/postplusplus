@@ -86,6 +86,7 @@ import {
   AudienceFollowerCursor,
   AudienceCultivateCursor,
   AudienceFollowedCursor,
+  AudienceUnfollowedCursor,
   AudienceLeadCursor,
   ChannelInteractionRepository,
   GradeFollowerCursor,
@@ -883,6 +884,23 @@ export class IntegrationService {
         'followed'
       );
       return this.getFollowedAudiencePage(
+        org.id,
+        actorUserId,
+        integration,
+        normalizedQuery
+      );
+    }
+    if (normalizedQuery.audience === 'unfollowed') {
+      if (normalizedQuery.cursor && this.isHttpUrl(normalizedQuery.cursor)) {
+        throw new HttpException('Invalid follower cursor', HttpStatus.BAD_REQUEST);
+      }
+      this.assertFollowerCursorQueryIdentity(
+        normalizedQuery.cursor,
+        search,
+        undefined,
+        'unfollowed'
+      );
+      return this.getUnfollowedAudiencePage(
         org.id,
         actorUserId,
         integration,
@@ -2847,6 +2865,53 @@ export class IntegrationService {
     };
   }
 
+  private async getUnfollowedAudiencePage(
+    organizationId: string,
+    userId: string | undefined,
+    integration: Integration,
+    query: FollowerQuery
+  ): Promise<FollowerPage> {
+    const direction = query.direction ?? 'desc';
+    const cursor = query.cursor
+      ? this.decodeUnfollowedAudienceCursor(
+        query.cursor,
+        organizationId,
+        integration.id,
+        direction,
+        query.search
+      )
+      : undefined;
+    const ranked = await this._channelInteractionRepository.getAudienceUnfollowed({
+      organizationId,
+      integrationId: integration.id,
+      userId,
+      direction,
+      limit: query.limit,
+      ...(cursor ? { cursor } : {}),
+      ...(query.search ? { search: query.search } : {}),
+      ignoredVisibility: 'exclude',
+    });
+    const items = ranked.items.map((row) => this.mapAudienceMemberProfile(row));
+    const last = ranked.items.at(-1);
+    return {
+      items,
+      hasMore: ranked.hasMore,
+      ...(ranked.hasMore && last?.weFollowedAt
+        ? {
+          nextCursor: this.encodeUnfollowedAudienceCursor({
+            organizationId,
+            integrationId: integration.id,
+            direction,
+            search: query.search,
+            audience: 'unfollowed',
+            weFollowedAt: last.weFollowedAt.toISOString(),
+            externalId: last.externalId,
+          }),
+        }
+        : {}),
+    };
+  }
+
   private async getCultivateAudiencePage(
     organizationId: string,
     userId: string | undefined,
@@ -3840,6 +3905,18 @@ export class IntegrationService {
     ).toString('base64url')}`;
   }
 
+  private encodeUnfollowedAudienceCursor(cursor: {
+    organizationId: string;
+    integrationId: string;
+    direction: 'asc' | 'desc';
+    search?: string;
+    audience: 'unfollowed';
+  } & AudienceUnfollowedCursor) {
+    return `follower-unfollowed:v1:${Buffer.from(
+      JSON.stringify({ version: 1, ...cursor })
+    ).toString('base64url')}`;
+  }
+
   private encodeCultivateAudienceCursor(cursor: {
     organizationId: string;
     integrationId: string;
@@ -4061,6 +4138,43 @@ export class IntegrationService {
         cursor.direction !== direction ||
         cursor.search !== search ||
         cursor.audience !== 'followed' ||
+        typeof cursor.weFollowedAt !== 'string' ||
+        Number.isNaN(Date.parse(cursor.weFollowedAt)) ||
+        typeof cursor.externalId !== 'string'
+      ) {
+        throw new Error();
+      }
+      return {
+        weFollowedAt: cursor.weFollowedAt,
+        externalId: cursor.externalId,
+      };
+    } catch {
+      throw new HttpException('Invalid follower cursor', HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  private decodeUnfollowedAudienceCursor(
+    value: string,
+    organizationId: string,
+    integrationId: string,
+    direction: 'asc' | 'desc',
+    search: string | undefined
+  ): AudienceUnfollowedCursor {
+    try {
+      if (!value.startsWith('follower-unfollowed:v1:')) throw new Error();
+      const cursor = JSON.parse(
+        Buffer.from(
+          value.slice('follower-unfollowed:v1:'.length),
+          'base64url'
+        ).toString('utf8')
+      );
+      if (
+        cursor?.version !== 1 ||
+        cursor.organizationId !== organizationId ||
+        cursor.integrationId !== integrationId ||
+        cursor.direction !== direction ||
+        cursor.search !== search ||
+        cursor.audience !== 'unfollowed' ||
         typeof cursor.weFollowedAt !== 'string' ||
         Number.isNaN(Date.parse(cursor.weFollowedAt)) ||
         typeof cursor.externalId !== 'string'
@@ -4314,6 +4428,7 @@ export class IntegrationService {
       'follower-lead:v2:',
       'follower-lead:v3:',
       'follower-followed:v1:',
+      'follower-unfollowed:v1:',
       'follower-cultivate:v1:',
       'follower-cultivate:v2:',
       'follower-hot:v1:',

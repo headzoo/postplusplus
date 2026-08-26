@@ -57,6 +57,7 @@ describe('IntegrationService followers', () => {
       getRecentFollowers: jest.fn(),
       getAudienceLeads: jest.fn(),
       getAudienceFollowed: jest.fn(),
+      getAudienceUnfollowed: jest.fn(),
       getAudienceCultivate: jest.fn(),
       getAudienceHot: jest.fn(),
       getIgnoredAudienceFollowers: jest.fn(),
@@ -3981,6 +3982,62 @@ describe('IntegrationService followers', () => {
     expect(followers).not.toHaveBeenCalled();
     expect(
       (service as any)._channelInteractionRepository.getAudienceFollowed
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: 'org-a',
+        integrationId: 'channel-a',
+        direction: 'desc',
+        limit: 24,
+        ignoredVisibility: 'exclude',
+      })
+    );
+  });
+
+  it('routes the unfollowed audience through lost followers you still follow', async () => {
+    const followers = jest.fn();
+    const service = createService([integration], {
+      supported: { followers },
+    });
+    (
+      service as any
+    )._channelInteractionRepository.getAudienceUnfollowed.mockResolvedValue({
+      items: [
+        {
+          externalId: 'unfollowed-1',
+          name: 'Unfollowed One',
+          username: 'unfollowed',
+          picture: null,
+          profileUrl: null,
+          bio: null,
+          followersCount: null,
+          followingCount: null,
+          followedAt: new Date('2026-08-01T12:00:00.000Z'),
+          weFollowedAt: new Date('2026-08-20T12:00:00.000Z'),
+          accountCreatedAt: null,
+        },
+      ],
+      hasMore: false,
+    });
+
+    await expect(
+      service.getFollowers(org, user, 'channel-a', {
+        limit: 24,
+        audience: 'unfollowed',
+      })
+    ).resolves.toEqual({
+      items: [
+        expect.objectContaining({
+          id: 'unfollowed-1',
+          name: 'Unfollowed One',
+          weFollowedAt: '2026-08-20T12:00:00.000Z',
+          isFollowed: true,
+        }),
+      ],
+      hasMore: false,
+    });
+    expect(followers).not.toHaveBeenCalled();
+    expect(
+      (service as any)._channelInteractionRepository.getAudienceUnfollowed
     ).toHaveBeenCalledWith(
       expect.objectContaining({
         organizationId: 'org-a',

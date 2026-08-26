@@ -22,7 +22,7 @@ export const FollowerSummaryCards: FC<{
 
   return (
     <div
-      className="grid grid-cols-2 gap-[12px] sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-10"
+      className="grid grid-cols-2 gap-[12px] sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-11"
       data-testid="followers-summary-cards"
     >
       {FOLLOWER_SUMMARY_SEGMENTS.map((segment) => {
@@ -37,9 +37,9 @@ export const FollowerSummaryCards: FC<{
             : segment.isBot
               ? categoryCount(summary?.categories, 'bots')
               : categoryCount(
-                  summary?.categories,
-                  segment.categoryKey || segment.slug
-                );
+                summary?.categories,
+                segment.categoryKey || segment.slug
+              );
         const href = buildHref(
           segment.slug === 'all' ? undefined : segment.slug
         );

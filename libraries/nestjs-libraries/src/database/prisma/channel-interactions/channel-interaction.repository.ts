@@ -193,6 +193,22 @@ export type AudienceFollowedQuery = {
   ignoredVisibility?: AudienceIgnoredVisibility;
 };
 
+export type AudienceUnfollowedCursor = {
+  weFollowedAt: string;
+  externalId: string;
+};
+
+export type AudienceUnfollowedQuery = {
+  organizationId: string;
+  integrationId: string;
+  userId?: string;
+  direction: 'asc' | 'desc';
+  limit: number;
+  cursor?: AudienceUnfollowedCursor;
+  search?: string;
+  ignoredVisibility?: AudienceIgnoredVisibility;
+};
+
 export type AudienceCultivateCursor = {
   finalRank: number;
   externalId: string;
@@ -4140,6 +4156,7 @@ export class ChannelInteractionRepository {
           organizationId: query.organizationId,
           integrationId: query.integrationId,
           weFollowedAt: { not: null },
+          followedAt: null,
           membershipState: {
             in: [
               ChannelAudienceMembership.UNKNOWN,
@@ -4150,6 +4167,43 @@ export class ChannelInteractionRepository {
             this.audienceSearchFilter(query.search),
             this.ignoredVisibilityFilter(query.ignoredVisibility),
             this.followedAudienceKeyset(query.cursor, query.direction)
+          ),
+        },
+        orderBy: [
+          { weFollowedAt: query.direction },
+          { externalId: query.direction },
+        ],
+        take: query.limit + 1,
+        select: this.audienceMemberListSelect(query.userId),
+      });
+
+      return {
+        items: rows.slice(0, query.limit),
+        hasMore: rows.length > query.limit,
+      };
+    });
+  }
+
+  async getAudienceUnfollowed(query: AudienceUnfollowedQuery) {
+    return this.withSerializableRetry(async (tx) => {
+      await this.assertOwnedIntegration(
+        tx,
+        query.organizationId,
+        query.integrationId
+      );
+
+      const rows = await tx.channelAudienceMember.findMany({
+        where: {
+          organizationId: query.organizationId,
+          integrationId: query.integrationId,
+          weFollowedAt: { not: null },
+          followedAt: { not: null },
+          membershipState: ChannelAudienceMembership.NOT_FOLLOWER,
+          ignoredAt: null,
+          ...this.audienceListFilters(
+            this.audienceSearchFilter(query.search),
+            this.ignoredVisibilityFilter(query.ignoredVisibility),
+            this.unfollowedAudienceKeyset(query.cursor, query.direction)
           ),
         },
         orderBy: [
@@ -4806,12 +4860,21 @@ export class ChannelInteractionRepository {
     if (category === 'followed') {
       return {
         weFollowedAt: { not: null },
+        followedAt: null,
         membershipState: {
           in: [
             ChannelAudienceMembership.UNKNOWN,
             ChannelAudienceMembership.NOT_FOLLOWER,
           ],
         },
+        ignoredAt: null,
+      };
+    }
+    if (category === 'unfollowed') {
+      return {
+        weFollowedAt: { not: null },
+        followedAt: { not: null },
+        membershipState: ChannelAudienceMembership.NOT_FOLLOWER,
         ignoredAt: null,
       };
     }
@@ -5148,6 +5211,27 @@ export class ChannelInteractionRepository {
 
   private followedAudienceKeyset(
     cursor: AudienceFollowedCursor | undefined,
+    direction: 'asc' | 'desc'
+  ): Prisma.ChannelAudienceMemberWhereInput {
+    if (!cursor) {
+      return {};
+    }
+
+    const comparison = direction === 'desc' ? 'lt' : 'gt';
+    const weFollowedAt = new Date(cursor.weFollowedAt);
+    return {
+      OR: [
+        { weFollowedAt: { [comparison]: weFollowedAt } },
+        {
+          weFollowedAt,
+          externalId: { [comparison]: cursor.externalId },
+        },
+      ],
+    };
+  }
+
+  private unfollowedAudienceKeyset(
+    cursor: AudienceUnfollowedCursor | undefined,
     direction: 'asc' | 'desc'
   ): Prisma.ChannelAudienceMemberWhereInput {
     if (!cursor) {

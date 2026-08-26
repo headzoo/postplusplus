@@ -17,6 +17,7 @@ export const FOLLOWER_TRIAGE_TIP_SLUGS = [
   'costly',
   'bots',
   'ignored',
+  'unfollowed',
 ] as const;
 
 export type FollowerTriageTipSlug = (typeof FOLLOWER_TRIAGE_TIP_SLUGS)[number];
@@ -82,6 +83,13 @@ const FOLLOWER_TRIAGE_TIP_COPY: Record<
     defaultTitle: 'Ignored',
     bodyKey: 'followers_triage_tip_ignored_body',
     defaultBody: 'People you’ve hidden from other views.',
+  },
+  unfollowed: {
+    titleKey: 'followers_triage_tip_unfollowed_title',
+    defaultTitle: 'Unfollowed',
+    bodyKey: 'followers_triage_tip_unfollowed_body',
+    defaultBody:
+      'People you still follow who used to follow you and no longer do.',
   },
 };
 

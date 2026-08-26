@@ -123,21 +123,25 @@ const publicStrategy = (
 const isBoardPreviewParams = (params: UseFollowersParams) =>
   params.limit === FOLLOWER_BOARD_PREVIEW_LIMIT &&
   !params.cursor &&
-  !params.listId &&
   !params.search &&
-  !params.isBot &&
-  (params.audience === 'lead' ||
+  (!!params.listId ||
+    !!params.isBot ||
+    params.audience === 'lead' ||
     params.audience === 'hot' ||
     params.audience === 'cultivate' ||
+    params.audience === 'followed' ||
+    params.audience === 'unfollowed' ||
+    params.audience === 'ignored' ||
     params.triage === 'mutual' ||
-    params.triage === 'quiet');
+    params.triage === 'quiet' ||
+    params.triage === 'over_invested');
 
 const mainFollowersParams = () => {
   const withIntegration = useFollowersMock.mock.calls
     .map((call) => call[0] as UseFollowersParams)
     .filter((params) => !!params.integrationId);
   const boardStyle = withIntegration.filter(isBoardPreviewParams);
-  if (boardStyle.length >= 5) {
+  if (boardStyle.length >= 10) {
     return withIntegration.filter((params) => !boardStyle.includes(params));
   }
   return withIntegration;
@@ -497,6 +501,12 @@ describe('follower page href helpers', () => {
       audience: 'ignored',
       isBot: undefined,
     });
+    expect(parseFollowerViewPath('/followers/unfollowed')).toEqual({
+      slug: 'unfollowed',
+      triage: undefined,
+      audience: 'unfollowed',
+      isBot: undefined,
+    });
     expect(parseFollowerViewPath('/followers/bots')).toEqual({
       slug: 'bots',
       triage: undefined,
@@ -758,12 +768,19 @@ describe('FollowersComponent', () => {
 
     expect(screen.getByTestId('followers-summary-cards')).toBeTruthy();
     expect(screen.getByTestId('followers-board')).toBeTruthy();
-    const columns = screen.getAllByTestId('followers-board-column');
-    expect(columns).toHaveLength(6);
-    expect(columns[0].getAttribute('data-board-segment')).toBe('leads');
-    expect(columns[1].getAttribute('data-board-segment')).toBe('hot');
-    expect(columns[2].getAttribute('data-board-segment')).toBe('cultivate');
-    expect(columns[3].getAttribute('data-board-segment')).toBe('followed');
+    const segmentColumns = screen
+      .getAllByTestId('followers-board-column')
+      .filter((column) => column.hasAttribute('data-board-segment'));
+    expect(segmentColumns).toHaveLength(9);
+    expect(segmentColumns[0].getAttribute('data-board-segment')).toBe('leads');
+    expect(segmentColumns[1].getAttribute('data-board-segment')).toBe('hot');
+    expect(segmentColumns[2].getAttribute('data-board-segment')).toBe('cultivate');
+    expect(segmentColumns[3].getAttribute('data-board-segment')).toBe('followed');
+    expect(
+      screen
+        .getAllByTestId('followers-board-column')
+        .some((column) => column.getAttribute('data-board-list') === 'list-1')
+    ).toBe(true);
 
     const summaryCards = screen
       .getByTestId('followers-summary-cards')
@@ -782,6 +799,7 @@ describe('FollowersComponent', () => {
       'quiet',
       'costly',
       'ignored',
+      'unfollowed',
       'bots',
     ]);
   });
@@ -805,9 +823,10 @@ describe('FollowersComponent', () => {
 
     const boardSegments = screen
       .getAllByTestId('followers-board-column')
-      .map((column) => column.getAttribute('data-board-segment'));
+      .map((column) => column.getAttribute('data-board-segment'))
+      .filter(Boolean);
     expect(boardSegments).not.toContain('hot');
-    expect(boardSegments).toHaveLength(5);
+    expect(boardSegments).toHaveLength(9);
   });
 
   it('redirects away from a hidden triage route', () => {
@@ -921,6 +940,18 @@ describe('FollowersComponent', () => {
     expect(mainFollowersParams().at(-1)).toEqual(
       expect.objectContaining({
         audience: 'ignored',
+        triage: undefined,
+      })
+    );
+  });
+
+  it('hydrates the unfollowed audience from /followers/unfollowed', () => {
+    mockPathname = '/followers/unfollowed';
+    render(<FollowersComponent />);
+
+    expect(mainFollowersParams().at(-1)).toEqual(
+      expect.objectContaining({
+        audience: 'unfollowed',
         triage: undefined,
       })
     );

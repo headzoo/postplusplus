@@ -2445,6 +2445,7 @@ export class ChannelInteractionService {
       'lead',
       'leads',
       'followed',
+      'unfollowed',
       'ignored',
     ];
     if (reserved.includes(normalized.toLowerCase())) {

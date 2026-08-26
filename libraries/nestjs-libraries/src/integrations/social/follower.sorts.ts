@@ -30,6 +30,7 @@ export type FollowerTriageFilterValue =
 export const FOLLOWER_AUDIENCES = [
   'lead',
   'followed',
+  'unfollowed',
   'ignored',
   'cultivate',
   'hot',
@@ -60,6 +61,8 @@ export const FOLLOWER_CATEGORY_DESCRIPTIONS = {
   lead: 'An interacting non-follower.',
   followed:
     'Someone the channel followed who has not followed back yet.',
+  unfollowed:
+    'Someone the channel still follows who used to follow and no longer does.',
   ignored: 'An organization-managed visibility state, not a relationship score.',
   cultivate:
     'A warm relationship that has not received outbound attention recently.',

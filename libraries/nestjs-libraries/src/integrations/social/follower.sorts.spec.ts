@@ -15,7 +15,9 @@ import {
 describe('follower.sorts', () => {
   it('includes hot in follower audiences', () => {
     expect(FOLLOWER_AUDIENCES).toContain('hot');
+    expect(FOLLOWER_AUDIENCES).toContain('unfollowed');
     expect(FOLLOWER_CATEGORY_DESCRIPTIONS.hot).toContain('materialized');
+    expect(FOLLOWER_CATEGORY_DESCRIPTIONS.unfollowed).toContain('used to follow');
   });
 
   const followers = [
