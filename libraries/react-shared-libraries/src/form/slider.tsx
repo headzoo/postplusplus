@@ -5,17 +5,22 @@ import clsx from 'clsx';
 export const Slider: FC<{
   value: 'on' | 'off';
   fill?: boolean;
+  disabled?: boolean;
   onChange: (value: 'on' | 'off') => void;
 }> = (props) => {
-  const { value, onChange, fill } = props;
+  const { value, onChange, fill, disabled } = props;
   const change = useCallback(() => {
+    if (disabled) {
+      return;
+    }
     onChange(value === 'on' ? 'off' : 'on');
-  }, [value]);
+  }, [disabled, onChange, value]);
   return (
     <div
       className={clsx(
         'w-[57px] h-[34px] p-[4px] border-fifth border rounded-[100px]',
-        value === 'on' && fill && 'bg-forth'
+        value === 'on' && fill && 'bg-forth',
+        disabled && 'opacity-50 pointer-events-none'
       )}
       onClick={change}
     >
