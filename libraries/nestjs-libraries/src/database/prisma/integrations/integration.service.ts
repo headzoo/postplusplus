@@ -47,6 +47,7 @@ import {
 } from '@gitroom/nestjs-libraries/integrations/social/follower.sorts';
 import {
   applyPersonalRelationshipGrade,
+  applyHotTriageMembershipGate,
   calculateRelationshipGrade,
   getRelationshipTriage,
   RELATIONSHIP_CADENCE_DAYS,
@@ -2009,6 +2010,7 @@ export class IntegrationService {
     relationshipTriage?: string | null;
     relationshipFormulaVersion?: number | null;
     relationshipSnapshotAt?: Date | null;
+    membershipState?: string | null;
     botGrade?: number | null;
     isBot?: boolean | null;
     botConfidence?: number | null;
@@ -2138,6 +2140,7 @@ export class IntegrationService {
   }
 
   private followerRelationshipFields(member?: {
+    membershipState?: string | null;
     relationshipEffortScore?: number | null;
     relationshipReciprocationScore?: number | null;
     relationshipNetGap?: number | null;
@@ -2157,9 +2160,13 @@ export class IntegrationService {
     if (!hasProjection) {
       return {};
     }
-    const computedTriage = this.isRelationshipTriage(member?.relationshipTriage)
+    const rawTriage = this.isRelationshipTriage(member?.relationshipTriage)
       ? member!.relationshipTriage
       : getRelationshipTriage(effortScore!, reciprocationScore!);
+    const computedTriage = applyHotTriageMembershipGate(
+      rawTriage,
+      member?.membershipState
+    );
     const now = Date.now();
     const ignored = new Set([
       ...(member?.ignoredTriages ?? []),
@@ -2176,6 +2183,10 @@ export class IntegrationService {
     const hotIgnored =
       computedTriage === 'hot_lead' &&
       (ignored.has('hot_lead') || ignored.has('engaged_not_yet'));
+    const visibleTriage =
+      !computedTriage || hotIgnored || ignored.has(computedTriage)
+        ? null
+        : computedTriage;
     return {
       effortScore,
       reciprocationScore,
@@ -2183,8 +2194,7 @@ export class IntegrationService {
         reciprocationScore! - effortScore!,
       effortStars: scoreToStars(effortScore!),
       reciprocationStars: scoreToStars(reciprocationScore!),
-      relationshipTriage:
-        hotIgnored || ignored.has(computedTriage!) ? null : computedTriage,
+      ...(visibleTriage ? { relationshipTriage: visibleTriage } : {}),
       relationshipFormulaVersion: member?.relationshipFormulaVersion ?? null,
       relationshipSnapshotAt:
         member?.relationshipSnapshotAt?.toISOString() ?? null,
@@ -2273,6 +2283,7 @@ export class IntegrationService {
 
   private mapFollowerRelationshipFromProjection(
     member: {
+      membershipState?: string | null;
       relationshipGrade?: number | null;
       relationshipEffortScore?: number | null;
       relationshipReciprocationScore?: number | null;
@@ -2300,7 +2311,7 @@ export class IntegrationService {
       effortScore!,
       reciprocationScore!
     );
-    return this.mapFollowerRelationshipSnapshot(
+    const snapshot = this.mapFollowerRelationshipSnapshot(
       {
         snapshotAt,
         windowStartedAt: new Date(
@@ -2320,6 +2331,13 @@ export class IntegrationService {
         ? member.relationshipTriage
         : undefined
     );
+    return {
+      ...snapshot,
+      triage: applyHotTriageMembershipGate(
+        snapshot.triage,
+        member.membershipState
+      ),
+    };
   }
 
   /**

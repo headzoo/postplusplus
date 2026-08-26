@@ -52,6 +52,7 @@ import {
 } from './channel-interaction.repository';
 import {
   applyPersonalRelationshipGrade,
+  applyHotTriageMembershipGate,
   BOT_FORMULA_VERSION,
   calculateBotGrade,
   getChannelInteractionScore,
@@ -93,6 +94,7 @@ import { utcDayKey } from '@gitroom/nestjs-libraries/temporal/cultivate.schedule
 
 export {
   applyPersonalRelationshipGrade,
+  applyHotTriageMembershipGate,
   calculateBotGrade,
   calculateRelationshipGrade,
   getChannelInteractionScore,
@@ -1849,15 +1851,22 @@ export class ChannelInteractionService {
         reciprocationScore,
       }),
     };
+    const gatedSnapshot = {
+      ...snapshot,
+      triage: applyHotTriageMembershipGate(
+        snapshot.triage,
+        member.membershipState
+      ),
+    };
     await this._repository.updateCurrentRelationshipProjections(
       organizationId,
       integrationId,
       snapshotAt,
-      [snapshot],
+      [gatedSnapshot],
       { force: true }
     );
     return {
-      ...snapshot,
+      ...gatedSnapshot,
       snapshotAt,
     };
   }
@@ -1911,10 +1920,15 @@ export class ChannelInteractionService {
           'inbound'
         ),
       };
+      const graded = this.gradeRelationship(strategy, profile, input);
       return {
         externalId: member.externalId,
         ...input,
-        ...this.gradeRelationship(strategy, profile, input),
+        ...graded,
+        triage: applyHotTriageMembershipGate(
+          graded.triage,
+          member.membershipState
+        ),
       };
     });
   }

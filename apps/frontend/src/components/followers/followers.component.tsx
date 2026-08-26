@@ -1217,11 +1217,12 @@ export const FollowersComponent: FC = () => {
           modal: 'text-textColor',
         },
         onClose: username ? closeFollowerDetailUrl : undefined,
-        children: (
+        children: (close) => (
           <FollowerDetailModal
             integrationId={integrationId}
             externalId={externalId}
             username={username}
+            close={close}
           />
         ),
       });

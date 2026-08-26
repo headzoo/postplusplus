@@ -52,12 +52,20 @@ jest.mock('@gitroom/frontend/components/ui/custom.scroll.area', () => ({
   CustomScrollArea: ({
     children,
     className,
+    contentClassName,
+    'data-testid': dataTestId,
   }: {
     children: React.ReactNode;
     className?: string;
+    contentClassName?: string;
+    'data-testid'?: string;
   }) => (
-    <div data-testid="custom-scroll-area" className={className}>
-      {children}
+    <div data-testid={dataTestId ?? 'custom-scroll-area'} className={className}>
+      {contentClassName ? (
+        <div className={contentClassName}>{children}</div>
+      ) : (
+        children
+      )}
     </div>
   ),
 }));
@@ -201,10 +209,10 @@ describe('FollowerBoardRow', () => {
     expect(screen.getByText('Alex Rivera')).toBeTruthy();
     expect(screen.getByText('@alex')).toBeTruthy();
     expect(screen.getByText(/12/)).toBeTruthy();
-    expect(screen.getByText(/Interactions/)).toBeTruthy();
+    expect(screen.getByText('12i')).toBeTruthy();
   });
 
-  it('does not open the modal when avatar or username profile links are clicked', () => {
+  it('opens the modal when avatar or username profile links are clicked', () => {
     const onOpen = jest.fn();
     render(
       <FollowerBoardRow
@@ -219,7 +227,7 @@ describe('FollowerBoardRow', () => {
     );
     fireEvent.click(screen.getByText('@alex'));
 
-    expect(onOpen).not.toHaveBeenCalled();
+    expect(onOpen).toHaveBeenCalledTimes(2);
   });
 
   it('snoozes Hot and Cultivate triages when a profile link is clicked', async () => {
@@ -244,7 +252,7 @@ describe('FollowerBoardRow', () => {
       );
     });
 
-    expect(onOpen).not.toHaveBeenCalled();
+    expect(onOpen).toHaveBeenCalled();
     expect(onDismissTriage).toHaveBeenCalledWith('hot_lead', undefined, {
       snooze: true,
     });

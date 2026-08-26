@@ -79,6 +79,7 @@ export const FollowerBoardRow: FC<{
     event: MouseEvent<HTMLAnchorElement>
   ) => {
     event.stopPropagation();
+    onOpen();
     if (!onDismissTriage) {
       return;
     }
@@ -164,8 +165,8 @@ export const FollowerBoardRow: FC<{
       <div className="flex shrink-0 items-center gap-[6px] text-[12px] text-textItemBlur">
         {interactions != null && (
           <span>
-            {interactions}{' '}
-            {t('followers_interaction_count', 'Interactions')}
+            {interactions}
+            {t('followers_interaction_count', 'i')}
           </span>
         )}
         <span
@@ -328,8 +329,10 @@ export const FollowerBoard: FC<{
   ) => Promise<void> | void;
 }> = ({ columns, onOpenFollower, onDismissTriage }) => {
   return (
-    <div
-      className="flex h-full min-h-0 flex-1 items-stretch gap-[12px] overflow-x-auto overflow-y-hidden pb-[4px]"
+    <CustomScrollArea
+      direction="horizontal"
+      className="flex h-full min-h-0 flex-1"
+      contentClassName="flex h-full items-stretch gap-[12px] pb-[4px]"
       data-testid="followers-board"
     >
       {columns.map((column) => (
@@ -344,7 +347,7 @@ export const FollowerBoard: FC<{
           onDismissTriage={onDismissTriage}
         />
       ))}
-    </div>
+    </CustomScrollArea>
   );
 };
 

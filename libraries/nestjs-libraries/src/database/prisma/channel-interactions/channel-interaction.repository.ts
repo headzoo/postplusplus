@@ -299,6 +299,7 @@ export type FollowerAudienceCounts = {
   relationshipTriage: string | null;
   relationshipFormulaVersion: number | null;
   relationshipSnapshotAt: Date | null;
+  membershipState: string | null;
   botGrade: number | null;
   isBot: boolean | null;
   botConfidence: number | null;
@@ -437,6 +438,7 @@ function botScoreDueWhere(now = new Date()): Prisma.ChannelAudienceMemberWhereIn
 export type RelationshipGradeBatchMember = {
   externalId: string;
   interactionCounts: RelationshipInteractionCounts;
+  membershipState?: string | null;
 };
 
 export type RelationshipGradeStrategySelection = {
@@ -458,7 +460,7 @@ export type RelationshipGradeSnapshotInput = {
   formulaVersion: number;
   strategyId: ChannelStrategyId;
   strategyVersion: number;
-  triage: RelationshipTriage;
+  triage: RelationshipTriage | null;
 };
 
 @Injectable()
@@ -1587,6 +1589,7 @@ export class ChannelInteractionRepository {
         where: { organizationId, integrationId, externalId },
         select: {
           externalId: true,
+          membershipState: true,
           relationshipEffortScore: true,
           relationshipReciprocationScore: true,
         },
@@ -4570,6 +4573,7 @@ export class ChannelInteractionRepository {
           relationshipTriage: row.relationshipTriage,
           relationshipFormulaVersion: row.relationshipFormulaVersion,
           relationshipSnapshotAt: row.relationshipSnapshotAt,
+          membershipState: row.membershipState,
           botGrade: row.botGrade,
           isBot: row.isBot,
           botConfidence: row.botConfidence,
@@ -4939,6 +4943,7 @@ export class ChannelInteractionRepository {
       followedAt: true,
       weFollowedAt: true,
       accountCreatedAt: true,
+      membershipState: true,
       noteCount: true,
       likesCount: true,
       inboundInteractionCount: true,
@@ -5576,10 +5581,22 @@ export class ChannelInteractionRepository {
       },
       _count: { _all: true },
     });
+    const membershipRows = await tx.channelAudienceMember.findMany({
+      where: {
+        organizationId,
+        integrationId,
+        externalId: { in: externalIds },
+      },
+      select: { externalId: true, membershipState: true },
+    });
+    const membershipById = new Map(
+      membershipRows.map((row) => [row.externalId, row.membershipState])
+    );
     const counts = new Map<string, RelationshipGradeBatchMember>();
     for (const externalId of externalIds) {
       counts.set(externalId, {
         externalId,
+        membershipState: membershipById.get(externalId) ?? null,
         interactionCounts: createRelationshipInteractionCounts(),
       });
     }

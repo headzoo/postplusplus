@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, NotFoundException } from '@nest
 import { ioRedis } from '@gitroom/nestjs-libraries/redis/redis.service';
 import {
   applyPersonalRelationshipGrade,
+  applyHotTriageMembershipGate,
   calculateBotGrade,
   calculateRelationshipGrade,
   ChannelInteractionService,
@@ -234,6 +235,20 @@ describe('ChannelInteractionService', () => {
     'classifies relationship triage for effort %i and reciprocation %i',
     (effortScore, reciprocationScore, triage) => {
       expect(getRelationshipTriage(effortScore, reciprocationScore)).toBe(triage);
+    }
+  );
+
+  it.each([
+    ['FOLLOWER', 'hot_lead', 'hot_lead'],
+    ['NOT_FOLLOWER', 'hot_lead', null],
+    ['UNKNOWN', 'hot_lead', null],
+    ['FOLLOWER', 'quiet', 'quiet'],
+    ['NOT_FOLLOWER', 'mutual', 'mutual'],
+    [undefined, 'hot_lead', null],
+  ] as const)(
+    'applyHotTriageMembershipGate keeps Hot triage follower-only (%s + %s)',
+    (membershipState, triage, expected) => {
+      expect(applyHotTriageMembershipGate(triage, membershipState)).toBe(expected);
     }
   );
 
@@ -570,6 +585,7 @@ describe('ChannelInteractionService', () => {
       members: [
         {
           externalId: 'person-1',
+          membershipState: 'FOLLOWER',
           interactionCounts: interactionCounts({ reply: { inbound: 1 } }),
         },
       ],
@@ -603,6 +619,7 @@ describe('ChannelInteractionService', () => {
       strategy: growStrategy,
       members: ['a', 'b', 'c'].map((externalId) => ({
         externalId,
+        membershipState: 'FOLLOWER',
         interactionCounts: interactionCounts({ like: { inbound: 2 } }),
       })),
     });
@@ -627,6 +644,7 @@ describe('ChannelInteractionService', () => {
       members: [
         {
           externalId: 'person-1',
+          membershipState: 'FOLLOWER',
           interactionCounts: interactionCounts({ follow: { inbound: 1 } }),
         },
       ],
@@ -681,6 +699,7 @@ describe('ChannelInteractionService', () => {
       members: [
         {
           externalId: 'person-1',
+          membershipState: 'FOLLOWER',
           interactionCounts: interactionCounts({
             reply: { outbound: 1 },
             like: { inbound: 1 },
@@ -718,6 +737,33 @@ describe('ChannelInteractionService', () => {
     );
   });
 
+  it('clears Hot triage when refreshing projections for a non-follower lead', async () => {
+    const repository = createRepository();
+    repository.recordNormalizedEvent.mockResolvedValue({ created: true });
+    repository.getRelationshipScoresForMembers.mockResolvedValue({
+      strategy: growStrategy,
+      members: [
+        {
+          externalId: 'lead-1',
+          membershipState: 'NOT_FOLLOWER',
+          interactionCounts: interactionCounts({ reply: { inbound: 2 } }),
+        },
+      ],
+    });
+    const service = new ChannelInteractionService(repository as any);
+
+    await service.recordNormalizedDelivery('org', 'integration', [
+      interaction({ counterparty: { externalId: 'lead-1', name: 'Lead' } }),
+    ] as any);
+
+    const [projection] =
+      repository.updateCurrentRelationshipProjections.mock.calls[0][3];
+    expect(projection.externalId).toBe('lead-1');
+    expect(projection.reciprocationScore).toBeGreaterThan(0);
+    expect(projection.effortScore).toBe(0);
+    expect(projection.triage).toBeNull();
+  });
+
   it('writes live webhook refreshes with the newly selected strategy', async () => {
     const repository = createRepository();
     repository.getRelationshipScoresForMembers.mockResolvedValue({
@@ -725,6 +771,7 @@ describe('ChannelInteractionService', () => {
       members: [
         {
           externalId: 'person-1',
+          membershipState: 'FOLLOWER',
           interactionCounts: interactionCounts({ reply: { inbound: 1 } }),
         },
       ],
@@ -1828,6 +1875,7 @@ describe('ChannelInteractionService', () => {
     const repository = createRepository();
     repository.getCurrentRelationshipProjection.mockResolvedValue({
       externalId: 'follower-a',
+      membershipState: 'FOLLOWER',
       relationshipEffortScore: 10,
       relationshipReciprocationScore: 5,
     });
@@ -1836,6 +1884,7 @@ describe('ChannelInteractionService', () => {
       members: [
         {
           externalId: 'follower-a',
+          membershipState: 'FOLLOWER',
           interactionCounts: interactionCounts({
             reply: { outbound: 5 },
             follow: { inbound: 3 },

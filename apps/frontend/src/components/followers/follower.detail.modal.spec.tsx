@@ -203,6 +203,7 @@ const detail: FollowerMemberDetail = {
 describe('FollowerDetailModal', () => {
   const mutate = jest.fn().mockResolvedValue(detail);
   const fetchMock = jest.fn();
+  const close = jest.fn();
   let swrDetail: FollowerMemberDetail = detail;
 
   const mockSwrByKey = (key: string | null) => {
@@ -743,7 +744,11 @@ describe('FollowerDetailModal', () => {
     triageDismissOpen.mockResolvedValue('remove');
 
     render(
-      <FollowerDetailModal integrationId="channel-1" externalId="follower-1" />
+      <FollowerDetailModal
+        integrationId="channel-1"
+        externalId="follower-1"
+        close={close}
+      />
     );
 
     fireEvent.click(
@@ -763,7 +768,64 @@ describe('FollowerDetailModal', () => {
         })
       );
       expect(mutate).toHaveBeenCalled();
+      expect(close).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it('snoozes a relationship triage badge from the modal header and closes', async () => {
+    triageDismissOpen.mockResolvedValue('snooze');
+
+    render(
+      <FollowerDetailModal
+        integrationId="channel-1"
+        externalId="follower-1"
+        close={close}
+      />
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Remove Costly badge' })
+    );
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/followers/channel-1/member/triage-ignore',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            externalId: 'follower-1',
+            triage: 'over_invested',
+            snooze: true,
+          }),
+        })
+      );
+      expect(close).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('does not close the modal when triage dismissal is cancelled', async () => {
+    triageDismissOpen.mockResolvedValue(null);
+
+    render(
+      <FollowerDetailModal
+        integrationId="channel-1"
+        externalId="follower-1"
+        close={close}
+      />
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Remove Costly badge' })
+    );
+
+    await waitFor(() => {
+      expect(triageDismissOpen).toHaveBeenCalledWith('Costly');
+    });
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      '/followers/channel-1/member/triage-ignore',
+      expect.anything()
+    );
+    expect(close).not.toHaveBeenCalled();
   });
 
   it('dismisses a lead badge from the modal header', async () => {
@@ -778,7 +840,11 @@ describe('FollowerDetailModal', () => {
     leadDismissOpen.mockResolvedValue({ action: 'remove', reasons: ['bio_wording'] });
 
     render(
-      <FollowerDetailModal integrationId="channel-1" externalId="follower-1" />
+      <FollowerDetailModal
+        integrationId="channel-1"
+        externalId="follower-1"
+        close={close}
+      />
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Remove Lead badge' }));
@@ -797,6 +863,55 @@ describe('FollowerDetailModal', () => {
         })
       );
       expect(mutate).toHaveBeenCalled();
+      expect(close).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it('does not close the modal when following a lead fails', async () => {
+    swrDetail = {
+      ...detail,
+      follower: {
+        ...detail.follower,
+        isLead: true,
+        relationshipTriage: null,
+      },
+    };
+    leadDismissOpen.mockResolvedValue({ action: 'follow' });
+    fetchMock.mockImplementation(async (url: string, options?: RequestInit) => {
+      if (url === '/followers/channel-1/member/follow') {
+        return {
+          ok: false,
+          json: async () => ({ message: 'Follow failed' }),
+        };
+      }
+      if (options?.method === 'POST') {
+        return {
+          ok: true,
+          json: async () => ({}),
+        };
+      }
+      return { ok: true, json: async () => ({}) };
+    });
+
+    render(
+      <FollowerDetailModal
+        integrationId="channel-1"
+        externalId="follower-1"
+        close={close}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Lead badge' }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/followers/channel-1/member/follow',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ externalId: 'follower-1' }),
+        })
+      );
+    });
+    expect(close).not.toHaveBeenCalled();
   });
 });

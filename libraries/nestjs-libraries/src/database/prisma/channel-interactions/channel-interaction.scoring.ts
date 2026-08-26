@@ -78,6 +78,17 @@ export function getRelationshipTriage(
   );
 }
 
+/** Hot triage is follower-only; non-followers belong in the Lead audience instead. */
+export function applyHotTriageMembershipGate(
+  triage: RelationshipTriage,
+  membershipState: string | null | undefined
+): RelationshipTriage | null {
+  if (triage === 'hot_lead' && membershipState !== 'FOLLOWER') {
+    return null;
+  }
+  return triage;
+}
+
 export function isEngagedNotYet(
   effortScore: number,
   reciprocationScore: number

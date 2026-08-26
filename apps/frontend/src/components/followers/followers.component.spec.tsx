@@ -753,6 +753,7 @@ describe('FollowersComponent', () => {
       'Leads',
       'Hot',
       'Cultivate',
+      'Followed',
       'Mutual',
       'Quiet',
       'Costly',
@@ -770,6 +771,7 @@ describe('FollowersComponent', () => {
       'Hot',
       'All',
       'Cultivate',
+      'Followed',
       'Mutual',
       'Quiet',
       'Costly',
@@ -819,9 +821,11 @@ describe('FollowersComponent', () => {
     expect(screen.getByTestId('followers-summary-cards')).toBeTruthy();
     expect(screen.getByTestId('followers-board')).toBeTruthy();
     const columns = screen.getAllByTestId('followers-board-column');
-    expect(columns).toHaveLength(5);
+    expect(columns).toHaveLength(6);
     expect(columns[0].getAttribute('data-board-segment')).toBe('leads');
+    expect(columns[1].getAttribute('data-board-segment')).toBe('hot');
     expect(columns[2].getAttribute('data-board-segment')).toBe('cultivate');
+    expect(columns[3].getAttribute('data-board-segment')).toBe('followed');
 
     const summaryCards = screen
       .getByTestId('followers-summary-cards')
@@ -835,6 +839,7 @@ describe('FollowersComponent', () => {
       'leads',
       'hot',
       'cultivate',
+      'followed',
       'mutual',
       'quiet',
       'costly',

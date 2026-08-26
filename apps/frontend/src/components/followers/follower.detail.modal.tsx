@@ -303,7 +303,8 @@ const FollowerDetailContent: FC<{
   integrationId: string;
   externalId: string;
   mutate: () => Promise<FollowerMemberDetail | undefined>;
-}> = ({ detail, integrationId, externalId, mutate }) => {
+  close?: () => void;
+}> = ({ detail, integrationId, externalId, mutate, close }) => {
   const t = useT();
   const toast = useToaster();
   const { data: channels = [] } = useFollowerChannels();
@@ -349,6 +350,7 @@ const FollowerDetailContent: FC<{
         try {
           await followMember(externalId);
           await revalidateDetail();
+          close?.();
         } catch (error) {
           toast.show(
             error instanceof Error
@@ -362,13 +364,16 @@ const FollowerDetailContent: FC<{
       if (triage === 'lead' && options?.moveToListId) {
         await addMember(options.moveToListId, externalId);
         await revalidateDetail();
+        close?.();
         return;
       }
       await ignoreTriage(externalId, triage, reasons, options);
       await revalidateDetail();
+      close?.();
     },
     [
       addMember,
+      close,
       externalId,
       followMember,
       ignoreTriage,
@@ -866,7 +871,8 @@ export const FollowerDetailModal: FC<{
   integrationId: string;
   externalId?: string;
   username?: string;
-}> = ({ integrationId, externalId, username }) => {
+  close?: () => void;
+}> = ({ integrationId, externalId, username, close }) => {
   const t = useT();
   const { data, error, isLoading, mutate } = useFollowerDetail(integrationId, {
     externalId,
@@ -903,6 +909,7 @@ export const FollowerDetailModal: FC<{
       integrationId={integrationId}
       externalId={data.follower.id}
       mutate={mutate}
+      close={close}
     />
   );
 };

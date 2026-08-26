@@ -3275,6 +3275,65 @@ describe('IntegrationService followers', () => {
     ).not.toHaveBeenCalled();
   });
 
+  it('hides Hot triage on lead audience members who are not followers', async () => {
+    const service = createService([integration], {
+      supported: {
+        followers: jest.fn(),
+        followerSorts: [{
+          key: 'recent',
+          label: 'Recent',
+          directions: ['desc'],
+          defaultDirection: 'desc',
+        }],
+      },
+    });
+    (
+      service as any
+    )._channelInteractionRepository.getAudienceLeads.mockResolvedValue({
+      items: [
+        {
+          externalId: 'lead-hot',
+          name: 'Lead Hot',
+          username: 'leadhot',
+          picture: null,
+          profileUrl: null,
+          bio: null,
+          followersCount: null,
+          followingCount: null,
+          followedAt: null,
+          accountCreatedAt: null,
+          membershipState: 'NOT_FOLLOWER',
+          inboundInteractionCount: 3,
+          lastInboundAt: new Date('2026-08-14T12:00:00.000Z'),
+          relationshipEffortScore: 0,
+          relationshipReciprocationScore: 12,
+          relationshipNetGap: 12,
+          relationshipTriage: 'hot_lead',
+          relationshipFormulaVersion: 4,
+          relationshipSnapshotAt: new Date('2026-08-14T12:00:00.000Z'),
+          leadBridgeScore: null,
+          leadFitScore: null,
+          leadBridgesAsLead: [],
+        },
+      ],
+      hasMore: false,
+    });
+
+    const page = await service.getFollowers(org, user, 'channel-a', {
+      limit: 24,
+      audience: 'lead',
+    });
+    expect(page.items).toEqual([
+      expect.objectContaining({
+        id: 'lead-hot',
+        isLead: true,
+        effortScore: 0,
+        reciprocationScore: 12,
+      }),
+    ]);
+    expect(page.items[0]?.relationshipTriage).toBeUndefined();
+  });
+
   it('returns cultivate followers from the cultivate audience page', async () => {
     const service = createService([integration], {
       supported: {
@@ -3496,6 +3555,7 @@ describe('IntegrationService followers', () => {
         relationshipTriage: 'hot_lead',
         relationshipFormulaVersion: 2,
         relationshipSnapshotAt: new Date('2026-08-12T12:00:00.000Z'),
+        membershipState: 'FOLLOWER',
         personalGrades: [],
       }],
       hasMore: false,
