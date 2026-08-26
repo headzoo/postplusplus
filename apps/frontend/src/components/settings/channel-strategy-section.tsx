@@ -687,7 +687,7 @@ export const ChannelStrategySection: FC<{
             className={STRATEGY_ACCENT.save}
             aria-label={t('save_channel_strategy_aria', 'Save channel strategy')}
           >
-            {t('save_channel_strategy', 'Save strategy')}
+            {t('save', 'Save')}
           </Button>
         </div>
       </div>

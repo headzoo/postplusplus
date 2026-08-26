@@ -32,6 +32,7 @@ export const ContextDocumentAssignmentPicker: FC<{
   title?: string;
   helpText?: string;
   emptyText?: string;
+  hideHeader?: boolean;
 }> = ({
   selectedIds,
   onChange,
@@ -39,6 +40,7 @@ export const ContextDocumentAssignmentPicker: FC<{
   title,
   helpText,
   emptyText,
+  hideHeader = false,
 }) => {
     const t = useT();
     const { data: library = [], error, isLoading } = useContextDocumentList();
@@ -136,18 +138,20 @@ export const ContextDocumentAssignmentPicker: FC<{
 
     return (
       <div className="flex flex-col gap-[10px]">
-        <div className="flex flex-col gap-[4px]">
-          <div className="text-[14px] font-[600] text-textColor">
-            {title || t('pipeline_context_documents', 'Context documents')}
+        {!hideHeader && (
+          <div className="flex flex-col gap-[4px]">
+            <div className="text-[14px] font-[600] text-textColor">
+              {title || t('pipeline_context_documents', 'Context documents')}
+            </div>
+            <div className="text-[13px] opacity-70">
+              {helpText ||
+                t(
+                  'pipeline_context_documents_help',
+                  'Optional Markdown files the agent can read when drafting posts for this Pipeline. Assignments reference your organization library — content is not copied.'
+                )}
+            </div>
           </div>
-          <div className="text-[13px] opacity-70">
-            {helpText ||
-              t(
-                'pipeline_context_documents_help',
-                'Optional Markdown files the agent can read when drafting posts for this Pipeline. Assignments reference your organization library — content is not copied.'
-              )}
-          </div>
-        </div>
+        )}
 
         {error && (
           <div className="rounded-[8px] border border-red-500/30 px-[12px] py-[8px] text-[13px] text-red-500">

@@ -21,7 +21,12 @@ import {
 } from '@gitroom/frontend/components/settings/use.channel.details';
 import { ChannelTrackingAlert } from '@gitroom/frontend/components/settings/channel-tracking-alert.component';
 import { ChannelStrategySection } from '@gitroom/frontend/components/settings/channel-strategy-section';
-import { ChannelAdditionalSettingsForm } from '@gitroom/frontend/components/launches/settings.modal';
+import {
+  ChannelAdditionalSettingsForm,
+  isConnectionAdditionalSetting,
+} from '@gitroom/frontend/components/launches/settings.modal';
+import { Slider } from '@gitroom/react/form/slider';
+import { GlobalIcon, TagIcon } from '@gitroom/frontend/components/ui/icons';
 import {
   ChannelInteractionKindCoverage,
   ChannelInteractionTrackingFailureCategory,
@@ -104,6 +109,15 @@ const formatTimestamp = (value?: string) => {
   });
 };
 
+const CONNECTION_ACCENT = {
+  text: 'text-sky-600 dark:text-sky-400',
+  well: 'bg-sky-500/15 text-sky-600 dark:text-sky-400',
+};
+
+const LINK_TRACKING_ACCENT = {
+  well: 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
+};
+
 const DetailRow: FC<{ label: string; children: React.ReactNode }> = ({
   label,
   children,
@@ -113,6 +127,264 @@ const DetailRow: FC<{ label: string; children: React.ReactNode }> = ({
       {label}
     </div>
     <div className="min-w-0 break-words">{children}</div>
+  </div>
+);
+
+const ConnectionDetailField: FC<{ label: string; children: React.ReactNode }> = ({
+  label,
+  children,
+}) => (
+  <div className="flex flex-col gap-[4px] min-w-0">
+    <div className="text-[11px] uppercase tracking-wide font-[500] text-newTextColor">
+      {label}
+    </div>
+    <div className="text-[14px] min-w-0 break-words">{children}</div>
+  </div>
+);
+
+const resolveChannelStatus = (
+  integration: IntegrationListItem,
+  details: ChannelDetails | undefined,
+  t: ReturnType<typeof useT>
+) => {
+  if (details?.deleted) {
+    return {
+      label: t('deleted', 'Deleted'),
+      badgeClassName: 'border-red-500/30 bg-red-500/10 text-red-300',
+      dotClassName: 'bg-red-400',
+    };
+  }
+  if (integration.disabled) {
+    return {
+      label: t('disabled', 'Disabled'),
+      badgeClassName: 'border-newSep bg-boxHover text-newTextColor',
+      dotClassName: 'bg-newTextColor',
+    };
+  }
+  if (integration.refreshNeeded) {
+    return {
+      label: t('reconnect_needed', 'Reconnect needed'),
+      badgeClassName: 'border-amber-500/30 bg-amber-500/10 text-amber-300',
+      dotClassName: 'bg-amber-400',
+    };
+  }
+  if (integration.inBetweenSteps) {
+    return {
+      label: t('setup_incomplete', 'Setup incomplete'),
+      badgeClassName: 'border-amber-500/30 bg-amber-500/10 text-amber-300',
+      dotClassName: 'bg-amber-400',
+    };
+  }
+  return {
+    label: t('channel_status_connected', 'Connected'),
+    badgeClassName: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
+    dotClassName: 'bg-emerald-400',
+  };
+};
+
+const ChannelConnectionSection: FC<{
+  integration: IntegrationListItem;
+  details?: ChannelDetails;
+  onSettingsUpdated: () => Promise<unknown>;
+}> = ({ integration, details, onSettingsUpdated }) => {
+  const t = useT();
+  const toast = useToaster();
+  const fetch = useFetch();
+  const { mutate } = useSWRConfig();
+  const persistedSettings = useMemo(
+    () => JSON.parse(integration.additionalSettings || '[]') as Array<{
+      title: string;
+      description?: string;
+      value: boolean;
+    }>,
+    [integration.additionalSettings]
+  );
+  const connectionSetting = persistedSettings.find(isConnectionAdditionalSetting);
+  const [connectionEnabled, setConnectionEnabled] = useState(
+    !!connectionSetting?.value
+  );
+  const [saving, setSaving] = useState(false);
+  const status = resolveChannelStatus(integration, details, t);
+
+  useEffect(() => {
+    setConnectionEnabled(!!connectionSetting?.value);
+  }, [connectionSetting?.value, integration.id]);
+
+  const saveConnectionSetting = useCallback(
+    async (nextValue: boolean) => {
+      if (!connectionSetting || saving) {
+        return;
+      }
+      const previousValue = connectionEnabled;
+      setConnectionEnabled(nextValue);
+      setSaving(true);
+      try {
+        const otherSettings = persistedSettings.filter(
+          (setting) => !isConnectionAdditionalSetting(setting)
+        );
+        const nextSettings = [
+          ...otherSettings,
+          { ...connectionSetting, value: nextValue },
+        ];
+        const response = await fetch(`/integrations/${integration.id}/settings`, {
+          method: 'POST',
+          body: JSON.stringify({
+            additionalSettings: JSON.stringify(nextSettings),
+          }),
+        });
+        if (!response.ok) {
+          throw new Error('connection setting save failed');
+        }
+        await Promise.all([
+          onSettingsUpdated(),
+          mutate('/integrations/list'),
+        ]);
+        toast.show(t('settings_updated', 'Settings Updated'), 'success');
+      } catch {
+        setConnectionEnabled(previousValue);
+        toast.show(
+          t('channel_settings_save_error', 'Failed to save channel settings'),
+          'warning'
+        );
+      } finally {
+        setSaving(false);
+      }
+    },
+    [
+      connectionSetting,
+      connectionEnabled,
+      fetch,
+      integration.id,
+      mutate,
+      onSettingsUpdated,
+      persistedSettings,
+      saving,
+      t,
+      toast,
+    ]
+  );
+
+  return (
+    <div className="flex flex-col gap-[16px] border border-newBorder rounded-[8px] p-[16px]">
+      <div className="flex flex-col gap-[8px]">
+        <div className="flex items-start justify-between gap-[12px]">
+          <div className="flex items-center gap-[10px] min-w-0">
+            <div
+              className={clsx(
+                'size-9 shrink-0 rounded-full flex items-center justify-center',
+                CONNECTION_ACCENT.well
+              )}
+            >
+              <GlobalIcon size={18} />
+            </div>
+            <div className="text-[16px] font-[500]">
+              {t('channel_connection', 'Channel connection')}
+            </div>
+          </div>
+          <div
+            className={clsx(
+              'shrink-0 inline-flex items-center gap-[6px] rounded-full border px-[10px] py-[4px] text-[12px]',
+              status.badgeClassName
+            )}
+          >
+            <span className={clsx('size-[6px] rounded-full', status.dotClassName)} />
+            {status.label}
+          </div>
+        </div>
+        <div className="text-[13px] text-newTextColor">
+          {t(
+            'channel_connection_description',
+            'Provider account details and connection health for this channel.'
+          )}
+        </div>
+      </div>
+
+      <div className="rounded-[8px] border border-newBorder p-[16px] flex flex-col gap-[16px] min-w-0">
+        <div
+          className={clsx(
+            'text-[11px] uppercase tracking-wide font-[500]',
+            CONNECTION_ACCENT.text
+          )}
+        >
+          {t('channel_connection_account_details', 'Account details')}
+        </div>
+
+        <div className="grid grid-cols-2 mobile:grid-cols-1 gap-[16px]">
+          <ConnectionDetailField label={t('provider', 'Provider')}>
+            {integration.identifier}
+          </ConnectionDetailField>
+          <ConnectionDetailField label={t('account_id', 'Account ID')}>
+            {details?.internalId || integration.internalId || '—'}
+          </ConnectionDetailField>
+          <ConnectionDetailField label={t('status', 'Status')}>
+            {status.label}
+          </ConnectionDetailField>
+          {details?.profileUrl ? (
+            <ConnectionDetailField label={t('profile', 'Profile')}>
+              <a
+                href={details.profileUrl}
+                target="_blank"
+                rel="noreferrer"
+                className={clsx('underline', CONNECTION_ACCENT.text)}
+              >
+                {details.profileUrl}
+              </a>
+            </ConnectionDetailField>
+          ) : null}
+        </div>
+
+        {connectionSetting && (
+          <div className="flex flex-col gap-[10px] border-t border-newBorder pt-[16px]">
+            <div className="flex items-start justify-between gap-[12px]">
+              <div className="min-w-0 flex flex-col gap-[4px]">
+                <div className="text-[14px] font-[500]">{connectionSetting.title}</div>
+                {connectionSetting.description && (
+                  <div className="text-[13px] text-newTextColor">
+                    {connectionSetting.description}
+                  </div>
+                )}
+              </div>
+              <Slider
+                value={connectionEnabled ? 'on' : 'off'}
+                disabled={saving}
+                onChange={() => {
+                  void saveConnectionSetting(!connectionEnabled);
+                }}
+                fill={true}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const InteractionTrackingSection: FC<{
+  tracking?: FollowerPageTracking;
+  stateLabel?: { key: string; defaultLabel: string };
+  failure?: string;
+  t: ReturnType<typeof useT>;
+}> = ({ tracking, stateLabel, failure, t }) => (
+  <div className="flex flex-col gap-[10px] border border-newBorder rounded-[8px] p-[16px]">
+    <div className="text-[16px] font-[500]">
+      {t('interaction_tracking', 'Interaction tracking')}
+    </div>
+    <DetailRow label={t('state', 'State')}>
+      {stateLabel ? t(stateLabel.key, stateLabel.defaultLabel) : '—'}
+    </DetailRow>
+    {tracking?.availability && (
+      <DetailRow label={t('availability', 'Availability')}>
+        {tracking.availability}
+      </DetailRow>
+    )}
+    {failure && <DetailRow label={t('reason', 'Reason')}>{failure}</DetailRow>}
+    <DetailRow label={t('tracking_started', 'Tracking started')}>
+      {formatTimestamp(tracking?.trackingStartedAt)}
+    </DetailRow>
+    <DetailRow label={t('follower_sync', 'Follower sync')}>
+      {formatTimestamp(tracking?.followerSnapshotAt)}
+    </DetailRow>
   </div>
 );
 
@@ -220,9 +492,19 @@ const ChannelLinkTrackingSection: FC<{
 
   if (loading && utmParams === undefined) {
     return (
-      <div className="flex flex-col gap-[10px] border border-newBorder rounded-[8px] p-[16px]">
-        <div className="text-[16px] font-[500]">
-          {t('channel_link_tracking', 'Link tracking')}
+      <div className="flex flex-col gap-[16px] border border-newBorder rounded-[8px] p-[16px]">
+        <div className="flex items-center gap-[10px]">
+          <div
+            className={clsx(
+              'size-9 shrink-0 rounded-full flex items-center justify-center',
+              LINK_TRACKING_ACCENT.well
+            )}
+          >
+            <TagIcon size={18} />
+          </div>
+          <div className="text-[16px] font-[500]">
+            {t('channel_link_tracking', 'Link tracking')}
+          </div>
         </div>
         <div className="text-[14px] text-newTextColor">
           {t('loading', 'Loading...')}
@@ -232,12 +514,22 @@ const ChannelLinkTrackingSection: FC<{
   }
 
   return (
-    <div className="flex flex-col gap-[12px] border border-newBorder rounded-[8px] p-[16px]">
-      <div>
-        <div className="text-[16px] font-[500]">
-          {t('channel_link_tracking', 'Link tracking')}
+    <div className="flex flex-col gap-[16px] border border-newBorder rounded-[8px] p-[16px]">
+      <div className="flex flex-col gap-[8px]">
+        <div className="flex items-center gap-[10px]">
+          <div
+            className={clsx(
+              'size-9 shrink-0 rounded-full flex items-center justify-center',
+              LINK_TRACKING_ACCENT.well
+            )}
+          >
+            <TagIcon size={18} />
+          </div>
+          <div className="text-[16px] font-[500]">
+            {t('channel_link_tracking', 'Link tracking')}
+          </div>
         </div>
-        <div className="text-[13px] text-newTextColor mt-[4px]">
+        <div className="text-[13px] text-newTextColor">
           {t(
             'channel_link_tracking_description',
             'Query params appended to http(s) links in post text when you save a post. Applied before shortlinks when shortlinking is enabled.'
@@ -363,37 +655,11 @@ const ChannelDetailPanel: FC<{
             </div>
           )}
 
-        <div className="flex flex-col gap-[10px] border border-newBorder rounded-[8px] p-[16px]">
-          <DetailRow label={t('provider', 'Provider')}>
-            {integration.identifier}
-          </DetailRow>
-          <DetailRow label={t('account_id', 'Account ID')}>
-            {details?.internalId || integration.internalId || '—'}
-          </DetailRow>
-          <DetailRow label={t('status', 'Status')}>
-            {details?.deleted
-              ? t('deleted', 'Deleted')
-              : integration.disabled
-                ? t('disabled', 'Disabled')
-                : integration.refreshNeeded
-                  ? t('reconnect_needed', 'Reconnect needed')
-                  : integration.inBetweenSteps
-                    ? t('setup_incomplete', 'Setup incomplete')
-                    : t('connected', 'Connected')}
-          </DetailRow>
-          {details?.profileUrl && (
-            <DetailRow label={t('profile', 'Profile')}>
-              <a
-                href={details.profileUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="underline"
-              >
-                {details.profileUrl}
-              </a>
-            </DetailRow>
-          )}
-        </div>
+        <ChannelConnectionSection
+          integration={integration}
+          details={details}
+          onSettingsUpdated={onStrategyUpdated}
+        />
 
         {loading && !details ? (
           <div className="flex justify-center py-[40px]">
@@ -408,31 +674,6 @@ const ChannelDetailPanel: FC<{
                 subscriptions={details?.subscriptions}
               />
             )}
-
-            <div className="flex flex-col gap-[10px] border border-newBorder rounded-[8px] p-[16px]">
-              <div className="text-[16px] font-[500]">
-                {t('interaction_tracking', 'Interaction tracking')}
-              </div>
-              <DetailRow label={t('state', 'State')}>
-                {stateLabel
-                  ? t(stateLabel.key, stateLabel.defaultLabel)
-                  : '—'}
-              </DetailRow>
-              {tracking?.availability && (
-                <DetailRow label={t('availability', 'Availability')}>
-                  {tracking.availability}
-                </DetailRow>
-              )}
-              {failure && (
-                <DetailRow label={t('reason', 'Reason')}>{failure}</DetailRow>
-              )}
-              <DetailRow label={t('tracking_started', 'Tracking started')}>
-                {formatTimestamp(tracking?.trackingStartedAt)}
-              </DetailRow>
-              <DetailRow label={t('follower_sync', 'Follower sync')}>
-                {formatTimestamp(tracking?.followerSnapshotAt)}
-              </DetailRow>
-            </div>
 
             <ChannelStrategySection
               integrationId={integration.id}
@@ -453,6 +694,13 @@ const ChannelDetailPanel: FC<{
               utmParams={details?.utmParams ?? integration.utmParams ?? null}
               loading={loading}
               onUtmUpdated={onStrategyUpdated}
+            />
+
+            <InteractionTrackingSection
+              tracking={tracking}
+              stateLabel={stateLabel}
+              failure={failure}
+              t={t}
             />
 
             <CoverageTable coverage={tracking?.coverage} />

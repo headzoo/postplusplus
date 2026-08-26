@@ -1,6 +1,7 @@
 'use client';
 
 import React, { FC, useCallback, useEffect, useState } from 'react';
+import clsx from 'clsx';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { Button } from '@gitroom/react/form/button';
 import { Slider } from '@gitroom/react/form/slider';
@@ -9,6 +10,16 @@ import { ContextDocumentAssignmentPicker } from '@gitroom/frontend/components/co
 import { PipelineContextDocument } from '@gitroom/frontend/components/pipelines/pipeline.types';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { useSWRConfig } from 'swr';
+import { SparkleIcon } from '@gitroom/frontend/components/ui/icons';
+
+const CONTEXT_DOCUMENTS_ACCENT = {
+  well: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+};
+
+export const CONNECTION_ADDITIONAL_SETTING_TITLES = new Set(['Premium', 'Verified']);
+
+export const isConnectionAdditionalSetting = (setting: { title?: string }) =>
+  CONNECTION_ADDITIONAL_SETTING_TITLES.has(setting?.title ?? '');
 
 export const Element: FC<{
   setting: any;
@@ -44,9 +55,14 @@ export const ChannelAdditionalSettingsForm: FC<{
   const toast = useToaster();
   const { mutate } = useSWRConfig();
   const { onSaved, integration } = props;
-  const [values, setValues] = useState(
-    JSON.parse(integration?.additionalSettings || '[]')
+  const parseFormSettings = useCallback(
+    () =>
+      JSON.parse(integration?.additionalSettings || '[]').filter(
+        (setting: { title?: string }) => !isConnectionAdditionalSetting(setting)
+      ),
+    [integration?.additionalSettings]
   );
+  const [values, setValues] = useState(parseFormSettings);
   const [selectedContextDocumentIds, setSelectedContextDocumentIds] = useState<
     string[]
   >([]);
@@ -57,8 +73,8 @@ export const ChannelAdditionalSettingsForm: FC<{
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    setValues(JSON.parse(integration?.additionalSettings || '[]'));
-  }, [integration.id, integration?.additionalSettings]);
+    setValues(parseFormSettings());
+  }, [integration.id, parseFormSettings]);
 
   useEffect(() => {
     let cancelled = false;
@@ -112,13 +128,20 @@ export const ChannelAdditionalSettingsForm: FC<{
   const save = useCallback(async () => {
     setSaving(true);
     try {
-      if (values.length) {
+      const connectionSettings = JSON.parse(
+        integration?.additionalSettings || '[]'
+      ).filter((setting: { title?: string }) =>
+        isConnectionAdditionalSetting(setting)
+      );
+      const mergedSettings = [...values, ...connectionSettings];
+
+      if (mergedSettings.length) {
         const settingsResponse = await fetch(
           `/integrations/${integration.id}/settings`,
           {
             method: 'POST',
             body: JSON.stringify({
-              additionalSettings: JSON.stringify(values),
+              additionalSettings: JSON.stringify(mergedSettings),
             }),
           }
         );
@@ -176,7 +199,29 @@ export const ChannelAdditionalSettingsForm: FC<{
         </div>
       )}
 
-      <div>
+      <div className="flex flex-col gap-[16px]">
+        <div className="flex flex-col gap-[8px]">
+          <div className="flex items-center gap-[10px]">
+            <div
+              className={clsx(
+                'size-9 shrink-0 rounded-full flex items-center justify-center',
+                CONTEXT_DOCUMENTS_ACCENT.well
+              )}
+            >
+              <SparkleIcon size={18} />
+            </div>
+            <div className="text-[16px] font-[500]">
+              {t('channel_context_documents', 'Context documents')}
+            </div>
+          </div>
+          <div className="text-[13px] text-newTextColor">
+            {t(
+              'channel_context_documents_help',
+              'Optional Markdown files that describe this channel — who they are, what they believe, and who they want to attract. Lead scoring and the agent can use these documents.'
+            )}
+          </div>
+        </div>
+
         {loadingDocuments ? (
           <div className="text-[13px] opacity-70">
             {t('loading', 'Loading...')}
@@ -186,11 +231,7 @@ export const ChannelAdditionalSettingsForm: FC<{
             selectedIds={selectedContextDocumentIds}
             onChange={setSelectedContextDocumentIds}
             knownDocuments={knownDocuments}
-            title={t('channel_context_documents', 'Context documents')}
-            helpText={t(
-              'channel_context_documents_help',
-              'Optional Markdown files that describe this channel — who they are, what they believe, and who they want to attract. Lead scoring and the agent can use these documents.'
-            )}
+            hideHeader
             emptyText={t(
               'channel_context_documents_empty',
               'No organization documents yet. Upload Markdown files in the context document library, then attach them here.'
@@ -199,7 +240,7 @@ export const ChannelAdditionalSettingsForm: FC<{
         )}
       </div>
 
-      <div className="flex gap-[10px]">
+      <div className="flex justify-end gap-[10px]">
         <Button onClick={save} disabled={saving || loadingDocuments}>
           {saving ? t('saving', 'Saving...') : t('save', 'Save')}
         </Button>
