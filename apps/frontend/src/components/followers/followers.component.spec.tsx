@@ -829,6 +829,19 @@ describe('FollowersComponent', () => {
     expect(boardSegments).toHaveLength(9);
   });
 
+  it('keeps visible triage routes instead of redirecting to All', () => {
+    mockPathname = '/followers/leads';
+    render(<FollowersComponent />);
+
+    expect(replace).not.toHaveBeenCalledWith('/followers');
+    expect(mainFollowersParams().at(-1)).toEqual(
+      expect.objectContaining({
+        audience: 'lead',
+        triage: undefined,
+      })
+    );
+  });
+
   it('redirects away from a hidden triage route', () => {
     mockPathname = '/followers/hot';
     render(<FollowersComponent />);

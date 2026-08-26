@@ -1494,7 +1494,7 @@ export const FollowersComponent: FC = () => {
     if (
       followerPath.type === 'follower' ||
       !slug ||
-      !isFollowerSegmentVisible(slug as FollowerSegmentSlug, hiddenSlugs)
+      isFollowerSegmentVisible(slug as FollowerSegmentSlug, hiddenSlugs)
     ) {
       return;
     }
