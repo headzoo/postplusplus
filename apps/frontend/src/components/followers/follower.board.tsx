@@ -248,7 +248,7 @@ export const FollowerBoardColumn: FC<{
             data-testid="followers-board-column-help"
             data-tooltip-id="tooltip"
             data-tooltip-content={segmentDescription}
-            data-tooltip-events='["mouseenter","focus","click"]'
+            data-tooltip-events={['hover', 'click']}
             data-tooltip-place="top"
           >
             <HelpIcon size={16} />
