@@ -482,6 +482,12 @@ describe('follower page href helpers', () => {
       audience: 'lead',
       isBot: undefined,
     });
+    expect(parseFollowerViewPath('/followers/followed')).toEqual({
+      slug: 'followed',
+      triage: undefined,
+      audience: 'followed',
+      isBot: undefined,
+    });
     expect(parseFollowerViewPath('/followers/ignored')).toEqual({
       slug: 'ignored',
       triage: undefined,

@@ -143,7 +143,7 @@ export type FollowerListPath = {
   type: 'list';
   slug?: string;
   triage?: FollowerTriageFilter;
-  audience?: 'lead' | 'ignored' | 'cultivate' | 'hot';
+  audience?: 'lead' | 'followed' | 'ignored' | 'cultivate' | 'hot';
   isBot?: true;
 };
 
