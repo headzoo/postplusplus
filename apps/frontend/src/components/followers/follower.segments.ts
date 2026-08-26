@@ -8,6 +8,7 @@ import {
   RobotIcon,
   SadFaceIcon,
   SeedlingIcon,
+  UserIcon,
   UsersGroupIcon,
   UsersIcon,
 } from '@gitroom/frontend/components/ui/icons';
@@ -45,6 +46,7 @@ export type FollowerSegmentSlug =
   | 'all'
   | 'leads'
   | 'hot'
+  | 'followed'
   | 'mutual'
   | 'cultivate'
   | 'quiet'
@@ -61,7 +63,7 @@ export type FollowerSegmentDefinition = {
   color: FollowerSegmentColor;
   icon: FC<IconProps>;
   categoryKey?: keyof typeof FOLLOWER_CATEGORY_DESCRIPTIONS;
-  audience?: 'lead' | 'ignored' | 'cultivate' | 'hot';
+  audience?: 'lead' | 'followed' | 'ignored' | 'cultivate' | 'hot';
   triage?: FollowerTriageFilter;
   isBot?: true;
 };
@@ -179,6 +181,17 @@ export const FOLLOWER_SUMMARY_SEGMENTS: FollowerSegmentDefinition[] = [
     audience: 'cultivate',
   },
   {
+    slug: 'followed',
+    key: 'followers_audience_followed',
+    defaultLabel: 'Followed',
+    descriptionKey: 'followers_board_followed_description',
+    defaultDescription: FOLLOWER_CATEGORY_DESCRIPTIONS.followed,
+    color: 'green',
+    icon: UserIcon,
+    categoryKey: 'followed',
+    audience: 'followed',
+  },
+  {
     slug: 'mutual',
     key: 'followers_triage_mutual',
     defaultLabel: 'Mutual',
@@ -239,6 +252,7 @@ export const FOLLOWER_BOARD_SEGMENTS: FollowerSegmentDefinition[] = [
   FOLLOWER_SUMMARY_SEGMENTS.find((s) => s.slug === 'leads')!,
   FOLLOWER_SUMMARY_SEGMENTS.find((s) => s.slug === 'hot')!,
   FOLLOWER_SUMMARY_SEGMENTS.find((s) => s.slug === 'cultivate')!,
+  FOLLOWER_SUMMARY_SEGMENTS.find((s) => s.slug === 'followed')!,
   FOLLOWER_SUMMARY_SEGMENTS.find((s) => s.slug === 'mutual')!,
   FOLLOWER_SUMMARY_SEGMENTS.find((s) => s.slug === 'quiet')!,
 ];
@@ -248,72 +262,79 @@ export const FOLLOWER_TAB_SEGMENTS: Array<{
   key: string;
   defaultLabel: string;
   color: FollowerSegmentColor;
-  audience?: 'lead' | 'ignored' | 'cultivate' | 'hot';
+  audience?: 'lead' | 'followed' | 'ignored' | 'cultivate' | 'hot';
   triage?: FollowerTriageFilter;
   isBot?: true;
 }> = [
-  {
-    key: 'followers_triage_filter_all',
-    defaultLabel: 'All',
-    color: 'neutral',
-  },
-  {
-    slug: 'leads',
-    key: 'followers_audience_leads',
-    defaultLabel: 'Leads',
-    color: 'red',
-    audience: 'lead',
-  },
-  {
-    slug: 'hot',
-    key: 'followers_triage_hot_lead',
-    defaultLabel: 'Hot',
-    color: 'red',
-    audience: 'hot',
-  },
-  {
-    slug: 'cultivate',
-    key: 'followers_audience_cultivate',
-    defaultLabel: 'Cultivate',
-    color: 'red',
-    audience: 'cultivate',
-  },
-  {
-    slug: 'mutual',
-    key: 'followers_triage_mutual',
-    defaultLabel: 'Mutual',
-    color: 'green',
-    triage: 'mutual',
-  },
-  {
-    slug: 'quiet',
-    key: 'followers_triage_quiet',
-    defaultLabel: 'Quiet',
-    color: 'green',
-    triage: 'quiet',
-  },
-  {
-    slug: 'costly',
-    key: 'followers_triage_over_invested',
-    defaultLabel: 'Costly',
-    color: 'yellow',
-    triage: 'over_invested',
-  },
-  {
-    slug: 'ignored',
-    key: 'followers_ignored_list',
-    defaultLabel: 'Ignored',
-    color: 'yellow',
-    audience: 'ignored',
-  },
-  {
-    slug: 'bots',
-    key: 'followers_bot_filter',
-    defaultLabel: 'Bots',
-    color: 'yellow',
-    isBot: true,
-  },
-];
+    {
+      key: 'followers_triage_filter_all',
+      defaultLabel: 'All',
+      color: 'neutral',
+    },
+    {
+      slug: 'leads',
+      key: 'followers_audience_leads',
+      defaultLabel: 'Leads',
+      color: 'red',
+      audience: 'lead',
+    },
+    {
+      slug: 'hot',
+      key: 'followers_triage_hot_lead',
+      defaultLabel: 'Hot',
+      color: 'red',
+      audience: 'hot',
+    },
+    {
+      slug: 'cultivate',
+      key: 'followers_audience_cultivate',
+      defaultLabel: 'Cultivate',
+      color: 'red',
+      audience: 'cultivate',
+    },
+    {
+      slug: 'followed',
+      key: 'followers_audience_followed',
+      defaultLabel: 'Followed',
+      color: 'green',
+      audience: 'followed',
+    },
+    {
+      slug: 'mutual',
+      key: 'followers_triage_mutual',
+      defaultLabel: 'Mutual',
+      color: 'green',
+      triage: 'mutual',
+    },
+    {
+      slug: 'quiet',
+      key: 'followers_triage_quiet',
+      defaultLabel: 'Quiet',
+      color: 'green',
+      triage: 'quiet',
+    },
+    {
+      slug: 'costly',
+      key: 'followers_triage_over_invested',
+      defaultLabel: 'Costly',
+      color: 'yellow',
+      triage: 'over_invested',
+    },
+    {
+      slug: 'ignored',
+      key: 'followers_ignored_list',
+      defaultLabel: 'Ignored',
+      color: 'yellow',
+      audience: 'ignored',
+    },
+    {
+      slug: 'bots',
+      key: 'followers_bot_filter',
+      defaultLabel: 'Bots',
+      color: 'yellow',
+      isBot: true,
+    },
+  ];
 
 export const categoryCount = (
   categories: Record<string, number | null> | undefined,

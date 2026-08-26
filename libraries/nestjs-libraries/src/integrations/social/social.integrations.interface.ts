@@ -392,6 +392,8 @@ export type Follower = {
   followingCount?: number;
   influenceScore?: number;
   followedAt?: string;
+  weFollowedAt?: string;
+  isFollowed?: boolean;
   accountCreatedAt?: string;
   interactionCount?: number;
   interactionScore?: number;
@@ -848,6 +850,11 @@ export interface SocialProvider
     integration: Integration,
     url: string
   ): Promise<Follower | null>;
+  followAudienceMember?(
+    integration: Integration,
+    accessToken: string,
+    externalId: string
+  ): Promise<void>;
   postLikers?(
     integration: Integration,
     accessToken: string,

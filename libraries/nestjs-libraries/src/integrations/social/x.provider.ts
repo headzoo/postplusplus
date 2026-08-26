@@ -2009,6 +2009,27 @@ export class XProvider extends SocialAbstract implements SocialProvider {
     };
   }
 
+  async followAudienceMember(
+    integration: Integration,
+    accessToken: string,
+    externalId: string
+  ): Promise<void> {
+    const client = await this.getClient(accessToken);
+    const sourceUserId = integration.internalId;
+    if (!sourceUserId) {
+      throw new BadBody('X channel identity is missing', undefined, {} as BodyInit);
+    }
+    try {
+      await client.v2.follow(sourceUserId, externalId);
+    } catch (error) {
+      throw new BadBody(
+        error instanceof Error ? error.message : 'Could not follow on X',
+        undefined,
+        {} as BodyInit
+      );
+    }
+  }
+
   async resolveAudienceProfileFromUrl(
     accessToken: string,
     _integration: Integration,

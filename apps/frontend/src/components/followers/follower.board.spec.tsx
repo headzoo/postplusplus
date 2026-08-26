@@ -10,7 +10,6 @@ import {
   FollowerBoardRow,
 } from './follower.board';
 import {
-  FOLLOWER_BOARD_LIST_MIN_HEIGHT_PX,
   FOLLOWER_BOARD_SEGMENTS,
 } from './follower.segments';
 import { Follower } from './use.followers';
@@ -107,7 +106,33 @@ describe('FollowerBoard', () => {
     );
   });
 
-  it('renders a scroll wrapper with min height when a column has items', () => {
+  it('shows segment descriptions in help tooltips instead of inline text', () => {
+    render(
+      <FollowerBoard
+        columns={FOLLOWER_BOARD_SEGMENTS.map((segment, index) => ({
+          segment,
+          items: [],
+          total: index,
+          viewAllHref: `/followers/${segment.slug}`,
+        }))}
+        onOpenFollower={jest.fn()}
+      />
+    );
+
+    const leadsSegment = FOLLOWER_BOARD_SEGMENTS.find((segment) => segment.slug === 'leads')!;
+    expect(screen.queryByText(leadsSegment.defaultDescription)).toBeNull();
+
+    const helpButtons = screen.getAllByTestId('followers-board-column-help');
+    expect(helpButtons).toHaveLength(FOLLOWER_BOARD_SEGMENTS.length);
+
+    const leadsHelp = helpButtons[0];
+    expect(leadsHelp.getAttribute('data-tooltip-content')).toBe(
+      leadsSegment.defaultDescription
+    );
+    expect(leadsHelp.getAttribute('aria-label')).toBe('About Leads');
+  });
+
+  it('renders a scroll wrapper when a column has items', () => {
     const segment = FOLLOWER_BOARD_SEGMENTS[0];
     render(
       <FollowerBoardColumn
@@ -119,12 +144,30 @@ describe('FollowerBoard', () => {
       />
     );
 
-    const scrollWrapper = screen.getByTestId('followers-board-column-scroll');
-    expect(scrollWrapper).toBeTruthy();
-    expect(scrollWrapper.style.minHeight).toBe(
-      `${FOLLOWER_BOARD_LIST_MIN_HEIGHT_PX}px`
-    );
+    expect(screen.getByTestId('followers-board-column-scroll')).toBeTruthy();
     expect(screen.getByTestId('custom-scroll-area')).toBeTruthy();
+    expect(screen.getByTestId('followers-board-view-all')).toBeTruthy();
+  });
+
+  it('renders View all in every column footer for populated and empty columns', () => {
+    render(
+      <FollowerBoard
+        columns={FOLLOWER_BOARD_SEGMENTS.map((segment, index) => ({
+          segment,
+          items:
+            index % 2 === 0
+              ? [follower({ id: `f-${index}`, name: `${segment.defaultLabel} User` })]
+              : [],
+          total: 10 + index,
+          viewAllHref: `/followers/${segment.slug}`,
+        }))}
+        onOpenFollower={jest.fn()}
+      />
+    );
+
+    const viewAllLinks = screen.getAllByTestId('followers-board-view-all');
+    expect(viewAllLinks).toHaveLength(FOLLOWER_BOARD_SEGMENTS.length);
+    expect(screen.getAllByTestId('followers-board-column-scroll')).toHaveLength(3);
   });
 
   it('omits the scroll wrapper when a column is empty', () => {
@@ -141,6 +184,7 @@ describe('FollowerBoard', () => {
 
     expect(screen.queryByTestId('followers-board-column-scroll')).toBeNull();
     expect(screen.getByText('No people in this segment yet.')).toBeTruthy();
+    expect(screen.getByTestId('followers-board-view-all')).toBeTruthy();
   });
 });
 

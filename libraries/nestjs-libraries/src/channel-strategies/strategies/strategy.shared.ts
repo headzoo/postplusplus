@@ -92,6 +92,7 @@ export function createStrategy(
         'leads',
         'hot',
         'cultivate',
+        'followed',
         'mutual',
         'quiet',
         'costly',

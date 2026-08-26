@@ -1,6 +1,6 @@
 'use client';
 
-import { FC, useCallback, useMemo, useState } from 'react';
+import { FC, KeyboardEvent, useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import clsx from 'clsx';
 import { useClickOutside } from '@mantine/hooks';
@@ -33,8 +33,6 @@ import {
   IntegrationListItem,
   useIntegrationList,
 } from '@gitroom/frontend/components/launches/helpers/use.integration.list';
-
-const PIPELINE_PAUSED_RAIL_COLOR = '#616161';
 
 const pipelineMetaChipClass =
   'inline-flex items-center gap-[6px] text-[12px] px-[8px] py-[3px] rounded-full border border-newBorder bg-newBgColorInner text-textItemBlur';
@@ -94,59 +92,45 @@ const PipelineListCard: FC<{
   onToggleActive: (value: 'on' | 'off') => void;
 }> = ({ pipeline, pending, onSchedule, onEdit, onDelete, onToggleActive }) => {
   const t = useT();
-  const railColor = pipeline.active ? pipeline.color : PIPELINE_PAUSED_RAIL_COLOR;
   const nextSlotLabel = pipeline.active
     ? formatPipelineSlotShort(pipeline.nextSlot, pipeline.timezone)
-    : t('pipeline_paused', 'Paused');
+    : '—';
+
+  const handleCardKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onSchedule();
+    }
+  };
 
   return (
     <article
+      role="button"
+      tabIndex={0}
+      onClick={onSchedule}
+      onKeyDown={handleCardKeyDown}
       className={clsx(
         'relative flex flex-col rounded-[12px] border border-newTableBorder bg-newTableHeader',
         'transition-all duration-200 hover:border-newTextColor/20',
+        'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-newTextColor/30',
         pending && 'opacity-70 pointer-events-none'
       )}
     >
-      <div
-        className="absolute start-0 top-0 bottom-0 w-[4px] rounded-s-[12px]"
-        style={{ backgroundColor: railColor }}
-        aria-hidden="true"
-      />
-      <div className="flex flex-col gap-[12px] p-[16px] ps-[20px]">
+      <div className="flex flex-col gap-[12px] p-[16px]">
         <div className="flex flex-col gap-[12px] lg:flex-row lg:items-start lg:justify-between">
           <div className="flex flex-col gap-[10px] min-w-0 flex-1">
             <div className="flex items-center gap-[8px] flex-wrap min-w-0">
-              <button
-                type="button"
-                onClick={onSchedule}
-                className="text-[18px] font-[600] truncate text-start cursor-pointer min-w-0"
-              >
+              <span className="text-[18px] font-[600] truncate min-w-0">
                 {pipeline.name}
-              </button>
+              </span>
               <div
                 className="w-[12px] h-[12px] rounded-full shrink-0 border border-newBorder"
                 style={{ backgroundColor: pipeline.color }}
                 aria-hidden="true"
               />
-              <span
-                className={clsx(
-                  'inline-flex shrink-0 items-center text-[11px] font-[600] px-[8px] py-[2px] rounded-full',
-                  pipeline.active
-                    ? 'bg-green-500/15 text-green-400'
-                    : 'bg-newBgColor text-textItemBlur'
-                )}
-              >
-                {pipeline.active ? t('active', 'Active') : t('paused', 'Paused')}
-              </span>
             </div>
 
             <div className="flex flex-wrap items-center gap-[6px]">
-              <span
-                className={pipelineMetaChipClass}
-                title={pipeline.timezone}
-              >
-                {formatPipelineTimezoneLabel(pipeline.timezone)}
-              </span>
               {pipeline.channels.length > 0 && (
                 <span className={clsx(pipelineMetaChipClass, 'py-[2px]')}>
                   <PipelineChannels channels={pipeline.channels} stacked />
@@ -155,6 +139,12 @@ const PipelineListCard: FC<{
               <span className={pipelineMetaChipClass}>
                 <span className="font-[600] text-textColor">{pipeline.queueCount}</span>
                 {` ${t('queued', 'queued')}`}
+              </span>
+              <span
+                className={pipelineMetaChipClass}
+                title={pipeline.timezone}
+              >
+                {formatPipelineTimezoneLabel(pipeline.timezone)}
               </span>
               <span
                 className={clsx(
@@ -173,8 +163,11 @@ const PipelineListCard: FC<{
             </div>
           </div>
 
-          <div className="flex items-center gap-[8px] shrink-0">
-            <Button secondary onClick={onSchedule}>{t('schedule', 'Schedule')}</Button>
+          <div
+            className="flex items-center gap-[8px] shrink-0"
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
+          >
             <Slider
               value={pipeline.active ? 'on' : 'off'}
               onChange={onToggleActive}

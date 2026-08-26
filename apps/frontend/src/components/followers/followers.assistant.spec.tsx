@@ -22,9 +22,8 @@ jest.mock('@copilotkit/react-core', () => ({
 jest.mock('@copilotkit/react-ui', () => ({
   CopilotPopup: (props: any) => {
     popupProps = props;
-    return <div data-testid="copilot-popup" />;
+    return <div data-testid="copilot-popup">{props.children}</div>;
   },
-  useChatContext: () => ({ open: false, setOpen: jest.fn() }),
 }));
 
 jest.mock('@copilotkit/shared', () => ({
@@ -37,6 +36,16 @@ jest.mock('@gitroom/react/translation/get.transation.service.client', () => ({
 
 jest.mock('./use.followers', () => ({
   useFollowerChannels: () => ({ data: channels }),
+}));
+
+jest.mock('./followers.copilot.input', () => ({
+  FollowersCopilotInput: () => <div data-testid="followers-copilot-input" />,
+}));
+
+jest.mock('./followers.copilot.launch.listener', () => ({
+  FollowersCopilotLaunchListener: () => (
+    <div data-testid="followers-copilot-launch-listener" />
+  ),
 }));
 
 // The browser only receives the public strategy view served by /followers/channels.
@@ -186,5 +195,14 @@ describe('FollowersAssistant', () => {
       'Prioritize high-intent inbound signals'
     );
     expect(popupProps.instructions).not.toContain('strategyTags include');
+  });
+
+  it('passes the followers copilot input component', () => {
+    channels = [channelFor('channel-1', 'lead_capture')];
+
+    const { getByTestId } = render(<Harness page={pageFor('channel-1')} />);
+
+    expect(popupProps.Input).toBeDefined();
+    expect(getByTestId('followers-copilot-launch-listener')).toBeTruthy();
   });
 });

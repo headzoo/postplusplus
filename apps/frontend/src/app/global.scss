@@ -530,6 +530,11 @@ div div .set-font-family {
   display: none !important;
 }
 
+.copilotKitPopup {
+  position: fixed;
+  z-index: 10100 !important;
+}
+
 @media (min-width: 640px) {
   .copilotKitPopup .copilotKitWindow {
     max-width: none;

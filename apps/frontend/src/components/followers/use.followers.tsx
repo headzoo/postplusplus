@@ -129,6 +129,7 @@ export type FollowerChannel = {
   display?: string;
   identifier: string;
   sorts: FollowerSort[];
+  canFollowAudienceMember?: boolean;
   strategy?: FollowerStrategyMetadata;
   recomputing?: boolean;
   tracking?: FollowerPageTracking;
@@ -145,6 +146,8 @@ export type Follower = {
   followingCount?: number;
   influenceScore?: number;
   followedAt?: string;
+  weFollowedAt?: string;
+  isFollowed?: boolean;
   accountCreatedAt?: string;
   interactionCount?: number;
   interactionScore?: number;
@@ -326,7 +329,7 @@ export type UseFollowersParams = {
   window?: ChannelInteractionWindow;
   search?: string;
   triage?: FollowerTriageFilter;
-  audience?: 'lead' | 'ignored' | 'cultivate' | 'hot';
+  audience?: 'lead' | 'followed' | 'ignored' | 'cultivate' | 'hot';
   listId?: string;
   isBot?: boolean;
 };
@@ -1115,6 +1118,37 @@ export const applyTriageIgnoreToFollowerPage = (
   };
 };
 
+export const applyFollowToFollowerPage = (
+  page: FollowerPage | undefined,
+  externalId: string,
+  weFollowedAt: string,
+  options?: { removeFromPage?: boolean }
+): FollowerPage | undefined => {
+  if (!page) {
+    return page;
+  }
+  if (options?.removeFromPage) {
+    return {
+      ...page,
+      items: page.items.filter((item) => item.id !== externalId),
+    };
+  }
+  return {
+    ...page,
+    items: page.items.map((item) => {
+      if (item.id !== externalId) {
+        return item;
+      }
+      return {
+        ...item,
+        isLead: false,
+        weFollowedAt,
+        isFollowed: true,
+      };
+    }),
+  };
+};
+
 export const applyIgnoreToFollowerPage = (
   page: FollowerPage | undefined,
   externalId: string,
@@ -1336,6 +1370,45 @@ export const useFollowerListMutations = (integrationId?: string) => {
     [fetch, integrationId, mutateCache]
   );
 
+  const followMember = useCallback(
+    async (externalId: string) => {
+      if (!integrationId) {
+        throw new Error('Channel is required');
+      }
+      const response = await fetch(
+        `/followers/${integrationId}/member/follow`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ externalId }),
+        }
+      );
+      if (!response.ok) {
+        let message = 'Failed to follow this profile';
+        try {
+          const body = (await response.json()) as { message?: string | string[] };
+          if (typeof body.message === 'string') {
+            message = body.message;
+          } else if (Array.isArray(body.message)) {
+            message = body.message.join(', ');
+          }
+        } catch {
+          /** keep default message */
+        }
+        throw new Error(message);
+      }
+      const result = (await response.json()) as { weFollowedAt?: string };
+      const weFollowedAt = result.weFollowedAt ?? new Date().toISOString();
+      await mutateCache(
+        (key) => isFollowerListCacheKey(integrationId, key),
+        (page: FollowerPage | undefined) =>
+          applyFollowToFollowerPage(page, externalId, weFollowedAt),
+        { revalidate: true }
+      );
+      return { weFollowedAt };
+    },
+    [fetch, integrationId, mutateCache]
+  );
+
   const ignoreFollower = useCallback(
     async (externalId: string) => {
       if (!integrationId) {
@@ -1399,6 +1472,7 @@ export const useFollowerListMutations = (integrationId?: string) => {
     importMemberFromUrl,
     removeMember,
     ignoreTriage,
+    followMember,
     ignoreFollower,
     unignoreFollower,
     revalidateLists,

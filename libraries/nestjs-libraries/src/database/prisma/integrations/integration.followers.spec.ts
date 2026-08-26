@@ -56,6 +56,7 @@ describe('IntegrationService followers', () => {
       getAudienceFollowers: jest.fn(),
       getRecentFollowers: jest.fn(),
       getAudienceLeads: jest.fn(),
+      getAudienceFollowed: jest.fn(),
       getAudienceCultivate: jest.fn(),
       getAudienceHot: jest.fn(),
       getIgnoredAudienceFollowers: jest.fn(),
@@ -72,6 +73,7 @@ describe('IntegrationService followers', () => {
       upsertFollowerGrade: jest.fn(),
       refreshFollowerRelationshipScore: jest.fn(),
       getStoredFollowerAudienceCounts: jest.fn(),
+      markAudienceMemberFollowed: jest.fn(),
     };
     (service as any)._channelAnalyticsService = {
       getLatestAccountAudienceTotal: jest.fn().mockResolvedValue(null),
@@ -183,7 +185,7 @@ describe('IntegrationService followers', () => {
         total: 1256,
         totalAsOf: '2026-08-25T12:00:00.000Z',
         totalSource: 'snapshot',
-        categories: { lead: 12, hot: 5, quiet: 3, bots: 900 },
+        categories: { lead: 12, hot: 5, quiet: 3 },
         lists: [{ id: 'list-1', name: 'VIP', total: 2 }],
         listsTruncated: false,
       })
@@ -224,7 +226,7 @@ describe('IntegrationService followers', () => {
         total: 42,
         totalAsOf: null,
         totalSource: 'list',
-        categories: { mutual: 8, bots: 42 },
+        categories: { mutual: 8 },
         lists: [],
         listsTruncated: false,
       })
@@ -292,6 +294,7 @@ describe('IntegrationService followers', () => {
           }),
         },
         recomputing: false,
+        canFollowAudienceMember: false,
       },
     ]);
     expect(followers).toHaveBeenCalledWith(
@@ -1648,6 +1651,106 @@ describe('IntegrationService followers', () => {
       }),
     ]);
     expect(result.relationship.formulaVersion).toBe(2);
+  });
+
+  it('maps lead fit fields on follower member details', async () => {
+    const service = createService([integration], {
+      supported: { followers: jest.fn() },
+    });
+    (service as any)._channelInteractionService.getFollowerDetails.mockResolvedValue({
+      member: {
+        externalId: 'lead-1',
+        name: 'Lead One',
+        username: 'leadone',
+        picture: null,
+        profileUrl: null,
+        bio: null,
+        followersCount: null,
+        followingCount: null,
+        followedAt: null,
+        accountCreatedAt: null,
+        membershipState: 'UNKNOWN',
+        inboundInteractionCount: 2,
+        leadFitScore: 77,
+        leadFitReason: 'Matches tech audience',
+        leadBridgesAsLead: [
+          {
+            bridgeExternalId: 'warm-1',
+            bridgeRelationshipGrade: 4.2,
+            bridgeMember: { username: 'warmbridge', name: 'Warm' },
+          },
+        ],
+      },
+      snapshots: [],
+      notes: [],
+      events: [],
+      tracking: { followerSync: null, subscriptions: [] },
+    });
+
+    const result = await service.getFollowerMemberDetails(
+      org,
+      user,
+      'channel-a',
+      'lead-1'
+    );
+
+    expect(result.follower).toEqual(
+      expect.objectContaining({
+        id: 'lead-1',
+        isLead: true,
+        leadFitScore: 77,
+        leadFitReason: 'Matches tech audience',
+        leadBridges: [
+          {
+            externalId: 'warm-1',
+            username: 'warmbridge',
+            grade: 4.2,
+          },
+        ],
+      })
+    );
+  });
+
+  it('marks bridge-only leads as leads on follower member details', async () => {
+    const service = createService([integration], {
+      supported: { followers: jest.fn() },
+    });
+    (service as any)._channelInteractionService.getFollowerDetails.mockResolvedValue({
+      member: {
+        externalId: 'bridge-lead',
+        name: 'Bridge Lead',
+        username: null,
+        picture: null,
+        profileUrl: null,
+        bio: null,
+        followersCount: null,
+        followingCount: null,
+        followedAt: null,
+        accountCreatedAt: null,
+        membershipState: 'NOT_FOLLOWER',
+        inboundInteractionCount: 0,
+        leadBridgesAsLead: [
+          {
+            bridgeExternalId: 'warm-1',
+            bridgeRelationshipGrade: 3,
+            bridgeMember: { username: 'bridge', name: null },
+          },
+        ],
+      },
+      snapshots: [],
+      notes: [],
+      events: [],
+      tracking: { followerSync: null, subscriptions: [] },
+    });
+
+    const result = await service.getFollowerMemberDetails(
+      org,
+      user,
+      'channel-a',
+      'bridge-lead'
+    );
+
+    expect(result.follower.isLead).toBe(true);
   });
 
   it('reads historical grades with the strategy each snapshot was scored with', async () => {
@@ -3674,5 +3777,116 @@ describe('IntegrationService followers', () => {
       items: [{ id: 'waiting', username: 'waiting' }],
       hasMore: false,
     });
+  });
+
+  it('exposes canFollowAudienceMember from provider capability', async () => {
+    const followers = jest
+      .fn()
+      .mockResolvedValue({ items: [{ id: 'follower-1' }], hasMore: false });
+    const service = createService([integration], {
+      supported: {
+        followers,
+        followAudienceMember: jest.fn(),
+      },
+    });
+
+    await expect(service.getFollowerChannels(org)).resolves.toEqual([
+      expect.objectContaining({
+        id: 'channel-a',
+        canFollowAudienceMember: true,
+      }),
+    ]);
+  });
+
+  it('rejects follow when the provider does not support followAudienceMember', async () => {
+    const service = createService([integration], {
+      supported: { followers: jest.fn() },
+    });
+
+    await expect(
+      service.followFollowerMember(org, 'channel-a', 'user-1')
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('follows through the provider and stamps weFollowedAt', async () => {
+    const followAudienceMember = jest.fn().mockResolvedValue(undefined);
+    const service = createService([integration], {
+      supported: { followers: jest.fn(), followAudienceMember },
+    });
+    (
+      service as any
+    )._channelInteractionService.markAudienceMemberFollowed.mockResolvedValue({
+      weFollowedAt: '2026-08-20T12:00:00.000Z',
+    });
+
+    await expect(
+      service.followFollowerMember(org, 'channel-a', 'user-1')
+    ).resolves.toEqual({
+      weFollowedAt: '2026-08-20T12:00:00.000Z',
+    });
+    expect(followAudienceMember).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'channel-a' }),
+      'token',
+      'user-1'
+    );
+    expect(
+      (service as any)._channelInteractionService.markAudienceMemberFollowed
+    ).toHaveBeenCalledWith('org-a', 'channel-a', 'user-1');
+  });
+
+  it('routes the followed audience through weFollowedAt members', async () => {
+    const followers = jest.fn();
+    const service = createService([integration], {
+      supported: { followers },
+    });
+    (
+      service as any
+    )._channelInteractionRepository.getAudienceFollowed.mockResolvedValue({
+      items: [
+        {
+          externalId: 'followed-1',
+          name: 'Followed One',
+          username: 'followed',
+          picture: null,
+          profileUrl: null,
+          bio: null,
+          followersCount: null,
+          followingCount: null,
+          followedAt: null,
+          weFollowedAt: new Date('2026-08-20T12:00:00.000Z'),
+          accountCreatedAt: null,
+        },
+      ],
+      hasMore: false,
+    });
+
+    await expect(
+      service.getFollowers(org, user, 'channel-a', {
+        limit: 24,
+        audience: 'followed',
+      })
+    ).resolves.toEqual({
+      items: [
+        expect.objectContaining({
+          id: 'followed-1',
+          name: 'Followed One',
+          weFollowedAt: '2026-08-20T12:00:00.000Z',
+          isFollowed: true,
+        }),
+      ],
+      hasMore: false,
+    });
+    expect(followers).not.toHaveBeenCalled();
+    expect(
+      (service as any)._channelInteractionRepository.getAudienceFollowed
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: 'org-a',
+        integrationId: 'channel-a',
+        direction: 'desc',
+        limit: 24,
+        ignoredVisibility: 'exclude',
+      })
+    );
   });
 });

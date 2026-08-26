@@ -8,8 +8,12 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useCopilotReadable } from '@copilotkit/react-core';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { Button } from '@gitroom/react/form/button';
+import { useToaster } from '@gitroom/react/toaster/toaster';
 import { LoadingComponent } from '@gitroom/frontend/components/layout/loading';
-import { FollowerCard } from '@gitroom/frontend/components/followers/follower.card';
+import {
+  DismissTriageOptions,
+  FollowerCard,
+} from '@gitroom/frontend/components/followers/follower.card';
 import { FollowerDetailModal } from '@gitroom/frontend/components/followers/follower.detail.modal';
 import { FollowerListCreateModal } from '@gitroom/frontend/components/followers/follower.list.create.modal';
 import { FollowerListAddModal } from '@gitroom/frontend/components/followers/follower.list.add.modal';
@@ -49,12 +53,14 @@ import {
   ChannelInteractionKindCoverage,
   ChannelInteractionWindow,
   DEFAULT_FOLLOWER_INTERACTION_WINDOW,
+  DismissibleTriage,
   FollowerChannel,
   FollowerPageTracking,
   FollowerStrategyMetadata,
   FollowerSortDirection,
   FollowerTriageFilter,
   Follower,
+  applyFollowToFollowerPage,
   applyIgnoreToFollowerPage,
   applyTriageIgnoreToFollowerPage,
   buildFollowerDetailHref,
@@ -66,10 +72,15 @@ import {
   useFollowerLists,
   useFollowers,
 } from '@gitroom/frontend/components/followers/use.followers';
+import { LeadFitDismissReason } from '@gitroom/nestjs-libraries/dtos/integrations/lead-fit-feedback.types';
 
 const FOLLOWER_VIEW_BY_SLUG: Record<
   string,
-  { triage?: FollowerTriageFilter; audience?: 'lead' | 'ignored' | 'cultivate' | 'hot'; isBot?: true }
+  {
+    triage?: FollowerTriageFilter;
+    audience?: 'lead' | 'followed' | 'ignored' | 'cultivate' | 'hot';
+    isBot?: true;
+  }
 > = {
   // Legacy bookmark slug; canonicalize to /followers/hot.
   engaged: { audience: 'hot' },
@@ -81,6 +92,7 @@ const FOLLOWER_VIEW_BY_SLUG: Record<
   leads: { audience: 'lead' },
   // Legacy bookmark slug; canonicalize to /followers/leads.
   lead: { audience: 'lead' },
+  followed: { audience: 'followed' },
   ignored: { audience: 'ignored' },
   bots: { isBot: true },
 };
@@ -88,7 +100,7 @@ const FOLLOWER_VIEW_BY_SLUG: Record<
 type FollowerFilterOption = {
   slug?: string;
   value?: FollowerTriageFilter;
-  audience?: 'lead' | 'cultivate' | 'ignored' | 'hot';
+  audience?: 'lead' | 'followed' | 'cultivate' | 'ignored' | 'hot';
   isBot?: true;
   key: string;
   defaultLabel: string;
@@ -941,6 +953,11 @@ export const FollowersComponent: FC = () => {
     limit: FOLLOWER_BOARD_PREVIEW_LIMIT,
     triage: 'quiet',
   });
+  const followedPreview = useFollowers({
+    integrationId: boardIntegrationId,
+    limit: FOLLOWER_BOARD_PREVIEW_LIMIT,
+    audience: 'followed',
+  });
 
   const {
     data: audienceSummary,
@@ -952,6 +969,7 @@ export const FollowersComponent: FC = () => {
     hot: hotPreview,
     mutual: mutualPreview,
     cultivate: cultivatePreview,
+    followed: followedPreview,
     quiet: quietPreview,
   } as const;
 
@@ -975,9 +993,83 @@ export const FollowersComponent: FC = () => {
     importMemberFromUrl,
     removeMember,
     ignoreTriage,
+    followMember,
     ignoreFollower,
     unignoreFollower,
   } = useFollowerListMutations(selectedIntegrationId);
+  const toast = useToaster();
+  const canFollowAudienceMember = !!selectedChannel?.canFollowAudienceMember;
+
+  const handleDismissTriage = useCallback(
+    async (
+      follower: Follower,
+      triageValue: DismissibleTriage,
+      reasons?: LeadFitDismissReason[],
+      options?: DismissTriageOptions
+    ) => {
+      if (triageValue === 'lead' && options?.follow) {
+        try {
+          await followMember(follower.id);
+          if (resolvedAudience === 'lead') {
+            await mutateFollowers(
+              (page) =>
+                applyFollowToFollowerPage(page, follower.id, new Date().toISOString(), {
+                  removeFromPage: true,
+                }),
+              { revalidate: false }
+            );
+          }
+        } catch (error) {
+          toast.show(
+            error instanceof Error
+              ? error.message
+              : t('followers_lead_follow_error', 'Could not follow this profile'),
+            'warning'
+          );
+        }
+        return;
+      }
+      if (triageValue === 'lead' && options?.moveToListId) {
+        await addMember(options.moveToListId, follower.id);
+        if (resolvedAudience === 'lead') {
+          await mutateFollowers(
+            (page) =>
+              applyIgnoreToFollowerPage(page, follower.id, {
+                removeFromPage: true,
+              }),
+            { revalidate: false }
+          );
+        }
+        return;
+      }
+      await ignoreTriage(follower.id, triageValue, reasons, options);
+      const shouldRemoveFromPage =
+        resolvedTriage === triageValue ||
+        (resolvedAudience === 'lead' && triageValue === 'lead') ||
+        (resolvedAudience === 'cultivate' && triageValue === 'cultivate') ||
+        (resolvedAudience === 'hot' && triageValue === 'hot_lead');
+      if (shouldRemoveFromPage) {
+        await mutateFollowers(
+          (page) =>
+            applyTriageIgnoreToFollowerPage(page, follower.id, {
+              removeFromPage: true,
+              triage: triageValue,
+            }),
+          { revalidate: false }
+        );
+      }
+    },
+    [
+      addMember,
+      followMember,
+      ignoreTriage,
+      mutateFollowers,
+      resolvedAudience,
+      resolvedTriage,
+      t,
+      toast,
+    ]
+  );
 
   const activeCategory = !urlListId
     ? resolvedTriage || resolvedAudience
@@ -1455,6 +1547,22 @@ export const FollowersComponent: FC = () => {
       );
     }
 
+    if (resolvedAudience === 'followed') {
+      return (
+        <div className="flex flex-col items-center justify-center gap-[8px] rounded-[12px] border border-newTableBorder bg-newTableHeader p-[32px] text-center">
+          <p className="text-[18px] text-newTextColor">
+            {t('followers_followed_empty_title', 'No followed people yet')}
+          </p>
+          <p className="text-[14px] text-textItemBlur max-w-[520px]">
+            {t(
+              'followers_followed_empty_description',
+              'Follow leads from their badge to track people you followed who have not followed back yet.'
+            )}
+          </p>
+        </div>
+      );
+    }
+
     if (resolvedAudience === 'hot') {
       return (
         <div className="flex flex-col items-center justify-center gap-[8px] rounded-[12px] border border-newTableBorder bg-newTableHeader p-[32px] text-center">
@@ -1657,17 +1765,6 @@ export const FollowersComponent: FC = () => {
             showBoard && 'shrink-0'
           )}
         >
-        {selectedChannel?.strategy && (
-          <div className="flex flex-wrap items-center gap-x-[12px] gap-y-[4px] text-[13px]">
-            <span className="font-medium text-newTextColor">
-              {t(
-                selectedChannel.strategy.summary.key,
-                selectedChannel.strategy.summary.defaultValue
-              )}
-            </span>
-          </div>
-        )}
-
         <FollowerSummaryCards
           summary={audienceSummary}
           isLoading={isLoadingAudienceSummary}
@@ -1847,7 +1944,7 @@ export const FollowersComponent: FC = () => {
               columns={boardColumns}
               onOpenFollower={openFollowerDetail}
               onDismissTriage={async (follower, triageValue, reasons, options) => {
-                await ignoreTriage(follower.id, triageValue, reasons, options);
+                await handleDismissTriage(follower, triageValue, reasons, options);
               }}
             />
           </div>
@@ -1912,6 +2009,7 @@ export const FollowersComponent: FC = () => {
                       : undefined
                   }
                   lists={followerLists}
+                  canFollow={canFollowAudienceMember}
                   onToggleList={async (list, assigned) => {
                     if (assigned) {
                       await removeMember(list.id, follower.id);
@@ -1956,22 +2054,7 @@ export const FollowersComponent: FC = () => {
                     }
                   }}
                   onDismissTriage={async (triageValue, reasons, options) => {
-                    await ignoreTriage(follower.id, triageValue, reasons, options);
-                    const shouldRemoveFromPage =
-                      resolvedTriage === triageValue ||
-                      (resolvedAudience === 'lead' && triageValue === 'lead') ||
-                      (resolvedAudience === 'cultivate' && triageValue === 'cultivate') ||
-                      (resolvedAudience === 'hot' && triageValue === 'hot_lead');
-                    if (shouldRemoveFromPage) {
-                      await mutateFollowers(
-                        (page) =>
-                          applyTriageIgnoreToFollowerPage(page, follower.id, {
-                            removeFromPage: true,
-                            triage: triageValue,
-                          }),
-                        { revalidate: false }
-                      );
-                    }
+                    await handleDismissTriage(follower, triageValue, reasons, options);
                   }}
                   onOpen={() => openFollowerDetail(follower)}
                 />

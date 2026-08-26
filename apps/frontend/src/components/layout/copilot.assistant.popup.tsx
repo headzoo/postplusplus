@@ -1,7 +1,9 @@
 'use client';
 
-import { FC } from 'react';
+import { FC, ReactNode, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { CopilotPopup } from '@copilotkit/react-ui';
+import type { InputProps } from '@copilotkit/react-ui/dist/components/chat/props';
 import {
   useCopilotMessagesContext,
   type SuggestionItem,
@@ -13,16 +15,33 @@ type CopilotAssistantPopupProps = {
   instructions: string;
   initialMessage?: string;
   suggestions?: SuggestionItem[];
+  Input?: React.ComponentType<InputProps>;
+  children?: ReactNode;
 };
 
 export const CopilotAssistantPopup: FC<CopilotAssistantPopupProps> = (props) => {
-  return <CopilotAssistantPopupChat {...props} />;
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return null;
+  }
+
+  return createPortal(
+    <CopilotAssistantPopupChat {...props} />,
+    document.body
+  );
 };
 
 const CopilotAssistantPopupChat: FC<CopilotAssistantPopupProps> = ({
   instructions,
   initialMessage,
   suggestions,
+  Input,
+  children,
 }) => {
   const t = useT();
   const { messages } = useCopilotMessagesContext();
@@ -42,6 +61,7 @@ const CopilotAssistantPopupChat: FC<CopilotAssistantPopupProps> = ({
       clickOutsideToClose={true}
       instructions={instructions}
       Window={ResizableCopilotWindow}
+      Input={Input}
       {...suggestionProps}
       labels={{
         title: t('your_assistant', 'Your Assistant'),
@@ -52,6 +72,8 @@ const CopilotAssistantPopupChat: FC<CopilotAssistantPopupProps> = ({
             'Hi! I can help you to refine your social media posts.'
           ),
       }}
-    />
+    >
+      {children}
+    </CopilotPopup>
   );
 };

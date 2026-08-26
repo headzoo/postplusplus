@@ -491,7 +491,9 @@ describe('ChannelInteractionRepository', () => {
       .mockResolvedValueOnce(5)
       .mockResolvedValueOnce(6)
       .mockResolvedValueOnce(7)
-      .mockResolvedValueOnce(8);
+      .mockResolvedValueOnce(8)
+      .mockResolvedValueOnce(9)
+      .mockResolvedValueOnce(0);
 
     const result = await repository.getStoredFollowerAudienceCounts(
       'org',
@@ -515,8 +517,9 @@ describe('ChannelInteractionRepository', () => {
       quiet: 4,
       engaged_not_yet: 5,
       lead: 6,
-      ignored: 7,
-      cultivate: 8,
+      followed: 7,
+      ignored: 8,
+      cultivate: 9,
       hot: 0,
     });
     expect(result.lists).toHaveLength(20);
@@ -526,7 +529,7 @@ describe('ChannelInteractionRepository', () => {
       total: 0,
     });
     expect(result.listsTruncated).toBe(true);
-    expect(tx.channelAudienceMember.count).toHaveBeenCalledTimes(29);
+    expect(tx.channelAudienceMember.count).toHaveBeenCalledTimes(30);
     expect(tx.channelAudienceMember.count).toHaveBeenCalledWith({
       where: expect.objectContaining({
         organizationId: 'org',
@@ -2205,6 +2208,7 @@ describe('ChannelInteractionRepository', () => {
             { inboundInteractionCount: { gt: 0 } },
             { leadBridgesAsLead: { some: {} } },
           ],
+          weFollowedAt: null,
           triageIgnores: {
             none: expect.objectContaining({
               triage: 'lead',
@@ -2243,8 +2247,55 @@ describe('ChannelInteractionRepository', () => {
     expect(audienceMemberFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
+          weFollowedAt: null,
           AND: expect.arrayContaining([excludeActiveListMembership]),
         }),
+      })
+    );
+  });
+
+  it('lists followed audience members who have not followed back', async () => {
+    const { repository, tx, audienceMemberFindMany } = createHarness();
+    audienceMemberFindMany.mockResolvedValue([
+      {
+        externalId: 'followed-1',
+        name: 'Followed One',
+        weFollowedAt: new Date('2026-08-20T12:00:00.000Z'),
+      },
+    ]);
+
+    await expect(
+      repository.getAudienceFollowed({
+        organizationId: 'org',
+        integrationId: 'integration',
+        userId: 'user-a',
+        direction: 'desc',
+        limit: 24,
+      })
+    ).resolves.toEqual({
+      items: [
+        {
+          externalId: 'followed-1',
+          name: 'Followed One',
+          weFollowedAt: new Date('2026-08-20T12:00:00.000Z'),
+        },
+      ],
+      hasMore: false,
+    });
+
+    expect(tx.integration.findFirst).toHaveBeenCalled();
+    expect(audienceMemberFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          weFollowedAt: { not: null },
+          membershipState: {
+            in: [
+              ChannelAudienceMembership.UNKNOWN,
+              ChannelAudienceMembership.NOT_FOLLOWER,
+            ],
+          },
+        }),
+        orderBy: [{ weFollowedAt: 'desc' }, { externalId: 'desc' }],
       })
     );
   });
@@ -2400,6 +2451,7 @@ describe('ChannelInteractionRepository', () => {
             { inboundInteractionCount: { gt: 0 } },
             { leadBridgesAsLead: { some: {} } },
           ],
+          weFollowedAt: null,
           triageIgnores: {
             none: expect.objectContaining({
               triage: 'lead',

@@ -1,15 +1,22 @@
 import 'reflect-metadata';
 
 const fetchUserFollowers = jest.fn();
+const followUser = jest.fn();
 
 jest.mock('@neynar/nodejs-sdk', () => ({
-  NeynarAPIClient: jest.fn().mockImplementation(() => ({ fetchUserFollowers })),
+  NeynarAPIClient: jest.fn().mockImplementation(() => ({
+    fetchUserFollowers,
+    followUser,
+  })),
 }));
 
 import { FarcasterProvider } from '@gitroom/nestjs-libraries/integrations/social/farcaster.provider';
 
 describe('FarcasterProvider followers', () => {
-  beforeEach(() => fetchUserFollowers.mockReset());
+  beforeEach(() => {
+    fetchUserFollowers.mockReset();
+    followUser.mockReset();
+  });
 
   it('maps recommended ordering to Neynar algorithmic ordering', async () => {
     fetchUserFollowers.mockResolvedValue({
@@ -75,5 +82,18 @@ describe('FarcasterProvider followers', () => {
         limit: 1,
       })
     ).resolves.toEqual({ items: [], hasMore: false });
+  });
+
+  it('follows an audience member by fid through Neynar', async () => {
+    followUser.mockResolvedValue(undefined);
+    const provider = new FarcasterProvider();
+
+    await expect(
+      provider.followAudienceMember({} as any, 'signer-uuid', '42')
+    ).resolves.toBeUndefined();
+    expect(followUser).toHaveBeenCalledWith({
+      signerUuid: 'signer-uuid',
+      targetFids: [42],
+    });
   });
 });

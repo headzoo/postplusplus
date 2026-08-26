@@ -3,6 +3,8 @@
 import { FC, KeyboardEvent, MouseEvent, useCallback } from 'react';
 import clsx from 'clsx';
 import Link from 'next/link';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
 import ImageWithFallback from '@gitroom/react/helpers/image.with.fallback';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { useTriageDismissModal } from '@gitroom/frontend/components/followers/triage.dismiss.modal';
@@ -12,6 +14,8 @@ import { RelationshipStars } from '@gitroom/frontend/components/followers/follow
 import { FollowerListDropdown } from '@gitroom/frontend/components/followers/follower.list.dropdown';
 import { TimelineIcon, RobotIcon } from '@gitroom/frontend/components/ui/icons';
 import { LeadFitDismissReason } from '@gitroom/nestjs-libraries/dtos/integrations/lead-fit-feedback.types';
+
+dayjs.extend(relativeTime);
 
 const TRIAGE_LABELS: Record<
   DismissibleTriage,
@@ -57,16 +61,22 @@ const TRIAGE_STYLES: Record<DismissibleTriage, string> = {
   cultivate: 'border-teal-500/40 text-teal-500',
 };
 
-export type DismissTriageOptions = { snooze?: boolean };
+export type DismissTriageOptions = {
+  snooze?: boolean;
+  follow?: boolean;
+  moveToListId?: string;
+};
 
 export const RelationshipTriageBadge: FC<{
   triage: DismissibleTriage;
+  canFollow?: boolean;
+  lists?: FollowerList[];
   onRemove?: (
     triage: DismissibleTriage,
     reasons?: LeadFitDismissReason[],
     options?: DismissTriageOptions
   ) => Promise<void> | void;
-}> = ({ triage, onRemove }) => {
+}> = ({ triage, canFollow = false, lists = [], onRemove }) => {
   const t = useT();
   const triageDismiss = useTriageDismissModal();
   const leadDismiss = useLeadDismissModal();
@@ -81,8 +91,16 @@ export const RelationshipTriageBadge: FC<{
         return;
       }
       if (triage === 'lead') {
-        const result = await leadDismiss.open();
+        const result = await leadDismiss.open({ canFollow, lists });
         if (!result) {
+          return;
+        }
+        if (result.action === 'follow') {
+          await onRemove(triage, undefined, { follow: true });
+          return;
+        }
+        if (result.action === 'moveToList') {
+          await onRemove(triage, undefined, { moveToListId: result.listId });
           return;
         }
         if (result.action === 'snooze') {
@@ -102,7 +120,7 @@ export const RelationshipTriageBadge: FC<{
         action === 'snooze' ? { snooze: true } : undefined
       );
     },
-    [displayLabel, leadDismiss, onRemove, triage, triageDismiss]
+    [canFollow, displayLabel, leadDismiss, lists, onRemove, triage, triageDismiss]
   );
 
   const className = clsx(
@@ -129,6 +147,115 @@ export const RelationshipTriageBadge: FC<{
     </button>
   );
 };
+
+export const FollowerIdentityBadges: FC<{
+  follower: Follower;
+  lists?: FollowerList[];
+  canFollow?: boolean;
+  onDismissTriage?: (
+    triage: DismissibleTriage,
+    reasons?: LeadFitDismissReason[],
+    options?: DismissTriageOptions
+  ) => Promise<void> | void;
+  onToggleList?: (list: FollowerList, assigned: boolean) => Promise<void> | void;
+  onToggleIgnored?: (ignored: boolean) => Promise<void> | void;
+}> = ({
+  follower,
+  lists = [],
+  canFollow = false,
+  onDismissTriage,
+  onToggleList,
+  onToggleIgnored,
+}) => {
+    const t = useT();
+
+    return (
+      <>
+        {follower.isBot === true && (
+          <span
+            role="img"
+            className="inline-flex shrink-0 text-textItemBlur"
+            title={t(
+              'followers_bot_tooltip',
+              'Likely bot · grade {{grade}} of 5',
+              {
+                grade:
+                  follower.botGrade != null ? String(follower.botGrade) : '?',
+              }
+            )}
+            aria-label={t(
+              'followers_bot_aria',
+              'Likely bot, grade {{grade}} of 5',
+              {
+                grade:
+                  follower.botGrade != null
+                    ? String(follower.botGrade)
+                    : 'unknown',
+              }
+            )}
+          >
+            <RobotIcon size={14} />
+          </span>
+        )}
+        {follower.isLead && (
+          <RelationshipTriageBadge
+            triage="lead"
+            canFollow={canFollow}
+            lists={lists}
+            onRemove={onDismissTriage}
+          />
+        )}
+        {follower.isCultivate && (
+          <RelationshipTriageBadge
+            triage="cultivate"
+            onRemove={onDismissTriage}
+          />
+        )}
+        {Number.isFinite(follower.leadFitScore) && (
+          <span
+            className="inline-flex w-fit shrink-0 items-center rounded-full border border-orange-600/50 px-[8px] py-[2px] text-[11px] font-[600] text-orange-500"
+            title={
+              follower.leadFitReason ||
+              t('followers_lead_fit_title', 'Lead fit score')
+            }
+          >
+            {t('followers_lead_fit', 'Fit {{score}}', {
+              score: Math.round(follower.leadFitScore!),
+            })}
+          </span>
+        )}
+        {follower.relationshipTriage && (
+          <RelationshipTriageBadge
+            triage={follower.relationshipTriage}
+            onRemove={onDismissTriage}
+          />
+        )}
+        {(follower.listIds ?? []).map((listId) => {
+          const list = lists.find((item) => item.id === listId);
+          if (!list) {
+            return null;
+          }
+          return (
+            <span
+              key={list.id}
+              className="inline-flex w-fit shrink-0 items-center rounded-full border border-newTableBorder px-[8px] py-[2px] text-[11px] font-[600] text-textItemBlur"
+            >
+              {list.name}
+            </span>
+          );
+        })}
+        {(onToggleList || onToggleIgnored) && (
+          <FollowerListDropdown
+            lists={lists}
+            assignedListIds={follower.listIds ?? []}
+            isIgnored={!!follower.isIgnored}
+            onToggle={onToggleList ?? (async () => undefined)}
+            onToggleIgnored={onToggleIgnored}
+          />
+        )}
+      </>
+    );
+  };
 
 const formatDate = (value: string) => {
   const date = new Date(value);
@@ -157,6 +284,7 @@ const formatCompactCount = (value: number) => {
 export const FollowerCard: FC<{
   follower: Follower;
   lists?: FollowerList[];
+  canFollow?: boolean;
   timelineHref?: string;
   onToggleList?: (list: FollowerList, assigned: boolean) => Promise<void> | void;
   onToggleIgnored?: (ignored: boolean) => Promise<void> | void;
@@ -169,6 +297,7 @@ export const FollowerCard: FC<{
 }> = ({
   follower,
   lists = [],
+  canFollow = false,
   timelineHref,
   onToggleList,
   onToggleIgnored,
@@ -178,6 +307,9 @@ export const FollowerCard: FC<{
     const t = useT();
     const followedAt = follower.followedAt
       ? formatDate(follower.followedAt)
+      : null;
+    const weFollowedAt = follower.weFollowedAt
+      ? dayjs(follower.weFollowedAt).fromNow()
       : null;
     const accountCreatedAt = follower.accountCreatedAt
       ? formatDate(follower.accountCreatedAt)
@@ -339,88 +471,14 @@ export const FollowerCard: FC<{
                 <h3 className="text-[15px] font-[600] text-newTextColor truncate">
                   {follower.name}
                 </h3>
-                {follower.isBot === true && (
-                  <span
-                    role="img"
-                    className="inline-flex shrink-0 text-textItemBlur"
-                    title={t(
-                      'followers_bot_tooltip',
-                      'Likely bot · grade {{grade}} of 5',
-                      {
-                        grade:
-                          follower.botGrade != null
-                            ? String(follower.botGrade)
-                            : '?',
-                      }
-                    )}
-                    aria-label={t(
-                      'followers_bot_aria',
-                      'Likely bot, grade {{grade}} of 5',
-                      {
-                        grade:
-                          follower.botGrade != null
-                            ? String(follower.botGrade)
-                            : 'unknown',
-                      }
-                    )}
-                  >
-                    <RobotIcon size={14} />
-                  </span>
-                )}
-                {follower.isLead && (
-                  <RelationshipTriageBadge
-                    triage="lead"
-                    onRemove={onDismissTriage}
-                  />
-                )}
-                {follower.isCultivate && (
-                  <RelationshipTriageBadge
-                    triage="cultivate"
-                    onRemove={onDismissTriage}
-                  />
-                )}
-                {Number.isFinite(follower.leadFitScore) && (
-                  <span
-                    className="inline-flex w-fit shrink-0 items-center rounded-full border border-orange-600/50 px-[8px] py-[2px] text-[11px] font-[600] text-orange-500"
-                    title={
-                      follower.leadFitReason ||
-                      t('followers_lead_fit_title', 'Lead fit score')
-                    }
-                  >
-                    {t('followers_lead_fit', 'Fit {{score}}', {
-                      score: Math.round(follower.leadFitScore!),
-                    })}
-                  </span>
-                )}
-                {follower.relationshipTriage && (
-                  <RelationshipTriageBadge
-                    triage={follower.relationshipTriage}
-                    onRemove={onDismissTriage}
-                  />
-                )}
-                {(follower.listIds ?? []).map((listId) => {
-                  const list = lists.find((item) => item.id === listId);
-                  if (!list) {
-                    return null;
-                  }
-                  return (
-                    <span
-                      key={list.id}
-                      className="inline-flex w-fit shrink-0 items-center rounded-full border border-newTableBorder px-[8px] py-[2px] text-[11px] font-[600] text-textItemBlur"
-                    >
-                      {list.name}
-                    </span>
-                  );
-                })}
-                {(onToggleList || onToggleIgnored) && (
-                  <FollowerListDropdown
-                    lists={lists}
-                    assignedListIds={follower.listIds ?? []}
-                    isIgnored={!!follower.isIgnored}
-                    onToggle={onToggleList ?? (async () => undefined)}
-                    onToggleIgnored={onToggleIgnored}
-                  />
-                )}
+                <FollowerIdentityBadges
+                  follower={follower}
+                  lists={lists}
+                  canFollow={canFollow}
+                  onDismissTriage={onDismissTriage}
+                  onToggleList={onToggleList}
+                  onToggleIgnored={onToggleIgnored}
+                />
               </div>
               {handle &&
                 (follower.profileUrl ? (
@@ -634,13 +692,22 @@ export const FollowerCard: FC<{
                 )}
               </div>
 
-              {followedAt && (
+              {(followedAt || weFollowedAt) && (
                 <div className="mt-auto flex flex-col gap-[4px] text-[12px] text-textItemBlur">
-                  <span>
-                    {t('followers_followed_at', 'Followed {{date}}', {
-                      date: followedAt,
-                    })}
-                  </span>
+                  {weFollowedAt && (
+                    <span>
+                      {t('followers_we_followed_at', 'You followed {{time}}', {
+                        time: weFollowedAt,
+                      })}
+                    </span>
+                  )}
+                  {followedAt && (
+                    <span>
+                      {t('followers_followed_at', 'Followed {{date}}', {
+                        date: followedAt,
+                      })}
+                    </span>
+                  )}
                 </div>
               )}
             </div>

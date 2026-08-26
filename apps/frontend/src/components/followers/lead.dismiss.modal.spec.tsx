@@ -62,6 +62,23 @@ jest.mock('@gitroom/react/form/button', () => ({
   ),
 }));
 
+jest.mock('@gitroom/react/form/select', () => ({
+  Select: ({
+    label,
+    children,
+    onChange,
+  }: {
+    label?: string;
+    children?: React.ReactNode;
+    onChange?: (event: React.ChangeEvent<HTMLSelectElement>) => void;
+  }) => (
+    <label>
+      {label}
+      <select onChange={onChange}>{children}</select>
+    </label>
+  ),
+}));
+
 describe('LeadDismissModal', () => {
   beforeEach(() => {
     closeCurrent.mockReset();
@@ -111,6 +128,51 @@ describe('LeadDismissModal', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
     expect(resolution).toHaveBeenCalledWith(null);
+    expect(closeCurrent).toHaveBeenCalled();
+  });
+
+  it('shows Follow only when the channel supports it', () => {
+    const resolution = jest.fn();
+    const { rerender } = render(
+      <LeadDismissModal resolution={resolution} canFollow={false} />
+    );
+
+    expect(screen.queryByRole('button', { name: 'Follow' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Add to followed' })).toBeNull();
+
+    rerender(<LeadDismissModal resolution={resolution} canFollow={true} />);
+
+    expect(screen.getByRole('heading', { name: 'Add to followed' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Follow' }));
+
+    expect(resolution).toHaveBeenCalledWith({ action: 'follow' });
+    expect(closeCurrent).toHaveBeenCalled();
+  });
+
+  it('separates remove-from-leads heading from the reason prompt', () => {
+    render(<LeadDismissModal resolution={jest.fn()} />);
+
+    expect(screen.getByRole('heading', { name: 'Remove from Leads' })).toBeTruthy();
+    expect(screen.getByText('Choose why they are not a lead')).toBeTruthy();
+  });
+
+  it('resolves moveToList when a custom list is selected', () => {
+    const resolution = jest.fn();
+    render(
+      <LeadDismissModal
+        resolution={resolution}
+        lists={[{ id: 'list-1', name: 'VIP', createdAt: '', updatedAt: '' }]}
+      />
+    );
+
+    fireEvent.change(screen.getByRole('combobox'), {
+      target: { value: 'list-1' },
+    });
+
+    expect(resolution).toHaveBeenCalledWith({
+      action: 'moveToList',
+      listId: 'list-1',
+    });
     expect(closeCurrent).toHaveBeenCalled();
   });
 });

@@ -7,15 +7,19 @@ import ImageWithFallback from '@gitroom/react/helpers/image.with.fallback';
 import { Button } from '@gitroom/react/form/button';
 import { Textarea } from '@gitroom/react/form/textarea';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
+import { useToaster } from '@gitroom/react/toaster/toaster';
 import { LoadingComponent } from '@gitroom/frontend/components/layout/loading';
 import {
   useDecisionModal,
 } from '@gitroom/frontend/components/layout/new-modal';
 import { FollowerRelationshipChart } from '@gitroom/frontend/components/followers/follower.relationship.chart';
-import { RelationshipTriageBadge } from '@gitroom/frontend/components/followers/follower.card';
+import { DismissTriageOptions, FollowerIdentityBadges } from '@gitroom/frontend/components/followers/follower.card';
 import { RelationshipStars } from '@gitroom/frontend/components/followers/follower.relationship.stars';
 import { CustomScrollArea } from '@gitroom/frontend/components/ui/custom.scroll.area';
-import { ResetIcon, TimelineIcon, RobotIcon } from '@gitroom/frontend/components/ui/icons';
+import { ResetIcon, TimelineIcon, SparkleIcon } from '@gitroom/frontend/components/ui/icons';
+import {
+  launchFollowerCopilotChat,
+} from '@gitroom/frontend/components/followers/use.copilot.follower.assistant';
 import {
   ChannelInteractionKind,
   FollowerMemberDetail,
@@ -25,11 +29,15 @@ import {
   DismissibleTriage,
   useFollowerDetail,
   buildFollowerTimelineHref,
+  useFollowerChannels,
   useFollowerGradeMutation,
   useFollowerListMutations,
+  useFollowerLists,
   useFollowerNoteMutations,
   useFollowerRelationshipScoreMutation,
+  FollowerList,
 } from '@gitroom/frontend/components/followers/use.followers';
+import { LeadFitDismissReason } from '@gitroom/nestjs-libraries/dtos/integrations/lead-fit-feedback.types';
 
 const INTERACTION_SENTENCE_LABELS: Record<
   ChannelInteractionKind,
@@ -297,6 +305,12 @@ const FollowerDetailContent: FC<{
   mutate: () => Promise<FollowerMemberDetail | undefined>;
 }> = ({ detail, integrationId, externalId, mutate }) => {
   const t = useT();
+  const toast = useToaster();
+  const { data: channels = [] } = useFollowerChannels();
+  const { data: followerLists = [] } = useFollowerLists(integrationId);
+  const canFollowAudienceMember = !!channels.find(
+    (channel) => channel.id === integrationId
+  )?.canFollowAudienceMember;
   const [newNote, setNewNote] = useState('');
   const [noteError, setNoteError] = useState('');
   const [isNotePending, setIsNotePending] = useState(false);
@@ -322,18 +336,70 @@ const FollowerDetailContent: FC<{
     externalId,
     revalidateDetail
   );
-  const { ignoreTriage } = useFollowerListMutations(integrationId);
+  const { ignoreTriage, followMember, addMember, removeMember, ignoreFollower, unignoreFollower } =
+    useFollowerListMutations(integrationId);
 
   const handleDismissTriage = useCallback(
     async (
       triage: DismissibleTriage,
-      reasons?: string[],
-      options?: { snooze?: boolean }
+      reasons?: LeadFitDismissReason[],
+      options?: DismissTriageOptions
     ) => {
+      if (triage === 'lead' && options?.follow) {
+        try {
+          await followMember(externalId);
+          await revalidateDetail();
+        } catch (error) {
+          toast.show(
+            error instanceof Error
+              ? error.message
+              : t('followers_lead_follow_error', 'Could not follow this profile'),
+            'warning'
+          );
+        }
+        return;
+      }
+      if (triage === 'lead' && options?.moveToListId) {
+        await addMember(options.moveToListId, externalId);
+        await revalidateDetail();
+        return;
+      }
       await ignoreTriage(externalId, triage, reasons, options);
       await revalidateDetail();
     },
-    [externalId, ignoreTriage, revalidateDetail]
+    [
+      addMember,
+      externalId,
+      followMember,
+      ignoreTriage,
+      revalidateDetail,
+      t,
+      toast,
+    ]
+  );
+
+  const handleToggleList = useCallback(
+    async (list: FollowerList, assigned: boolean) => {
+      if (assigned) {
+        await removeMember(list.id, externalId);
+      } else {
+        await addMember(list.id, externalId);
+      }
+      await revalidateDetail();
+    },
+    [addMember, externalId, removeMember, revalidateDetail]
+  );
+
+  const handleToggleIgnored = useCallback(
+    async (ignored: boolean) => {
+      if (ignored) {
+        await ignoreFollower(externalId);
+      } else {
+        await unignoreFollower(externalId);
+      }
+      await revalidateDetail();
+    },
+    [externalId, ignoreFollower, revalidateDetail, unignoreFollower]
   );
 
   const sortedNotes = useMemo(
@@ -472,40 +538,14 @@ const FollowerDetailContent: FC<{
               <h3 className="text-[15px] font-[600] text-newTextColor truncate">
                 {follower.name}
               </h3>
-              {follower.isBot === true && (
-                <span
-                  role="img"
-                  className="inline-flex shrink-0 text-textItemBlur"
-                  title={t(
-                    'followers_bot_tooltip',
-                    'Likely bot · grade {{grade}} of 5',
-                    {
-                      grade:
-                        follower.botGrade != null
-                          ? String(follower.botGrade)
-                          : '?',
-                    }
-                  )}
-                  aria-label={t(
-                    'followers_bot_aria',
-                    'Likely bot, grade {{grade}} of 5',
-                    {
-                      grade:
-                        follower.botGrade != null
-                          ? String(follower.botGrade)
-                          : 'unknown',
-                    }
-                  )}
-                >
-                  <RobotIcon size={14} />
-                </span>
-              )}
-              {follower.isLead && (
-                <RelationshipTriageBadge
-                  triage="lead"
-                  onRemove={handleDismissTriage}
-                />
-              )}
+              <FollowerIdentityBadges
+                follower={follower}
+                lists={followerLists}
+                canFollow={canFollowAudienceMember}
+                onDismissTriage={handleDismissTriage}
+                onToggleList={handleToggleList}
+                onToggleIgnored={handleToggleIgnored}
+              />
             </div>
             {handle &&
               (follower.profileUrl ? (
@@ -562,20 +602,37 @@ const FollowerDetailContent: FC<{
           </div>
         </div>
         {follower.username && (
-          <Link
-            href={buildFollowerTimelineHref(
-              integrationId,
-              follower.username,
-              externalId
-            )}
-            className={clsx(
-              'shrink-0 inline-flex h-[28px] w-[28px] items-center justify-center rounded-full border',
-              'border-newTableBorder text-textItemBlur hover:border-newTextColor/40 hover:text-newTextColor'
-            )}
-            aria-label={t('followers_timeline_button', 'Timeline')}
-          >
-            <TimelineIcon size={14} />
-          </Link>
+          <div className="flex shrink-0 items-center gap-[8px]">
+            <button
+              type="button"
+              onClick={() => launchFollowerCopilotChat(follower.username!)}
+              className={clsx(
+                'inline-flex h-[28px] w-[28px] items-center justify-center rounded-full border',
+                'border-newTableBorder text-textItemBlur hover:border-newTextColor/40 hover:text-newTextColor'
+              )}
+              aria-label={t(
+                'followers_ask_ai_about',
+                'Ask AI about @{{username}}',
+                { username: follower.username }
+              )}
+            >
+              <SparkleIcon size={14} />
+            </button>
+            <Link
+              href={buildFollowerTimelineHref(
+                integrationId,
+                follower.username,
+                externalId
+              )}
+              className={clsx(
+                'inline-flex h-[28px] w-[28px] items-center justify-center rounded-full border',
+                'border-newTableBorder text-textItemBlur hover:border-newTextColor/40 hover:text-newTextColor'
+              )}
+              aria-label={t('followers_timeline_button', 'Timeline')}
+            >
+              <TimelineIcon size={14} />
+            </Link>
+          </div>
         )}
       </div>
 
@@ -714,12 +771,6 @@ const FollowerDetailContent: FC<{
                   value: formatReciprocity(current.reciprocity),
                 })}
               </p>
-              {current.triage && (
-                <RelationshipTriageBadge
-                  triage={current.triage}
-                  onRemove={handleDismissTriage}
-                />
-              )}
             </div>
             <h4 className="text-[16px] font-[600] text-newTextColor">
               {t('followers_relationship_grade', 'Relationship grade')}

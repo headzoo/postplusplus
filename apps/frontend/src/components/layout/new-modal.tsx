@@ -281,43 +281,29 @@ export const Component: FC<{
                     ) : null}
                   </div>
                 )}
-              {!!modal.height && !!modal.size && !modal.fullScreen ? (
+              <CustomScrollArea
+                className="flex-1 min-h-0 pr-[12px]"
+                contentClassName={clsx(
+                  'px-[16px] sm:px-[32px] pb-[16px] sm:pb-[32px]',
+                  !(
+                    !!modal.title ||
+                    typeof modal.withCloseButton === 'undefined' ||
+                    modal.withCloseButton
+                  ) && 'pt-[16px] sm:pt-[32px]'
+                )}
+              >
                 <div
                   className={clsx(
-                    'flex-1 min-h-0 flex flex-col overflow-hidden px-[16px] sm:px-[32px] pb-[16px] sm:pb-[32px]',
-                    !(
-                      !!modal.title ||
-                      typeof modal.withCloseButton === 'undefined' ||
-                      modal.withCloseButton
-                    ) && 'pt-[16px] sm:pt-[32px]'
+                    'whitespace-pre-line',
+                    !!modal.height &&
+                      !!modal.size &&
+                      !modal.fullScreen &&
+                      'flex min-h-0 h-full flex-1 flex-col'
                   )}
                 >
-                  <div className="flex flex-1 flex-col min-h-0 h-full whitespace-pre-line">
-                    {RenderComponent}
-                  </div>
+                  {RenderComponent}
                 </div>
-              ) : (
-                <CustomScrollArea
-                  className="flex-1 min-h-0 pr-[12px]"
-                  contentClassName={clsx(
-                    'px-[16px] sm:px-[32px] pb-[16px] sm:pb-[32px]',
-                    !(
-                      !!modal.title ||
-                      typeof modal.withCloseButton === 'undefined' ||
-                      modal.withCloseButton
-                    ) && 'pt-[16px] sm:pt-[32px]'
-                  )}
-                >
-                  <div
-                    className={clsx(
-                      'whitespace-pre-line',
-                      !!modal.height && !!modal.size && 'flex flex-1 flex-col'
-                    )}
-                  >
-                    {RenderComponent}
-                  </div>
-                </CustomScrollArea>
-              )}
+              </CustomScrollArea>
             </div>
           </div>
         </div>

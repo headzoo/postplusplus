@@ -21,7 +21,7 @@ export const FollowerSummaryCards: FC<{
 
   return (
     <div
-      className="grid grid-cols-2 gap-[12px] sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9"
+      className="grid grid-cols-2 gap-[12px] sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-10"
       data-testid="followers-summary-cards"
     >
       {FOLLOWER_SUMMARY_SEGMENTS.map((segment) => {

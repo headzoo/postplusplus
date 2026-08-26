@@ -7,13 +7,13 @@ import ImageWithFallback from '@gitroom/react/helpers/image.with.fallback';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import {
   FOLLOWER_BOARD_SEGMENTS,
-  FOLLOWER_BOARD_LIST_MIN_HEIGHT_PX,
   FOLLOWER_BOARD_VISIBLE_ROWS,
   FOLLOWER_SEGMENT_COLOR_CLASSES,
   FollowerSegmentDefinition,
   formatSegmentCount,
 } from '@gitroom/frontend/components/followers/follower.segments';
 import { CustomScrollArea } from '@gitroom/frontend/components/ui/custom.scroll.area';
+import { HelpIcon } from '@gitroom/frontend/components/ui/icons';
 import {
   DismissibleTriage,
   Follower,
@@ -199,99 +199,117 @@ export const FollowerBoardColumn: FC<{
   onOpenFollower,
   onDismissTriage,
 }) => {
-  const t = useT();
-  const colors = FOLLOWER_SEGMENT_COLOR_CLASSES[segment.color];
-  const Icon = segment.icon;
-  const countLabel = formatSegmentCount(total);
-  const preview = items;
-  const hasScrollableContent = isLoading || preview.length > 0;
-  const skeletonCount = FOLLOWER_BOARD_VISIBLE_ROWS;
+    const t = useT();
+    const colors = FOLLOWER_SEGMENT_COLOR_CLASSES[segment.color];
+    const Icon = segment.icon;
+    const countLabel = formatSegmentCount(total);
+    const preview = items;
+    const hasScrollableContent = isLoading || preview.length > 0;
+    const skeletonCount = FOLLOWER_BOARD_VISIBLE_ROWS;
+    const segmentLabel = t(segment.key, segment.defaultLabel);
+    const segmentDescription = t(segment.descriptionKey, segment.defaultDescription);
 
-  return (
-    <div
-      className="flex h-full min-h-0 min-w-[240px] flex-1 flex-col gap-[12px] overflow-hidden rounded-[12px] border border-newTableBorder bg-newBgColorInner p-[14px]"
-      data-testid="followers-board-column"
-      data-board-segment={segment.slug}
-    >
-      <div className="flex shrink-0 items-start gap-[10px]">
-        <span
-          className={clsx(
-            'inline-flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-[8px]',
-            colors.iconBg,
-            colors.text
-          )}
-        >
-          <Icon size={16} />
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-baseline gap-[8px]">
-            <h3 className="text-[15px] font-medium text-newTextColor">
-              {t(segment.key, segment.defaultLabel)}
-            </h3>
-            <span className="text-[12px] text-textItemBlur">
-              {`${countLabel} ${t('followers_board_users_label', 'users')}`}
-            </span>
-          </div>
-          <p className="mt-[4px] min-h-[34px] text-[12px] leading-[1.4] text-textItemBlur line-clamp-2">
-            {t(segment.descriptionKey, segment.defaultDescription)}
-          </p>
-        </div>
-      </div>
-
-      {hasScrollableContent ? (
-        <div
-          className="flex min-h-0 flex-1 flex-col"
-          data-testid="followers-board-column-scroll"
-          style={{ minHeight: FOLLOWER_BOARD_LIST_MIN_HEIGHT_PX }}
-        >
-          <CustomScrollArea
-            className="min-h-0 w-full flex-1"
-            contentClassName="flex flex-col gap-[6px]"
-          >
-            {isLoading &&
-              Array.from({ length: skeletonCount }).map((_, index) => (
-                <div
-                  key={index}
-                  className="h-[52px] animate-pulse rounded-[8px] bg-newTableHeader"
-                />
-              ))}
-            {!isLoading &&
-              preview.map((follower) => (
-                <FollowerBoardRow
-                  key={follower.id}
-                  follower={follower}
-                  color={segment.color}
-                  onOpen={() => onOpenFollower(follower)}
-                  onDismissTriage={
-                    onDismissTriage
-                      ? (triage, reasons, options) =>
-                          onDismissTriage(follower, triage, reasons, options)
-                      : undefined
-                  }
-                />
-              ))}
-          </CustomScrollArea>
-        </div>
-      ) : (
-        <p className="px-[6px] py-[16px] text-[12px] text-textItemBlur">
-          {t('followers_board_empty', 'No people in this segment yet.')}
-        </p>
-      )}
-
-      <Link
-        href={viewAllHref}
-        scroll={false}
-        className={clsx(
-          'mt-auto inline-flex shrink-0 items-center justify-center rounded-[10px] border px-[12px] py-[8px] text-[13px] transition-colors',
-          colors.outlineButton
-        )}
-        data-testid="followers-board-view-all"
+    return (
+      <div
+        className="flex h-full min-h-0 min-w-[240px] flex-1 flex-col gap-[12px] overflow-hidden rounded-[12px] border border-newTableBorder bg-newBgColorInner p-[14px]"
+        data-testid="followers-board-column"
+        data-board-segment={segment.slug}
       >
-        {`${t('followers_board_view_all_label', 'View all')} (${countLabel})`}
-      </Link>
-    </div>
-  );
-};
+        <div className="flex shrink-0 items-start justify-between gap-[8px]">
+          <div className="flex min-w-0 flex-1 items-start gap-[10px]">
+            <span
+              className={clsx(
+                'inline-flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-[8px]',
+                colors.iconBg,
+                colors.text
+              )}
+            >
+              <Icon size={16} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-baseline gap-[8px]">
+                <h3 className="text-[15px] font-medium text-newTextColor">
+                  {segmentLabel}
+                </h3>
+                <span className="text-[12px] text-textItemBlur">
+                  {`${countLabel} ${t('followers_board_users_label', 'users')}`}
+                </span>
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="shrink-0 text-textItemBlur hover:text-newTextColor cursor-help"
+            aria-label={t(
+              'followers_board_column_help',
+              'About {{segment}}',
+              { segment: segmentLabel }
+            )}
+            data-testid="followers-board-column-help"
+            data-tooltip-id="tooltip"
+            data-tooltip-content={segmentDescription}
+            data-tooltip-events='["mouseenter","focus","click"]'
+            data-tooltip-place="top"
+          >
+            <HelpIcon size={16} />
+          </button>
+        </div>
+
+        {hasScrollableContent ? (
+          <div
+            className="flex min-h-0 flex-1 flex-col"
+            data-testid="followers-board-column-scroll"
+          >
+            <CustomScrollArea
+              className="min-h-0 w-full flex-1"
+              contentClassName="flex flex-col gap-[6px]"
+            >
+              {isLoading &&
+                Array.from({ length: skeletonCount }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="h-[52px] animate-pulse rounded-[8px] bg-newTableHeader"
+                  />
+                ))}
+              {!isLoading &&
+                preview.map((follower) => (
+                  <FollowerBoardRow
+                    key={follower.id}
+                    follower={follower}
+                    color={segment.color}
+                    onOpen={() => onOpenFollower(follower)}
+                    onDismissTriage={
+                      onDismissTriage
+                        ? (triage, reasons, options) =>
+                          onDismissTriage(follower, triage, reasons, options)
+                        : undefined
+                    }
+                  />
+                ))}
+            </CustomScrollArea>
+          </div>
+        ) : (
+          <div className="flex min-h-0 flex-1 flex-col">
+            <p className="px-[6px] py-[16px] text-[12px] text-textItemBlur">
+              {t('followers_board_empty', 'No people in this segment yet.')}
+            </p>
+          </div>
+        )}
+
+        <Link
+          href={viewAllHref}
+          scroll={false}
+          className={clsx(
+            'inline-flex shrink-0 items-center justify-center rounded-[10px] border px-[12px] py-[8px] text-[13px] transition-colors',
+            colors.outlineButton
+          )}
+          data-testid="followers-board-view-all"
+        >
+          {`${t('followers_board_view_all_label', 'View all')} (${countLabel})`}
+        </Link>
+      </div>
+    );
+  };
 
 export const FollowerBoard: FC<{
   columns: Array<{

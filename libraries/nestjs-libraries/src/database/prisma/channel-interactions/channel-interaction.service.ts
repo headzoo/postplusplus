@@ -2316,6 +2316,49 @@ export class ChannelInteractionService {
     }
   }
 
+  async markAudienceMemberFollowed(
+    organizationId: string,
+    integrationId: string,
+    externalId: string
+  ) {
+    this.validateBoundedString(externalId, 'externalId', MAX_ID_LENGTH);
+    const stamped = await this._repository.stampAudienceMemberWeFollowedAt(
+      organizationId,
+      integrationId,
+      externalId
+    );
+    if ('missing' in stamped) {
+      throw new NotFoundException('Follower was not found');
+    }
+    try {
+      await this._repository.recordNormalizedEvent(
+        organizationId,
+        integrationId,
+        {
+          providerEventKey: `manual-outbound-follow:${integrationId}:${externalId}`,
+          kind: PrismaInteractionKind.FOLLOW,
+          direction: PrismaInteractionDirection.OUTBOUND,
+          eventAt: stamped.weFollowedAt,
+          counterparty: stamped.counterparty,
+          normalizationVersion: 1,
+          score: getChannelInteractionScore('follow', 'outbound'),
+        }
+      );
+    } catch {
+      /** Stamp succeeded; interaction recording is best-effort */
+    }
+    try {
+      await this.refreshRelationshipGradeProjections(
+        organizationId,
+        integrationId,
+        [externalId]
+      );
+    } catch {
+      /** Temporal remains the fallback if live projection refresh fails */
+    }
+    return { weFollowedAt: stamped.weFollowedAt.toISOString() };
+  }
+
   private normalizeFollowerListName(name: string) {
     const normalized = name.trim().replace(/\s+/g, ' ');
     this.validateBoundedString(normalized, 'name', 64);
@@ -2328,6 +2371,7 @@ export class ChannelInteractionService {
       'quiet',
       'lead',
       'leads',
+      'followed',
       'ignored',
     ];
     if (reserved.includes(normalized.toLowerCase())) {

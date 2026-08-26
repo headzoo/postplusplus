@@ -48,4 +48,19 @@ describe('BlueskyProvider followers', () => {
       cursor: 'current',
     });
   });
+
+  it('follows an audience member through the agent', async () => {
+    const provider = new BlueskyProvider();
+    const follow = jest.fn().mockResolvedValue(undefined);
+    jest.spyOn(provider as any, 'getAgent').mockResolvedValue({ follow });
+
+    await expect(
+      provider.followAudienceMember(
+        { internalId: 'did:plc:owner' } as any,
+        '',
+        'did:plc:target'
+      )
+    ).resolves.toBeUndefined();
+    expect(follow).toHaveBeenCalledWith('did:plc:target');
+  });
 });

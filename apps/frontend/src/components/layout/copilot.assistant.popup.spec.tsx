@@ -72,6 +72,16 @@ describe('CopilotAssistantPopup', () => {
 
     expect(popupProps.suggestions).toEqual([]);
   });
+
+  it('forwards a custom Input component when provided', () => {
+    const CustomInput = () => <div data-testid="custom-input" />;
+
+    render(
+      <CopilotAssistantPopup instructions="help" Input={CustomInput} />
+    );
+
+    expect(popupProps.Input).toBe(CustomInput);
+  });
 });
 
 describe('ResizableCopilotWindow', () => {

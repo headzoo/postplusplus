@@ -674,4 +674,19 @@ describe('FollowerCard', () => {
       Node.DOCUMENT_POSITION_FOLLOWING
     );
   });
+
+  it('shows relative time since the channel followed them', () => {
+    render(
+      <FollowerCard
+        follower={{
+          ...baseFollower,
+          weFollowedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+          isFollowed: true,
+        }}
+        onOpen={jest.fn()}
+      />
+    );
+
+    expect(screen.getByText(/You followed/i)).toBeTruthy();
+  });
 });

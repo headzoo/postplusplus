@@ -77,6 +77,32 @@ jest.mock('@gitroom/frontend/components/ui/custom.scroll.area', () => ({
   ),
 }));
 
+jest.mock('@mantine/hooks', () => ({
+  useClickOutside: () => undefined,
+}));
+
+jest.mock('@gitroom/react/toaster/toaster', () => ({
+  useToaster: () => ({ show: jest.fn() }),
+}));
+
+const triageDismissOpen = jest.fn();
+const leadDismissOpen = jest.fn();
+
+jest.mock('@gitroom/frontend/components/followers/triage.dismiss.modal', () => ({
+  useTriageDismissModal: () => ({ open: triageDismissOpen }),
+}));
+
+jest.mock('@gitroom/frontend/components/followers/lead.dismiss.modal', () => ({
+  useLeadDismissModal: () => ({ open: leadDismissOpen }),
+}));
+
+const launchFollowerCopilotChat = jest.fn();
+
+jest.mock('@gitroom/frontend/components/followers/use.copilot.follower.assistant', () => ({
+  launchFollowerCopilotChat: (...args: unknown[]) =>
+    launchFollowerCopilotChat(...args),
+}));
+
 const useSWR = jest.requireMock('swr').default as jest.Mock;
 const useSWRConfig = jest.requireMock('swr').useSWRConfig as jest.Mock;
 const mutateCache = jest.fn();
@@ -93,6 +119,7 @@ const detail: FollowerMemberDetail = {
     bio: 'Builder',
     followersCount: 1200,
     followingCount: 300,
+    relationshipTriage: 'over_invested',
   },
   notes: [
     {
@@ -176,19 +203,68 @@ const detail: FollowerMemberDetail = {
 describe('FollowerDetailModal', () => {
   const mutate = jest.fn().mockResolvedValue(detail);
   const fetchMock = jest.fn();
+  let swrDetail: FollowerMemberDetail = detail;
+
+  const mockSwrByKey = (key: string | null) => {
+    if (key === '/followers/channels') {
+      return {
+        data: [
+          {
+            id: 'channel-1',
+            name: 'Channel',
+            identifier: 'channel',
+            sorts: [],
+            canFollowAudienceMember: true,
+          },
+        ],
+        error: undefined,
+        isLoading: false,
+        mutate,
+      };
+    }
+    if (key === '/followers/channel-1/lists') {
+      return {
+        data: [
+          {
+            id: 'list-1',
+            name: 'VIP',
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          },
+        ],
+        error: undefined,
+        isLoading: false,
+        mutate,
+      };
+    }
+    if (key && String(key).includes('/member')) {
+      return {
+        data: swrDetail,
+        error: undefined,
+        isLoading: false,
+        mutate,
+      };
+    }
+    return {
+      data: undefined,
+      error: undefined,
+      isLoading: false,
+      mutate,
+    };
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
+    swrDetail = detail;
     useFetch.mockReturnValue(fetchMock);
     mutateCache.mockReset();
     useSWRConfig.mockReturnValue({ mutate: mutateCache });
     decisionOpen.mockResolvedValue(true);
-    useSWR.mockReturnValue({
-      data: detail,
-      error: undefined,
-      isLoading: false,
-      mutate,
-    });
+    triageDismissOpen.mockReset();
+    triageDismissOpen.mockResolvedValue(null);
+    leadDismissOpen.mockReset();
+    leadDismissOpen.mockResolvedValue(null);
+    useSWR.mockImplementation((key: string | null) => mockSwrByKey(key));
     fetchMock.mockImplementation(async (url: string, options?: RequestInit) => {
       if (typeof url === 'string' && url.includes('/member/relationship-score')) {
         return {
@@ -265,6 +341,19 @@ describe('FollowerDetailModal', () => {
     ).toBeTruthy();
   });
 
+  it('launches the followers assistant with the username when the AI button is clicked', () => {
+    render(
+      <FollowerDetailModal integrationId="channel-1" externalId="follower-1" />
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Ask AI about @alex' })
+    );
+
+    expect(launchFollowerCopilotChat).toHaveBeenCalledWith('alex');
+    expect(screen.getByRole('link', { name: 'Timeline' })).toBeTruthy();
+  });
+
   it('renders effort-first relationship details and accessible star labels', () => {
     render(
       <FollowerDetailModal integrationId="channel-1" externalId="follower-1" />
@@ -289,20 +378,15 @@ describe('FollowerDetailModal', () => {
   });
 
   it('allows bot classification metadata to wrap on narrow screens', () => {
-    useSWR.mockReturnValue({
-      data: {
-        ...detail,
-        follower: {
-          ...detail.follower,
-          isBot: true,
-          botGrade: 4,
-          botConfidence: 0.86,
-        },
+    swrDetail = {
+      ...detail,
+      follower: {
+        ...detail.follower,
+        isBot: true,
+        botGrade: 4,
+        botConfidence: 0.86,
       },
-      error: undefined,
-      isLoading: false,
-      mutate,
-    });
+    };
 
     render(
       <FollowerDetailModal integrationId="channel-1" externalId="follower-1" />
@@ -331,18 +415,13 @@ describe('FollowerDetailModal', () => {
   });
 
   it('renders the relationship chart from current when history is empty', () => {
-    useSWR.mockReturnValue({
-      data: {
-        ...detail,
-        relationship: {
-          ...detail.relationship,
-          history: [],
-        },
+    swrDetail = {
+      ...detail,
+      relationship: {
+        ...detail.relationship,
+        history: [],
       },
-      error: undefined,
-      isLoading: false,
-      mutate,
-    });
+    };
 
     render(
       <FollowerDetailModal integrationId="channel-1" externalId="follower-1" />
@@ -441,24 +520,19 @@ describe('FollowerDetailModal', () => {
   });
 
   it('shows empty effort stars when no relationship snapshot exists', () => {
-    useSWR.mockReturnValue({
-      data: {
-        ...detail,
-        relationship: {
-          ...detail.relationship,
-          current: null,
-          history: [],
-        },
-        tracking: {
-          state: 'unsupported',
-          noBackfill: true,
-          coverage: [],
-        },
+    swrDetail = {
+      ...detail,
+      relationship: {
+        ...detail.relationship,
+        current: null,
+        history: [],
       },
-      error: undefined,
-      isLoading: false,
-      mutate,
-    });
+      tracking: {
+        state: 'unsupported',
+        noBackfill: true,
+        coverage: [],
+      },
+    };
 
     render(
       <FollowerDetailModal integrationId="channel-1" externalId="follower-1" />
@@ -473,23 +547,18 @@ describe('FollowerDetailModal', () => {
   });
 
   it('shows effort stars when computed grade is null but scores exist', () => {
-    useSWR.mockReturnValue({
-      data: {
-        ...detail,
-        relationship: {
-          ...detail.relationship,
-          current: {
-            ...detail.relationship.current!,
-            grade: null,
-            adjustedGrade: null,
-            reciprocity: null,
-          },
+    swrDetail = {
+      ...detail,
+      relationship: {
+        ...detail.relationship,
+        current: {
+          ...detail.relationship.current!,
+          grade: null,
+          adjustedGrade: null,
+          reciprocity: null,
         },
       },
-      error: undefined,
-      isLoading: false,
-      mutate,
-    });
+    };
 
     render(
       <FollowerDetailModal integrationId="channel-1" externalId="follower-1" />
@@ -635,5 +704,99 @@ describe('FollowerDetailModal', () => {
       ).toBeTruthy();
     });
     expect(screen.getByDisplayValue('Broken save')).toBeTruthy();
+  });
+
+  it('renders lead and fit triage badges beside the display name', () => {
+    swrDetail = {
+      ...detail,
+      follower: {
+        ...detail.follower,
+        isLead: true,
+        leadFitScore: 81,
+        leadFitReason: 'Strong product fit',
+        relationshipTriage: 'mutual',
+      },
+    };
+
+    render(
+      <FollowerDetailModal integrationId="channel-1" externalId="follower-1" />
+    );
+
+    const name = screen.getByRole('heading', { name: 'Alex Example' });
+    const lead = screen.getByRole('button', { name: 'Remove Lead badge' });
+    const fit = screen.getByText('Fit 81');
+    const mutual = screen.getByRole('button', { name: 'Remove Mutual badge' });
+
+    expect(
+      name.compareDocumentPosition(lead) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    expect(
+      lead.compareDocumentPosition(fit) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    expect(
+      fit.compareDocumentPosition(mutual) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Add to list' })).toBeTruthy();
+  });
+
+  it('dismisses a relationship triage badge from the modal header', async () => {
+    triageDismissOpen.mockResolvedValue('remove');
+
+    render(
+      <FollowerDetailModal integrationId="channel-1" externalId="follower-1" />
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Remove Costly badge' })
+    );
+
+    await waitFor(() => {
+      expect(triageDismissOpen).toHaveBeenCalledWith('Costly');
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/followers/channel-1/member/triage-ignore',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            externalId: 'follower-1',
+            triage: 'over_invested',
+          }),
+        })
+      );
+      expect(mutate).toHaveBeenCalled();
+    });
+  });
+
+  it('dismisses a lead badge from the modal header', async () => {
+    swrDetail = {
+      ...detail,
+      follower: {
+        ...detail.follower,
+        isLead: true,
+        relationshipTriage: null,
+      },
+    };
+    leadDismissOpen.mockResolvedValue({ action: 'remove', reasons: ['bio_wording'] });
+
+    render(
+      <FollowerDetailModal integrationId="channel-1" externalId="follower-1" />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Lead badge' }));
+
+    await waitFor(() => {
+      expect(leadDismissOpen).toHaveBeenCalled();
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/followers/channel-1/member/triage-ignore',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            externalId: 'follower-1',
+            triage: 'lead',
+            reasons: ['bio_wording'],
+          }),
+        })
+      );
+      expect(mutate).toHaveBeenCalled();
+    });
   });
 });

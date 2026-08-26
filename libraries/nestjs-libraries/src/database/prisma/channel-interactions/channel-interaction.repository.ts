@@ -177,6 +177,22 @@ export type AudienceLeadsQuery = {
   ignoredVisibility?: AudienceIgnoredVisibility;
 };
 
+export type AudienceFollowedCursor = {
+  weFollowedAt: string;
+  externalId: string;
+};
+
+export type AudienceFollowedQuery = {
+  organizationId: string;
+  integrationId: string;
+  userId?: string;
+  direction: 'asc' | 'desc';
+  limit: number;
+  cursor?: AudienceFollowedCursor;
+  search?: string;
+  ignoredVisibility?: AudienceIgnoredVisibility;
+};
+
 export type AudienceCultivateCursor = {
   finalRank: number;
   externalId: string;
@@ -3115,6 +3131,20 @@ export class ChannelInteractionRepository {
           triageIgnores: {
             select: { triage: true, expiresAt: true },
           },
+          leadBridgesAsLead: {
+            orderBy: [
+              { bridgeRelationshipGrade: { sort: 'desc', nulls: 'last' } },
+              { lastSeenAt: 'desc' },
+            ],
+            take: 3,
+            select: {
+              bridgeExternalId: true,
+              bridgeRelationshipGrade: true,
+              bridgeMember: {
+                select: { username: true, name: true },
+              },
+            },
+          },
           notes: {
             orderBy: { createdAt: 'desc' },
             include: {
@@ -4038,6 +4068,7 @@ export class ChannelInteractionRepository {
             { leadBridgesAsLead: { some: {} } },
           ],
           triageIgnores: { none: this.activeTriageIgnoreWhere('lead') },
+          weFollowedAt: null,
           ...this.audienceListFilters(
             this.audienceSearchFilter(query.search),
             this.ignoredVisibilityFilter(query.ignoredVisibility),
@@ -4083,6 +4114,93 @@ export class ChannelInteractionRepository {
       return {
         items: rows.slice(0, query.limit),
         hasMore: rows.length > query.limit,
+      };
+    });
+  }
+
+  async getAudienceFollowed(query: AudienceFollowedQuery) {
+    return this.withSerializableRetry(async (tx) => {
+      await this.assertOwnedIntegration(
+        tx,
+        query.organizationId,
+        query.integrationId
+      );
+
+      const rows = await tx.channelAudienceMember.findMany({
+        where: {
+          organizationId: query.organizationId,
+          integrationId: query.integrationId,
+          weFollowedAt: { not: null },
+          membershipState: {
+            in: [
+              ChannelAudienceMembership.UNKNOWN,
+              ChannelAudienceMembership.NOT_FOLLOWER,
+            ],
+          },
+          ...this.audienceListFilters(
+            this.audienceSearchFilter(query.search),
+            this.ignoredVisibilityFilter(query.ignoredVisibility),
+            this.followedAudienceKeyset(query.cursor, query.direction)
+          ),
+        },
+        orderBy: [
+          { weFollowedAt: query.direction },
+          { externalId: query.direction },
+        ],
+        take: query.limit + 1,
+        select: this.audienceMemberListSelect(query.userId),
+      });
+
+      return {
+        items: rows.slice(0, query.limit),
+        hasMore: rows.length > query.limit,
+      };
+    });
+  }
+
+  async stampAudienceMemberWeFollowedAt(
+    organizationId: string,
+    integrationId: string,
+    externalId: string
+  ): Promise<
+    | { missing: 'member' }
+    | { ok: true; counterparty: AudienceProfile; weFollowedAt: Date }
+  > {
+    return this.withSerializableRetry(async (tx) => {
+      await this.assertOwnedIntegration(tx, organizationId, integrationId);
+      const member = await tx.channelAudienceMember.findFirst({
+        where: { organizationId, integrationId, externalId },
+        select: {
+          externalId: true,
+          name: true,
+          username: true,
+          picture: true,
+          profileUrl: true,
+          weFollowedAt: true,
+        },
+      });
+      if (!member) {
+        return { missing: 'member' as const };
+      }
+      const now = new Date();
+      if (!member.weFollowedAt) {
+        await tx.channelAudienceMember.update({
+          where: {
+            integrationId_externalId: { integrationId, externalId },
+          },
+          data: { weFollowedAt: now },
+        });
+      }
+      return {
+        ok: true as const,
+        counterparty: {
+          externalId: member.externalId,
+          ...(member.name ? { name: member.name } : {}),
+          ...(member.username ? { username: member.username } : {}),
+          ...(member.picture ? { picture: member.picture } : {}),
+          ...(member.profileUrl ? { profileUrl: member.profileUrl } : {}),
+        },
+        weFollowedAt: member.weFollowedAt ?? now,
       };
     });
   }
@@ -4602,6 +4720,7 @@ export class ChannelInteractionRepository {
           { leadBridgesAsLead: { some: {} } },
         ],
         ignoredAt: null,
+        weFollowedAt: null,
         triageIgnores: { none: this.activeTriageIgnoreWhere('lead') },
         AND: [
           this.leadFitVisibilityFilter(),
@@ -4623,6 +4742,18 @@ export class ChannelInteractionRepository {
     if (category === 'hot') {
       return {
         ...this.hotEligibilityWhere(),
+      };
+    }
+    if (category === 'followed') {
+      return {
+        weFollowedAt: { not: null },
+        membershipState: {
+          in: [
+            ChannelAudienceMembership.UNKNOWN,
+            ChannelAudienceMembership.NOT_FOLLOWER,
+          ],
+        },
+        ignoredAt: null,
       };
     }
     return {
@@ -4806,6 +4937,7 @@ export class ChannelInteractionRepository {
       followersCount: true,
       followingCount: true,
       followedAt: true,
+      weFollowedAt: true,
       accountCreatedAt: true,
       noteCount: true,
       likesCount: true,
@@ -4950,6 +5082,27 @@ export class ChannelInteractionRepository {
           AND: [{ leadFitScore: fitScore }, bridgeTieBreak],
         },
         ...(direction === 'desc' ? [{ leadFitScore: null }] : []),
+      ],
+    };
+  }
+
+  private followedAudienceKeyset(
+    cursor: AudienceFollowedCursor | undefined,
+    direction: 'asc' | 'desc'
+  ): Prisma.ChannelAudienceMemberWhereInput {
+    if (!cursor) {
+      return {};
+    }
+
+    const comparison = direction === 'desc' ? 'lt' : 'gt';
+    const weFollowedAt = new Date(cursor.weFollowedAt);
+    return {
+      OR: [
+        { weFollowedAt: { [comparison]: weFollowedAt } },
+        {
+          weFollowedAt,
+          externalId: { [comparison]: cursor.externalId },
+        },
       ],
     };
   }

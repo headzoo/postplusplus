@@ -397,6 +397,23 @@ export class BlueskyProvider extends SocialAbstract implements SocialProvider {
     };
   }
 
+  async followAudienceMember(
+    integration: Integration,
+    _accessToken: string,
+    externalId: string
+  ): Promise<void> {
+    const agent = await this.getAgent(integration);
+    try {
+      await agent.follow(externalId);
+    } catch (error) {
+      throw new BadBody(
+        error instanceof Error ? error.message : 'Could not follow on Bluesky',
+        undefined,
+        {} as BodyInit
+      );
+    }
+  }
+
   async resolveAudienceProfileFromUrl(
     _accessToken: string,
     integration: Integration,

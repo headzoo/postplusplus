@@ -89,6 +89,23 @@ describe('XProvider followers', () => {
     );
   });
 
+  it('follows an audience member through the OAuth client', async () => {
+    const provider = new XProvider();
+    const follow = jest.fn().mockResolvedValue(undefined);
+    jest
+      .spyOn(provider as any, 'getClient')
+      .mockResolvedValue({ v2: { follow } });
+
+    await expect(
+      provider.followAudienceMember(
+        { internalId: '42' } as any,
+        'token:secret',
+        'target-9'
+      )
+    ).resolves.toBeUndefined();
+    expect(follow).toHaveBeenCalledWith('42', 'target-9');
+  });
+
   it('normalizes member timeline posts from userTimeline', async () => {
     const provider = new XProvider();
     const userTimeline = jest.fn().mockResolvedValue({

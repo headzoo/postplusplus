@@ -158,6 +158,27 @@ export class FarcasterProvider
     };
   }
 
+  async followAudienceMember(
+    _integration: Integration,
+    accessToken: string,
+    externalId: string
+  ): Promise<void> {
+    const targetFid = Number(externalId);
+    if (!Number.isSafeInteger(targetFid) || targetFid < 1) {
+      throw new Error('Invalid Farcaster profile id');
+    }
+    try {
+      await client.followUser({
+        signerUuid: accessToken,
+        targetFids: [targetFid],
+      });
+    } catch (error) {
+      throw new Error(
+        error instanceof Error ? error.message : 'Could not follow on Farcaster'
+      );
+    }
+  }
+
   async resolveAudienceProfileFromUrl(
     _accessToken: string,
     _integration: Integration,

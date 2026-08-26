@@ -61,4 +61,22 @@ describe('MastodonProvider followers', () => {
       '{"max_id":"next"}'
     );
   });
+
+  it('follows an audience member through the Mastodon API', async () => {
+    const provider = new MastodonProvider();
+    const fetch = jest.spyOn(provider as any, 'fetch').mockResolvedValue({
+      ok: true,
+    });
+
+    await expect(
+      provider.followAudienceMember({} as any, 'token', 'account-9')
+    ).resolves.toBeUndefined();
+    expect(fetch).toHaveBeenCalledWith(
+      'https://mastodon.example/api/v1/accounts/account-9/follow',
+      {
+        method: 'POST',
+        headers: { Authorization: 'Bearer token' },
+      }
+    );
+  });
 });

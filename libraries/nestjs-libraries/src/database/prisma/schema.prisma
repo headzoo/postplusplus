@@ -1514,6 +1514,7 @@ model ChannelAudienceMember {
   followingCount                 Int?
   membershipState                ChannelAudienceMembership           @default(UNKNOWN)
   followedAt                     DateTime?
+  weFollowedAt                   DateTime?
   accountCreatedAt               DateTime?
   followerSyncGeneration         String?
   membershipEvidenceGeneration   String?
@@ -1583,6 +1584,7 @@ model ChannelAudienceMember {
   @@index([integrationId, membershipState, botFormulaVersion, botGradedAt], map: "ChannelAudienceMember_bot_formula_due_idx")
   @@index([integrationId, membershipState, ignoredAt, externalId], map: "ChannelAudienceMember_ignored_keyset_idx")
   @@index([integrationId, membershipState, lastOutboundAt, externalId], map: "ChannelAudienceMember_last_outbound_keyset_idx")
+  @@index([integrationId, membershipState, weFollowedAt, externalId], map: "ChannelAudienceMember_followed_keyset_idx")
   @@index([ignoredByUserId])
   @@index([integrationId])
   @@index([organizationId])

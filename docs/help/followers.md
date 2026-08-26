@@ -114,7 +114,7 @@ Strategy affects **initial navigation only** when you have not already chosen a 
 | **Build awareness**   | **All**       | **Interactions**                 |
 | **Support customers** | **Costly**    | **Recent**                       |
 
-Strategy also adjusts filter chip order and emphasis, the compact strategy summary above the grid, empty-state copy for the active filter, and the Followers assistant opening message and suggested question chips.
+Strategy also adjusts filter chip order and emphasis, empty-state copy for the active filter, and the Followers assistant opening message and suggested question chips.
 
 Explicit URL routes (`/followers/leads`, `/followers/cultivate`, and similar), custom lists, search, sort, direction, pagination, and in-session chip clicks always win over strategy defaults.
 

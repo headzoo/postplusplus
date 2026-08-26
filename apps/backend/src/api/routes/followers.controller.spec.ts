@@ -26,6 +26,7 @@ describe('FollowersController', () => {
     updateFollowerMemberGrade: jest.fn(),
     refreshFollowerMemberRelationshipScore: jest.fn(),
     ignoreFollowerMemberTriage: jest.fn(),
+    followFollowerMember: jest.fn(),
     ignoreFollowerMember: jest.fn(),
     unignoreFollowerMember: jest.fn(),
     createFollowerList: jest.fn(),
@@ -172,6 +173,38 @@ describe('FollowersController', () => {
       expect.arrayContaining([
         expect.objectContaining({ property: 'audience' }),
       ])
+    );
+  });
+
+  it('accepts the followed audience and rejects it combined with triage', async () => {
+    const valid = Object.assign(new FollowersQueryDto(), { audience: 'followed' });
+    const combined = Object.assign(new FollowersQueryDto(), {
+      audience: 'followed',
+      triage: 'hot_lead',
+    });
+
+    await expect(validate(valid)).resolves.toHaveLength(0);
+    await expect(validate(combined)).resolves.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ property: 'audience' }),
+      ])
+    );
+  });
+
+  it('delegates follow member through organization and external id', async () => {
+    service.followFollowerMember.mockResolvedValue({
+      weFollowedAt: '2026-08-20T12:00:00.000Z',
+    });
+
+    await expect(
+      controller.followFollowerMember(org, 'channel-a', {
+        externalId: 'follower-a',
+      })
+    ).resolves.toEqual({ weFollowedAt: '2026-08-20T12:00:00.000Z' });
+    expect(service.followFollowerMember).toHaveBeenCalledWith(
+      org,
+      'channel-a',
+      'follower-a'
     );
   });
 

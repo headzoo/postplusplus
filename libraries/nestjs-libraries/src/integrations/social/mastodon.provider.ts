@@ -255,6 +255,28 @@ export class MastodonProvider extends SocialAbstract implements SocialProvider {
     };
   }
 
+  async followAudienceMember(
+    _integration: Integration,
+    accessToken: string,
+    externalId: string
+  ): Promise<void> {
+    const url = new URL(
+      `/api/v1/accounts/${encodeURIComponent(externalId)}/follow`,
+      this.mastodonInstanceUrl()
+    );
+    const response = await this.fetch(url.toString(), {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!response.ok) {
+      throw new BadBody(
+        'Could not follow on Mastodon',
+        undefined,
+        {} as BodyInit
+      );
+    }
+  }
+
   async resolveAudienceProfileFromUrl(
     accessToken: string,
     integration: Integration,
