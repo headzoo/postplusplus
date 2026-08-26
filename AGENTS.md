@@ -83,9 +83,30 @@ DTO >> Controller >> Manager >> Service >> Repository.
 Most of the server logic should be inside of libs/server.
 The backend repository is mostly used to write controller, and import files from libs.server.
 
+## Linting
+
+Prefer scoped mental focus while iterating (change followers → run checks once at root) so
+concurrent agents do not all hammer the full monorepo suite. All commands run from the repo
+root:
+
+```bash
+pnpm lint
+pnpm typecheck
+pnpm format:check
+pnpm test:changed
+```
+
+Before finishing a task, run the orchestrated full suite once from the repo root:
+
+```bash
+pnpm check
+```
+
+`pnpm check` runs lint, format:check, typecheck, and test:changed in parallel. Fix any
+reported issues before finishing the task. Use `pnpm format` to auto-fix formatting.
+
 ## Conventions
 
-- Linting of the project can run only from the root.
 - Use only pnpm.
 - Never use RAW SQL queries, always use Prisma.
 - The system is in production with many users, if you want to change something, you need to be sure that you are not breaking anything for existing users and a migration might be needed

@@ -1,4 +1,17 @@
-# Add files here to ignore them from prettier formatting
-/dist
+node_modules
+pnpm-lock.yaml
+**/dist
+**/.next
+**/out
+**/build
 /coverage
 /.nx/cache
+/reports
+graphify-out
+**/*.generated.json
+product-expertise-agent-library.scratch.md
+rules-parallel-hard-cutover.scratch.md
+hourly-hot-triage-materialization-ai-rerank.scratch.md
+*.scratch.md
+docs
+var

@@ -1,0 +1,19 @@
+---
+description: Run lint, typecheck, and format checks after code changes
+alwaysApply: true
+---
+
+After modifying code files, run from the repo root before finishing the task:
+
+```bash
+pnpm lint && pnpm typecheck && pnpm format:check
+```
+
+Fix all reported issues. Before marking work complete, run:
+
+```bash
+pnpm check
+```
+
+Use `pnpm format` to auto-fix Prettier issues. Use `pnpm test:changed` for fast test
+iteration when you changed behavior covered by tests.

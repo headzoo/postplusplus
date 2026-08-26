@@ -47,8 +47,7 @@ export class MastodonCustomProvider extends MastodonProvider {
       external?.instanceUrl!,
       state,
       external?.client_id!,
-      process.env.FRONTEND_URL!,
-      refresh
+      process.env.FRONTEND_URL!
     );
 
     return {
@@ -99,8 +98,8 @@ export class MastodonCustomProvider extends MastodonProvider {
   override profileUrl(integration: Integration) {
     return integration.profile
       ? `${this.instanceUrl(integration).replace(/\/$/, '')}/@${encodeURIComponent(
-          integration.profile
-        )}`
+        integration.profile
+      )}`
       : undefined;
   }
 
