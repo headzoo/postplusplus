@@ -855,6 +855,11 @@ export interface SocialProvider
     accessToken: string,
     externalId: string
   ): Promise<void>;
+  unfollowAudienceMember?(
+    integration: Integration,
+    accessToken: string,
+    externalId: string
+  ): Promise<void>;
   postLikers?(
     integration: Integration,
     accessToken: string,

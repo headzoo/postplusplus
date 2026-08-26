@@ -2030,6 +2030,27 @@ export class XProvider extends SocialAbstract implements SocialProvider {
     }
   }
 
+  async unfollowAudienceMember(
+    integration: Integration,
+    accessToken: string,
+    externalId: string
+  ): Promise<void> {
+    const client = await this.getClient(accessToken);
+    const sourceUserId = integration.internalId;
+    if (!sourceUserId) {
+      throw new BadBody('X channel identity is missing', undefined, {} as BodyInit);
+    }
+    try {
+      await client.v2.unfollow(sourceUserId, externalId);
+    } catch (error) {
+      throw new BadBody(
+        error instanceof Error ? error.message : 'Could not unfollow on X',
+        undefined,
+        {} as BodyInit
+      );
+    }
+  }
+
   async resolveAudienceProfileFromUrl(
     accessToken: string,
     _integration: Integration,

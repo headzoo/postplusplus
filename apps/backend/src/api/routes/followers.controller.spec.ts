@@ -27,6 +27,7 @@ describe('FollowersController', () => {
     refreshFollowerMemberRelationshipScore: jest.fn(),
     ignoreFollowerMemberTriage: jest.fn(),
     followFollowerMember: jest.fn(),
+    unfollowFollowerMember: jest.fn(),
     ignoreFollowerMember: jest.fn(),
     unignoreFollowerMember: jest.fn(),
     createFollowerList: jest.fn(),
@@ -202,6 +203,23 @@ describe('FollowersController', () => {
       })
     ).resolves.toEqual({ weFollowedAt: '2026-08-20T12:00:00.000Z' });
     expect(service.followFollowerMember).toHaveBeenCalledWith(
+      org,
+      'channel-a',
+      'follower-a'
+    );
+  });
+
+  it('delegates unfollow member through organization and external id', async () => {
+    service.unfollowFollowerMember.mockResolvedValue({
+      unfollowedAt: '2026-08-20T12:00:00.000Z',
+    });
+
+    await expect(
+      controller.unfollowFollowerMember(org, 'channel-a', {
+        externalId: 'follower-a',
+      })
+    ).resolves.toEqual({ unfollowedAt: '2026-08-20T12:00:00.000Z' });
+    expect(service.unfollowFollowerMember).toHaveBeenCalledWith(
       org,
       'channel-a',
       'follower-a'

@@ -4,6 +4,7 @@ import React, { ReactNode, useCallback, useEffect, useRef, useState } from 'reac
 import { jakartaSans } from '@gitroom/frontend/app/fonts';
 
 import clsx from 'clsx';
+import useCookie from 'react-use-cookie';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useVariables } from '@gitroom/react/helpers/variable.context';
 import { usePathname, useSearchParams } from 'next/navigation';
@@ -38,6 +39,8 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [collapseSidebar, setCollapseSidebar] = useCookie('collapseSidebar', '0');
+  const sidebarCollapsed = collapseSidebar === '1';
   const desktopHelpTriggerRef = useRef<HTMLButtonElement>(null);
   const mobileHelpTriggerRef = useRef<HTMLButtonElement>(null);
   const activeHelpTriggerRef = useRef<HTMLButtonElement>(null);
@@ -121,15 +124,28 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                   />
                   <div className="flex min-h-0 flex-1 gap-[8px] overflow-hidden">
                     <Support />
-                    <div className="flex w-[80px] flex-col rounded-[12px] bg-newBgColorInner mobile:hidden">
+                    <div
+                      className={clsx(
+                        'shrink-0 mobile:hidden transition-[width] duration-200 ease-out',
+                        sidebarCollapsed ? 'w-[80px]' : 'w-[200px]'
+                      )}
+                    >
                       <div
                         id="left-menu"
                         className={clsx(
-                          'fixed h-full w-[80px] start-[12px] flex flex-1 top-0',
-                          user?.impersonate && 'pt-[60px]'
+                          'fixed flex flex-col overflow-hidden rounded-[12px] bg-newBgColorInner transition-[width] duration-200 ease-out start-[12px]',
+                          sidebarCollapsed ? 'w-[80px]' : 'w-[200px]',
+                          user?.impersonate
+                            ? 'top-[72px] bottom-[12px]'
+                            : 'top-[12px] bottom-[12px]'
                         )}
                       >
-                        <SidebarNav />
+                        <SidebarNav
+                          collapsed={sidebarCollapsed}
+                          onToggleCollapse={() =>
+                            setCollapseSidebar(sidebarCollapsed ? '0' : '1')
+                          }
+                        />
                       </div>
                     </div>
                     <div className="blurMe flex min-h-0 flex-1 flex-col gap-[1px] overflow-hidden rounded-[12px] bg-newBgLineColor">

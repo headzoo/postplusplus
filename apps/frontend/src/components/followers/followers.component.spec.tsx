@@ -848,11 +848,11 @@ describe('FollowersComponent', () => {
     ]);
   });
 
-  it('hides the board when a filtered tab is active', () => {
+  it('hides the summary cards and board when a filtered tab is active', () => {
     mockPathname = '/followers/hot';
     render(<FollowersComponent />);
 
-    expect(screen.getByTestId('followers-summary-cards')).toBeTruthy();
+    expect(screen.queryByTestId('followers-summary-cards')).toBeNull();
     expect(screen.queryByTestId('followers-board')).toBeNull();
   });
 

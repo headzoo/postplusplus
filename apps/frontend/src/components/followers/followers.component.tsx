@@ -994,6 +994,7 @@ export const FollowersComponent: FC = () => {
     removeMember,
     ignoreTriage,
     followMember,
+    unfollowMember,
     ignoreFollower,
     unignoreFollower,
   } = useFollowerListMutations(selectedIntegrationId);
@@ -1069,6 +1070,22 @@ export const FollowersComponent: FC = () => {
       t,
       toast,
     ]
+  );
+
+  const handleUnfollowFollower = useCallback(
+    async (follower: Follower) => {
+      try {
+        await unfollowMember(follower.id);
+      } catch (error) {
+        toast.show(
+          error instanceof Error
+            ? error.message
+            : t('followers_unfollow_error', 'Could not unfollow this profile'),
+          'warning'
+        );
+      }
+    },
+    [t, toast, unfollowMember]
   );
 
   const activeCategory = !urlListId
@@ -1766,18 +1783,20 @@ export const FollowersComponent: FC = () => {
             showBoard && 'shrink-0'
           )}
         >
-        <FollowerSummaryCards
-          summary={audienceSummary}
-          isLoading={isLoadingAudienceSummary}
-          buildHref={(segmentSlug) =>
-            buildFollowersPageHref({
-              slug: segmentSlug,
-              search: trimmedSearch || undefined,
-              sort: querySort,
-              direction: querySort ? queryDirection : undefined,
-            })
-          }
-        />
+        {showBoard && (
+          <FollowerSummaryCards
+            summary={audienceSummary}
+            isLoading={isLoadingAudienceSummary}
+            buildHref={(segmentSlug) =>
+              buildFollowersPageHref({
+                slug: segmentSlug,
+                search: trimmedSearch || undefined,
+                sort: querySort,
+                direction: querySort ? queryDirection : undefined,
+              })
+            }
+          />
+        )}
 
         <div className="flex flex-col gap-[12px] sm:flex-row sm:items-center">
           <div className="relative min-w-0 flex-1">
@@ -1943,10 +1962,14 @@ export const FollowersComponent: FC = () => {
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden pt-[16px]">
             <FollowerBoard
               columns={boardColumns}
+              canFollow={canFollowAudienceMember}
+              canUnfollow={canFollowAudienceMember}
+              lists={followerLists}
               onOpenFollower={openFollowerDetail}
               onDismissTriage={async (follower, triageValue, reasons, options) => {
                 await handleDismissTriage(follower, triageValue, reasons, options);
               }}
+              onUnfollow={handleUnfollowFollower}
             />
           </div>
         )}

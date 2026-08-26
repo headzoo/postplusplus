@@ -4208,6 +4208,55 @@ export class ChannelInteractionRepository {
     });
   }
 
+  async clearAudienceMemberWeFollowedAt(
+    organizationId: string,
+    integrationId: string,
+    externalId: string
+  ): Promise<
+    | { missing: 'member' }
+    | { missing: 'not_followed' }
+    | { ok: true; counterparty: AudienceProfile; clearedAt: Date }
+  > {
+    return this.withSerializableRetry(async (tx) => {
+      await this.assertOwnedIntegration(tx, organizationId, integrationId);
+      const member = await tx.channelAudienceMember.findFirst({
+        where: { organizationId, integrationId, externalId },
+        select: {
+          externalId: true,
+          name: true,
+          username: true,
+          picture: true,
+          profileUrl: true,
+          weFollowedAt: true,
+        },
+      });
+      if (!member) {
+        return { missing: 'member' as const };
+      }
+      if (!member.weFollowedAt) {
+        return { missing: 'not_followed' as const };
+      }
+      const clearedAt = new Date();
+      await tx.channelAudienceMember.update({
+        where: {
+          integrationId_externalId: { integrationId, externalId },
+        },
+        data: { weFollowedAt: null },
+      });
+      return {
+        ok: true as const,
+        counterparty: {
+          externalId: member.externalId,
+          ...(member.name ? { name: member.name } : {}),
+          ...(member.username ? { username: member.username } : {}),
+          ...(member.picture ? { picture: member.picture } : {}),
+          ...(member.profileUrl ? { profileUrl: member.profileUrl } : {}),
+        },
+        clearedAt,
+      };
+    });
+  }
+
   async getAudienceFollowers(query: AudienceFollowersQuery) {
     return this.withSerializableRetry(async (tx) => {
       await this.assertOwnedIntegration(

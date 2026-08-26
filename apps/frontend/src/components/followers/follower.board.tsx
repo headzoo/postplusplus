@@ -1,6 +1,6 @@
 'use client';
 
-import { FC, KeyboardEvent, MouseEvent } from 'react';
+import { FC, KeyboardEvent, MouseEvent, useCallback } from 'react';
 import clsx from 'clsx';
 import Link from 'next/link';
 import ImageWithFallback from '@gitroom/react/helpers/image.with.fallback';
@@ -11,49 +11,66 @@ import {
   FOLLOWER_SEGMENT_COLOR_CLASSES,
   FollowerSegmentDefinition,
   formatSegmentCount,
+  getFollowerBoardColumnAction,
 } from '@gitroom/frontend/components/followers/follower.segments';
 import { CustomScrollArea } from '@gitroom/frontend/components/ui/custom.scroll.area';
-import { HelpIcon } from '@gitroom/frontend/components/ui/icons';
+import { HelpIcon, MoreIcon } from '@gitroom/frontend/components/ui/icons';
+import {
+  DismissTriageOptions,
+  useRelationshipTriageDismiss,
+} from '@gitroom/frontend/components/followers/follower.card';
+import { useUnfollowConfirmModal } from '@gitroom/frontend/components/followers/unfollow.confirm.modal';
 import {
   DismissibleTriage,
   Follower,
+  FollowerList,
   getProfileLinkAutoSnoozeTriages,
 } from '@gitroom/frontend/components/followers/use.followers';
 import { LeadFitDismissReason } from '@gitroom/nestjs-libraries/dtos/integrations/lead-fit-feedback.types';
 
-type DismissTriageOptions = { snooze?: boolean };
-
-const formatCompactCount = (value: number) => {
-  const count = Math.abs(Math.round(value));
-  if (count < 10000) {
-    return count.toLocaleString('en-US');
-  }
-  return new Intl.NumberFormat('en-US', {
-    notation: 'compact',
-    compactDisplay: 'short',
-    maximumFractionDigits: 1,
-  }).format(count);
-};
-
 export const FollowerBoardRow: FC<{
   follower: Follower;
-  color: FollowerSegmentDefinition['color'];
+  segment: FollowerSegmentDefinition;
+  canFollow?: boolean;
+  canUnfollow?: boolean;
+  lists?: FollowerList[];
   onOpen: () => void;
   onDismissTriage?: (
     triage: DismissibleTriage,
     reasons?: LeadFitDismissReason[],
     options?: DismissTriageOptions
   ) => Promise<void> | void;
-}> = ({ follower, color, onOpen, onDismissTriage }) => {
+  onUnfollow?: () => Promise<void> | void;
+}> = ({
+  follower,
+  segment,
+  canFollow = false,
+  canUnfollow = false,
+  lists = [],
+  onOpen,
+  onDismissTriage,
+  onUnfollow,
+}) => {
   const t = useT();
-  const colors = FOLLOWER_SEGMENT_COLOR_CLASSES[color];
+  const columnAction = getFollowerBoardColumnAction(segment.slug);
+  const triage =
+    columnAction?.type === 'triage' ? columnAction.triage : undefined;
+  const { dismiss: dismissTriage } = useRelationshipTriageDismiss({
+    triage: triage ?? 'lead',
+    canFollow,
+    lists,
+    onRemove: triage ? onDismissTriage : undefined,
+  });
+  const unfollowConfirm = useUnfollowConfirmModal();
+  const showMenu =
+    columnAction?.type === 'unfollow'
+      ? canUnfollow && !!onUnfollow
+      : !!triage && !!onDismissTriage;
+
   const handle = follower.username
     ? follower.username.startsWith('@')
       ? follower.username
       : `@${follower.username}`
-    : null;
-  const interactions = Number.isFinite(follower.interactionCount)
-    ? formatCompactCount(follower.interactionCount!)
     : null;
   const displayName =
     follower.name || handle || t('followers_unknown', 'Unknown');
@@ -65,7 +82,7 @@ export const FollowerBoardRow: FC<{
   const handleRowKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (
       event.target instanceof HTMLElement &&
-      event.target.closest('a[href]')
+      (event.target.closest('a[href]') || event.target.closest('button'))
     ) {
       return;
     }
@@ -79,21 +96,41 @@ export const FollowerBoardRow: FC<{
     event: MouseEvent<HTMLAnchorElement>
   ) => {
     event.stopPropagation();
-    onOpen();
     if (!onDismissTriage) {
       return;
     }
     const triages = getProfileLinkAutoSnoozeTriages(follower);
-    for (const triage of triages) {
-      await onDismissTriage(triage, undefined, { snooze: true });
+    for (const item of triages) {
+      await onDismissTriage(item, undefined, { snooze: true });
     }
   };
 
-  const stopProfileKeyboard = (event: KeyboardEvent<HTMLAnchorElement>) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.stopPropagation();
-    }
+  const stopNestedAction = (event: MouseEvent | KeyboardEvent) => {
+    event.stopPropagation();
   };
+
+  const handleMenuClick = useCallback(
+    async (event: MouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation();
+      event.preventDefault();
+      if (!columnAction) {
+        return;
+      }
+      if (columnAction.type === 'unfollow') {
+        if (!onUnfollow) {
+          return;
+        }
+        const action = await unfollowConfirm.open();
+        if (action !== 'unfollow') {
+          return;
+        }
+        await onUnfollow();
+        return;
+      }
+      await dismissTriage();
+    },
+    [columnAction, dismissTriage, onUnfollow, unfollowConfirm]
+  );
 
   const avatar = follower.picture ? (
     <ImageWithFallback
@@ -128,7 +165,7 @@ export const FollowerBoardRow: FC<{
             target="_blank"
             rel="noreferrer noopener"
             onClick={handleProfileLinkClick}
-            onKeyDown={stopProfileKeyboard}
+            onKeyDown={stopNestedAction}
             className="block h-full w-full hover:opacity-80"
             aria-label={t(
               'followers_view_profile_for',
@@ -153,7 +190,7 @@ export const FollowerBoardRow: FC<{
               target="_blank"
               rel="noreferrer noopener"
               onClick={handleProfileLinkClick}
-              onKeyDown={stopProfileKeyboard}
+              onKeyDown={stopNestedAction}
               className="block truncate text-[12px] text-textItemBlur hover:underline hover:opacity-80"
             >
               {handle}
@@ -162,18 +199,21 @@ export const FollowerBoardRow: FC<{
             <p className="truncate text-[12px] text-textItemBlur">{handle}</p>
           ))}
       </div>
-      <div className="flex shrink-0 items-center gap-[6px] text-[12px] text-textItemBlur">
-        {interactions != null && (
-          <span>
-            {interactions}
-            {t('followers_interaction_count', 'i')}
-          </span>
-        )}
-        <span
-          className={clsx('h-[7px] w-[7px] rounded-full', colors.statusDot)}
-          aria-hidden="true"
-        />
-      </div>
+      {showMenu && (
+        <button
+          type="button"
+          onClick={handleMenuClick}
+          onKeyDown={stopNestedAction}
+          className={clsx(
+            'inline-flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded-full border',
+            'border-newTableBorder text-textItemBlur hover:border-newTextColor/40 hover:text-newTextColor'
+          )}
+          aria-label={t('followers_board_row_actions', 'Follower actions')}
+          data-testid="followers-board-row-menu"
+        >
+          <MoreIcon size={12} />
+        </button>
+      )}
     </article>
   );
 };
@@ -184,6 +224,9 @@ export const FollowerBoardColumn: FC<{
   total: number | null;
   isLoading?: boolean;
   viewAllHref: string;
+  canFollow?: boolean;
+  canUnfollow?: boolean;
+  lists?: FollowerList[];
   onOpenFollower: (follower: Follower) => void;
   onDismissTriage?: (
     follower: Follower,
@@ -191,14 +234,19 @@ export const FollowerBoardColumn: FC<{
     reasons?: LeadFitDismissReason[],
     options?: DismissTriageOptions
   ) => Promise<void> | void;
+  onUnfollow?: (follower: Follower) => Promise<void> | void;
 }> = ({
   segment,
   items,
   total,
   isLoading,
   viewAllHref,
+  canFollow,
+  canUnfollow,
+  lists,
   onOpenFollower,
   onDismissTriage,
+  onUnfollow,
 }) => {
     const t = useT();
     const colors = FOLLOWER_SEGMENT_COLOR_CLASSES[segment.color];
@@ -216,8 +264,8 @@ export const FollowerBoardColumn: FC<{
         data-testid="followers-board-column"
         data-board-segment={segment.slug}
       >
-        <div className="flex shrink-0 items-start justify-between gap-[8px]">
-          <div className="flex min-w-0 flex-1 items-start gap-[10px]">
+        <div className="flex shrink-0 items-center justify-between gap-[8px]">
+          <div className="flex min-w-0 flex-1 items-center gap-[10px]">
             <span
               className={clsx(
                 'inline-flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-[8px]',
@@ -277,13 +325,19 @@ export const FollowerBoardColumn: FC<{
                   <FollowerBoardRow
                     key={follower.id}
                     follower={follower}
-                    color={segment.color}
+                    segment={segment}
+                    canFollow={canFollow}
+                    canUnfollow={canUnfollow}
+                    lists={lists}
                     onOpen={() => onOpenFollower(follower)}
                     onDismissTriage={
                       onDismissTriage
                         ? (triage, reasons, options) =>
                           onDismissTriage(follower, triage, reasons, options)
                         : undefined
+                    }
+                    onUnfollow={
+                      onUnfollow ? () => onUnfollow(follower) : undefined
                     }
                   />
                 ))}
@@ -320,6 +374,9 @@ export const FollowerBoard: FC<{
     isLoading?: boolean;
     viewAllHref: string;
   }>;
+  canFollow?: boolean;
+  canUnfollow?: boolean;
+  lists?: FollowerList[];
   onOpenFollower: (follower: Follower) => void;
   onDismissTriage?: (
     follower: Follower,
@@ -327,7 +384,16 @@ export const FollowerBoard: FC<{
     reasons?: LeadFitDismissReason[],
     options?: DismissTriageOptions
   ) => Promise<void> | void;
-}> = ({ columns, onOpenFollower, onDismissTriage }) => {
+  onUnfollow?: (follower: Follower) => Promise<void> | void;
+}> = ({
+  columns,
+  canFollow,
+  canUnfollow,
+  lists,
+  onOpenFollower,
+  onDismissTriage,
+  onUnfollow,
+}) => {
   return (
     <CustomScrollArea
       direction="horizontal"
@@ -343,8 +409,12 @@ export const FollowerBoard: FC<{
           total={column.total}
           isLoading={column.isLoading}
           viewAllHref={column.viewAllHref}
+          canFollow={canFollow}
+          canUnfollow={canUnfollow}
+          lists={lists}
           onOpenFollower={onOpenFollower}
           onDismissTriage={onDismissTriage}
+          onUnfollow={onUnfollow}
         />
       ))}
     </CustomScrollArea>

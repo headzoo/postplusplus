@@ -14,6 +14,9 @@ import {
 } from './follower.segments';
 import { Follower } from './use.followers';
 
+const dismissTriage = jest.fn();
+const unfollowConfirmOpen = jest.fn();
+
 jest.mock('@gitroom/react/translation/get.transation.service.client', () => ({
   useT: () => (key: string, fallback: string, params?: Record<string, unknown>) => {
     if (!params) {
@@ -25,6 +28,19 @@ jest.mock('@gitroom/react/translation/get.transation.service.client', () => ({
       fallback
     );
   },
+}));
+
+jest.mock('@gitroom/frontend/components/followers/follower.card', () => ({
+  useRelationshipTriageDismiss: () => ({
+    dismiss: dismissTriage,
+    displayLabel: 'Lead',
+  }),
+}));
+
+jest.mock('@gitroom/frontend/components/followers/unfollow.confirm.modal', () => ({
+  useUnfollowConfirmModal: () => ({
+    open: unfollowConfirmOpen,
+  }),
 }));
 
 jest.mock('next/link', () => ({
@@ -81,8 +97,16 @@ const follower = (overrides: Partial<Follower> = {}): Follower =>
     ...overrides,
   }) as Follower;
 
+const leadsSegment = FOLLOWER_BOARD_SEGMENTS.find((segment) => segment.slug === 'leads')!;
+const followedSegment = FOLLOWER_BOARD_SEGMENTS.find((segment) => segment.slug === 'followed')!;
+
 describe('FollowerBoard', () => {
-  it('renders five columns with cultivate before mutual and opens rows', () => {
+  beforeEach(() => {
+    dismissTriage.mockClear();
+    unfollowConfirmOpen.mockClear();
+  });
+
+  it('renders six columns with followed before mutual and opens rows', () => {
     const onOpen = jest.fn();
     render(
       <FollowerBoard
@@ -93,17 +117,19 @@ describe('FollowerBoard', () => {
           viewAllHref: `/followers/${segment.slug}`,
         }))}
         onOpenFollower={onOpen}
+        onDismissTriage={jest.fn()}
       />
     );
 
     expect(screen.getByTestId('followers-board')).toBeTruthy();
     const columns = screen.getAllByTestId('followers-board-column');
-    expect(columns).toHaveLength(5);
+    expect(columns).toHaveLength(6);
     expect(columns[0].getAttribute('data-board-segment')).toBe('leads');
     expect(columns[1].getAttribute('data-board-segment')).toBe('hot');
     expect(columns[2].getAttribute('data-board-segment')).toBe('cultivate');
-    expect(columns[3].getAttribute('data-board-segment')).toBe('mutual');
-    expect(columns[4].getAttribute('data-board-segment')).toBe('quiet');
+    expect(columns[3].getAttribute('data-board-segment')).toBe('followed');
+    expect(columns[4].getAttribute('data-board-segment')).toBe('mutual');
+    expect(columns[5].getAttribute('data-board-segment')).toBe('quiet');
     expect(
       screen.getByRole('link', { name: 'View all (10)' }).getAttribute('href')
     ).toBe('/followers/leads');
@@ -127,7 +153,6 @@ describe('FollowerBoard', () => {
       />
     );
 
-    const leadsSegment = FOLLOWER_BOARD_SEGMENTS.find((segment) => segment.slug === 'leads')!;
     expect(screen.queryByText(leadsSegment.defaultDescription)).toBeNull();
 
     const helpButtons = screen.getAllByTestId('followers-board-column-help');
@@ -141,14 +166,14 @@ describe('FollowerBoard', () => {
   });
 
   it('renders a scroll wrapper when a column has items', () => {
-    const segment = FOLLOWER_BOARD_SEGMENTS[0];
     render(
       <FollowerBoardColumn
-        segment={segment}
+        segment={leadsSegment}
         items={[follower()]}
         total={12}
         viewAllHref="/followers/leads"
         onOpenFollower={jest.fn()}
+        onDismissTriage={jest.fn()}
       />
     );
 
@@ -170,6 +195,7 @@ describe('FollowerBoard', () => {
           viewAllHref: `/followers/${segment.slug}`,
         }))}
         onOpenFollower={jest.fn()}
+        onDismissTriage={jest.fn()}
       />
     );
 
@@ -179,10 +205,9 @@ describe('FollowerBoard', () => {
   });
 
   it('omits the scroll wrapper when a column is empty', () => {
-    const segment = FOLLOWER_BOARD_SEGMENTS[0];
     render(
       <FollowerBoardColumn
-        segment={segment}
+        segment={leadsSegment}
         items={[]}
         total={0}
         viewAllHref="/followers/leads"
@@ -197,28 +222,35 @@ describe('FollowerBoard', () => {
 });
 
 describe('FollowerBoardRow', () => {
-  it('shows name, handle, and interaction count', () => {
+  beforeEach(() => {
+    dismissTriage.mockClear();
+    unfollowConfirmOpen.mockClear();
+  });
+
+  it('shows name and handle without interaction count', () => {
     render(
       <FollowerBoardRow
         follower={follower()}
-        color="red"
+        segment={leadsSegment}
         onOpen={jest.fn()}
+        onDismissTriage={jest.fn()}
       />
     );
 
     expect(screen.getByText('Alex Rivera')).toBeTruthy();
     expect(screen.getByText('@alex')).toBeTruthy();
-    expect(screen.getByText(/12/)).toBeTruthy();
-    expect(screen.getByText('12i')).toBeTruthy();
+    expect(screen.queryByText('12i')).toBeNull();
+    expect(screen.getByTestId('followers-board-row-menu')).toBeTruthy();
   });
 
-  it('opens the modal when avatar or username profile links are clicked', () => {
+  it('does not open the modal when avatar or username profile links are clicked', () => {
     const onOpen = jest.fn();
     render(
       <FollowerBoardRow
         follower={follower()}
-        color="red"
+        segment={leadsSegment}
         onOpen={onOpen}
+        onDismissTriage={jest.fn()}
       />
     );
 
@@ -227,7 +259,7 @@ describe('FollowerBoardRow', () => {
     );
     fireEvent.click(screen.getByText('@alex'));
 
-    expect(onOpen).toHaveBeenCalledTimes(2);
+    expect(onOpen).not.toHaveBeenCalled();
   });
 
   it('snoozes Hot and Cultivate triages when a profile link is clicked', async () => {
@@ -240,7 +272,7 @@ describe('FollowerBoardRow', () => {
           isCultivate: true,
           relationshipTriage: 'hot_lead',
         })}
-        color="red"
+        segment={leadsSegment}
         onOpen={onOpen}
         onDismissTriage={onDismissTriage}
       />
@@ -252,7 +284,7 @@ describe('FollowerBoardRow', () => {
       );
     });
 
-    expect(onOpen).toHaveBeenCalled();
+    expect(onOpen).not.toHaveBeenCalled();
     expect(onDismissTriage).toHaveBeenCalledWith('hot_lead', undefined, {
       snooze: true,
     });
@@ -261,13 +293,57 @@ describe('FollowerBoardRow', () => {
     });
   });
 
+  it('opens triage dismiss flow from the menu without opening the row', async () => {
+    const onOpen = jest.fn();
+    render(
+      <FollowerBoardRow
+        follower={follower()}
+        segment={leadsSegment}
+        onOpen={onOpen}
+        onDismissTriage={jest.fn()}
+      />
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('followers-board-row-menu'));
+    });
+
+    expect(onOpen).not.toHaveBeenCalled();
+    expect(dismissTriage).toHaveBeenCalled();
+  });
+
+  it('opens unfollow flow from the menu in the followed column', async () => {
+    const onOpen = jest.fn();
+    const onUnfollow = jest.fn();
+    unfollowConfirmOpen.mockResolvedValue('unfollow');
+
+    render(
+      <FollowerBoardRow
+        follower={follower()}
+        segment={followedSegment}
+        canUnfollow={true}
+        onOpen={onOpen}
+        onUnfollow={onUnfollow}
+      />
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('followers-board-row-menu'));
+    });
+
+    expect(onOpen).not.toHaveBeenCalled();
+    expect(unfollowConfirmOpen).toHaveBeenCalled();
+    expect(onUnfollow).toHaveBeenCalled();
+  });
+
   it('opens the modal when the row is clicked outside profile links', () => {
     const onOpen = jest.fn();
     render(
       <FollowerBoardRow
         follower={follower()}
-        color="red"
+        segment={leadsSegment}
         onOpen={onOpen}
+        onDismissTriage={jest.fn()}
       />
     );
 

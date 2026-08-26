@@ -74,6 +74,7 @@ describe('IntegrationService followers', () => {
       refreshFollowerRelationshipScore: jest.fn(),
       getStoredFollowerAudienceCounts: jest.fn(),
       markAudienceMemberFollowed: jest.fn(),
+      markAudienceMemberUnfollowed: jest.fn(),
     };
     (service as any)._channelAnalyticsService = {
       getLatestAccountAudienceTotal: jest.fn().mockResolvedValue(null),
@@ -3891,6 +3892,46 @@ describe('IntegrationService followers', () => {
     );
     expect(
       (service as any)._channelInteractionService.markAudienceMemberFollowed
+    ).toHaveBeenCalledWith('org-a', 'channel-a', 'user-1');
+  });
+
+  it('rejects unfollow when the provider does not support unfollowAudienceMember', async () => {
+    const service = createService([integration], {
+      supported: { followers: jest.fn(), followAudienceMember: jest.fn() },
+    });
+
+    await expect(
+      service.unfollowFollowerMember(org, 'channel-a', 'user-1')
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('unfollows through the provider and clears weFollowedAt', async () => {
+    const unfollowAudienceMember = jest.fn().mockResolvedValue(undefined);
+    const service = createService([integration], {
+      supported: {
+        followers: jest.fn(),
+        followAudienceMember: jest.fn(),
+        unfollowAudienceMember,
+      },
+    });
+    (
+      service as any
+    )._channelInteractionService.markAudienceMemberUnfollowed.mockResolvedValue({
+      unfollowedAt: '2026-08-20T12:00:00.000Z',
+    });
+
+    await expect(
+      service.unfollowFollowerMember(org, 'channel-a', 'user-1')
+    ).resolves.toEqual({
+      unfollowedAt: '2026-08-20T12:00:00.000Z',
+    });
+    expect(unfollowAudienceMember).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'channel-a' }),
+      'token',
+      'user-1'
+    );
+    expect(
+      (service as any)._channelInteractionService.markAudienceMemberUnfollowed
     ).toHaveBeenCalledWith('org-a', 'channel-a', 'user-1');
   });
 

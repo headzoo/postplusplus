@@ -63,4 +63,32 @@ describe('BlueskyProvider followers', () => {
     ).resolves.toBeUndefined();
     expect(follow).toHaveBeenCalledWith('did:plc:target');
   });
+
+  it('unfollows an audience member through the agent', async () => {
+    const provider = new BlueskyProvider();
+    const getProfile = jest.fn().mockResolvedValue({
+      data: {
+        viewer: {
+          following: 'at://did:plc:owner/app.bsky.graph.follow/rkey123',
+        },
+      },
+    });
+    const deleteFollow = jest.fn().mockResolvedValue(undefined);
+    jest.spyOn(provider as any, 'getAgent').mockResolvedValue({
+      getProfile,
+      deleteFollow,
+    });
+
+    await expect(
+      provider.unfollowAudienceMember(
+        { internalId: 'did:plc:owner' } as any,
+        '',
+        'did:plc:target'
+      )
+    ).resolves.toBeUndefined();
+    expect(getProfile).toHaveBeenCalledWith({ actor: 'did:plc:target' });
+    expect(deleteFollow).toHaveBeenCalledWith(
+      'at://did:plc:owner/app.bsky.graph.follow/rkey123'
+    );
+  });
 });

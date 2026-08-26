@@ -11,9 +11,18 @@ export const MenuItem: FC<{
   icon: ReactNode;
   path: string;
   layout?: NavLayout;
+  collapsed?: boolean;
   onClick?: () => void;
   onNavigate?: () => void;
-}> = ({ label, icon, path, layout = 'sidebar', onClick, onNavigate }) => {
+}> = ({
+  label,
+  icon,
+  path,
+  layout = 'sidebar',
+  collapsed = false,
+  onClick,
+  onNavigate,
+}) => {
   const currentPath = usePathname();
   // Root path must match exactly; otherwise `/` would mark every route active.
   const isActive =
@@ -21,13 +30,14 @@ export const MenuItem: FC<{
       ? currentPath === '/'
       : currentPath === path || currentPath.startsWith(`${path}/`);
 
-  const isDrawer = layout === 'drawer';
+  const showLabel = layout === 'drawer' || !collapsed;
+  const isIconOnly = layout === 'sidebar' && collapsed;
 
   const className = clsx(
-    'group w-full font-[600] rounded-[12px] transition-colors',
-    isDrawer
-      ? 'h-[48px] px-[12px] gap-[12px] flex flex-row items-center justify-start'
-      : 'minCustom:h-[54px] custom:h-[44px] py-[8px] px-[6px] minCustom:gap-[4px] custom:gap-[2px] flex flex-col items-center justify-center',
+    'group font-[600] rounded-[12px] transition-colors',
+    showLabel
+      ? 'w-full h-[48px] px-[12px] gap-[12px] flex flex-row items-center justify-start'
+      : 'w-[48px] h-[48px] shrink-0 flex items-center justify-center',
     isActive
       ? 'text-white bg-btnPrimary hover:opacity-90'
       : 'text-textItemBlur hover:text-white hover:bg-btnPrimary'
@@ -35,23 +45,10 @@ export const MenuItem: FC<{
 
   const inner = (
     <>
-      <div
-        className={clsx(
-          !isDrawer && 'custom:scale-90 transition-transform'
-        )}
-      >
-        {icon}
-      </div>
-      <div
-        className={clsx(
-          'leading-[1.1]',
-          isDrawer
-            ? 'text-[10px] text-start'
-            : 'custom:text-[9px] minCustom:text-[10px] text-center'
-        )}
-      >
-        {label}
-      </div>
+      <div>{icon}</div>
+      {showLabel && (
+        <div className="leading-[1.1] text-[13px] text-start">{label}</div>
+      )}
     </>
   );
 

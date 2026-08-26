@@ -2,9 +2,25 @@ import {
   FOLLOWER_BOARD_SEGMENTS,
   FOLLOWER_SUMMARY_SEGMENTS,
   FOLLOWER_TAB_SEGMENTS,
+  getFollowerBoardColumnAction,
 } from './follower.segments';
 
 describe('follower.segments', () => {
+  it('maps board columns to triage actions and unfollow', () => {
+    expect(getFollowerBoardColumnAction('leads')).toEqual({
+      type: 'triage',
+      triage: 'lead',
+    });
+    expect(getFollowerBoardColumnAction('hot')).toEqual({
+      type: 'triage',
+      triage: 'hot_lead',
+    });
+    expect(getFollowerBoardColumnAction('followed')).toEqual({
+      type: 'unfollow',
+    });
+    expect(getFollowerBoardColumnAction('all')).toBeNull();
+  });
+
   it('places Followed before Mutual in green triage group', () => {
     const summaryIndex = (slug: string) =>
       FOLLOWER_SUMMARY_SEGMENTS.findIndex((segment) => segment.slug === slug);

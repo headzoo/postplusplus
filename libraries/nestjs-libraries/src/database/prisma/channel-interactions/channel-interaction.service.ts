@@ -2373,6 +2373,52 @@ export class ChannelInteractionService {
     return { weFollowedAt: stamped.weFollowedAt.toISOString() };
   }
 
+  async markAudienceMemberUnfollowed(
+    organizationId: string,
+    integrationId: string,
+    externalId: string
+  ) {
+    this.validateBoundedString(externalId, 'externalId', MAX_ID_LENGTH);
+    const cleared = await this._repository.clearAudienceMemberWeFollowedAt(
+      organizationId,
+      integrationId,
+      externalId
+    );
+    if ('missing' in cleared) {
+      if (cleared.missing === 'member') {
+        throw new NotFoundException('Follower was not found');
+      }
+      throw new BadRequestException('This profile is not followed');
+    }
+    try {
+      await this._repository.recordNormalizedEvent(
+        organizationId,
+        integrationId,
+        {
+          providerEventKey: `manual-outbound-unfollow:${integrationId}:${externalId}`,
+          kind: PrismaInteractionKind.FOLLOW,
+          direction: PrismaInteractionDirection.OUTBOUND,
+          eventAt: cleared.clearedAt,
+          counterparty: cleared.counterparty,
+          normalizationVersion: 1,
+          score: getChannelInteractionScore('follow', 'outbound'),
+        }
+      );
+    } catch {
+      /** Clear succeeded; interaction recording is best-effort */
+    }
+    try {
+      await this.refreshRelationshipGradeProjections(
+        organizationId,
+        integrationId,
+        [externalId]
+      );
+    } catch {
+      /** Temporal remains the fallback if live projection refresh fails */
+    }
+    return { unfollowedAt: cleared.clearedAt.toISOString() };
+  }
+
   private normalizeFollowerListName(name: string) {
     const normalized = name.trim().replace(/\s+/g, ' ');
     this.validateBoundedString(normalized, 'name', 64);

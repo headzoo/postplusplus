@@ -1635,6 +1635,71 @@ export class IntegrationService {
     }
   }
 
+  async unfollowFollowerMember(
+    org: Organization,
+    integrationId: string,
+    externalId: string
+  ) {
+    const { integration, provider } = await this.getFollowerIntegrationProvider(
+      org,
+      integrationId
+    );
+    if (!provider.unfollowAudienceMember) {
+      throw new HttpException(
+        'Unfollowing is not supported for this channel',
+        HttpStatus.BAD_REQUEST
+      );
+    }
+
+    const liveIntegration = { ...integration };
+    if (
+      !!liveIntegration.tokenExpiration &&
+      dayjs(liveIntegration.tokenExpiration).isBefore(dayjs())
+    ) {
+      const data = await this._refreshIntegrationService.refresh(liveIntegration);
+      if (!data || !data.accessToken) {
+        throw new HttpException(
+          'Followers are temporarily unavailable',
+          HttpStatus.SERVICE_UNAVAILABLE
+        );
+      }
+      liveIntegration.token = data.accessToken;
+      if (provider.refreshWait) {
+        await timer(10000);
+      }
+    }
+
+    try {
+      await provider.unfollowAudienceMember(
+        liveIntegration,
+        liveIntegration.token,
+        externalId
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : 'Could not unfollow this profile';
+      throw new HttpException(message, HttpStatus.BAD_REQUEST);
+    }
+
+    try {
+      return await this._channelInteractionService.markAudienceMemberUnfollowed(
+        org.id,
+        integrationId,
+        externalId
+      );
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw new HttpException('Follower was not found', HttpStatus.NOT_FOUND);
+      }
+      if (error instanceof BadRequestException) {
+        throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
+      }
+      throw error;
+    }
+  }
+
   async ignoreFollowerMemberTriage(
     org: Organization,
     user: User,

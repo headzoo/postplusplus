@@ -277,6 +277,28 @@ export class MastodonProvider extends SocialAbstract implements SocialProvider {
     }
   }
 
+  async unfollowAudienceMember(
+    _integration: Integration,
+    accessToken: string,
+    externalId: string
+  ): Promise<void> {
+    const url = new URL(
+      `/api/v1/accounts/${encodeURIComponent(externalId)}/unfollow`,
+      this.mastodonInstanceUrl()
+    );
+    const response = await this.fetch(url.toString(), {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!response.ok) {
+      throw new BadBody(
+        'Could not unfollow on Mastodon',
+        undefined,
+        {} as BodyInit
+      );
+    }
+  }
+
   async resolveAudienceProfileFromUrl(
     accessToken: string,
     integration: Integration,

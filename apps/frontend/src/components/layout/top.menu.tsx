@@ -389,51 +389,51 @@ export const useMenuItem = () => {
 export const TopMenu: FC<{
   onNavigate?: () => void;
   layout?: NavLayout;
-}> = ({ onNavigate, layout = 'sidebar' }) => {
+  collapsed?: boolean;
+}> = ({ onNavigate, layout = 'sidebar', collapsed = false }) => {
   const user = useUser();
   const { firstMenu, secondMenu } = useMenuItem();
   const { isGeneral, billingEnabled } = useVariables();
   return (
-    <>
-      <div className="flex flex-1 flex-col minCustom:gap-[20px] blurMe">
-        {
-          // @ts-ignore
-          user?.orgId &&
-          // @ts-ignore
-          (user.tier !== 'FREE' || !isGeneral || !billingEnabled) &&
-          firstMenu
-            .filter((f) => {
-              if (f.hide) {
-                return false;
-              }
-              if (f.requireBilling && !billingEnabled) {
-                return false;
-              }
-              if (f.name === 'Billing' && user?.isLifetime) {
-                return false;
-              }
-              if (f.superAdminOnly) {
-                return !!user?.admin;
-              }
-              if (f.role) {
-                return f.role.includes(user?.role!);
-              }
-              return true;
-            })
-            .map((item) => (
-              <MenuItem
-                path={item.path}
-                label={item.name}
-                icon={item.icon}
-                key={item.name}
-                layout={layout}
-                onClick={item.onClick}
-                onNavigate={onNavigate}
-              />
-            ))
-        }
-      </div>
-      <div className="flex flex-col minCustom:gap-[24px] custom:gap-[12px] blurMe">
+    <div className="flex flex-col gap-[4px] blurMe">
+      {
+        // @ts-ignore
+        user?.orgId &&
+        // @ts-ignore
+        (user.tier !== 'FREE' || !isGeneral || !billingEnabled) &&
+        firstMenu
+          .filter((f) => {
+            if (f.hide) {
+              return false;
+            }
+            if (f.requireBilling && !billingEnabled) {
+              return false;
+            }
+            if (f.name === 'Billing' && user?.isLifetime) {
+              return false;
+            }
+            if (f.superAdminOnly) {
+              return !!user?.admin;
+            }
+            if (f.role) {
+              return f.role.includes(user?.role!);
+            }
+            return true;
+          })
+          .map((item) => (
+            <MenuItem
+              path={item.path}
+              label={item.name}
+              icon={item.icon}
+              key={item.name}
+              layout={layout}
+              collapsed={collapsed}
+              onClick={item.onClick}
+              onNavigate={onNavigate}
+            />
+          ))
+      }
+      <div className="mt-[24px] flex flex-col gap-[4px]">
         {secondMenu
           .filter((f) => {
             if (f.hide) {
@@ -460,11 +460,12 @@ export const TopMenu: FC<{
               icon={item.icon}
               key={item.name}
               layout={layout}
+              collapsed={collapsed}
               onClick={item.onClick}
               onNavigate={onNavigate}
             />
           ))}
       </div>
-    </>
+    </div>
   );
 };

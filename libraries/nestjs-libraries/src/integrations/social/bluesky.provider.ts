@@ -414,6 +414,28 @@ export class BlueskyProvider extends SocialAbstract implements SocialProvider {
     }
   }
 
+  async unfollowAudienceMember(
+    integration: Integration,
+    _accessToken: string,
+    externalId: string
+  ): Promise<void> {
+    const agent = await this.getAgent(integration);
+    try {
+      const { data: profile } = await agent.getProfile({ actor: externalId });
+      const followUri = profile?.viewer?.following;
+      if (!followUri) {
+        return;
+      }
+      await agent.deleteFollow(followUri);
+    } catch (error) {
+      throw new BadBody(
+        error instanceof Error ? error.message : 'Could not unfollow on Bluesky',
+        undefined,
+        {} as BodyInit
+      );
+    }
+  }
+
   async resolveAudienceProfileFromUrl(
     _accessToken: string,
     integration: Integration,

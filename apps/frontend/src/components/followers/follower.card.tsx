@@ -67,6 +67,65 @@ export type DismissTriageOptions = {
   moveToListId?: string;
 };
 
+export const useRelationshipTriageDismiss = ({
+  triage,
+  canFollow = false,
+  lists = [],
+  onRemove,
+}: {
+  triage: DismissibleTriage;
+  canFollow?: boolean;
+  lists?: FollowerList[];
+  onRemove?: (
+    triage: DismissibleTriage,
+    reasons?: LeadFitDismissReason[],
+    options?: DismissTriageOptions
+  ) => Promise<void> | void;
+}) => {
+  const t = useT();
+  const triageDismiss = useTriageDismissModal();
+  const leadDismiss = useLeadDismissModal();
+  const label = TRIAGE_LABELS[triage];
+  const displayLabel = t(label.key, label.defaultLabel);
+
+  const dismiss = useCallback(async () => {
+    if (!onRemove) {
+      return;
+    }
+    if (triage === 'lead') {
+      const result = await leadDismiss.open({ canFollow, lists });
+      if (!result) {
+        return;
+      }
+      if (result.action === 'follow') {
+        await onRemove(triage, undefined, { follow: true });
+        return;
+      }
+      if (result.action === 'moveToList') {
+        await onRemove(triage, undefined, { moveToListId: result.listId });
+        return;
+      }
+      if (result.action === 'snooze') {
+        await onRemove(triage, undefined, { snooze: true });
+        return;
+      }
+      await onRemove(triage, result.reasons);
+      return;
+    }
+    const action = await triageDismiss.open(displayLabel);
+    if (!action) {
+      return;
+    }
+    await onRemove(
+      triage,
+      undefined,
+      action === 'snooze' ? { snooze: true } : undefined
+    );
+  }, [canFollow, displayLabel, leadDismiss, lists, onRemove, triage, triageDismiss]);
+
+  return { dismiss, displayLabel };
+};
+
 export const RelationshipTriageBadge: FC<{
   triage: DismissibleTriage;
   canFollow?: boolean;
@@ -78,49 +137,20 @@ export const RelationshipTriageBadge: FC<{
   ) => Promise<void> | void;
 }> = ({ triage, canFollow = false, lists = [], onRemove }) => {
   const t = useT();
-  const triageDismiss = useTriageDismissModal();
-  const leadDismiss = useLeadDismissModal();
-  const label = TRIAGE_LABELS[triage];
-  const displayLabel = t(label.key, label.defaultLabel);
+  const { dismiss, displayLabel } = useRelationshipTriageDismiss({
+    triage,
+    canFollow,
+    lists,
+    onRemove,
+  });
 
   const handleClick = useCallback(
     async (event: MouseEvent<HTMLButtonElement>) => {
       event.stopPropagation();
       event.preventDefault();
-      if (!onRemove) {
-        return;
-      }
-      if (triage === 'lead') {
-        const result = await leadDismiss.open({ canFollow, lists });
-        if (!result) {
-          return;
-        }
-        if (result.action === 'follow') {
-          await onRemove(triage, undefined, { follow: true });
-          return;
-        }
-        if (result.action === 'moveToList') {
-          await onRemove(triage, undefined, { moveToListId: result.listId });
-          return;
-        }
-        if (result.action === 'snooze') {
-          await onRemove(triage, undefined, { snooze: true });
-          return;
-        }
-        await onRemove(triage, result.reasons);
-        return;
-      }
-      const action = await triageDismiss.open(displayLabel);
-      if (!action) {
-        return;
-      }
-      await onRemove(
-        triage,
-        undefined,
-        action === 'snooze' ? { snooze: true } : undefined
-      );
+      await dismiss();
     },
-    [canFollow, displayLabel, leadDismiss, lists, onRemove, triage, triageDismiss]
+    [dismiss]
   );
 
   const className = clsx(

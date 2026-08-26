@@ -1149,6 +1149,35 @@ export const applyFollowToFollowerPage = (
   };
 };
 
+export const applyUnfollowToFollowerPage = (
+  page: FollowerPage | undefined,
+  externalId: string,
+  options?: { removeFromPage?: boolean }
+): FollowerPage | undefined => {
+  if (!page) {
+    return page;
+  }
+  if (options?.removeFromPage) {
+    return {
+      ...page,
+      items: page.items.filter((item) => item.id !== externalId),
+    };
+  }
+  return {
+    ...page,
+    items: page.items.map((item) => {
+      if (item.id !== externalId) {
+        return item;
+      }
+      return {
+        ...item,
+        weFollowedAt: undefined,
+        isFollowed: false,
+      };
+    }),
+  };
+};
+
 export const applyIgnoreToFollowerPage = (
   page: FollowerPage | undefined,
   externalId: string,
@@ -1409,6 +1438,47 @@ export const useFollowerListMutations = (integrationId?: string) => {
     [fetch, integrationId, mutateCache]
   );
 
+  const unfollowMember = useCallback(
+    async (externalId: string) => {
+      if (!integrationId) {
+        throw new Error('Channel is required');
+      }
+      const response = await fetch(
+        `/followers/${integrationId}/member/unfollow`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ externalId }),
+        }
+      );
+      if (!response.ok) {
+        let message = 'Failed to unfollow this profile';
+        try {
+          const body = (await response.json()) as { message?: string | string[] };
+          if (typeof body.message === 'string') {
+            message = body.message;
+          } else if (Array.isArray(body.message)) {
+            message = body.message.join(', ');
+          }
+        } catch {
+          /** keep default message */
+        }
+        throw new Error(message);
+      }
+      await mutateCache(
+        (key) => isFollowerListCacheKey(integrationId, key),
+        (page: FollowerPage | undefined) => {
+          const isFollowedAudience =
+            typeof key === 'string' && key.includes('audience=followed');
+          return applyUnfollowToFollowerPage(page, externalId, {
+            removeFromPage: isFollowedAudience,
+          });
+        },
+        { revalidate: true }
+      );
+    },
+    [fetch, integrationId, mutateCache]
+  );
+
   const ignoreFollower = useCallback(
     async (externalId: string) => {
       if (!integrationId) {
@@ -1473,6 +1543,7 @@ export const useFollowerListMutations = (integrationId?: string) => {
     removeMember,
     ignoreTriage,
     followMember,
+    unfollowMember,
     ignoreFollower,
     unignoreFollower,
     revalidateLists,

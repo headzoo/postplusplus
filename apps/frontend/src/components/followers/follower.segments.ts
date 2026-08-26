@@ -14,6 +14,7 @@ import {
 } from '@gitroom/frontend/components/ui/icons';
 import { FOLLOWER_CATEGORY_DESCRIPTIONS } from '@gitroom/nestjs-libraries/integrations/social/follower.sorts';
 import {
+  DismissibleTriage,
   FollowerSortDirection,
   FollowerTriageFilter,
 } from '@gitroom/frontend/components/followers/use.followers';
@@ -141,7 +142,7 @@ export const FOLLOWER_SUMMARY_SEGMENTS: FollowerSegmentDefinition[] = [
   {
     slug: 'all',
     key: 'followers_summary_all',
-    defaultLabel: 'All Followers',
+    defaultLabel: 'All',
     descriptionKey: 'followers_summary_all_description',
     defaultDescription: 'Everyone in this channel’s audience view.',
     color: 'blue',
@@ -256,6 +257,31 @@ export const FOLLOWER_BOARD_SEGMENTS: FollowerSegmentDefinition[] = [
   FOLLOWER_SUMMARY_SEGMENTS.find((s) => s.slug === 'mutual')!,
   FOLLOWER_SUMMARY_SEGMENTS.find((s) => s.slug === 'quiet')!,
 ];
+
+export type FollowerBoardColumnAction =
+  | { type: 'triage'; triage: DismissibleTriage }
+  | { type: 'unfollow' };
+
+export const getFollowerBoardColumnAction = (
+  slug: FollowerSegmentSlug
+): FollowerBoardColumnAction | null => {
+  switch (slug) {
+    case 'leads':
+      return { type: 'triage', triage: 'lead' };
+    case 'hot':
+      return { type: 'triage', triage: 'hot_lead' };
+    case 'cultivate':
+      return { type: 'triage', triage: 'cultivate' };
+    case 'mutual':
+      return { type: 'triage', triage: 'mutual' };
+    case 'quiet':
+      return { type: 'triage', triage: 'quiet' };
+    case 'followed':
+      return { type: 'unfollow' };
+    default:
+      return null;
+  }
+};
 
 export const FOLLOWER_TAB_SEGMENTS: Array<{
   slug?: FollowerSegmentSlug;

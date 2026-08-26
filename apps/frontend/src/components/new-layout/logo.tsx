@@ -4,8 +4,10 @@ import Link from 'next/link';
 
 export const Logo = ({
   sidebar = false,
+  collapsed: _collapsed = false,
 }: {
   sidebar?: boolean;
+  collapsed?: boolean;
 }) => {
   return (
     <Link
@@ -13,7 +15,7 @@ export const Logo = ({
       aria-label="Dashboard"
       className={
         sidebar
-          ? 'mt-[8px] flex w-full items-center justify-center'
+          ? 'mt-[8px] mb-[8px] flex w-full shrink-0 items-center justify-center'
           : 'mt-[8px] min-w-[60px] min-h-[60px]'
       }
     >
@@ -22,7 +24,7 @@ export const Logo = ({
         alt="Post++"
         className={
           sidebar
-            ? 'relative top-[10px] h-[60px] w-[60px] object-contain'
+            ? 'h-[68px] w-[68px] object-contain'
             : 'h-[60px] w-[60px] object-contain'
         }
       />
