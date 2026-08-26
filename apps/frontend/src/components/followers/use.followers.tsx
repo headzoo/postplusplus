@@ -1464,17 +1464,29 @@ export const useFollowerListMutations = (integrationId?: string) => {
         }
         throw new Error(message);
       }
-      await mutateCache(
-        (key) => isFollowerListCacheKey(integrationId, key),
-        (page: FollowerPage | undefined) => {
-          const isFollowedAudience =
-            typeof key === 'string' && key.includes('audience=followed');
-          return applyUnfollowToFollowerPage(page, externalId, {
-            removeFromPage: isFollowedAudience,
-          });
-        },
-        { revalidate: true }
-      );
+      await Promise.all([
+        mutateCache(
+          (key) =>
+            isFollowerListCacheKey(integrationId, key) &&
+            typeof key === 'string' &&
+            key.includes('audience=followed'),
+          (page: FollowerPage | undefined) =>
+            applyUnfollowToFollowerPage(page, externalId, {
+              removeFromPage: true,
+            }),
+          { revalidate: true }
+        ),
+        mutateCache(
+          (key) =>
+            isFollowerListCacheKey(integrationId, key) &&
+            (typeof key !== 'string' || !key.includes('audience=followed')),
+          (page: FollowerPage | undefined) =>
+            applyUnfollowToFollowerPage(page, externalId, {
+              removeFromPage: false,
+            }),
+          { revalidate: true }
+        ),
+      ]);
     },
     [fetch, integrationId, mutateCache]
   );
