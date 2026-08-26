@@ -29,7 +29,6 @@ import { Sets } from '@gitroom/frontend/components/sets/sets';
 import { SignaturesComponent } from '@gitroom/frontend/components/settings/signatures.component';
 import { Autopost } from '@gitroom/frontend/components/autopost/autopost';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
-import { SVGLine } from '@gitroom/frontend/components/launches/launches.component';
 import { GlobalSettings } from '@gitroom/frontend/components/settings/global.settings';
 import { ApprovedAppsComponent } from '@gitroom/frontend/components/approved-apps/approved-apps.component';
 import { ThirdPartyComponent } from '@gitroom/frontend/components/third-parties/third-party.component';
@@ -99,7 +98,7 @@ export const SettingsPopup: FC<{
   const t = useT();
   const list = useMemo(() => {
     const arr = [];
-    arr.push({ tab: 'global_settings', label: t('global_settings', 'Global Settings') });
+    arr.push({ tab: 'global_settings', label: t('global', 'Global') });
     // Populate tabs based on user permissions
     if (user?.tier?.team_members && isGeneral) {
       arr.push({ tab: 'teams', label: t('teams', 'Teams') });
@@ -178,19 +177,11 @@ export const SettingsPopup: FC<{
             <div
               key={tabKey}
               className={clsx(
-                'cursor-pointer flex items-center gap-[12px] group/profile hover:bg-boxHover rounded-e-[8px]',
+                'cursor-pointer px-[12px] py-[8px] hover:bg-boxHover rounded-[8px]',
                 tabKey === tab && 'bg-boxHover'
               )}
               onClick={() => selectTab(tabKey)}
             >
-              <div
-                className={clsx(
-                  'h-full w-[4px] rounded-s-[3px] opacity-0 group-hover/profile:opacity-100 transition-opacity',
-                  tabKey === tab && 'opacity-100'
-                )}
-              >
-                <SVGLine />
-              </div>
               {label}
             </div>
           ))}

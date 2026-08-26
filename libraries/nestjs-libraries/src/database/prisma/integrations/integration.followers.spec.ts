@@ -377,6 +377,7 @@ describe('IntegrationService followers', () => {
       profileUrl: 'https://x.com/channel',
       strategyApplicable: false,
       recomputeRequested: false,
+      utmParams: null,
       tracking: expect.objectContaining({
         state: 'partial',
         failureCategory: 'authorization',

@@ -100,6 +100,8 @@ import {
 import { ChannelAnalyticsService } from '@gitroom/nestjs-libraries/database/prisma/channel-analytics/channel-analytics.service';
 import { ChannelAnalyticsRepository } from '@gitroom/nestjs-libraries/database/prisma/channel-analytics/channel-analytics.repository';
 import { UpdateChannelStrategyDto } from '@gitroom/nestjs-libraries/dtos/integrations/channel-strategy.dto';
+import { UpdateChannelUtmParamsDto } from '@gitroom/nestjs-libraries/dtos/integrations/channel-utm-params.dto';
+import { normalizeUtmParamsString } from '@gitroom/helpers/utils/utm.params';
 import {
   getChannelStrategy,
   isChannelStrategyId,
@@ -180,6 +182,32 @@ export class IntegrationService {
       id,
       additionalSettings
     );
+  }
+
+  async updateChannelUtmParams(
+    orgId: string,
+    integrationId: string,
+    body: UpdateChannelUtmParamsDto
+  ) {
+    const integration = await this._integrationRepository.getIntegrationById(
+      orgId,
+      integrationId
+    );
+    if (!integration || integration.deletedAt) {
+      throw new NotFoundException('Integration not found');
+    }
+
+    const normalized = normalizeUtmParamsString(body.utmParams);
+    const updated = await this._integrationRepository.updateUtmParams(
+      orgId,
+      integrationId,
+      normalized
+    );
+    if (!updated) {
+      throw new NotFoundException('Integration not found');
+    }
+
+    return { utmParams: normalized };
   }
 
   async updateChannelStrategy(
@@ -626,6 +654,7 @@ export class IntegrationService {
       ...(strategyApplicable
         ? { strategy: this.publicStrategy(strategy), recomputing }
         : {}),
+      utmParams: integration.utmParams || null,
       recomputeRequested: false,
       tracking,
       subscriptions: this.mapChannelSubscriptions(tracked.subscriptions),

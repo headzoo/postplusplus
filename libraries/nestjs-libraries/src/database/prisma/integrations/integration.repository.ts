@@ -481,6 +481,19 @@ export class IntegrationRepository {
     return result.count > 0;
   }
 
+  async updateUtmParams(orgId: string, integrationId: string, utmParams: string | null) {
+    const result = await this._integration.model.integration.updateMany({
+      where: {
+        id: integrationId,
+        organizationId: orgId,
+      },
+      data: {
+        utmParams,
+      },
+    });
+    return result.count > 0;
+  }
+
   async getIntegrationForOrder(
     id: string,
     order: string,

@@ -42,7 +42,7 @@ describe('LogoutComponent', () => {
   it('clears mirrored admin_auth alongside auth during local logout', async () => {
     render(<LogoutComponent />);
 
-    fireEvent.click(screen.getByText(/Logout from/i));
+    fireEvent.click(screen.getByText('Logout'));
 
     await Promise.resolve();
 

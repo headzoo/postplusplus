@@ -38,6 +38,7 @@ import { ReorderCustomerDto } from '@gitroom/nestjs-libraries/dtos/integrations/
 import { RenameCustomerDto } from '@gitroom/nestjs-libraries/dtos/integrations/customer-rename.dto';
 import { ChannelTrackingAuthorizationDto } from '@gitroom/nestjs-libraries/dtos/integrations/channel.tracking.authorization.dto';
 import { UpdateChannelStrategyDto } from '@gitroom/nestjs-libraries/dtos/integrations/channel-strategy.dto';
+import { UpdateChannelUtmParamsDto } from '@gitroom/nestjs-libraries/dtos/integrations/channel-utm-params.dto';
 
 export const publicProfileUrl = (value: string | undefined) => {
   if (!value) {
@@ -145,6 +146,15 @@ export class IntegrationsController {
     return this._integrationService.updateChannelStrategy(org.id, id, body);
   }
 
+  @Put('/:id/utm-params')
+  async updateChannelUtmParams(
+    @GetOrgFromRequest() org: Organization,
+    @Param('id') id: string,
+    @Body() body: UpdateChannelUtmParamsDto
+  ) {
+    return this._integrationService.updateChannelUtmParams(org.id, id, body);
+  }
+
   // Authorizing tracking grants extra permissions on a channel that already
   // exists, so it is not gated behind the channel creation entitlement.
   @Get('/:id/tracking-authorization')
@@ -244,6 +254,7 @@ export class IntegrationsController {
             changeNickName: !!findIntegration?.changeNickname,
             customer: p.customer,
             additionalSettings: p.additionalSettings || '[]',
+            utmParams: p.utmParams || null,
             ...(profileUrl ? { profileUrl } : {}),
           };
         })

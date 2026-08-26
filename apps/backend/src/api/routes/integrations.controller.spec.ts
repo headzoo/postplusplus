@@ -69,3 +69,28 @@ describe('IntegrationsController strategy settings', () => {
     });
   });
 });
+
+describe('IntegrationsController utm params settings', () => {
+  it('passes the complete utm params DTO to the service', async () => {
+    const updateChannelUtmParams = jest.fn().mockResolvedValue({
+      utmParams: 'utm_campaign=spring',
+    });
+    const controller = new IntegrationsController(
+      {} as any,
+      { updateChannelUtmParams } as any,
+      {} as any,
+      {} as any
+    );
+
+    await expect(
+      controller.updateChannelUtmParams(
+        { id: 'org-a' } as any,
+        'channel-a',
+        { utmParams: 'utm_campaign=spring' }
+      )
+    ).resolves.toEqual({ utmParams: 'utm_campaign=spring' });
+    expect(updateChannelUtmParams).toHaveBeenCalledWith('org-a', 'channel-a', {
+      utmParams: 'utm_campaign=spring',
+    });
+  });
+});

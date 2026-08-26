@@ -62,6 +62,7 @@ export type ChannelDetails = {
   strategy?: ChannelStrategyPublicSummary;
   recomputing?: boolean;
   recomputeRequested?: boolean;
+  utmParams?: string | null;
 };
 
 export const useChannelDetails = (integrationId?: string) => {

@@ -1,5 +1,5 @@
 // Keep this in sync with the URL detection used by the short linking service
-const urlRegex = () =>
+export const urlRegex = () =>
   /(https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&//=]*))/gm;
 
 export function hasLinks(text?: string | null): boolean {

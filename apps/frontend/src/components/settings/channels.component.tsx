@@ -31,6 +31,7 @@ import {
 import { FALLBACK_CHANNEL_STRATEGY_ID } from '@gitroom/nestjs-libraries/channel-strategies/channel-strategy.registry';
 import type { ChannelStrategyId } from '@gitroom/nestjs-libraries/channel-strategies/channel-strategy.types';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { isValidUtmParamsString } from '@gitroom/helpers/utils/utm.params';
 
 const TRACKING_STATE_LABELS: Record<string, { key: string; defaultLabel: string }> = {
   active: { key: 'channel_tracking_active', defaultLabel: 'Active' },
@@ -366,6 +367,7 @@ const ChannelStrategySection: FC<{
             loading={saving}
             disabled={saving || !hasChanges}
             onClick={saveStrategy}
+            aria-label={t('save_channel_strategy', 'Save channel strategy')}
           >
             {t('save', 'Save')}
           </Button>
@@ -373,6 +375,147 @@ const ChannelStrategySection: FC<{
       </div>
     );
   };
+
+const ChannelLinkTrackingSection: FC<{
+  integrationId: string;
+  utmParams?: string | null;
+  loading: boolean;
+  onUtmUpdated: () => Promise<unknown>;
+}> = ({ integrationId, utmParams, loading, onUtmUpdated }) => {
+  const t = useT();
+  const toast = useToaster();
+  const fetch = useFetch();
+  const { mutate } = useSWRConfig();
+  const persistedValue = utmParams || '';
+  const [value, setValue] = useState(persistedValue);
+  const [saving, setSaving] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setValue(persistedValue);
+    setValidationError(null);
+  }, [integrationId, persistedValue]);
+
+  const hasChanges = value !== persistedValue;
+  const isValid = isValidUtmParamsString(value);
+
+  const saveUtmParams = useCallback(async () => {
+    if (saving || !hasChanges || !isValid) {
+      return;
+    }
+    setSaving(true);
+    try {
+      const response = await fetch(`/integrations/${integrationId}/utm-params`, {
+        method: 'PUT',
+        body: JSON.stringify({ utmParams: value.trim() }),
+      });
+      if (!response.ok) {
+        throw new Error('utm save failed');
+      }
+      await Promise.all([
+        onUtmUpdated(),
+        mutate('/integrations/list'),
+      ]);
+      toast.show(
+        t('channel_utm_saved', 'Link tracking params updated.'),
+        'success'
+      );
+    } catch {
+      setValue(persistedValue);
+      toast.show(
+        t(
+          'channel_utm_save_failed',
+          'Could not update link tracking params.'
+        )
+      );
+    } finally {
+      setSaving(false);
+    }
+  }, [
+    fetch,
+    hasChanges,
+    integrationId,
+    isValid,
+    mutate,
+    onUtmUpdated,
+    persistedValue,
+    saving,
+    t,
+    toast,
+    value,
+  ]);
+
+  if (loading && utmParams === undefined) {
+    return (
+      <div className="flex flex-col gap-[10px] border border-newBorder rounded-[8px] p-[16px]">
+        <div className="text-[16px] font-[500]">
+          {t('channel_link_tracking', 'Link tracking')}
+        </div>
+        <div className="text-[14px] text-newTextColor">
+          {t('loading', 'Loading...')}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-[12px] border border-newBorder rounded-[8px] p-[16px]">
+      <div>
+        <div className="text-[16px] font-[500]">
+          {t('channel_link_tracking', 'Link tracking')}
+        </div>
+        <div className="text-[13px] text-newTextColor mt-[4px]">
+          {t(
+            'channel_link_tracking_description',
+            'Query params appended to http(s) links in post text when you save a post. Applied before shortlinks when shortlinking is enabled.'
+          )}
+        </div>
+      </div>
+      <div className="flex flex-col gap-[6px]">
+        <label
+          htmlFor={`channel-utm-${integrationId}`}
+          className="text-[14px]"
+        >
+          {t('channel_utm_params', 'UTM / tracking params')}
+        </label>
+        <input
+          id={`channel-utm-${integrationId}`}
+          type="text"
+          value={value}
+          disabled={saving}
+          placeholder="utm_campaign=spring&utm_medium=social"
+          onChange={(event) => {
+            const next = event.target.value;
+            setValue(next);
+            setValidationError(
+              isValidUtmParamsString(next)
+                ? null
+                : t(
+                    'channel_utm_invalid',
+                    'Enter a valid query string such as utm_campaign=spring&utm_medium=social'
+                  )
+            );
+          }}
+          className="bg-input w-full p-[12px] outline-none border border-fifth rounded-[4px] text-inputText placeholder-inputText text-[14px]"
+        />
+        {validationError && (
+          <div className="text-[12px] text-red-400">{validationError}</div>
+        )}
+      </div>
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          loading={saving}
+          disabled={saving || !hasChanges || !isValid}
+          onClick={saveUtmParams}
+          aria-label={t('save_link_tracking_params', 'Save link tracking params')}
+        >
+          {t('save', 'Save')}
+        </Button>
+      </div>
+    </div>
+  );
+};
 
 const ChannelDetailPanel: FC<{
   integration: IntegrationListItem;
@@ -530,6 +673,13 @@ const ChannelDetailPanel: FC<{
             <ChannelAdditionalSettingsForm
               key={integration.id}
               integration={integration}
+            />
+
+            <ChannelLinkTrackingSection
+              integrationId={integration.id}
+              utmParams={details?.utmParams ?? integration.utmParams ?? null}
+              loading={loading}
+              onUtmUpdated={onStrategyUpdated}
             />
 
             <CoverageTable coverage={tracking?.coverage} />

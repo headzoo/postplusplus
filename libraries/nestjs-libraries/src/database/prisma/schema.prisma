@@ -443,6 +443,7 @@ model Integration {
   additionalSettings                  String?                              @default("[]")
   strategyId                          String                               @default("grow_audience")
   strategyVersion                     Int                                  @default(1)
+  utmParams                           String?
   exisingPlugData                     ExisingPlugData[]
   customer                            Customer?                            @relation(fields: [customerId], references: [id])
   organization                        Organization                         @relation(fields: [organizationId], references: [id])

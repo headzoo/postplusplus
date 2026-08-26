@@ -51,6 +51,7 @@ import { RefreshIntegrationService } from '@gitroom/nestjs-libraries/integration
 import { ChannelInteractionService } from '@gitroom/nestjs-libraries/database/prisma/channel-interactions/channel-interaction.service';
 import { hasExtension } from '@gitroom/helpers/utils/has.extension';
 import { stripLinks } from '@gitroom/helpers/utils/strip.links';
+import { appendUtmParamsToText } from '@gitroom/helpers/utils/utm.params';
 import { validate } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
 import { stripHtmlValidation } from '@gitroom/helpers/utils/strip.html.validation';
@@ -1165,7 +1166,24 @@ export class PostsService {
       );
       const removeLinks = !!provider?.stripLinks?.();
 
-      const messages = (post.value || []).map((p) => p.content);
+      let messages = (post.value || []).map((p) => p.content);
+      if (!removeLinks) {
+        const integration = await this._integrationService.getIntegrationById(
+          orgId,
+          post.integration.id
+        );
+        if (integration?.utmParams) {
+          const shortLinkDomain = ShortLinkService.provider.shortLinkDomain;
+          messages = messages.map((content) =>
+            appendUtmParamsToText(
+              content,
+              integration.utmParams,
+              shortLinkDomain
+            )
+          );
+        }
+      }
+
       // No point shortlinking links on platforms that strip them out anyway
       const updateContent =
         !body.shortLink || removeLinks

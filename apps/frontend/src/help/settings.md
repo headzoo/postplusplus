@@ -57,19 +57,30 @@ For channels that expose follower identities, the channel detail includes **Chan
 
 You always pick one of five strategies—there is no **None** option:
 
-| Strategy | Purpose |
-| -------- | ------- |
+| Strategy                        | Purpose                                                                                                   |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | **Grow audience** (**Default**) | Reciprocal relationships that can expand your reach. Matches pre-strategy behavior for existing channels. |
-| **Capture leads** | High-intent inbound conversations, mentions, replies, and follows. |
-| **Retain community** | Two-way interactions with people who already engage. |
-| **Build awareness** | Mentions and reposts that amplify your brand. |
-| **Support customers** | Incoming questions and support threads; recognizes outbound replies. |
+| **Capture leads**               | High-intent inbound conversations, mentions, replies, and follows.                                        |
+| **Retain community**            | Two-way interactions with people who already engage.                                                      |
+| **Build awareness**             | Mentions and reposts that amplify your brand.                                                             |
+| **Support customers**           | Incoming questions and support threads; recognizes outbound replies.                                      |
 
 Channels that do **not** expose follower identities show **Not available for this channel because it does not expose follower identities**—that is capability N/A, not a strategy choice.
 
 Saving a new strategy is immediate. Relationship grades recompute in the background. While that runs, a banner explains that **Relationship rankings are updating. Existing grades stay visible while the new strategy is applied.** Re-selecting **Grow audience** is the reset-to-default action.
 
 See [Followers → Channel strategy](/help/followers#channel-strategy) for how the choice affects default navigation, the assistant, and recomputation banners on the Followers page.
+
+### Link tracking
+
+Each channel can store **UTM / tracking params**—a query string such as `utm_campaign=spring&utm_medium=social`. Post++ appends those params to **http(s) links in post text** when you save or schedule a post for that channel.
+
+- Leave the field empty to disable link tracking for the channel.
+- Params already present on a link in your post are kept; channel defaults only fill in missing keys.
+- If **Shortlink Preference** shortens URLs, tracking params are applied to the destination **before** the short link is created, so clicks still land with attribution.
+- Link tracking applies to post body text, not separate provider link fields (for example Pinterest destination URLs).
+
+Changing link tracking affects **future saves** only; already stored or published post content is not rewritten.
 
 ## Webhooks and Auto Post
 

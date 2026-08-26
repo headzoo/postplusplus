@@ -322,7 +322,7 @@ describe('ChannelsSettings', () => {
     render(<ChannelsSettings />);
 
     fireEvent.click(screen.getByText('Capture leads'));
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save channel strategy' }));
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith('/integrations/channel-a/strategy', {
@@ -350,7 +350,7 @@ describe('ChannelsSettings', () => {
     render(<ChannelsSettings />);
 
     fireEvent.click(screen.getByText('Capture leads'));
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save channel strategy' }));
 
     await waitFor(() => {
       expect(toastShow).toHaveBeenCalledWith(
@@ -376,15 +376,19 @@ describe('ChannelsSettings', () => {
     render(<ChannelsSettings />);
 
     fireEvent.click(screen.getByText('Grow audience (Default)'));
-    expect(screen.getByRole('button', { name: 'Save' }).hasAttribute('disabled')).toBe(
-      true
-    );
+    expect(
+      screen.getByRole('button', { name: 'Save channel strategy' }).hasAttribute(
+        'disabled'
+      )
+    ).toBe(true);
 
     fireEvent.click(screen.getByText('Capture leads'));
     fireEvent.click(screen.getByText('Grow audience (Default)'));
-    expect(screen.getByRole('button', { name: 'Save' }).hasAttribute('disabled')).toBe(
-      true
-    );
+    expect(
+      screen.getByRole('button', { name: 'Save channel strategy' }).hasAttribute(
+        'disabled'
+      )
+    ).toBe(true);
   });
 
   it('shows strategy loading state while channel details load', () => {
@@ -418,7 +422,8 @@ describe('ChannelsSettings', () => {
       )
     ).toBeTruthy();
     expect(screen.queryByRole('radiogroup', { name: 'Channel strategy' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Save channel strategy' })).toBeNull();
+    expect(screen.getByText('Link tracking')).toBeTruthy();
   });
 
   it('shows recomputing copy when channel details report stale projections', () => {
@@ -482,5 +487,44 @@ describe('ChannelsSettings', () => {
       '/settings/channels?selected=channel-a',
       { scroll: false }
     );
+  });
+
+  it('saves link tracking params and revalidates caches', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ utmParams: 'utm_campaign=spring&utm_medium=social' }),
+    });
+
+    render(<ChannelsSettings />);
+
+    fireEvent.change(
+      screen.getByPlaceholderText('utm_campaign=spring&utm_medium=social'),
+      {
+        target: {
+          value: 'utm_campaign=spring&utm_medium=social',
+        },
+      }
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Save link tracking params' })
+    );
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/integrations/channel-a/utm-params',
+        {
+          method: 'PUT',
+          body: JSON.stringify({
+            utmParams: 'utm_campaign=spring&utm_medium=social',
+          }),
+        }
+      );
+      expect(mutateChannelDetails).toHaveBeenCalled();
+      expect(globalMutate).toHaveBeenCalledWith('/integrations/list');
+      expect(toastShow).toHaveBeenCalledWith(
+        'Link tracking params updated.',
+        'success'
+      );
+    });
   });
 });
