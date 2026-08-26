@@ -16,7 +16,8 @@ export const FollowerSummaryCards: FC<{
   summary?: FollowerAudienceSummary;
   isLoading?: boolean;
   buildHref: (slug?: string) => string;
-}> = ({ summary, isLoading, buildHref }) => {
+  isVisible?: (slug: (typeof FOLLOWER_SUMMARY_SEGMENTS)[number]['slug']) => boolean;
+}> = ({ summary, isLoading, buildHref, isVisible = () => true }) => {
   const t = useT();
 
   return (
@@ -25,6 +26,9 @@ export const FollowerSummaryCards: FC<{
       data-testid="followers-summary-cards"
     >
       {FOLLOWER_SUMMARY_SEGMENTS.map((segment) => {
+        if (!isVisible(segment.slug)) {
+          return null;
+        }
         const colors = FOLLOWER_SEGMENT_COLOR_CLASSES[segment.color];
         const Icon = segment.icon;
         const count =

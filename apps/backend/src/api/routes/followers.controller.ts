@@ -253,7 +253,8 @@ export class FollowersController {
       org,
       user,
       integrationId,
-      body.name
+      body.name,
+      body.color
     );
   }
 
@@ -268,7 +269,8 @@ export class FollowersController {
       org,
       integrationId,
       listId,
-      body.name
+      body.name,
+      body.color
     );
   }
 

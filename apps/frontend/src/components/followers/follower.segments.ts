@@ -43,6 +43,16 @@ export type FollowerSegmentColor =
   | 'orange'
   | 'neutral';
 
+export const FOLLOWER_SEGMENT_COLOR_OPTIONS: FollowerSegmentColor[] = [
+  'blue',
+  'green',
+  'red',
+  'purple',
+  'yellow',
+  'orange',
+  'neutral',
+];
+
 export type FollowerSegmentSlug =
   | 'all'
   | 'leads'
@@ -247,6 +257,22 @@ export const FOLLOWER_SUMMARY_SEGMENTS: FollowerSegmentDefinition[] = [
     isBot: true,
   },
 ];
+
+/** Built-in triage segments shown in the visibility menu (excludes All). */
+export const FOLLOWER_BUILTIN_TRIAGE_SEGMENTS: FollowerSegmentDefinition[] =
+  FOLLOWER_SUMMARY_SEGMENTS.filter((segment) => segment.slug !== 'all');
+
+export const isFollowerSegmentVisible = (
+  slug: FollowerSegmentSlug,
+  hiddenSlugs: ReadonlySet<FollowerSegmentSlug> | FollowerSegmentSlug[]
+) => {
+  if (slug === 'all') {
+    return true;
+  }
+  const hidden =
+    hiddenSlugs instanceof Set ? hiddenSlugs : new Set(hiddenSlugs);
+  return !hidden.has(slug);
+};
 
 /** Board columns on the All overview (no Ignored column). */
 export const FOLLOWER_BOARD_SEGMENTS: FollowerSegmentDefinition[] = [

@@ -3564,15 +3564,48 @@ describe('ChannelInteractionRepository', () => {
     tx.channelAudienceList.create.mockResolvedValue({
       id: 'list-1',
       name: 'VIP',
+      color: 'blue',
       createdAt: new Date('2026-08-15T00:00:00.000Z'),
       updatedAt: new Date('2026-08-15T00:00:00.000Z'),
     });
 
     await expect(
-      repository.createAudienceList('org', 'integration', 'VIP', 'user-a')
+      repository.createAudienceList(
+        'org',
+        'integration',
+        'VIP',
+        'user-a',
+        'blue'
+      )
     ).resolves.toEqual({
       conflict: false,
-      list: expect.objectContaining({ id: 'list-1', name: 'VIP' }),
+      list: expect.objectContaining({ id: 'list-1', name: 'VIP', color: 'blue' }),
+    });
+  });
+
+  it('updates list color when renaming a custom list', async () => {
+    const { repository, tx } = createHarness();
+    tx.channelAudienceList.findFirst
+      .mockResolvedValueOnce({ id: 'list-1' })
+      .mockResolvedValueOnce(null);
+    tx.channelAudienceList.update.mockResolvedValue({
+      id: 'list-1',
+      name: 'VIP',
+      color: 'green',
+      createdAt: new Date('2026-08-15T00:00:00.000Z'),
+      updatedAt: new Date('2026-08-16T00:00:00.000Z'),
+    });
+
+    await expect(
+      repository.updateAudienceList(
+        'org',
+        'integration',
+        'list-1',
+        'VIP',
+        'green'
+      )
+    ).resolves.toEqual({
+      list: expect.objectContaining({ id: 'list-1', color: 'green' }),
     });
   });
 

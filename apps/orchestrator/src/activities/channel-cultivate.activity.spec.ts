@@ -3,9 +3,9 @@ jest.mock('@gitroom/nestjs-libraries/integrations/integration.manager', () => ({
   socialIntegrationList: [],
 }));
 
-import { ChannelHotMaterializationActivity } from './channel-hot-materialization.activity';
+import { ChannelCultivateActivity } from './channel-cultivate.activity';
 
-describe('ChannelHotMaterializationActivity', () => {
+describe('ChannelCultivateActivity', () => {
   const hour = '2026-08-25T13';
   const candidate = {
     id: 'integration-1',
@@ -15,10 +15,10 @@ describe('ChannelHotMaterializationActivity', () => {
 
   const createActivity = (
     repository: {
-      listHotMaterializeCandidates: jest.Mock;
+      listCultivateMaterializeCandidates: jest.Mock;
     },
     channelInteractionService: {
-      materializeHotPicksForIntegration: jest.Mock;
+      materializeCultivatePicksForIntegration: jest.Mock;
     },
     integrationService: {
       getIntegrationById: jest.Mock;
@@ -27,7 +27,7 @@ describe('ChannelHotMaterializationActivity', () => {
       append: jest.Mock;
     } = { append: jest.fn().mockResolvedValue(undefined) }
   ) =>
-    new ChannelHotMaterializationActivity(
+    new ChannelCultivateActivity(
       repository as any,
       channelInteractionService as any,
       integrationService as any,
@@ -37,21 +37,21 @@ describe('ChannelHotMaterializationActivity', () => {
   it('lists one due candidate for the fixed hour and logs it', async () => {
     const logs = { append: jest.fn().mockResolvedValue(undefined) };
     const repository = {
-      listHotMaterializeCandidates: jest.fn().mockResolvedValue({
+      listCultivateMaterializeCandidates: jest.fn().mockResolvedValue({
         candidates: [candidate],
         next: undefined,
       }),
     };
     const activity = createActivity(
       repository,
-      { materializeHotPicksForIntegration: jest.fn() },
+      { materializeCultivatePicksForIntegration: jest.fn() },
       { getIntegrationById: jest.fn() },
       logs
     );
 
-    const result = await activity.listDueCandidatesV1({ hour });
+    const result = await activity.listDueCandidatesV2({ hour });
 
-    expect(repository.listHotMaterializeCandidates).toHaveBeenCalledWith(
+    expect(repository.listCultivateMaterializeCandidates).toHaveBeenCalledWith(
       undefined,
       8,
       hour
@@ -60,8 +60,8 @@ describe('ChannelHotMaterializationActivity', () => {
     expect(result.hour).toBe(hour);
     expect(logs.append).toHaveBeenCalledWith(
       expect.objectContaining({
-        scheduleKey: 'hot-triage',
-        message: `Found due channel ${candidate.id} for hot triage`,
+        scheduleKey: 'follower-cultivate',
+        message: `Found due channel ${candidate.id} for cultivate`,
         meta: {
           hour,
           after: null,
@@ -75,24 +75,24 @@ describe('ChannelHotMaterializationActivity', () => {
   it('logs when no due channels remain', async () => {
     const logs = { append: jest.fn().mockResolvedValue(undefined) };
     const repository = {
-      listHotMaterializeCandidates: jest.fn().mockResolvedValue({
+      listCultivateMaterializeCandidates: jest.fn().mockResolvedValue({
         candidates: [],
         next: undefined,
       }),
     };
     const activity = createActivity(
       repository,
-      { materializeHotPicksForIntegration: jest.fn() },
+      { materializeCultivatePicksForIntegration: jest.fn() },
       { getIntegrationById: jest.fn() },
       logs
     );
 
-    await activity.listDueCandidatesV1({ hour, after: 'prev-id' });
+    await activity.listDueCandidatesV2({ hour, after: 'prev-id' });
 
     expect(logs.append).toHaveBeenCalledWith(
       expect.objectContaining({
-        scheduleKey: 'hot-triage',
-        message: 'No due channels for hot triage',
+        scheduleKey: 'follower-cultivate',
+        message: 'No due channels for cultivate',
         meta: {
           hour,
           after: 'prev-id',
@@ -114,16 +114,16 @@ describe('ChannelHotMaterializationActivity', () => {
       }),
     };
     const channelInteractionService = {
-      materializeHotPicksForIntegration: jest.fn(),
+      materializeCultivatePicksForIntegration: jest.fn(),
     };
     const activity = createActivity(
-      { listHotMaterializeCandidates: jest.fn() },
+      { listCultivateMaterializeCandidates: jest.fn() },
       channelInteractionService,
       integrationService,
       logs
     );
 
-    const result = await activity.materializeHotPicksV1({ hour, candidate });
+    const result = await activity.materializeCultivatePicksV2({ hour, candidate });
 
     expect(result).toEqual({
       skipped: true,
@@ -131,11 +131,11 @@ describe('ChannelHotMaterializationActivity', () => {
       pickCount: 0,
       candidateCount: 0,
     });
-    expect(channelInteractionService.materializeHotPicksForIntegration).not.toHaveBeenCalled();
+    expect(channelInteractionService.materializeCultivatePicksForIntegration).not.toHaveBeenCalled();
     expect(logs.append).toHaveBeenCalledWith(
       expect.objectContaining({
-        scheduleKey: 'hot-triage',
-        message: `Skipped disabled/deleted channel ${candidate.id} for hot triage`,
+        scheduleKey: 'follower-cultivate',
+        message: `Skipped disabled/deleted channel ${candidate.id} for cultivate`,
       })
     );
   });
@@ -151,7 +151,7 @@ describe('ChannelHotMaterializationActivity', () => {
       }),
     };
     const channelInteractionService = {
-      materializeHotPicksForIntegration: jest.fn().mockResolvedValue({
+      materializeCultivatePicksForIntegration: jest.fn().mockResolvedValue({
         hour,
         skipped: false,
         candidateCount: 12,
@@ -159,15 +159,15 @@ describe('ChannelHotMaterializationActivity', () => {
       }),
     };
     const activity = createActivity(
-      { listHotMaterializeCandidates: jest.fn() },
+      { listCultivateMaterializeCandidates: jest.fn() },
       channelInteractionService,
       integrationService,
       logs
     );
 
-    const result = await activity.materializeHotPicksV1({ hour, candidate });
+    const result = await activity.materializeCultivatePicksV2({ hour, candidate });
 
-    expect(channelInteractionService.materializeHotPicksForIntegration).toHaveBeenCalledWith(
+    expect(channelInteractionService.materializeCultivatePicksForIntegration).toHaveBeenCalledWith(
       candidate.organizationId,
       candidate.id,
       new Date(`${hour}:00:00.000Z`)
@@ -180,8 +180,8 @@ describe('ChannelHotMaterializationActivity', () => {
     });
     expect(logs.append).toHaveBeenCalledWith(
       expect.objectContaining({
-        scheduleKey: 'hot-triage',
-        message: `Hot picks for channel ${candidate.id}: 8 picks from 12 candidates`,
+        scheduleKey: 'follower-cultivate',
+        message: `Cultivate picks for channel ${candidate.id}: 8 picks from 12 candidates`,
         meta: expect.objectContaining({
           hour,
           integrationId: candidate.id,
@@ -203,20 +203,20 @@ describe('ChannelHotMaterializationActivity', () => {
       }),
     };
     const channelInteractionService = {
-      materializeHotPicksForIntegration: jest.fn().mockResolvedValue({
+      materializeCultivatePicksForIntegration: jest.fn().mockResolvedValue({
         hour,
         skipped: 'near_full',
         visibleCount: 18,
       }),
     };
     const activity = createActivity(
-      { listHotMaterializeCandidates: jest.fn() },
+      { listCultivateMaterializeCandidates: jest.fn() },
       channelInteractionService,
       integrationService,
       logs
     );
 
-    const result = await activity.materializeHotPicksV1({ hour, candidate });
+    const result = await activity.materializeCultivatePicksV2({ hour, candidate });
 
     expect(result).toEqual({
       skipped: true,
@@ -228,8 +228,8 @@ describe('ChannelHotMaterializationActivity', () => {
     });
     expect(logs.append).toHaveBeenCalledWith(
       expect.objectContaining({
-        scheduleKey: 'hot-triage',
-        message: `Hot triage near-full for channel ${candidate.id}`,
+        scheduleKey: 'follower-cultivate',
+        message: `Cultivate near-full for channel ${candidate.id}`,
         meta: expect.objectContaining({
           reason: 'near_full',
           visibleCount: 18,
@@ -249,25 +249,25 @@ describe('ChannelHotMaterializationActivity', () => {
       }),
     };
     const channelInteractionService = {
-      materializeHotPicksForIntegration: jest
+      materializeCultivatePicksForIntegration: jest
         .fn()
         .mockRejectedValue(new Error('db unavailable')),
     };
     const activity = createActivity(
-      { listHotMaterializeCandidates: jest.fn() },
+      { listCultivateMaterializeCandidates: jest.fn() },
       channelInteractionService,
       integrationService,
       logs
     );
 
     await expect(
-      activity.materializeHotPicksV1({ hour, candidate })
+      activity.materializeCultivatePicksV2({ hour, candidate })
     ).rejects.toThrow('db unavailable');
     expect(logs.append).toHaveBeenCalledWith(
       expect.objectContaining({
-        scheduleKey: 'hot-triage',
+        scheduleKey: 'follower-cultivate',
         level: 'ERROR',
-        message: `Hot materialization failed for channel ${candidate.id}`,
+        message: `Cultivate materialization failed for channel ${candidate.id}`,
         meta: expect.objectContaining({ error: 'db unavailable' }),
       })
     );

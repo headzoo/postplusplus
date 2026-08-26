@@ -475,6 +475,7 @@ export type FollowerReadActor = {
 export type FollowerList = {
   id: string;
   name: string;
+  color?: string | null;
   createdAt: string;
   updatedAt: string;
 };

@@ -2,7 +2,6 @@
 
 import { FC, KeyboardEvent, useCallback, useMemo } from 'react';
 import clsx from 'clsx';
-import { SVGLine } from '@gitroom/frontend/components/launches/launches.component';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { PipelineChannels } from '@gitroom/frontend/components/pipelines/pipeline.channels';
 import { PipelineSummary } from '@gitroom/frontend/components/pipelines/pipeline.types';
@@ -90,13 +89,11 @@ export const PipelineSidebarList: FC<{
               onClick={() => onSelectPipeline(pipeline)}
               onKeyDown={handlePipelineKeyDown(pipeline)}
               className={clsx(
-                'relative flex gap-[12px] items-center group/pipeline justify-center hover:bg-boxHover rounded-e-[8px] hover:opacity-100 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-btnPrimary',
+                'flex gap-[12px] items-center justify-center px-[12px] py-[8px] hover:bg-boxHover rounded-[8px] hover:opacity-100 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-btnPrimary',
+                isSelected && 'bg-boxHover',
                 !isSelected && 'opacity-20'
               )}
             >
-              <div className="absolute start-0 top-0 bottom-0 w-[4px] -ms-[12px] rounded-s-[3px] opacity-0 group-hover/pipeline:opacity-100 transition-opacity">
-                <SVGLine />
-              </div>
               <div className="group-[.sidebar]:flex hidden">
                 <PipelineChannels channels={pipeline.channels} compact />
               </div>

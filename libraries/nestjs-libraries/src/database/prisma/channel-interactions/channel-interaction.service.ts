@@ -27,6 +27,10 @@ import {
   SocialProvider,
 } from '@gitroom/nestjs-libraries/integrations/social/social.integrations.interface';
 import { IntegrationManager } from '@gitroom/nestjs-libraries/integrations/integration.manager';
+import {
+  FOLLOWER_SEGMENT_COLORS,
+  FollowerSegmentColorValue,
+} from '@gitroom/nestjs-libraries/integrations/social/follower.sorts';
 import { Integration } from '@prisma/client';
 import { LogsService } from '@gitroom/nestjs-libraries/database/prisma/logs/logs.service';
 import { ioRedis } from '@gitroom/nestjs-libraries/redis/redis.service';
@@ -2067,15 +2071,18 @@ export class ChannelInteractionService {
     organizationId: string,
     integrationId: string,
     createdByUserId: string,
-    name: string
+    name: string,
+    color?: string | null
   ) {
     this.validateBoundedString(createdByUserId, 'createdByUserId', MAX_ID_LENGTH);
     const normalized = this.normalizeFollowerListName(name);
+    const normalizedColor = this.normalizeFollowerListColor(color);
     const result = await this._repository.createAudienceList(
       organizationId,
       integrationId,
       normalized,
-      createdByUserId
+      createdByUserId,
+      normalizedColor
     );
     if (result.conflict) {
       throw new ConflictException('A list with this name already exists');
@@ -2087,15 +2094,21 @@ export class ChannelInteractionService {
     organizationId: string,
     integrationId: string,
     listId: string,
-    name: string
+    name: string,
+    color?: string | null
   ) {
     this.validateBoundedString(listId, 'listId', MAX_ID_LENGTH);
     const normalized = this.normalizeFollowerListName(name);
+    const normalizedColor =
+      color === undefined
+        ? undefined
+        : this.normalizeFollowerListColor(color);
     const result = await this._repository.updateAudienceList(
       organizationId,
       integrationId,
       listId,
-      normalized
+      normalized,
+      normalizedColor
     );
     if (result.missing) {
       throw new NotFoundException('Follower list was not found');
@@ -2438,6 +2451,20 @@ export class ChannelInteractionService {
       throw new BadRequestException('List name cannot match a built-in filter');
     }
     return normalized;
+  }
+
+  private normalizeFollowerListColor(
+    color?: string | null
+  ): FollowerSegmentColorValue | null {
+    if (color == null || color === '') {
+      return null;
+    }
+    if (
+      !FOLLOWER_SEGMENT_COLORS.includes(color as FollowerSegmentColorValue)
+    ) {
+      throw new BadRequestException('List color is not supported');
+    }
+    return color as FollowerSegmentColorValue;
   }
 
   private validateEvent(event: NormalizedChannelInteractionEvent) {

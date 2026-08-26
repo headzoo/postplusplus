@@ -36,6 +36,18 @@ export const FOLLOWER_AUDIENCES = [
 ] as const;
 export type FollowerAudience = (typeof FOLLOWER_AUDIENCES)[number];
 
+export const FOLLOWER_SEGMENT_COLORS = [
+  'blue',
+  'green',
+  'red',
+  'purple',
+  'yellow',
+  'orange',
+  'neutral',
+] as const;
+export type FollowerSegmentColorValue =
+  (typeof FOLLOWER_SEGMENT_COLORS)[number];
+
 export const FOLLOWER_CATEGORY_DESCRIPTIONS = {
   hot: 'Hourly materialized picks for relationships that need reciprocation.',
   hot_lead:

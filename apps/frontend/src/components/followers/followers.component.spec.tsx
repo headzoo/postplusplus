@@ -29,6 +29,7 @@ const useFollowersMock = jest.fn();
 const useCopilotReadableMock = jest.fn();
 const importMemberFromUrlMock = jest.fn();
 const deleteListMock = jest.fn();
+const updateListMock = jest.fn();
 let mockPathname = '/followers';
 let mockSearchParams = new URLSearchParams();
 let followersPage = {
@@ -142,13 +143,6 @@ const mainFollowersParams = () => {
   return withIntegration;
 };
 
-const getFilterChipLabels = () => {
-  const filterBar = screen.getByTestId('followers-filter-bar');
-  const listGroup = filterBar.querySelector('[data-filter-group="lists"]');
-  return Array.from(filterBar.querySelectorAll('a'))
-    .filter((link) => !listGroup?.contains(link))
-    .map((link) => link.textContent?.trim());
-};
 
 jest.mock('@mantine/hooks', () => ({
   useClickOutside: () => ({ current: null }),
@@ -362,12 +356,21 @@ jest.mock('@gitroom/frontend/components/followers/use.followers', () => {
       isLoading: false,
     }),
     useFollowerLists: () => ({
-      data: [{ id: 'list-1', name: 'VIP', createdAt: '', updatedAt: '' }],
+      data: [
+        {
+          id: 'list-1',
+          name: 'VIP',
+          color: 'orange',
+          createdAt: '',
+          updatedAt: '',
+        },
+      ],
       isLoading: false,
     }),
     useFollowerListMutations: () => ({
       createList: jest.fn(),
       deleteList: deleteListMock,
+      updateList: updateListMock,
       addMember: jest.fn(),
       importMemberFromUrl: importMemberFromUrlMock,
       removeMember: jest.fn(),
@@ -573,11 +576,20 @@ describe('FollowersComponent', () => {
     importMemberFromUrlMock.mockReset();
     deleteListMock.mockReset();
     deleteListMock.mockResolvedValue(undefined);
+    updateListMock.mockReset();
+    updateListMock.mockResolvedValue({
+      id: 'list-1',
+      name: 'VIP',
+      color: 'green',
+      createdAt: '',
+      updatedAt: '',
+    });
     decisionOpen.mockReset();
     decisionOpen.mockResolvedValue(false);
     dismissAlertMock.mockReset();
     dismissedAlertKeys = [];
     dismissedAlertsLoading = false;
+    localStorage.clear();
     mockPathname = '/followers';
     mockSearchParams = new URLSearchParams();
     mockChannels = [channel];
@@ -618,16 +630,6 @@ describe('FollowersComponent', () => {
     pushState.mockRestore();
     historyBack.mockRestore();
     replaceState.mockRestore();
-  });
-
-  it('renders triage chips with accessible pressed state', () => {
-    render(<FollowersComponent />);
-
-    const allChip = screen.getByRole('link', { name: 'All' });
-    const hotLeadChip = screen.getByRole('link', { name: 'Hot' });
-
-    expect(allChip.getAttribute('aria-pressed')).toBe('true');
-    expect(hotLeadChip.getAttribute('aria-pressed')).toBe('false');
   });
 
   it('shows a triage tip on All and Hot views', () => {
@@ -674,9 +676,6 @@ describe('FollowersComponent', () => {
     rerender(<FollowersComponent />);
 
     expect(replace).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole('link', { name: 'All' }).getAttribute('aria-pressed')).toBe(
-      'true'
-    );
     expect(screen.getByTestId('followers-board')).toBeTruthy();
   });
 
@@ -705,9 +704,7 @@ describe('FollowersComponent', () => {
     rerender(<FollowersComponent />);
 
     expect(replace).not.toHaveBeenCalled();
-    expect(screen.getByRole('link', { name: 'All' }).getAttribute('aria-pressed')).toBe(
-      'true'
-    );
+    expect(screen.getByTestId('followers-board')).toBeTruthy();
   });
 
   it('applies a new channel strategy default once after switching channels', () => {
@@ -744,75 +741,16 @@ describe('FollowersComponent', () => {
     expect(replace).toHaveBeenCalledTimes(2);
   });
 
-  it('keeps the shipped filter chip order for grow audience', () => {
-    channel.strategy = publicStrategy('grow_audience');
-    render(<FollowersComponent />);
-
-    expect(getFilterChipLabels()).toEqual([
-      'All',
-      'Leads',
-      'Hot',
-      'Cultivate',
-      'Followed',
-      'Mutual',
-      'Quiet',
-      'Costly',
-      'Ignored',
-      'Bots',
-    ]);
-  });
-
-  it('reorders filter chips for non-default strategies', () => {
-    channel.strategy = publicStrategy('lead_capture');
-    render(<FollowersComponent />);
-
-    expect(getFilterChipLabels()).toEqual([
-      'Leads',
-      'Hot',
-      'All',
-      'Cultivate',
-      'Followed',
-      'Mutual',
-      'Quiet',
-      'Costly',
-      'Ignored',
-      'Bots',
-    ]);
-  });
-
-  it('renders flat tabs with mock segment colors and custom lists', () => {
+  it('renders custom list chips and a create button', () => {
     render(<FollowersComponent />);
 
     const filterBar = screen.getByTestId('followers-filter-bar');
-    expect(filterBar.querySelectorAll('[data-filter-group]')).toHaveLength(1);
-    expect(
-      filterBar
-        .querySelector('[data-filter-group="lists"]')
-        ?.getAttribute('data-filter-group')
-    ).toBe('lists');
+    expect(filterBar.getAttribute('data-filter-group')).toBe('lists');
 
-    const leadsChip = screen.getByRole('link', { name: 'Leads' });
-    const hotChip = screen.getByRole('link', { name: 'Hot' });
-    const cultivateChip = screen.getByRole('link', { name: 'Cultivate' });
-    const mutualChip = screen.getByRole('link', { name: 'Mutual' });
-    const quietChip = screen.getByRole('link', { name: 'Quiet' });
-    const costlyChip = screen.getByRole('link', { name: 'Costly' });
-    const ignoredChip = screen.getByRole('link', { name: 'Ignored' });
-    const botsChip = screen.getByRole('link', { name: 'Bots' });
     const vipChip = screen.getByRole('link', { name: 'VIP' });
-
-    expect(leadsChip.className).toContain('border-red-500/40');
-    expect(hotChip.className).toContain('border-red-500/40');
-    expect(cultivateChip.className).toContain('border-red-500/40');
-    expect(mutualChip.className).toContain('border-emerald-500/40');
-    expect(quietChip.className).toContain('border-emerald-500/40');
-    expect(costlyChip.className).toContain('border-amber-400/40');
-    expect(ignoredChip.className).toContain('border-amber-400/40');
-    expect(botsChip.className).toContain('border-amber-400/40');
     expect(vipChip.className).toContain('border-newBorder');
-    expect(
-      screen.getByRole('group', { name: 'Custom lists' }).contains(vipChip)
-    ).toBe(true);
+    expect(filterBar.contains(vipChip)).toBe(true);
+    expect(screen.getByRole('button', { name: 'Create list' })).toBeTruthy();
   });
 
   it('shows the summary cards and board on All with no search', () => {
@@ -846,6 +784,45 @@ describe('FollowersComponent', () => {
       'ignored',
       'bots',
     ]);
+  });
+
+  it('hides summary cards and board columns for hidden triages', () => {
+    localStorage.setItem(
+      'followers.triage.visibility.channel-1',
+      JSON.stringify({ hiddenSlugs: ['bots', 'ignored', 'hot'] })
+    );
+    render(<FollowersComponent />);
+
+    const summarySegments = Array.from(
+      screen
+        .getByTestId('followers-summary-cards')
+        .querySelectorAll('[data-summary-segment]')
+    ).map((card) => card.getAttribute('data-summary-segment'));
+    expect(summarySegments).not.toContain('bots');
+    expect(summarySegments).not.toContain('ignored');
+    expect(summarySegments).not.toContain('hot');
+    expect(summarySegments).toContain('all');
+
+    const boardSegments = screen
+      .getAllByTestId('followers-board-column')
+      .map((column) => column.getAttribute('data-board-segment'));
+    expect(boardSegments).not.toContain('hot');
+    expect(boardSegments).toHaveLength(5);
+  });
+
+  it('redirects away from a hidden triage route', () => {
+    mockPathname = '/followers/hot';
+    render(<FollowersComponent />);
+    replace.mockClear();
+
+    fireEvent.click(screen.getByTestId('followers-triage-visibility-button'));
+    fireEvent.click(
+      screen
+        .getByTestId('followers-triage-visibility-hot')
+        .querySelector('.cursor-pointer')!
+    );
+
+    expect(replace).toHaveBeenCalledWith('/followers');
   });
 
   it('hides the summary cards and board when a filtered tab is active', () => {
@@ -884,36 +861,9 @@ describe('FollowersComponent', () => {
     });
   });
 
-  it('points triage chips at real follower URLs', () => {
+  it('points custom list chips at real follower URLs', () => {
     render(<FollowersComponent />);
 
-    expect(screen.getByRole('link', { name: 'All' }).getAttribute('href')).toBe(
-      '/followers'
-    );
-    expect(screen.getByRole('link', { name: 'Hot' }).getAttribute('href')).toBe(
-      '/followers/hot'
-    );
-    expect(screen.getByRole('link', { name: 'Cultivate' }).getAttribute('href')).toBe(
-      '/followers/cultivate'
-    );
-    expect(screen.getByRole('link', { name: 'Mutual' }).getAttribute('href')).toBe(
-      '/followers/mutual'
-    );
-    expect(screen.getByRole('link', { name: 'Costly' }).getAttribute('href')).toBe(
-      '/followers/costly'
-    );
-    expect(screen.getByRole('link', { name: 'Quiet' }).getAttribute('href')).toBe(
-      '/followers/quiet'
-    );
-    expect(screen.getByRole('link', { name: /^Leads$/ }).getAttribute('href')).toBe(
-      '/followers/leads'
-    );
-    expect(screen.getByRole('link', { name: 'Ignored' }).getAttribute('href')).toBe(
-      '/followers/ignored'
-    );
-    expect(screen.getByRole('link', { name: 'Bots' }).getAttribute('href')).toBe(
-      '/followers/bots'
-    );
     expect(screen.getByRole('link', { name: 'VIP' }).getAttribute('href')).toBe(
       '/followers?listId=list-1'
     );
@@ -924,9 +874,6 @@ describe('FollowersComponent', () => {
     mockPathname = '/followers/hot';
     render(<FollowersComponent />);
 
-    expect(screen.getByRole('link', { name: 'Hot' }).getAttribute('aria-pressed')).toBe(
-      'true'
-    );
     expect(mainFollowersParams().at(-1)).toEqual(
       expect.objectContaining({ audience: 'hot', triage: undefined, sort: undefined })
     );
@@ -936,12 +883,6 @@ describe('FollowersComponent', () => {
     mockPathname = '/followers/bots';
     render(<FollowersComponent />);
 
-    expect(screen.getByRole('link', { name: 'Bots' }).getAttribute('aria-pressed')).toBe(
-      'true'
-    );
-    expect(screen.getByRole('link', { name: 'All' }).getAttribute('aria-pressed')).toBe(
-      'false'
-    );
     expect(mainFollowersParams().at(-1)).toEqual(
       expect.objectContaining({ isBot: true, triage: undefined, audience: undefined })
     );
@@ -977,9 +918,6 @@ describe('FollowersComponent', () => {
     mockPathname = '/followers/ignored';
     render(<FollowersComponent />);
 
-    expect(
-      screen.getByRole('link', { name: 'Ignored' }).getAttribute('aria-pressed')
-    ).toBe('true');
     expect(mainFollowersParams().at(-1)).toEqual(
       expect.objectContaining({
         audience: 'ignored',
@@ -1019,19 +957,6 @@ describe('FollowersComponent', () => {
         sort: 'their_effort',
         direction: 'asc',
       })
-    );
-  });
-
-  it('preserves search, sort, and direction on triage chip hrefs', () => {
-    mockSearchParams = new URLSearchParams({
-      search: 'alex',
-      sort: 'their_effort',
-      direction: 'asc',
-    });
-    render(<FollowersComponent />);
-
-    expect(screen.getByRole('link', { name: 'Hot' }).getAttribute('href')).toBe(
-      '/followers/hot?search=alex&sort=their_effort&direction=asc'
     );
   });
 
@@ -1207,6 +1132,39 @@ describe('FollowersComponent', () => {
     expect(decisionOpen).toHaveBeenCalled();
     expect(deleteListMock).not.toHaveBeenCalled();
     expect(push).not.toHaveBeenCalled();
+  });
+
+  it('shows a color picker for custom lists and hides it otherwise', () => {
+    mockSearchParams = new URLSearchParams('listId=list-1');
+    const { unmount } = render(<FollowersComponent />);
+    expect(screen.getByTestId('followers-list-color-button')).toBeTruthy();
+    unmount();
+
+    mockSearchParams = new URLSearchParams();
+    render(<FollowersComponent />);
+    expect(screen.queryByTestId('followers-list-color-button')).toBeNull();
+  });
+
+  it('updates list color when a palette option is selected', async () => {
+    mockSearchParams = new URLSearchParams('listId=list-1');
+    render(<FollowersComponent />);
+
+    fireEvent.click(screen.getByTestId('followers-list-color-button'));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('followers-list-color-green'));
+    });
+
+    expect(updateListMock).toHaveBeenCalledWith('list-1', {
+      name: 'VIP',
+      color: 'green',
+    });
+  });
+
+  it('applies stored list color classes to custom list chips', () => {
+    render(<FollowersComponent />);
+
+    const vipChip = screen.getByRole('link', { name: 'VIP' });
+    expect(vipChip.className).toContain('border-orange-500/50');
   });
 
   it('shows a triage-specific empty state when a filter has no matches', () => {

@@ -17,23 +17,29 @@ import {
 import { FollowerDetailModal } from '@gitroom/frontend/components/followers/follower.detail.modal';
 import { FollowerListCreateModal } from '@gitroom/frontend/components/followers/follower.list.create.modal';
 import { FollowerListAddModal } from '@gitroom/frontend/components/followers/follower.list.add.modal';
+import { FollowerListColorPicker } from '@gitroom/frontend/components/followers/follower.list.color.picker';
 import { FollowerTriageTip } from '@gitroom/frontend/components/followers/follower.triage.tip';
 import { FollowerSummaryCards } from '@gitroom/frontend/components/followers/follower.summary.cards';
 import { FollowerBoard } from '@gitroom/frontend/components/followers/follower.board';
 import { FollowerFiltersMenu } from '@gitroom/frontend/components/followers/follower.filters.menu';
+import { FollowerTriageVisibilityMenu } from '@gitroom/frontend/components/followers/follower.triage.visibility.menu';
 import {
   FOLLOWER_BOARD_SEGMENTS,
   FOLLOWER_BOARD_PREVIEW_LIMIT,
   FOLLOWER_SEGMENT_COLOR_CLASSES,
   FOLLOWER_TAB_SEGMENTS,
+  FollowerSegmentColor,
+  FollowerSegmentSlug,
   categoryCount,
+  isFollowerSegmentVisible,
 } from '@gitroom/frontend/components/followers/follower.segments';
+import { useFollowerTriageVisibility } from '@gitroom/frontend/components/followers/use.follower.triage.visibility';
 import { useCopilotFollowerPageProperties } from '@gitroom/frontend/components/followers/use.copilot.follower.page';
 import {
   useDecisionModal,
   useModals,
 } from '@gitroom/frontend/components/layout/new-modal';
-import { PlusIcon, SearchIcon } from '@gitroom/frontend/components/ui/icons';
+import { MinusIcon, PlusIcon, SearchIcon } from '@gitroom/frontend/components/ui/icons';
 import {
   ChannelMenu,
   ChannelsSidebar,
@@ -121,7 +127,7 @@ const FILTER_CHIP_BASE =
   'rounded-full border px-[12px] py-[6px] text-[13px] transition-colors bg-newBgColorInner';
 
 const getTabChipClasses = (
-  color: (typeof FOLLOWER_TAB_SEGMENTS)[number]['color'],
+  color: FollowerSegmentColor,
   isSelected: boolean
 ) => {
   const colors = FOLLOWER_SEGMENT_COLOR_CLASSES[color];
@@ -645,6 +651,8 @@ export const FollowersComponent: FC = () => {
     () => channels.find((channel) => channel.id === selectedIntegrationId),
     [channels, selectedIntegrationId]
   );
+  const { hiddenSlugs, isVisible: isTriageVisible, toggleVisibility } =
+    useFollowerTriageVisibility(selectedIntegrationId);
 
   const strategyDefaults =
     selectedIntegrationId &&
@@ -989,6 +997,7 @@ export const FollowersComponent: FC = () => {
   const {
     createList,
     deleteList,
+    updateList,
     addMember,
     importMemberFromUrl,
     removeMember,
@@ -1399,22 +1408,13 @@ export const FollowersComponent: FC = () => {
     urlListId,
   ]);
 
-  const orderedFollowerTabs = useMemo(() => {
-    const priority = selectedChannel?.strategy?.ui.filterPriority || [];
-    const rank = (tabSlug?: string) => {
-      const index = tabSlug ? priority.indexOf(tabSlug) : priority.indexOf('all');
-      return index === -1 ? Number.MAX_SAFE_INTEGER : index;
-    };
-    return [...FOLLOWER_TAB_SEGMENTS].sort(
-      (left, right) => rank(left.slug) - rank(right.slug)
-    );
-  }, [selectedChannel?.strategy?.ui.filterPriority]);
-
   const boardColumns = useMemo(() => {
     if (!showBoard) {
       return [];
     }
-    return FOLLOWER_BOARD_SEGMENTS.map((segment) => {
+    return FOLLOWER_BOARD_SEGMENTS.filter((segment) =>
+      isFollowerSegmentVisible(segment.slug, hiddenSlugs)
+    ).map((segment) => {
       const preview =
         boardPreviewBySlug[segment.slug as keyof typeof boardPreviewBySlug];
       const countKey = segment.categoryKey || segment.slug;
@@ -1436,6 +1436,34 @@ export const FollowersComponent: FC = () => {
     queryDirection,
     querySort,
     showBoard,
+    hiddenSlugs,
+  ]);
+
+  useEffect(() => {
+    if (
+      followerPath.type === 'follower' ||
+      !slug ||
+      !isFollowerSegmentVisible(slug as FollowerSegmentSlug, hiddenSlugs)
+    ) {
+      return;
+    }
+    router.replace(
+      buildFollowersPageHref({
+        search: trimmedSearch || undefined,
+        sort: querySort,
+        direction: querySort ? queryDirection : undefined,
+        listId: urlListId,
+      })
+    );
+  }, [
+    followerPath,
+    hiddenSlugs,
+    queryDirection,
+    querySort,
+    router,
+    slug,
+    trimmedSearch,
+    urlListId,
   ]);
 
   if (isLoadingChannels || isLoadingIntegrations) {
@@ -1783,20 +1811,52 @@ export const FollowersComponent: FC = () => {
             showBoard && 'shrink-0'
           )}
         >
-        {showBoard && (
-          <FollowerSummaryCards
-            summary={audienceSummary}
-            isLoading={isLoadingAudienceSummary}
-            buildHref={(segmentSlug) =>
-              buildFollowersPageHref({
-                slug: segmentSlug,
-                search: trimmedSearch || undefined,
-                sort: querySort,
-                direction: querySort ? queryDirection : undefined,
-              })
-            }
-          />
-        )}
+        <div
+          className="flex flex-wrap items-center gap-[8px]"
+          role="group"
+          aria-label={t('followers_filter_group_lists', 'Custom lists')}
+          data-testid="followers-filter-bar"
+          data-filter-group="lists"
+        >
+          {followerLists.map((list) => {
+            const isSelected = urlListId === list.id;
+            const listColor =
+              (list.color as FollowerSegmentColor | null | undefined) ??
+              'neutral';
+            return (
+              <Link
+                key={list.id}
+                href={buildFollowersPageHref({
+                  search: trimmedSearch || undefined,
+                  sort: querySort,
+                  direction: querySort ? queryDirection : undefined,
+                  listId: list.id,
+                })}
+                scroll={false}
+                className={clsx(
+                  FILTER_CHIP_BASE,
+                  getTabChipClasses(listColor, isSelected)
+                )}
+                aria-pressed={isSelected}
+                aria-current={isSelected ? 'page' : undefined}
+              >
+                {list.name}
+              </Link>
+            );
+          })}
+          <button
+            type="button"
+            onClick={openCreateListModal}
+            className={clsx(
+              'inline-flex items-center justify-center',
+              FILTER_CHIP_BASE,
+              getTabChipClasses('neutral', false)
+            )}
+            aria-label={t('followers_create_list', 'Create list')}
+          >
+            <PlusIcon size={14} />
+          </button>
+        </div>
 
         <div className="flex flex-col gap-[12px] sm:flex-row sm:items-center">
           <div className="relative min-w-0 flex-1">
@@ -1820,20 +1880,26 @@ export const FollowersComponent: FC = () => {
               data-testid="followers-search-input"
             />
           </div>
-          <FollowerFiltersMenu
-            sorts={selectedChannel?.sorts}
-            sort={effectiveSort}
-            direction={effectiveDirection}
-            window={window}
-            limit={limit}
-            showSort={showSortSelector}
-            showDirection={showDirectionSelector}
-            showWindow={requiresWindow}
-            onSortChange={handleSortChange}
-            onDirectionChange={handleDirectionChange}
-            onWindowChange={handleWindowChange}
-            onLimitChange={handleLimitChange}
-          />
+          <div className="flex shrink-0 items-center gap-[8px]">
+            <FollowerFiltersMenu
+              sorts={selectedChannel?.sorts}
+              sort={effectiveSort}
+              direction={effectiveDirection}
+              window={window}
+              limit={limit}
+              showSort={showSortSelector}
+              showDirection={showDirectionSelector}
+              showWindow={requiresWindow}
+              onSortChange={handleSortChange}
+              onDirectionChange={handleDirectionChange}
+              onWindowChange={handleWindowChange}
+              onLimitChange={handleLimitChange}
+            />
+            <FollowerTriageVisibilityMenu
+              hiddenSlugs={hiddenSlugs}
+              onToggle={toggleVisibility}
+            />
+          </div>
         </div>
 
         {isPageScopedSort && !showBoard && (
@@ -1844,96 +1910,6 @@ export const FollowersComponent: FC = () => {
             )}
           </p>
         )}
-
-        <div
-          className="flex flex-wrap items-center gap-[8px]"
-          role="group"
-          aria-label={t('followers_triage_filter_group', 'Triage filter')}
-          data-testid="followers-filter-bar"
-        >
-          {orderedFollowerTabs.map((option) => {
-            const isSelected = option.isBot
-              ? urlIsBot
-              : urlListId || urlIsBot
-                ? false
-                : option.audience
-                  ? resolvedAudience === option.audience
-                  : option.triage
-                    ? !resolvedAudience && resolvedTriage === option.triage
-                    : !resolvedAudience && !resolvedTriage && !urlIsBot;
-            const hrefSlug = option.isBot
-              ? urlIsBot
-                ? undefined
-                : 'bots'
-              : option.slug;
-            return (
-              <Link
-                key={option.key}
-                href={buildFollowersPageHref({
-                  slug: hrefSlug,
-                  search: trimmedSearch || undefined,
-                  sort: querySort,
-                  direction: querySort ? queryDirection : undefined,
-                })}
-                scroll={false}
-                className={clsx(
-                  FILTER_CHIP_BASE,
-                  getTabChipClasses(option.color, isSelected),
-                  selectedChannel?.strategy?.ui.filterEmphasis ===
-                    (option.slug || 'all') &&
-                    !isSelected &&
-                    'ring-1 ring-current'
-                )}
-                aria-pressed={isSelected}
-                aria-current={isSelected ? 'page' : undefined}
-              >
-                {t(option.key, option.defaultLabel)}
-              </Link>
-            );
-          })}
-          <div
-            className="flex flex-wrap gap-[8px]"
-            role="group"
-            aria-label={t('followers_filter_group_lists', 'Custom lists')}
-            data-filter-group="lists"
-          >
-            {followerLists.map((list) => {
-              const isSelected = urlListId === list.id;
-              return (
-                <Link
-                  key={list.id}
-                  href={buildFollowersPageHref({
-                    search: trimmedSearch || undefined,
-                    sort: querySort,
-                    direction: querySort ? queryDirection : undefined,
-                    listId: list.id,
-                  })}
-                  scroll={false}
-                  className={clsx(
-                    FILTER_CHIP_BASE,
-                    getTabChipClasses('neutral', isSelected)
-                  )}
-                  aria-pressed={isSelected}
-                  aria-current={isSelected ? 'page' : undefined}
-                >
-                  {list.name}
-                </Link>
-              );
-            })}
-            <button
-              type="button"
-              onClick={openCreateListModal}
-              className={clsx(
-                'inline-flex items-center justify-center',
-                FILTER_CHIP_BASE,
-                getTabChipClasses('neutral', false)
-              )}
-              aria-label={t('followers_create_list', 'Create list')}
-            >
-              <PlusIcon size={14} />
-            </button>
-          </div>
-        </div>
 
         <FollowerTriageTip slug={slug} hidden={!!urlListId} />
 
@@ -1952,9 +1928,34 @@ export const FollowersComponent: FC = () => {
               onClick={removeSelectedList}
               className="inline-flex items-center gap-[6px] rounded-[8px] border border-newBorder bg-newBgColorInner px-[10px] py-[6px] text-[13px] text-textItemBlur hover:bg-newTableHeader hover:text-newTextColor"
             >
+              <MinusIcon size={14} />
               {t('followers_list_remove_button', 'Remove')}
             </button>
+            {activeList && (
+              <FollowerListColorPicker
+                color={activeList.color}
+                onChange={(color) =>
+                  updateList(urlListId, { name: activeList.name, color })
+                }
+              />
+            )}
           </div>
+        )}
+
+        {showBoard && (
+          <FollowerSummaryCards
+            summary={audienceSummary}
+            isLoading={isLoadingAudienceSummary}
+            isVisible={isTriageVisible}
+            buildHref={(segmentSlug) =>
+              buildFollowersPageHref({
+                slug: segmentSlug,
+                search: trimmedSearch || undefined,
+                sort: querySort,
+                direction: querySort ? queryDirection : undefined,
+              })
+            }
+          />
         )}
         </div>
 

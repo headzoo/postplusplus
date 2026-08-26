@@ -1,5 +1,12 @@
 import { Transform } from 'class-transformer';
-import { IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  IsIn,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
+import { FOLLOWER_SEGMENT_COLORS } from '@gitroom/nestjs-libraries/integrations/social/follower.sorts';
 
 const trimString = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
@@ -10,6 +17,10 @@ export class CreateFollowerListDto {
   @MinLength(1)
   @MaxLength(64)
   name!: string;
+
+  @IsOptional()
+  @IsIn(FOLLOWER_SEGMENT_COLORS)
+  color?: string;
 }
 
 export class UpdateFollowerListDto {
@@ -18,6 +29,10 @@ export class UpdateFollowerListDto {
   @MinLength(1)
   @MaxLength(64)
   name!: string;
+
+  @IsOptional()
+  @IsIn(FOLLOWER_SEGMENT_COLORS)
+  color?: string;
 }
 
 export class FollowerListMemberDto {

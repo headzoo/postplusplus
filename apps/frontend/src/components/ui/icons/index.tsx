@@ -466,6 +466,26 @@ export const PlusIcon: FC<IconProps> = ({ size = 16, className, ...props }) => (
   </svg>
 );
 
+export const MinusIcon: FC<IconProps> = ({ size = 16, className, ...props }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 16 16"
+    fill="none"
+    className={className}
+    {...props}
+  >
+    <path
+      d="M3.33398 7.99967H12.6673"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 // Checkmark Icon
 export const CheckmarkIcon: FC<IconProps> = ({ className, ...props }) => (
   <svg
@@ -1321,6 +1341,31 @@ export const FilterFunnelIcon: FC<IconProps> = ({
   >
     <path
       d="M4 4H20L14 12V19L10 21V12L4 4Z"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+export const CategoriesIcon: FC<IconProps> = ({
+  size = 16,
+  className,
+  ...props
+}) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    className={className}
+    aria-hidden="true"
+    {...props}
+  >
+    <path
+      d="M3 3H10V10H3V3ZM14 3H21V10H14V3ZM14 14H21V21H14V14ZM3 14H10V21H3V14Z"
       stroke="currentColor"
       strokeWidth="1.5"
       strokeLinecap="round"

@@ -23,9 +23,6 @@ jest.mock('next/navigation', () => ({
 jest.mock('@gitroom/react/translation/get.transation.service.client', () => ({
   useT: () => (_key: string, fallback: string) => fallback,
 }));
-jest.mock('@gitroom/frontend/components/launches/launches.component', () => ({
-  SVGLine: () => null,
-}));
 jest.mock('@gitroom/frontend/components/admin/admin-general.component', () => ({
   AdminGeneralComponent: () => null,
 }));

@@ -1388,7 +1388,8 @@ export class IntegrationService {
     org: Organization,
     user: User,
     integrationId: string,
-    name: string
+    name: string,
+    color?: string | null
   ): Promise<FollowerList> {
     await this.getFollowerIntegrationProvider(org, integrationId);
     try {
@@ -1396,7 +1397,8 @@ export class IntegrationService {
         org.id,
         integrationId,
         user.id,
-        name
+        name,
+        color
       );
       return this.mapFollowerList(list);
     } catch (error) {
@@ -1408,7 +1410,8 @@ export class IntegrationService {
     org: Organization,
     integrationId: string,
     listId: string,
-    name: string
+    name: string,
+    color?: string | null
   ): Promise<FollowerList> {
     await this.getFollowerIntegrationProvider(org, integrationId);
     try {
@@ -1416,7 +1419,8 @@ export class IntegrationService {
         org.id,
         integrationId,
         listId,
-        name
+        name,
+        color
       );
       return this.mapFollowerList(list);
     } catch (error) {
@@ -1805,12 +1809,14 @@ export class IntegrationService {
   private mapFollowerList(list: {
     id: string;
     name: string;
+    color?: string | null;
     createdAt: Date;
     updatedAt: Date;
   }): FollowerList {
     return {
       id: list.id,
       name: list.name,
+      color: list.color ?? null,
       createdAt: list.createdAt.toISOString(),
       updatedAt: list.updatedAt.toISOString(),
     };

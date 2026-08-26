@@ -6,6 +6,7 @@ import {
 } from '@gitroom/nestjs-libraries/database/prisma/channel-interactions/channel-interaction.repository';
 import { ChannelInteractionService } from '@gitroom/nestjs-libraries/database/prisma/channel-interactions/channel-interaction.service';
 import { IntegrationService } from '@gitroom/nestjs-libraries/database/prisma/integrations/integration.service';
+import { AdminScheduleLogService } from '@gitroom/nestjs-libraries/database/prisma/admin-schedule-logs/admin-schedule-log.service';
 import { HOT_MATERIALIZATION_LIST_SCAN } from '@gitroom/nestjs-libraries/temporal/hot-triage.schedule';
 
 export type ChannelHotMaterializationCandidate = {
@@ -20,8 +21,9 @@ export class ChannelHotMaterializationActivity {
   constructor(
     private _repository: ChannelInteractionRepository,
     private _channelInteractionService: ChannelInteractionService,
-    private _integrationService: IntegrationService
-  ) {}
+    private _integrationService: IntegrationService,
+    private _adminScheduleLogService: AdminScheduleLogService
+  ) { }
 
   @ActivityMethod()
   async resolveSweepHourV1() {
@@ -44,6 +46,18 @@ export class ChannelHotMaterializationActivity {
         organizationId: candidate.organizationId,
         providerIdentifier: candidate.providerIdentifier,
       }));
+    await this._adminScheduleLogService.append({
+      scheduleKey: 'hot-triage',
+      message: candidates.length
+        ? `Found due channel ${candidates[0].id} for hot triage`
+        : 'No due channels for hot triage',
+      meta: {
+        hour: request.hour,
+        after: request.after ?? null,
+        candidateCount: candidates.length,
+        scanned: result.candidates.length,
+      },
+    });
     return {
       candidates,
       scanned: result.candidates.length,
@@ -62,6 +76,15 @@ export class ChannelHotMaterializationActivity {
       request.candidate.id
     );
     if (!integration || integration.disabled || integration.deletedAt) {
+      await this._adminScheduleLogService.append({
+        scheduleKey: 'hot-triage',
+        message: `Skipped disabled/deleted channel ${request.candidate.id} for hot triage`,
+        meta: {
+          hour: request.hour,
+          integrationId: request.candidate.id,
+          organizationId: request.candidate.organizationId,
+        },
+      });
       return {
         skipped: true as const,
         hour: request.hour,
@@ -70,27 +93,64 @@ export class ChannelHotMaterializationActivity {
       };
     }
     const now = new Date(`${request.hour}:00:00.000Z`);
-    const result =
-      await this._channelInteractionService.materializeHotPicksForIntegration(
-        integration.organizationId,
-        integration.id,
-        now
-      );
-    if (result.skipped === 'near_full') {
+    try {
+      const result =
+        await this._channelInteractionService.materializeHotPicksForIntegration(
+          integration.organizationId,
+          integration.id,
+          now
+        );
+      if (result.skipped === 'near_full') {
+        await this._adminScheduleLogService.append({
+          scheduleKey: 'hot-triage',
+          message: `Hot triage near-full for channel ${request.candidate.id}`,
+          meta: {
+            hour: result.hour,
+            integrationId: request.candidate.id,
+            organizationId: request.candidate.organizationId,
+            reason: 'near_full',
+            visibleCount: result.visibleCount,
+          },
+        });
+        return {
+          skipped: true as const,
+          reason: 'near_full' as const,
+          hour: result.hour,
+          visibleCount: result.visibleCount,
+          pickCount: 0,
+          candidateCount: 0,
+        };
+      }
+      await this._adminScheduleLogService.append({
+        scheduleKey: 'hot-triage',
+        message: `Hot picks for channel ${request.candidate.id}: ${result.pickCount} picks from ${result.candidateCount} candidates`,
+        meta: {
+          hour: result.hour,
+          organizationId: request.candidate.organizationId,
+          integrationId: request.candidate.id,
+          pickCount: result.pickCount,
+          candidateCount: result.candidateCount,
+        },
+      });
       return {
-        skipped: true as const,
-        reason: 'near_full' as const,
+        skipped: false as const,
         hour: result.hour,
-        visibleCount: result.visibleCount,
-        pickCount: 0,
-        candidateCount: 0,
+        candidateCount: result.candidateCount,
+        pickCount: result.pickCount,
       };
+    } catch (error) {
+      await this._adminScheduleLogService.append({
+        scheduleKey: 'hot-triage',
+        level: 'ERROR',
+        message: `Hot materialization failed for channel ${request.candidate.id}`,
+        meta: {
+          hour: request.hour,
+          integrationId: request.candidate.id,
+          organizationId: request.candidate.organizationId,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      });
+      throw error;
     }
-    return {
-      skipped: false as const,
-      hour: result.hour,
-      candidateCount: result.candidateCount,
-      pickCount: result.pickCount,
-    };
   }
 }

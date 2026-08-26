@@ -193,6 +193,7 @@ export type Follower = {
 export type FollowerList = {
   id: string;
   name: string;
+  color?: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -1270,6 +1271,44 @@ export const useFollowerListMutations = (integrationId?: string) => {
     [fetch, integrationId, mutateCache]
   );
 
+  const updateList = useCallback(
+    async (
+      listId: string,
+      body: { name: string; color?: string | null }
+    ) => {
+      if (!integrationId) {
+        throw new Error('Channel is required');
+      }
+      const response = await fetch(
+        `/followers/${integrationId}/lists/${listId}`,
+        {
+          method: 'PUT',
+          body: JSON.stringify(body),
+        }
+      );
+      if (!response.ok) {
+        throw new Error('Failed to update follower list');
+      }
+      const list = (await response.json()) as FollowerList;
+      await mutateCache(
+        followerListsKey(integrationId),
+        (current: FollowerList[] | undefined) => {
+          const lists = current ?? [];
+          const index = lists.findIndex((item) => item.id === listId);
+          if (index === -1) {
+            return [...lists, list];
+          }
+          const next = [...lists];
+          next[index] = list;
+          return next;
+        },
+        { revalidate: true }
+      );
+      return list;
+    },
+    [fetch, integrationId, mutateCache]
+  );
+
   const addMember = useCallback(
     async (listId: string, externalId: string) => {
       if (!integrationId) {
@@ -1550,6 +1589,7 @@ export const useFollowerListMutations = (integrationId?: string) => {
   return {
     createList,
     deleteList,
+    updateList,
     addMember,
     importMemberFromUrl,
     removeMember,

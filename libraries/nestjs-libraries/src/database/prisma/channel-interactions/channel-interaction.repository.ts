@@ -3301,7 +3301,7 @@ export class ChannelInteractionRepository {
       return tx.channelAudienceList.findMany({
         where: { organizationId, integrationId, deletedAt: null },
         orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
-        select: { id: true, name: true, createdAt: true, updatedAt: true },
+        select: { id: true, name: true, color: true, createdAt: true, updatedAt: true },
       });
     });
   }
@@ -3366,7 +3366,8 @@ export class ChannelInteractionRepository {
     organizationId: string,
     integrationId: string,
     name: string,
-    createdByUserId: string
+    createdByUserId: string,
+    color?: string | null
   ) {
     return this.withSerializableRetry(async (tx) => {
       await this.assertOwnedIntegration(tx, organizationId, integrationId);
@@ -3387,9 +3388,10 @@ export class ChannelInteractionRepository {
           organizationId,
           integrationId,
           name,
+          color: color ?? null,
           createdByUserId,
         },
-        select: { id: true, name: true, createdAt: true, updatedAt: true },
+        select: { id: true, name: true, color: true, createdAt: true, updatedAt: true },
       });
       return { conflict: false as const, list };
     });
@@ -3399,7 +3401,8 @@ export class ChannelInteractionRepository {
     organizationId: string,
     integrationId: string,
     listId: string,
-    name: string
+    name: string,
+    color?: string | null
   ) {
     return this.withSerializableRetry(async (tx) => {
       await this.assertOwnedIntegration(tx, organizationId, integrationId);
@@ -3425,8 +3428,11 @@ export class ChannelInteractionRepository {
       }
       const list = await tx.channelAudienceList.update({
         where: { id: listId },
-        data: { name },
-        select: { id: true, name: true, createdAt: true, updatedAt: true },
+        data: {
+          name,
+          ...(color !== undefined ? { color } : {}),
+        },
+        select: { id: true, name: true, color: true, createdAt: true, updatedAt: true },
       });
       return { list };
     });

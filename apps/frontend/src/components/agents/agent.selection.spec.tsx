@@ -111,10 +111,6 @@ jest.mock('@gitroom/react/helpers/safe.image', () => ({
   default: ({ alt }: { alt: string }) => <img alt={alt} />,
 }));
 
-jest.mock('@gitroom/frontend/components/launches/launches.component', () => ({
-  SVGLine: () => <div data-testid="svg-line" />,
-}));
-
 jest.mock('@gitroom/frontend/components/pipelines/pipeline.channels', () => ({
   PipelineChannels: ({ channels }: { channels: Integrations[] }) => (
     <div data-testid="pipeline-channels">{channels.length}</div>

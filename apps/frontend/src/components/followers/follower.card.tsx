@@ -12,6 +12,10 @@ import { useLeadDismissModal } from '@gitroom/frontend/components/followers/lead
 import { Follower, FollowerList, DismissibleTriage, getProfileLinkAutoSnoozeTriages } from '@gitroom/frontend/components/followers/use.followers';
 import { RelationshipStars } from '@gitroom/frontend/components/followers/follower.relationship.stars';
 import { FollowerListDropdown } from '@gitroom/frontend/components/followers/follower.list.dropdown';
+import {
+  FOLLOWER_SEGMENT_COLOR_CLASSES,
+  FollowerSegmentColor,
+} from '@gitroom/frontend/components/followers/follower.segments';
 import { TimelineIcon, RobotIcon } from '@gitroom/frontend/components/ui/icons';
 import { LeadFitDismissReason } from '@gitroom/nestjs-libraries/dtos/integrations/lead-fit-feedback.types';
 
@@ -265,10 +269,18 @@ export const FollowerIdentityBadges: FC<{
           if (!list) {
             return null;
           }
+          const listColor =
+            (list.color as FollowerSegmentColor | null | undefined) ??
+            'neutral';
+          const colorClasses = FOLLOWER_SEGMENT_COLOR_CLASSES[listColor];
           return (
             <span
               key={list.id}
-              className="inline-flex w-fit shrink-0 items-center rounded-full border border-newTableBorder px-[8px] py-[2px] text-[11px] font-[600] text-textItemBlur"
+              className={clsx(
+                'inline-flex w-fit shrink-0 items-center rounded-full border px-[8px] py-[2px] text-[11px] font-[600]',
+                colorClasses.border,
+                colorClasses.text
+              )}
             >
               {list.name}
             </span>

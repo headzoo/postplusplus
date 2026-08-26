@@ -60,6 +60,7 @@ module.exports = {
     '<rootDir>/apps/orchestrator/src/workflows/channel-cultivate.workflow.v1.spec.ts',
     '<rootDir>/apps/orchestrator/src/workflows/channel-hot-materialization.workflow.v1.spec.ts',
     '<rootDir>/apps/orchestrator/src/activities/channel-hot-materialization.activity.spec.ts',
+    '<rootDir>/apps/orchestrator/src/activities/channel-cultivate.activity.spec.ts',
     '<rootDir>/apps/frontend/src/components/admin/admin-schedule.component.spec.tsx',
     '<rootDir>/apps/frontend/src/components/admin/use.admin-schedule-logs.spec.tsx',
     '<rootDir>/apps/frontend/src/components/admin/admin-passkey.utils.spec.ts',

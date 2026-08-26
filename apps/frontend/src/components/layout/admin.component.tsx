@@ -5,7 +5,6 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import clsx from 'clsx';
 import { useUser } from '@gitroom/frontend/components/layout/user.context';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
-import { SVGLine } from '@gitroom/frontend/components/launches/launches.component';
 import { AdminGeneralComponent } from '@gitroom/frontend/components/admin/admin-general.component';
 import { AdminUsersComponent } from '@gitroom/frontend/components/admin/admin-users.component';
 import { AdminErrorsComponent } from '@gitroom/frontend/components/admin/admin-errors.component';
@@ -111,19 +110,11 @@ export const AdminLayout: FC = () => {
             <div
               key={tabKey}
               className={clsx(
-                'cursor-pointer flex items-center gap-[12px] group/profile hover:bg-boxHover rounded-e-[8px]',
+                'cursor-pointer px-[12px] py-[8px] hover:bg-boxHover rounded-[8px]',
                 tabKey === tab && 'bg-boxHover'
               )}
               onClick={() => router.push(path)}
             >
-              <div
-                className={clsx(
-                  'h-full w-[4px] rounded-s-[3px] opacity-0 group-hover/profile:opacity-100 transition-opacity',
-                  tabKey === tab && 'opacity-100'
-                )}
-              >
-                <SVGLine />
-              </div>
               {label}
             </div>
           ))}

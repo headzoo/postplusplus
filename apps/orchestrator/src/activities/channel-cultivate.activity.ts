@@ -3,6 +3,7 @@ import { Activity, ActivityMethod } from 'nestjs-temporal-core';
 import { ChannelInteractionRepository, utcHourKey } from '@gitroom/nestjs-libraries/database/prisma/channel-interactions/channel-interaction.repository';
 import { ChannelInteractionService } from '@gitroom/nestjs-libraries/database/prisma/channel-interactions/channel-interaction.service';
 import { IntegrationService } from '@gitroom/nestjs-libraries/database/prisma/integrations/integration.service';
+import { AdminScheduleLogService } from '@gitroom/nestjs-libraries/database/prisma/admin-schedule-logs/admin-schedule-log.service';
 import { CULTIVATE_MATERIALIZATION_LIST_SCAN } from '@gitroom/nestjs-libraries/temporal/cultivate.schedule';
 
 export type ChannelCultivateCandidate = {
@@ -17,7 +18,8 @@ export class ChannelCultivateActivity {
   constructor(
     private _repository: ChannelInteractionRepository,
     private _channelInteractionService: ChannelInteractionService,
-    private _integrationService: IntegrationService
+    private _integrationService: IntegrationService,
+    private _adminScheduleLogService: AdminScheduleLogService
   ) { }
 
   @ActivityMethod()
@@ -92,6 +94,18 @@ export class ChannelCultivateActivity {
         organizationId: candidate.organizationId,
         providerIdentifier: candidate.providerIdentifier,
       }));
+    await this._adminScheduleLogService.append({
+      scheduleKey: 'follower-cultivate',
+      message: candidates.length
+        ? `Found due channel ${candidates[0].id} for cultivate`
+        : 'No due channels for cultivate',
+      meta: {
+        hour: request.hour,
+        after: request.after ?? null,
+        candidateCount: candidates.length,
+        scanned: result.candidates.length,
+      },
+    });
     return {
       candidates,
       scanned: result.candidates.length,
@@ -110,6 +124,15 @@ export class ChannelCultivateActivity {
       request.candidate.id
     );
     if (!integration || integration.disabled || integration.deletedAt) {
+      await this._adminScheduleLogService.append({
+        scheduleKey: 'follower-cultivate',
+        message: `Skipped disabled/deleted channel ${request.candidate.id} for cultivate`,
+        meta: {
+          hour: request.hour,
+          integrationId: request.candidate.id,
+          organizationId: request.candidate.organizationId,
+        },
+      });
       return {
         skipped: true as const,
         hour: request.hour,
@@ -118,27 +141,64 @@ export class ChannelCultivateActivity {
       };
     }
     const now = new Date(`${request.hour}:00:00.000Z`);
-    const result =
-      await this._channelInteractionService.materializeCultivatePicksForIntegration(
-        integration.organizationId,
-        integration.id,
-        now
-      );
-    if (result.skipped === 'near_full') {
+    try {
+      const result =
+        await this._channelInteractionService.materializeCultivatePicksForIntegration(
+          integration.organizationId,
+          integration.id,
+          now
+        );
+      if (result.skipped === 'near_full') {
+        await this._adminScheduleLogService.append({
+          scheduleKey: 'follower-cultivate',
+          message: `Cultivate near-full for channel ${request.candidate.id}`,
+          meta: {
+            hour: result.hour,
+            integrationId: request.candidate.id,
+            organizationId: request.candidate.organizationId,
+            reason: 'near_full',
+            visibleCount: result.visibleCount,
+          },
+        });
+        return {
+          skipped: true as const,
+          reason: 'near_full' as const,
+          hour: result.hour,
+          visibleCount: result.visibleCount,
+          pickCount: 0,
+          candidateCount: 0,
+        };
+      }
+      await this._adminScheduleLogService.append({
+        scheduleKey: 'follower-cultivate',
+        message: `Cultivate picks for channel ${request.candidate.id}: ${result.pickCount} picks from ${result.candidateCount} candidates`,
+        meta: {
+          hour: result.hour,
+          organizationId: request.candidate.organizationId,
+          integrationId: request.candidate.id,
+          pickCount: result.pickCount,
+          candidateCount: result.candidateCount,
+        },
+      });
       return {
-        skipped: true as const,
-        reason: 'near_full' as const,
+        skipped: false as const,
         hour: result.hour,
-        visibleCount: result.visibleCount,
-        pickCount: 0,
-        candidateCount: 0,
+        candidateCount: result.candidateCount,
+        pickCount: result.pickCount,
       };
+    } catch (error) {
+      await this._adminScheduleLogService.append({
+        scheduleKey: 'follower-cultivate',
+        level: 'ERROR',
+        message: `Cultivate materialization failed for channel ${request.candidate.id}`,
+        meta: {
+          hour: request.hour,
+          integrationId: request.candidate.id,
+          organizationId: request.candidate.organizationId,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      });
+      throw error;
     }
-    return {
-      skipped: false as const,
-      hour: result.hour,
-      candidateCount: result.candidateCount,
-      pickCount: result.pickCount,
-    };
   }
 }

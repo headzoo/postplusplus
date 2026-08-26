@@ -1882,6 +1882,7 @@ model ChannelAudienceList {
   organizationId  String
   integrationId   String
   name            String
+  color           String?
   createdByUserId String?
   deletedAt       DateTime?
   createdAt       DateTime                    @default(now())

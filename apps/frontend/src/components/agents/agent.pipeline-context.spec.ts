@@ -17,10 +17,6 @@ jest.mock('@gitroom/helpers/utils/use.wait.for.class', () => ({
   useWaitForClass: () => false,
 }));
 
-jest.mock('@gitroom/frontend/components/launches/launches.component', () => ({
-  SVGLine: () => null,
-}));
-
 jest.mock('@gitroom/frontend/components/pipelines/pipeline.channels', () => ({
   PipelineChannels: () => null,
 }));
