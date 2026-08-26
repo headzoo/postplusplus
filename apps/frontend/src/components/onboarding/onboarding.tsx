@@ -8,6 +8,7 @@ import { OnboardingModal } from '@gitroom/frontend/components/onboarding/onboard
 
 export const Onboarding: FC = () => {
   const query = useSearchParams();
+  const onboarding = query.get('onboarding');
   const modal = useModals();
   const router = useRouter();
   const modalOpen = useRef(false);
@@ -19,7 +20,6 @@ export const Onboarding: FC = () => {
   }, [modal, router]);
 
   useEffect(() => {
-    const onboarding = query.get('onboarding');
     if (!onboarding) {
       if (modalOpen.current) {
         modalOpen.current = false;
@@ -41,7 +41,7 @@ export const Onboarding: FC = () => {
       onClose: handleClose,
       children: <OnboardingModal onClose={handleClose} />,
     });
-  }, [query, handleClose, t]);
+  }, [onboarding, handleClose, modal, t]);
   
   return null;
 };

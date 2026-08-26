@@ -90,7 +90,9 @@ These tabs appear depending on your plan.
 
 Outbound HTTP notifications when something happens in Post++ (for example when posts publish). Heading shows usage like **Webhooks (N/limit)**.
 
-**Add a webhook**: Name, URL, **All integrations** or **Specific integrations**, **Send Test**, **Save**.
+**+ Add**: Name, URL, **All integrations** or **Specific integrations**, **Send Test**, **Save**.
+
+**Logs**: Toggle to inspect incoming and outgoing webhook HTTP. Use filters (direction, event type, search), **Refresh**, and **View** a row for full detail (**Copy**). Tracking alerts may appear above the table with **Open channel settings**. Click **Logs** again to return to your configured webhooks.
 
 ### Auto Post
 
@@ -135,7 +137,7 @@ Empty: **No Integrations Yet**. Connected rows offer **Delete Integration**. Cat
 
 ## Logs
 
-**Logs** inspects outgoing and incoming HTTP for posts and webhooks. Toggle **Webhooks** | **Posts**, use filters (direction, event type, search), **Refresh**, and **View** a row for full detail (**Copy**). Empty: **No logs found.** Tracking alerts may appear above the table with **Open channel settings**.
+**Logs** inspects outgoing HTTP for posts. Use **Refresh** and **View** a row for full detail (**Copy**). Empty: **No logs found.**
 
 ## Log out
 

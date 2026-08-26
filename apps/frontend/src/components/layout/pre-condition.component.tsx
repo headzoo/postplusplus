@@ -1,4 +1,4 @@
-import React, { FC, useEffect } from 'react';
+import React, { FC, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ModalWrapperComponent } from '@gitroom/frontend/components/new-launch/modal.wrapper.component';
 import { useModals } from '@gitroom/frontend/components/layout/new-modal';
@@ -30,17 +30,21 @@ export const PreConditionComponentModal: FC = () => {
 export const PreConditionComponent: FC = () => {
   const modal = useModals();
   const query = useSearchParams();
+  const precondition = query.get('precondition');
+  const openedRef = useRef(false);
   useEffect(() => {
-    if (query.get('precondition')) {
-      modal.openModal({
-        title: 'Suspicious activity detected',
-        withCloseButton: true,
-        classNames: {
-          modal: 'text-textColor',
-        },
-        children: <PreConditionComponentModal />,
-      });
+    if (!precondition || openedRef.current) {
+      return;
     }
-  }, []);
+    openedRef.current = true;
+    modal.openModal({
+      title: 'Suspicious activity detected',
+      withCloseButton: true,
+      classNames: {
+        modal: 'text-textColor',
+      },
+      children: <PreConditionComponentModal />,
+    });
+  }, [modal, precondition]);
   return null;
 };

@@ -29,7 +29,7 @@ export const SidebarNav: FC<{
     >
       <div
         className={clsx(
-          'flex min-h-0 flex-1 flex-col overflow-y-auto',
+          'flex min-h-0 flex-1 flex-col overflow-y-auto scrollbar scrollbar-thumb-fifth scrollbar-track-newBgColor',
           isDrawer || !collapsed
             ? 'items-stretch px-[8px] gap-[8px]'
             : 'items-center px-[6px] gap-[8px]'

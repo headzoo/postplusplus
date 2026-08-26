@@ -3,12 +3,12 @@ import { FC, useEffect } from 'react';
 import { useFireEvents } from '@gitroom/helpers/utils/use.fire.events';
 export const NewSubscription: FC = () => {
   const query = useSearchParams();
+  const check = query.get('check');
   const fireEvents = useFireEvents();
   useEffect(() => {
-    const check = query.get('check');
     if (check) {
       fireEvents('purchase');
     }
-  }, [query]);
+  }, [check, fireEvents]);
   return null;
 };

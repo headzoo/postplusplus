@@ -45,10 +45,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           />
         )}
       </head>
-      <ChangeDirClient />
       <body
         className={clsx(jakartaSans.className, 'dark text-primary !bg-primary')}
       >
+        <ChangeDirClient />
         <VariableContextComponent
           storageProvider={
             process.env.STORAGE_PROVIDER! as 'local' | 'cloudflare'

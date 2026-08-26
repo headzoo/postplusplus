@@ -2,7 +2,7 @@
 
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useUser } from '@gitroom/frontend/components/layout/user.context';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { pricing } from '@gitroom/nestjs-libraries/database/prisma/subscriptions/pricing';
 import { Input } from '@gitroom/react/form/input';
 import { Button } from '@gitroom/react/form/button';
@@ -97,11 +97,19 @@ export const LifetimeDeal = () => {
     }
     return list;
   }, [user, nextPackage]);
+  const shouldRedirectToBilling =
+    !!user?.id && user?.tier?.current !== 'FREE' && !user?.isLifetime;
+
+  useEffect(() => {
+    if (shouldRedirectToBilling) {
+      router.replace('/billing');
+    }
+  }, [router, shouldRedirectToBilling]);
+
   if (!user?.tier) {
     return null;
   }
-  if (user?.id && user?.tier?.current !== 'FREE' && !user?.isLifetime) {
-    router.replace('/billing');
+  if (shouldRedirectToBilling) {
     return null;
   }
   return (

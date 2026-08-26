@@ -1329,6 +1329,208 @@ export const FilterFunnelIcon: FC<IconProps> = ({
   </svg>
 );
 
+export const TargetIcon: FC<IconProps> = ({
+  size = 20,
+  className,
+  ...props
+}) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    className={className}
+    aria-hidden="true"
+    {...props}
+  >
+    <circle
+      cx="12"
+      cy="12"
+      r="9"
+      stroke="currentColor"
+      strokeWidth="1.5"
+    />
+    <circle
+      cx="12"
+      cy="12"
+      r="5"
+      stroke="currentColor"
+      strokeWidth="1.5"
+    />
+    <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+  </svg>
+);
+
+export const MagnetIcon: FC<IconProps> = ({
+  size = 20,
+  className,
+  ...props
+}) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    className={className}
+    aria-hidden="true"
+    {...props}
+  >
+    <path
+      d="M6 3V8C6 10.7614 8.23858 13 11 13H13C15.7614 13 18 10.7614 18 8V3"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M6 3H9M15 3H18"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+    <path
+      d="M12 13V21M9 21H15"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+export const SpeechBubblesIcon: FC<IconProps> = ({
+  size = 20,
+  className,
+  ...props
+}) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    className={className}
+    aria-hidden="true"
+    {...props}
+  >
+    <path
+      d="M8 10H12M8 14H10M16 10H18M16 14H17"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+    <path
+      d="M6 18L7 14H4C3.44772 14 3 13.5523 3 13V6C3 5.44772 3.44772 5 4 5H11C11.5523 5 12 5.44772 12 6V9"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M13 9H20C20.5523 9 21 9.44772 21 10V17C21 17.5523 20.5523 18 20 18H17L16 21L15 18H13C12.4477 18 12 17.5523 12 17V10C12 9.44772 12.4477 9 13 9Z"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+export const MegaphoneIcon: FC<IconProps> = ({
+  size = 20,
+  className,
+  ...props
+}) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    className={className}
+    aria-hidden="true"
+    {...props}
+  >
+    <path
+      d="M4 10V14C4 15.1046 4.89543 16 6 16H8L13 20V4L8 8H6C4.89543 8 4 8.89543 4 10Z"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M16 9C17.1046 9 18 10.3431 18 12C18 13.6569 17.1046 15 16 15"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+    <path
+      d="M18 7C20.2091 7 22 9.23858 22 12C22 14.7614 20.2091 17 18 17"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+export const HeadsetIcon: FC<IconProps> = ({
+  size = 20,
+  className,
+  ...props
+}) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    className={className}
+    aria-hidden="true"
+    {...props}
+  >
+    <path
+      d="M4 12V10C4 6.13401 7.13401 3 11 3H13C16.866 3 20 6.13401 20 10V12"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+    <path
+      d="M4 12C4 13.1046 4.89543 14 6 14H7V18H6C4.89543 18 4 17.1046 4 16V12ZM20 12C20 13.1046 19.1046 14 18 14H17V18H18C19.1046 18 20 17.1046 20 16V12Z"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+export const StarOutlineIcon: FC<IconProps> = ({
+  size = 20,
+  className,
+  ...props
+}) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    className={className}
+    aria-hidden="true"
+    {...props}
+  >
+    <path
+      d="M12 3L14.317 8.68202L20.5 9.3541L15.75 13.5679L17.135 19.6459L12 16.682L6.865 19.6459L8.25 13.5679L3.5 9.3541L9.683 8.68202L12 3Z"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 export const NoMediaIcon: FC = () => {
   const [mode, setMode] = useCookie('mode', 'dark');
 

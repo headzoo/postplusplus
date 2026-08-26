@@ -18,8 +18,6 @@ import {
 import { ChannelTrackingAlert } from '@gitroom/frontend/components/settings/channel-tracking-alert.component';
 import { useChannelTrackingAlerts } from '@gitroom/frontend/components/settings/use.channel.tracking.alerts';
 
-type LogKind = 'posts' | 'webhooks';
-
 const isWebhookLog = (
   row: PostHttpLogRow | WebhookHttpLogRow
 ): row is WebhookHttpLogRow => 'direction' in row;
@@ -248,13 +246,11 @@ const LogDetailsModal: FC<{
   );
 };
 
-const LogTable: FC<{
-  kind: LogKind;
+const PostLogsTable: FC<{
   posts?: LogsResponse<PostHttpLogRow>;
-  webhooks?: LogsResponse<WebhookHttpLogRow>;
   isLoading: boolean;
   error?: Error;
-}> = ({ kind, posts, webhooks, isLoading, error }) => {
+}> = ({ posts, isLoading, error }) => {
   const t = useT();
   const modal = useModals();
 
@@ -273,6 +269,62 @@ const LogTable: FC<{
     },
     [modal, t]
   );
+
+  if (isLoading) {
+    return <LoadingComponent />;
+  }
+  if (error) {
+    return (
+      <div className="text-red-400">
+        {t('failed_to_load_logs', 'Failed to load logs.')}
+      </div>
+    );
+  }
+
+  if (!posts || posts.items.length === 0) {
+    return (
+      <div className="opacity-70">{t('no_logs_found', 'No logs found.')}</div>
+    );
+  }
+
+  return (
+    <div className="border border-newTableBorder rounded-[8px] overflow-hidden">
+      <div className="grid grid-cols-[170px_90px_80px_120px_1fr_90px] gap-[12px] px-[12px] py-[10px] bg-newTableHeader text-[12px] uppercase opacity-70 border-b border-newTableBorder">
+        <div>{t('created', 'Created')}</div>
+        <div>{t('status', 'Status')}</div>
+        <div>{t('method', 'Method')}</div>
+        <div>{t('provider', 'Provider')}</div>
+        <div>{t('url', 'URL')}</div>
+        <div className="text-right">{t('actions', 'Actions')}</div>
+      </div>
+      {posts.items.map((row) => (
+        <div
+          key={row.id}
+          className="grid grid-cols-[170px_90px_80px_120px_1fr_90px] gap-[12px] px-[12px] py-[10px] text-[13px] border-b border-newTableBorder last:border-b-0 items-center"
+        >
+          <div>{new Date(row.createdAt).toLocaleString()}</div>
+          <div>{row.statusCode ?? row.error ?? '—'}</div>
+          <div>{row.method}</div>
+          <div>{row.provider}</div>
+          <div className="break-all opacity-80">{row.url}</div>
+          <div className="flex justify-end">
+            <Button secondary type="button" onClick={() => openPost(row)}>
+              {t('view', 'View')}
+            </Button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const WebhookLogsTable: FC<{
+  webhooks?: LogsResponse<WebhookHttpLogRow>;
+  isLoading: boolean;
+  error?: Error;
+}> = ({ webhooks, isLoading, error }) => {
+  const t = useT();
+  const modal = useModals();
 
   const openWebhook = useCallback(
     (row: WebhookHttpLogRow) => {
@@ -297,43 +349,6 @@ const LogTable: FC<{
     return (
       <div className="text-red-400">
         {t('failed_to_load_logs', 'Failed to load logs.')}
-      </div>
-    );
-  }
-
-  if (kind === 'posts') {
-    if (!posts || posts.items.length === 0) {
-      return (
-        <div className="opacity-70">{t('no_logs_found', 'No logs found.')}</div>
-      );
-    }
-    return (
-      <div className="border border-newTableBorder rounded-[8px] overflow-hidden">
-        <div className="grid grid-cols-[170px_90px_80px_120px_1fr_90px] gap-[12px] px-[12px] py-[10px] bg-newTableHeader text-[12px] uppercase opacity-70 border-b border-newTableBorder">
-          <div>{t('created', 'Created')}</div>
-          <div>{t('status', 'Status')}</div>
-          <div>{t('method', 'Method')}</div>
-          <div>{t('provider', 'Provider')}</div>
-          <div>{t('url', 'URL')}</div>
-          <div className="text-right">{t('actions', 'Actions')}</div>
-        </div>
-        {posts.items.map((row) => (
-          <div
-            key={row.id}
-            className="grid grid-cols-[170px_90px_80px_120px_1fr_90px] gap-[12px] px-[12px] py-[10px] text-[13px] border-b border-newTableBorder last:border-b-0 items-center"
-          >
-            <div>{new Date(row.createdAt).toLocaleString()}</div>
-            <div>{row.statusCode ?? row.error ?? '—'}</div>
-            <div>{row.method}</div>
-            <div>{row.provider}</div>
-            <div className="break-all opacity-80">{row.url}</div>
-            <div className="flex justify-end">
-              <Button secondary type="button" onClick={() => openPost(row)}>
-                {t('view', 'View')}
-              </Button>
-            </div>
-          </div>
-        ))}
       </div>
     );
   }
@@ -383,33 +398,24 @@ const LogTable: FC<{
   );
 };
 
-export const LogsSettings: FC = () => {
+export const WebhookLogsPanel: FC = () => {
   const t = useT();
-  const [kind, setKind] = useState<LogKind>('webhooks');
   const [page, setPage] = useState(0);
   const [direction, setDirection] = useState<'INBOUND' | 'OUTBOUND' | ''>('');
   const [searchDraft, setSearchDraft] = useState('');
   const [search, setSearch] = useState('');
   const [eventType, setEventType] = useState('');
   const limit = 20;
-  const posts = usePostLogs(page, limit);
   const webhooks = useWebhookLogs(page, limit, direction, search, eventType);
   const trackingAlerts = useChannelTrackingAlerts();
-  const current = kind === 'posts' ? posts : webhooks;
-  const totalPages = Math.max(1, Math.ceil((current.data?.total || 0) / limit));
-
-  const selectKind = useCallback((next: LogKind) => {
-    setKind(next);
-    setPage(0);
-  }, []);
+  const totalPages = Math.max(
+    1,
+    Math.ceil((webhooks.data?.total || 0) / limit)
+  );
 
   const refreshLogs = useCallback(() => {
-    if (kind === 'posts') {
-      posts.mutate();
-      return;
-    }
     webhooks.mutate();
-  }, [kind, posts, webhooks]);
+  }, [webhooks]);
 
   const applySearch = useCallback(
     (event: React.FormEvent) => {
@@ -420,11 +426,119 @@ export const LogsSettings: FC = () => {
     [searchDraft]
   );
 
+  return (
+    <div className="flex flex-col gap-[16px] w-full">
+      {trackingAlerts.data?.map((alert) => (
+        <div key={alert.integrationId}>
+          <ChannelTrackingAlert
+            channelName={alert.channelName}
+            tracking={alert.details.tracking}
+            subscriptions={alert.details.subscriptions}
+          />
+        </div>
+      ))}
+      <div className="flex flex-wrap items-center gap-[8px] w-full">
+        <Button
+          type="button"
+          secondary
+          loading={!!webhooks.isValidating && !webhooks.isLoading}
+          onClick={refreshLogs}
+        >
+          {t('refresh', 'Refresh')}
+        </Button>
+        <div className="flex flex-wrap items-center gap-[8px] ml-auto">
+          <select
+            aria-label={t('direction', 'Direction')}
+            value={direction}
+            onChange={(event) => {
+              setPage(0);
+              setDirection(event.target.value as 'INBOUND' | 'OUTBOUND' | '');
+            }}
+            className="bg-newBgColorInner h-[40px] border border-newTableBorder rounded-[8px] px-[10px] text-[14px] text-textColor"
+          >
+            <option value="">{t('all_directions', 'All directions')}</option>
+            <option value="OUTBOUND">{t('outbound', 'Outbound')}</option>
+            <option value="INBOUND">{t('inbound', 'Inbound')}</option>
+          </select>
+          <select
+            aria-label={t('event_type', 'Event type')}
+            value={eventType}
+            onChange={(event) => {
+              setPage(0);
+              setEventType(event.target.value);
+            }}
+            className="bg-newBgColorInner h-[40px] border border-newTableBorder rounded-[8px] px-[10px] text-[14px] text-textColor"
+          >
+            <option value="">{t('all_event_types', 'All event types')}</option>
+            {WEBHOOK_EVENT_TYPES.map((value) => (
+              <option key={value} value={value}>
+                {WEBHOOK_EVENT_LABELS[value]}
+              </option>
+            ))}
+          </select>
+          <form className="flex items-center gap-[8px]" onSubmit={applySearch}>
+            <input
+              type="search"
+              value={searchDraft}
+              onChange={(event) => setSearchDraft(event.target.value)}
+              placeholder={t('search_source_or_target', 'Search source or target')}
+              className="bg-newBgColorInner h-[40px] w-[220px] border border-newTableBorder rounded-[8px] px-[10px] text-[14px] text-textColor"
+            />
+            <Button type="submit" secondary>
+              {t('search', 'Search')}
+            </Button>
+          </form>
+        </div>
+      </div>
+      <div className="w-full">
+        <WebhookLogsTable
+          webhooks={webhooks.data}
+          isLoading={!!webhooks.isLoading}
+          error={webhooks.error}
+        />
+      </div>
+      <div className="flex items-center justify-between w-full">
+        <div className="text-[13px] opacity-70">
+          {t('page', 'Page')} {page + 1} {t('of', 'of')} {totalPages}
+        </div>
+        <div className="flex gap-[8px]">
+          <Button
+            secondary
+            type="button"
+            disabled={page === 0}
+            onClick={() => setPage((currentPage) => Math.max(0, currentPage - 1))}
+          >
+            {t('previous', 'Previous')}
+          </Button>
+          <Button
+            type="button"
+            disabled={!webhooks.data?.hasMore}
+            onClick={() => setPage((currentPage) => currentPage + 1)}
+          >
+            {t('next', 'Next')}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export const LogsSettings: FC = () => {
+  const t = useT();
+  const [page, setPage] = useState(0);
+  const limit = 20;
+  const posts = usePostLogs(page, limit);
+  const totalPages = Math.max(1, Math.ceil((posts.data?.total || 0) / limit));
+
+  const refreshLogs = useCallback(() => {
+    posts.mutate();
+  }, [posts]);
+
   const subtitle = useMemo(
     () =>
       t(
-        'inspect_outgoing_and_incoming_http_for_posts_and_webhooks',
-        'Inspect outgoing and incoming HTTP for posts and webhooks.'
+        'inspect_outgoing_http_for_posts',
+        'Inspect outgoing HTTP for posts.'
       ),
     [t]
   );
@@ -433,93 +547,22 @@ export const LogsSettings: FC = () => {
     <div className="flex flex-col">
       <h3 className="text-[20px]">{t('logs', 'Logs')}</h3>
       <div className="text-customColor18 mt-[4px]">{subtitle}</div>
-      {kind === 'webhooks' &&
-        trackingAlerts.data?.map((alert) => (
-          <div key={alert.integrationId} className="mt-[16px]">
-            <ChannelTrackingAlert
-              channelName={alert.channelName}
-              tracking={alert.details.tracking}
-              subscriptions={alert.details.subscriptions}
-            />
-          </div>
-        ))}
       <div className="my-[16px] bg-sixth border-fifth items-center border rounded-[4px] p-[24px] flex flex-col gap-[16px]">
         <div className="flex flex-wrap items-center gap-[8px] w-full">
           <Button
             type="button"
-            secondary={kind !== 'webhooks'}
-            onClick={() => selectKind('webhooks')}
-          >
-            {t('webhooks', 'Webhooks')}
-          </Button>
-          <Button
-            type="button"
-            secondary={kind !== 'posts'}
-            onClick={() => selectKind('posts')}
-          >
-            {t('posts', 'Posts')}
-          </Button>
-          <Button
-            type="button"
             secondary
-            loading={!!current.isValidating && !current.isLoading}
+            loading={!!posts.isValidating && !posts.isLoading}
             onClick={refreshLogs}
           >
             {t('refresh', 'Refresh')}
           </Button>
-          {kind === 'webhooks' && (
-            <div className="flex flex-wrap items-center gap-[8px] ml-auto">
-              <select
-                aria-label={t('direction', 'Direction')}
-                value={direction}
-                onChange={(event) => {
-                  setPage(0);
-                  setDirection(event.target.value as 'INBOUND' | 'OUTBOUND' | '');
-                }}
-                className="bg-newBgColorInner h-[40px] border border-newTableBorder rounded-[8px] px-[10px] text-[14px] text-textColor"
-              >
-                <option value="">{t('all_directions', 'All directions')}</option>
-                <option value="OUTBOUND">{t('outbound', 'Outbound')}</option>
-                <option value="INBOUND">{t('inbound', 'Inbound')}</option>
-              </select>
-              <select
-                aria-label={t('event_type', 'Event type')}
-                value={eventType}
-                onChange={(event) => {
-                  setPage(0);
-                  setEventType(event.target.value);
-                }}
-                className="bg-newBgColorInner h-[40px] border border-newTableBorder rounded-[8px] px-[10px] text-[14px] text-textColor"
-              >
-                <option value="">{t('all_event_types', 'All event types')}</option>
-                {WEBHOOK_EVENT_TYPES.map((value) => (
-                  <option key={value} value={value}>
-                    {WEBHOOK_EVENT_LABELS[value]}
-                  </option>
-                ))}
-              </select>
-              <form className="flex items-center gap-[8px]" onSubmit={applySearch}>
-                <input
-                  type="search"
-                  value={searchDraft}
-                  onChange={(event) => setSearchDraft(event.target.value)}
-                  placeholder={t('search_source_or_target', 'Search source or target')}
-                  className="bg-newBgColorInner h-[40px] w-[220px] border border-newTableBorder rounded-[8px] px-[10px] text-[14px] text-textColor"
-                />
-                <Button type="submit" secondary>
-                  {t('search', 'Search')}
-                </Button>
-              </form>
-            </div>
-          )}
         </div>
         <div className="w-full">
-          <LogTable
-            kind={kind}
+          <PostLogsTable
             posts={posts.data}
-            webhooks={webhooks.data}
-            isLoading={!!current.isLoading}
-            error={current.error}
+            isLoading={!!posts.isLoading}
+            error={posts.error}
           />
         </div>
         <div className="flex items-center justify-between w-full">
@@ -537,7 +580,7 @@ export const LogsSettings: FC = () => {
             </Button>
             <Button
               type="button"
-              disabled={!current.data?.hasMore}
+              disabled={!posts.data?.hasMore}
               onClick={() => setPage((currentPage) => currentPage + 1)}
             >
               {t('next', 'Next')}

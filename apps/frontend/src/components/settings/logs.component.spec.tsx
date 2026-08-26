@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { LogsSettings } from './logs.component';
+import { LogsSettings, WebhookLogsPanel } from './logs.component';
 import { useWebhookLogs } from './use.logs';
 
 const openModal = jest.fn();
@@ -28,6 +28,10 @@ jest.mock('@gitroom/react/toaster/toaster', () => ({
 
 jest.mock('@gitroom/frontend/components/layout/loading', () => ({
   LoadingComponent: () => <div>Loading</div>,
+}));
+
+jest.mock('./use.channel.tracking.alerts', () => ({
+  useChannelTrackingAlerts: () => ({ data: [] }),
 }));
 
 jest.mock('./use.logs', () => ({
@@ -99,8 +103,36 @@ describe('LogsSettings', () => {
     (useWebhookLogs as jest.Mock).mockClear();
   });
 
-  it('renders webhook logs by default and opens the inspect modal', () => {
+  it('renders post logs by default and opens the inspect modal', () => {
     render(<LogsSettings />);
+
+    expect(screen.getByText('https://api.x.com/2/tweets')).toBeTruthy();
+    expect(screen.getByText('Method')).toBeTruthy();
+    expect(screen.getByText('Provider')).toBeTruthy();
+    expect(screen.queryByText('Webhooks')).toBeNull();
+    expect(screen.queryByText('Posts')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'View' }));
+    expect(openModal).toHaveBeenCalledTimes(1);
+  });
+
+  it('refetches post logs when refresh is clicked', () => {
+    render(<LogsSettings />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(mutatePostLogs).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('WebhookLogsPanel', () => {
+  beforeEach(() => {
+    openModal.mockClear();
+    mutatePostLogs.mockClear();
+    mutateWebhookLogs.mockClear();
+    (useWebhookLogs as jest.Mock).mockClear();
+  });
+
+  it('renders webhook logs and opens the inspect modal', () => {
+    render(<WebhookLogsPanel />);
 
     expect(screen.getAllByText('Created Post').length).toBeGreaterThan(0);
     expect(screen.getByText('Status')).toBeTruthy();
@@ -126,8 +158,8 @@ describe('LogsSettings', () => {
     expect(openModal).toHaveBeenCalledTimes(1);
   });
 
-  it('shows webhook search and event type filters, and hides them on posts', () => {
-    render(<LogsSettings />);
+  it('shows webhook search and event type filters', () => {
+    render(<WebhookLogsPanel />);
 
     expect(screen.getByLabelText('Direction')).toBeTruthy();
     expect(screen.getByLabelText('Event type')).toBeTruthy();
@@ -151,33 +183,12 @@ describe('LogsSettings', () => {
       'alice',
       'follow.follow'
     );
-
-    fireEvent.click(screen.getByRole('button', { name: 'Posts' }));
-
-    expect(screen.queryByLabelText('Direction')).toBeNull();
-    expect(screen.queryByLabelText('Event type')).toBeNull();
-    expect(
-      screen.queryByPlaceholderText('Search source or target')
-    ).toBeNull();
-    expect(screen.getByText('https://api.x.com/2/tweets')).toBeTruthy();
   });
 
-  it('switches to post logs', () => {
-    render(<LogsSettings />);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Posts' }));
-
-    expect(screen.getByText('https://api.x.com/2/tweets')).toBeTruthy();
-  });
-
-  it('refetches the current logs when refresh is clicked', () => {
-    render(<LogsSettings />);
+  it('refetches webhook logs when refresh is clicked', () => {
+    render(<WebhookLogsPanel />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
     expect(mutateWebhookLogs).toHaveBeenCalledTimes(1);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Posts' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
-    expect(mutatePostLogs).toHaveBeenCalledTimes(1);
   });
 });

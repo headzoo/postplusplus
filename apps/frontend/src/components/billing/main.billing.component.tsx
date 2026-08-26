@@ -445,8 +445,13 @@ export const MainBillingComponent: FC<{
       },
     [monthlyOrYearly, subscription, user, utm]
   );
+  useEffect(() => {
+    if (user?.isLifetime) {
+      router.replace('/');
+    }
+  }, [router, user?.isLifetime]);
+
   if (user?.isLifetime) {
-    router.replace('/');
     return null;
   }
   return (

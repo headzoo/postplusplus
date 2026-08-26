@@ -55,6 +55,8 @@ export const SettingsPopup: FC<{
     return modal.closeAll();
   }, []);
   const url = useSearchParams();
+  const tabParam = url.get('tab');
+  const selectedParam = url.get('selected');
   const pathname = usePathname();
   const router = useRouter();
   const showLogout = !url.get('onboarding') || user?.tier?.current === 'FREE';
@@ -139,15 +141,14 @@ export const SettingsPopup: FC<{
       setTab('channels');
       return;
     }
-    if (url.get('tab') === 'channels') {
-      const selected = url.get('selected');
+    if (tabParam === 'channels') {
       router.replace(
-        selected
-          ? `/settings/channels?selected=${encodeURIComponent(selected)}`
+        selectedParam
+          ? `/settings/channels?selected=${encodeURIComponent(selectedParam)}`
           : '/settings/channels'
       );
     }
-  }, [isChannelsPath, isLogsPath, router, url]);
+  }, [isChannelsPath, isLogsPath, router, selectedParam, tabParam]);
 
   const selectTab = useCallback(
     (tabKey: string) => {
@@ -235,7 +236,7 @@ export const SettingsPopup: FC<{
                 </div>
               )}
 
-              {tab === 'channels' && (
+              {tab === 'channels' && isChannelsPath && (
                 <div>
                   <ChannelsSettings />
                 </div>

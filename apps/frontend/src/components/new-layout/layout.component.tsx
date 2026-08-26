@@ -1,6 +1,6 @@
 'use client';
 
-import React, { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import React, { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { jakartaSans } from '@gitroom/frontend/app/fonts';
 
 import clsx from 'clsx';
@@ -49,7 +49,12 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
 
   const searchParams = useSearchParams();
   const helpParam = searchParams.get('help');
-  const helpLocationKey = `${pathname}?${searchParams.toString()}`;
+  const checkParam = searchParams.get('check') || '';
+  const searchString = searchParams.toString();
+  const helpLocationKey = useMemo(
+    () => `${pathname}?${searchString}`,
+    [pathname, searchString]
+  );
   const load = useCallback(async (path: string) => {
     return await (await fetch(path)).json();
   }, []);
@@ -92,7 +97,7 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
           <ToolTip />
           <Toaster />
           <TrialTracker />
-          <CheckPayment check={searchParams.get('check') || ''} mutate={mutate}>
+          <CheckPayment check={checkParam} mutate={mutate}>
             <ShowMediaBoxModal />
             <ShowLinkedinCompany />
             <MediaSettingsLayout />

@@ -13,9 +13,9 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { Select } from '@gitroom/react/form/select';
 import { PickPlatforms } from '@gitroom/frontend/components/launches/helpers/pick.platform.component';
 import { useToaster } from '@gitroom/react/toaster/toaster';
-import clsx from 'clsx';
 import { deleteDialog } from '@gitroom/react/helpers/delete.dialog';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
+import { WebhookLogsPanel } from '@gitroom/frontend/components/settings/logs.component';
 
 export const Webhooks: FC = () => {
   const fetch = useFetch();
@@ -23,6 +23,7 @@ export const Webhooks: FC = () => {
   const modal = useModals();
   const toaster = useToaster();
   const t = useT();
+  const [view, setView] = useState<'list' | 'logs'>('list');
   const list = useCallback(async () => {
     return (await fetch('/webhooks')).json();
   }, []);
@@ -69,46 +70,58 @@ export const Webhooks: FC = () => {
           'Webhooks are a way to get notified when something happens in Post Plus Plus via\n        an HTTP request.'
         )}
       </div>
-      <div className="my-[16px] mt-[16px] bg-sixth border-fifth items-center border rounded-[4px] p-[24px] flex gap-[24px]">
-        <div className="flex flex-col w-full">
-          {!!data?.length && (
-            <div className="grid grid-cols-[1fr,1fr,1fr,1fr] w-full gap-y-[10px]">
-              <div>{t('name', 'Name')}</div>
-              <div>{t('url', 'URL')}</div>
-              <div>{t('edit', 'Edit')}</div>
-              <div>{t('delete', 'Delete')}</div>
-              {data?.map((p: any) => (
-                <Fragment key={p.id}>
-                  <div className="flex flex-col justify-center">{p.name}</div>
-                  <div className="flex flex-col justify-center">{p.url}</div>
-                  <div className="flex flex-col justify-center">
-                    <div>
-                      <Button onClick={addWebhook(p)}>
-                        {t('edit', 'Edit')}
-                      </Button>
+      <div className="flex gap-[8px] my-[16px]">
+        {view === 'list' && (
+          <Button type="button" onClick={addWebhook()}>
+            {t('add_a_webhook', '+ Add')}
+          </Button>
+        )}
+        <Button
+          type="button"
+          secondary={view !== 'logs'}
+          onClick={() => setView((current) => (current === 'logs' ? 'list' : 'logs'))}
+        >
+          {t('logs', 'Logs')}
+        </Button>
+      </div>
+      {view === 'logs' ? (
+        <div className="my-[16px] bg-sixth border-fifth items-center border rounded-[4px] p-[24px] flex gap-[24px]">
+          <WebhookLogsPanel />
+        </div>
+      ) : (
+        <div className="my-[16px] bg-sixth border-fifth items-center border rounded-[4px] p-[24px] flex gap-[24px]">
+          <div className="flex flex-col w-full">
+            {!!data?.length && (
+              <div className="grid grid-cols-[1fr,1fr,1fr,1fr] w-full gap-y-[10px]">
+                <div>{t('name', 'Name')}</div>
+                <div>{t('url', 'URL')}</div>
+                <div>{t('edit', 'Edit')}</div>
+                <div>{t('delete', 'Delete')}</div>
+                {data?.map((p: any) => (
+                  <Fragment key={p.id}>
+                    <div className="flex flex-col justify-center">{p.name}</div>
+                    <div className="flex flex-col justify-center">{p.url}</div>
+                    <div className="flex flex-col justify-center">
+                      <div>
+                        <Button onClick={addWebhook(p)}>
+                          {t('edit', 'Edit')}
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex flex-col justify-center">
-                    <div>
-                      <Button onClick={deleteHook(p)}>
-                        {t('delete', 'Delete')}
-                      </Button>
+                    <div className="flex flex-col justify-center">
+                      <div>
+                        <Button onClick={deleteHook(p)}>
+                          {t('delete', 'Delete')}
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                </Fragment>
-              ))}
-            </div>
-          )}
-          <div>
-            <Button
-              onClick={addWebhook()}
-              className={clsx((data?.length || 0) > 0 && 'my-[16px]')}
-            >
-              {t('add_a_webhook', 'Add a webhook')}
-            </Button>
+                  </Fragment>
+                ))}
+              </div>
+            )}
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
@@ -179,8 +192,8 @@ export const AddOrEditWebhook: FC<{
         body: JSON.stringify({
           ...(data?.id
             ? {
-                id: data.id,
-              }
+              id: data.id,
+            }
             : {}),
           ...values,
         }),

@@ -272,6 +272,8 @@ describe('ChannelsSettings', () => {
     expect(screen.getByText('Build awareness')).toBeTruthy();
     expect(screen.getByText('Support customers')).toBeTruthy();
     expect(screen.getAllByRole('radio')).toHaveLength(5);
+    expect(screen.getByText('What this strategy does')).toBeTruthy();
+    expect(screen.getByText('Active')).toBeTruthy();
   });
 
   it('marks the current strategy selection', () => {
@@ -321,7 +323,7 @@ describe('ChannelsSettings', () => {
 
     render(<ChannelsSettings />);
 
-    fireEvent.click(screen.getByText('Capture leads'));
+    fireEvent.click(screen.getByRole('radio', { name: /Capture leads/i }));
     fireEvent.click(screen.getByRole('button', { name: 'Save channel strategy' }));
 
     await waitFor(() => {
@@ -349,7 +351,7 @@ describe('ChannelsSettings', () => {
 
     render(<ChannelsSettings />);
 
-    fireEvent.click(screen.getByText('Capture leads'));
+    fireEvent.click(screen.getByRole('radio', { name: /Capture leads/i }));
     fireEvent.click(screen.getByRole('button', { name: 'Save channel strategy' }));
 
     await waitFor(() => {
@@ -375,20 +377,64 @@ describe('ChannelsSettings', () => {
 
     render(<ChannelsSettings />);
 
-    fireEvent.click(screen.getByText('Grow audience (Default)'));
+    fireEvent.click(screen.getByRole('radio', { name: /Grow audience/i }));
     expect(
       screen.getByRole('button', { name: 'Save channel strategy' }).hasAttribute(
         'disabled'
       )
     ).toBe(true);
 
-    fireEvent.click(screen.getByText('Capture leads'));
-    fireEvent.click(screen.getByText('Grow audience (Default)'));
+    fireEvent.click(screen.getByRole('radio', { name: /Capture leads/i }));
+    fireEvent.click(screen.getByRole('radio', { name: /Grow audience/i }));
     expect(
       screen.getByRole('button', { name: 'Save channel strategy' }).hasAttribute(
         'disabled'
       )
     ).toBe(true);
+  });
+
+  it('updates the detail panel when previewing another strategy', () => {
+    render(<ChannelsSettings />);
+
+    expect(screen.getAllByText('Grow audience').length).toBeGreaterThan(0);
+    expect(
+      screen.getByText(
+        'Recommended for new or growth-focused channels'
+      )
+    ).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('radio', { name: /Capture leads/i }));
+
+    expect(screen.getAllByText('Capture leads').length).toBeGreaterThan(1);
+    expect(
+      screen.getByText(
+        'Recommended for channels focused on pipeline and conversion'
+      )
+    ).toBeTruthy();
+  });
+
+  it('restores the persisted strategy when cancel is clicked', () => {
+    render(<ChannelsSettings />);
+
+    fireEvent.click(screen.getByRole('radio', { name: /Capture leads/i }));
+    expect(
+      screen.getByRole('radio', { name: /Capture leads/i }).getAttribute(
+        'aria-checked'
+      )
+    ).toBe('true');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(
+      screen.getByRole('radio', { name: /Grow audience/i }).getAttribute(
+        'aria-checked'
+      )
+    ).toBe('true');
+    expect(
+      screen.getByText(
+        'Recommended for new or growth-focused channels'
+      )
+    ).toBeTruthy();
   });
 
   it('shows strategy loading state while channel details load', () => {
