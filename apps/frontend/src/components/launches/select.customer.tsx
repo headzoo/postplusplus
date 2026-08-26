@@ -76,7 +76,7 @@ export const SelectCustomer: FC<{
     <div className="relative select-none z-[500]" ref={ref}>
       <div
         data-tooltip-id="tooltip"
-        data-tooltip-content={t('select_customer_tooltip', 'Select Customer')}
+        data-tooltip-content={t('select_customer_tooltip', 'Select Channel Group')}
         onClick={openClose}
         className={clsx(
           'relative z-[20] cursor-pointer h-[42px] rounded-[8px] pl-[16px] pr-[12px] gap-[8px] border flex items-center',
@@ -99,7 +99,7 @@ export const SelectCustomer: FC<{
           className="flex flex-col fixed pt-[12px] bg-newBgColorInner menu-shadow min-w-[250px]"
         >
           <div className="text-[14px] font-[600] px-[12px] mb-[5px]">
-            {t('customers', 'Customers')}
+            {t('customers', 'Channel Groups')}
           </div>
           <div
             onClick={() => {
@@ -118,7 +118,7 @@ export const SelectCustomer: FC<{
               <div
                 onClick={() => {
                   toaster.show(
-                    t('customer_socials_selected', 'Customer socials selected'),
+                    t('customer_socials_selected', 'Channel group selected'),
                     'success'
                   );
                   setCustomer(p.customer?.id);

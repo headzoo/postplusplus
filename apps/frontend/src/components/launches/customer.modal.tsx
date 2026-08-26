@@ -58,7 +58,7 @@ export const CustomerModal: FC<{
           classNames={{
             label: 'text-white',
           }}
-          label={t('select_customer_label', 'Select Customer')}
+          label={t('select_customer_label', 'Select Channel Group')}
           placeholder={t('start_typing', 'Start typing...')}
           data={data?.map((p: any) => p.name) || []}
         />
@@ -68,7 +68,7 @@ export const CustomerModal: FC<{
         <Button onClick={() => saveCustomer()}>{t('save', 'Save')}</Button>
         {!!integration?.customer?.name && (
           <Button className="bg-red-700" onClick={removeFromCustomer}>
-            {t('remove_from_customer', 'Remove from customer')}
+            {t('remove_from_customer', 'Remove from channel group')}
           </Button>
         )}
       </div>

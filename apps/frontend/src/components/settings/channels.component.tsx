@@ -34,6 +34,10 @@ import {
 } from '@gitroom/frontend/components/followers/use.followers';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { isValidUtmParamsString } from '@gitroom/helpers/utils/utm.params';
+import {
+  resolveChannelId,
+  setLastChannelId,
+} from '@gitroom/frontend/components/launches/helpers/last-channel';
 
 const TRACKING_STATE_LABELS: Record<string, { key: string; defaultLabel: string }> = {
   active: { key: 'channel_tracking_active', defaultLabel: 'Active' },
@@ -833,13 +837,16 @@ export const ChannelsSettings: FC = () => {
     if (!integrations?.length) {
       return undefined;
     }
-    if (
-      selectedFromUrl &&
-      integrations.some((item) => item.id === selectedFromUrl)
-    ) {
-      return selectedFromUrl;
-    }
-    return integrations[0].id;
+    const eligibleIds = integrations.map((item) => item.id);
+    const urlId =
+      selectedFromUrl && eligibleIds.includes(selectedFromUrl)
+        ? selectedFromUrl
+        : undefined;
+    return resolveChannelId({
+      eligibleIds,
+      currentId: urlId,
+      fallbackId: integrations[0].id,
+    });
   }, [integrations, selectedFromUrl]);
 
   const selected = useMemo(
@@ -941,7 +948,10 @@ export const ChannelsSettings: FC = () => {
             collapsed={false}
             integrations={integrations}
             selectedIds={selectedId ? [selectedId] : []}
-            onSelect={(integration) => syncSelectedToUrl(integration.id)}
+            onSelect={(integration) => {
+              setLastChannelId(integration.id);
+              syncSelectedToUrl(integration.id);
+            }}
           />
         </div>
         <div

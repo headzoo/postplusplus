@@ -11,10 +11,6 @@ import { useShallow } from 'zustand/react/shallow';
 import { GlobalIcon } from '@gitroom/frontend/components/ui/icons';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { Integrations } from '@gitroom/frontend/components/launches/calendar.context';
-import {
-  useDecisionModal,
-  useModals,
-} from '@gitroom/frontend/components/layout/new-modal';
 
 export function useHasScroll(ref: RefObject<HTMLElement | null>): boolean {
   const [hasHorizontalScroll, setHasHorizontalScroll] = useState(false);
@@ -51,7 +47,6 @@ export function useHasScroll(ref: RefObject<HTMLElement | null>): boolean {
 }
 
 export const SelectCurrent: FC = () => {
-  const modals = useDecisionModal();
   const {
     selectedIntegrations,
     current,
@@ -74,22 +69,12 @@ export const SelectCurrent: FC = () => {
   const hasScroll = useHasScroll(contentRef);
 
   const removeSocial = useCallback(
-    (sIntegration: Integrations) => async (e: any) => {
+    (sIntegration: Integrations) => (e: any) => {
       e.stopPropagation();
       e.preventDefault();
-      const open = await modals.open({
-        title: 'Remove Social Account',
-        description:
-          'Are you sure you want to remove this social from scheduling?',
-      });
-
-      if (!open) {
-        return;
-      }
-
       addOrRemoveSelectedIntegration(sIntegration, {});
     },
-    []
+    [addOrRemoveSelectedIntegration]
   );
 
   return (

@@ -13,7 +13,7 @@ export class GroupListTool implements AgentToolInterface {
   run() {
     return createTool({
       id: 'groupList',
-      description: `This tool lists the available groups (customers). Use a group id with the integrationList tool to filter the integrations belonging to that group`,
+      description: `This tool lists the available channel groups. Use a group id with the integrationList tool to filter the integrations belonging to that group`,
       inputSchema: z.object({}),
       mcp: {
         annotations: {

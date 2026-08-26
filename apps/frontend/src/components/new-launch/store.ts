@@ -44,6 +44,7 @@ interface StoreState {
   comments: boolean | 'no-media';
   locked: boolean;
   hide: boolean;
+  showSettings: boolean;
   publishingMode: PublishingMode;
   pipelineId?: string;
   setLocked: (locked: boolean) => void;
@@ -117,6 +118,7 @@ interface StoreState {
   ) => void;
   setTab: (tab: 0 | 1) => void;
   setHide: (hide: boolean) => void;
+  setShowSettings: (showSettings: boolean) => void;
   setPublishingMode: (publishingMode: PublishingMode) => void;
   setPipelineId: (pipelineId?: string) => void;
   setDate: (date: dayjs.Dayjs) => void;
@@ -158,6 +160,7 @@ const initialState = {
   current: 'global',
   locked: false,
   hide: false,
+  showSettings: false,
   publishingMode: 'manual' as PublishingMode,
   pipelineId: undefined as string | undefined,
   integrations: [] as Integrations[],
@@ -170,8 +173,9 @@ const initialState = {
 export const useLaunchStore = create<StoreState>()((set) => ({
   ...initialState,
   setCurrent: (current: string) =>
-    set((state) => ({
-      current: current,
+    set(() => ({
+      current,
+      showSettings: false,
     })),
   addOrRemoveSelectedIntegration: (
     integration: Integrations,
@@ -554,6 +558,10 @@ export const useLaunchStore = create<StoreState>()((set) => ({
   setHide: (hide: boolean) =>
     set((state) => ({
       hide: hide,
+    })),
+  setShowSettings: (showSettings: boolean) =>
+    set(() => ({
+      showSettings,
     })),
   setPublishingMode: (publishingMode: PublishingMode) =>
     set(() => ({

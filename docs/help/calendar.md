@@ -6,7 +6,7 @@ This is different from the [Dashboard](/help/dashboard), which shows analytics�
 
 ## Using the Calendar
 
-You’ll see a grid (day, week, or month) or a list of posts, plus search and optional customer filters. Click a future empty slot or the header **Post** button to open the composer. Past slots are striped and can’t receive new posts or drops.
+You’ll see a grid (day, week, or month) or a list of posts, plus search and optional channel group filters. Click a future empty slot or the header **Post** button to open the composer. Past slots are striped and can’t receive new posts or drops.
 
 ## Views: Day, Week, Month, and List
 
@@ -58,7 +58,7 @@ Pipeline items on the calendar can also be dragged; doing so may pin or schedule
 ## Search and filter
 
 - **Search by title or content**, then **Search**—results open in list view. Clearing search restores your previous view.
-- If you have multiple customers, **Select Customer** limits which channels and posts you see (toast: **Customer socials selected**).
+- If you have multiple channel groups, **Select Channel Group** limits which channels and posts you see (toast: **Channel group selected**).
 
 While searching, list state chips (**All** / **Scheduled** / **Draft** / **Published**) are hidden.
 

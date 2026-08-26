@@ -154,6 +154,7 @@ describe('ChannelsSettings', () => {
   const originalLocation = window.location;
 
   beforeEach(() => {
+    localStorage.clear();
     fetchMock.mockReset();
     toastShow.mockReset();
     globalMutate.mockReset();

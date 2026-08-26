@@ -30,28 +30,79 @@ type LocalizedCopy = {
   defaultValue: string;
 };
 
-type StrategyPresentation = {
-  Icon: FC<{ size?: number; className?: string }>;
-  wellClassName: string;
-  highlights: Array<{ title: LocalizedCopy; body: LocalizedCopy }>;
-  recommendation: { title: LocalizedCopy; body: LocalizedCopy };
+type StrategyAccent = {
+  text: string;
+  well: string;
+  selectedCard: string;
+  ring: string;
+  radioBorder: string;
+  radioFill: string;
+  rec: string;
 };
 
-const STRATEGY_ACCENT = {
-  text: 'text-violet-600 dark:text-violet-400',
+const SECTION_CHROME = {
   well: 'bg-violet-500/15 text-violet-600 dark:text-violet-400',
-  selectedCard: 'border-violet-500 dark:border-violet-400 bg-violet-500/10',
-  ring: 'focus-visible:ring-violet-500',
-  radioBorder: 'border-violet-500 dark:border-violet-400',
-  radioFill: 'bg-violet-500',
-  rec: 'border-violet-500/40 bg-violet-500/10',
-  save: '!bg-violet-600 hover:!bg-violet-500',
+};
+
+const STRATEGY_ACCENTS: Record<ChannelStrategyId, StrategyAccent> = {
+  grow_audience: {
+    text: 'text-violet-600 dark:text-violet-400',
+    well: 'bg-violet-500/15 text-violet-600 dark:text-violet-400',
+    selectedCard: 'border-violet-500 dark:border-violet-400 bg-violet-500/10',
+    ring: 'focus-visible:ring-violet-500',
+    radioBorder: 'border-violet-500 dark:border-violet-400',
+    radioFill: 'bg-violet-500',
+    rec: 'border-violet-500/40 bg-violet-500/10',
+  },
+  lead_capture: {
+    text: 'text-blue-600 dark:text-blue-400',
+    well: 'bg-blue-500/15 text-blue-600 dark:text-blue-400',
+    selectedCard: 'border-blue-500 dark:border-blue-400 bg-blue-500/10',
+    ring: 'focus-visible:ring-blue-500',
+    radioBorder: 'border-blue-500 dark:border-blue-400',
+    radioFill: 'bg-blue-500',
+    rec: 'border-blue-500/40 bg-blue-500/10',
+  },
+  community_retention: {
+    text: 'text-emerald-600 dark:text-emerald-400',
+    well: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+    selectedCard: 'border-emerald-500 dark:border-emerald-400 bg-emerald-500/10',
+    ring: 'focus-visible:ring-emerald-500',
+    radioBorder: 'border-emerald-500 dark:border-emerald-400',
+    radioFill: 'bg-emerald-500',
+    rec: 'border-emerald-500/40 bg-emerald-500/10',
+  },
+  brand_awareness: {
+    text: 'text-orange-600 dark:text-orange-400',
+    well: 'bg-orange-500/15 text-orange-600 dark:text-orange-400',
+    selectedCard: 'border-orange-500 dark:border-orange-400 bg-orange-500/10',
+    ring: 'focus-visible:ring-orange-500',
+    radioBorder: 'border-orange-500 dark:border-orange-400',
+    radioFill: 'bg-orange-500',
+    rec: 'border-orange-500/40 bg-orange-500/10',
+  },
+  customer_support: {
+    text: 'text-rose-600 dark:text-rose-400',
+    well: 'bg-rose-500/15 text-rose-600 dark:text-rose-400',
+    selectedCard: 'border-rose-500 dark:border-rose-400 bg-rose-500/10',
+    ring: 'focus-visible:ring-rose-500',
+    radioBorder: 'border-rose-500 dark:border-rose-400',
+    radioFill: 'bg-rose-500',
+    rec: 'border-rose-500/40 bg-rose-500/10',
+  },
+};
+
+type StrategyPresentation = {
+  Icon: FC<{ size?: number; className?: string }>;
+  accent: StrategyAccent;
+  highlights: Array<{ title: LocalizedCopy; body: LocalizedCopy }>;
+  recommendation: { title: LocalizedCopy; body: LocalizedCopy };
 };
 
 const STRATEGY_PRESENTATION: Record<ChannelStrategyId, StrategyPresentation> = {
   grow_audience: {
     Icon: UsersGroupIcon,
-    wellClassName: STRATEGY_ACCENT.well,
+    accent: STRATEGY_ACCENTS.grow_audience,
     highlights: [
       {
         title: {
@@ -99,7 +150,7 @@ const STRATEGY_PRESENTATION: Record<ChannelStrategyId, StrategyPresentation> = {
   },
   lead_capture: {
     Icon: MagnetIcon,
-    wellClassName: 'bg-sky-500/15 text-sky-400',
+    accent: STRATEGY_ACCENTS.lead_capture,
     highlights: [
       {
         title: {
@@ -149,7 +200,7 @@ const STRATEGY_PRESENTATION: Record<ChannelStrategyId, StrategyPresentation> = {
   },
   community_retention: {
     Icon: SpeechBubblesIcon,
-    wellClassName: 'bg-emerald-500/15 text-emerald-400',
+    accent: STRATEGY_ACCENTS.community_retention,
     highlights: [
       {
         title: {
@@ -198,7 +249,7 @@ const STRATEGY_PRESENTATION: Record<ChannelStrategyId, StrategyPresentation> = {
   },
   brand_awareness: {
     Icon: MegaphoneIcon,
-    wellClassName: 'bg-amber-500/15 text-amber-400',
+    accent: STRATEGY_ACCENTS.brand_awareness,
     highlights: [
       {
         title: {
@@ -246,7 +297,7 @@ const STRATEGY_PRESENTATION: Record<ChannelStrategyId, StrategyPresentation> = {
   },
   customer_support: {
     Icon: HeadsetIcon,
-    wellClassName: 'bg-cyan-500/15 text-cyan-400',
+    accent: STRATEGY_ACCENTS.customer_support,
     highlights: [
       {
         title: {
@@ -302,7 +353,7 @@ const StrategyIconWell: FC<{
   presentation: StrategyPresentation;
   size?: 'sm' | 'lg';
 }> = ({ presentation, size = 'sm' }) => {
-  const { Icon, wellClassName } = presentation;
+  const { Icon, accent } = presentation;
   const iconSize = size === 'lg' ? 24 : 18;
 
   return (
@@ -310,7 +361,7 @@ const StrategyIconWell: FC<{
       className={clsx(
         'shrink-0 rounded-full flex items-center justify-center',
         size === 'lg' ? 'size-12' : 'size-9',
-        wellClassName
+        accent.well
       )}
     >
       <Icon size={iconSize} />
@@ -325,6 +376,7 @@ const StrategyDetailPanel: FC<{
 }> = ({ option, presentation, t }) => {
   const label = localizedStrategyCopy(option.label, t);
   const description = localizedStrategyCopy(option.description, t);
+  const { accent } = presentation;
 
   return (
     <div
@@ -335,7 +387,7 @@ const StrategyDetailPanel: FC<{
         <div
           className={clsx(
             'text-[11px] uppercase tracking-wide font-[500]',
-            STRATEGY_ACCENT.text
+            accent.text
           )}
         >
           {t('channel_strategy_selected_eyebrow', 'Selected strategy')}
@@ -359,7 +411,7 @@ const StrategyDetailPanel: FC<{
               <div
                 className={clsx(
                   'size-5 shrink-0 rounded-full flex items-center justify-center mt-[1px]',
-                  STRATEGY_ACCENT.well
+                  accent.well
                 )}
               >
                 <CheckmarkIcon className="size-[10px]" />
@@ -380,15 +432,15 @@ const StrategyDetailPanel: FC<{
       <div
         className={clsx(
           'rounded-[8px] border p-[12px] flex gap-[10px] items-start',
-          STRATEGY_ACCENT.rec
+          accent.rec
         )}
       >
         <StarOutlineIcon
           size={18}
-          className={clsx('shrink-0 mt-[1px]', STRATEGY_ACCENT.text)}
+          className={clsx('shrink-0 mt-[1px]', accent.text)}
         />
         <div className="min-w-0 flex flex-col gap-[2px]">
-          <div className="text-[13px] font-[500]">
+          <div className={clsx('text-[13px] font-[500]', accent.text)}>
             {localizedStrategyCopy(presentation.recommendation.title, t)}
           </div>
           <div className="text-[12px] text-newTextColor">
@@ -557,7 +609,7 @@ export const ChannelStrategySection: FC<{
               <div
                 className={clsx(
                   'size-9 shrink-0 rounded-full flex items-center justify-center',
-                  STRATEGY_ACCENT.well
+                  SECTION_CHROME.well
                 )}
               >
                 <TargetIcon size={18} />
@@ -630,9 +682,9 @@ export const ChannelStrategySection: FC<{
                   onKeyDown={handleOptionKeyDown(option.id)}
                   className={clsx(
                     'flex items-center gap-[12px] rounded-[8px] border p-[12px] cursor-pointer outline-none focus-visible:ring-2',
-                    STRATEGY_ACCENT.ring,
+                    presentation.accent.ring,
                     isSelected
-                      ? STRATEGY_ACCENT.selectedCard
+                      ? presentation.accent.selectedCard
                       : 'border-newBorder hover:bg-boxHover',
                     saving && 'opacity-60 cursor-not-allowed'
                   )}
@@ -640,7 +692,9 @@ export const ChannelStrategySection: FC<{
                   <div
                     className={clsx(
                       'size-4 shrink-0 rounded-full border flex items-center justify-center',
-                      isSelected ? STRATEGY_ACCENT.radioBorder : 'border-newSep'
+                      isSelected
+                        ? presentation.accent.radioBorder
+                        : 'border-newSep'
                     )}
                     aria-hidden="true"
                   >
@@ -648,7 +702,7 @@ export const ChannelStrategySection: FC<{
                       <span
                         className={clsx(
                           'size-2 rounded-full',
-                          STRATEGY_ACCENT.radioFill
+                          presentation.accent.radioFill
                         )}
                       />
                     )}
@@ -684,7 +738,6 @@ export const ChannelStrategySection: FC<{
             loading={saving}
             disabled={saving || !hasChanges}
             onClick={saveStrategy}
-            className={STRATEGY_ACCENT.save}
             aria-label={t('save_channel_strategy_aria', 'Save channel strategy')}
           >
             {t('save', 'Save')}

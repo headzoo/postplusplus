@@ -25,6 +25,7 @@ import {
 } from '@gitroom/frontend/components/new-launch/store';
 import { useShallow } from 'zustand/react/shallow';
 import { AddPostButton } from '@gitroom/frontend/components/new-launch/add.post.button';
+import { ComposerSettingsButton } from '@gitroom/frontend/components/new-launch/composer.settings.button';
 import { TagsComponent } from '@gitroom/frontend/components/launches/tags.component';
 import { MultiMediaComponent } from '@gitroom/frontend/components/media/media.component';
 import { UpDownArrow } from '@gitroom/frontend/components/launches/up.down.arrow';
@@ -484,6 +485,9 @@ export const EditorWrapper: FC<{
                               postComment={postComment}
                             />
                           )}
+                          <div id="composer-settings-button" className="hidden">
+                            <ComposerSettingsButton />
+                          </div>
                           {!dummy && (
                             <div className="mt-[12px]">
                               <TagsComponent

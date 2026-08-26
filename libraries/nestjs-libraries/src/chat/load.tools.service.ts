@@ -182,7 +182,7 @@ export class LoadToolsService {
         - Generate text for posts
         - Show global analytics about socials
         - List integrations (channels)
-        - List groups (customers) and filter the channels by a group
+        - List channel groups and filter the channels by a group
         - List scheduled, draft, or published posts (listPosts)
         - List pipelines and their queue sizes (listPipelines)
         - Inspect a pipeline's queued posts (listPostsByPipeline, requires a pipeline id from listPipelines)

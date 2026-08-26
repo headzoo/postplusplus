@@ -31,8 +31,6 @@ import { CopilotAssistantPopup } from '@gitroom/frontend/components/layout/copil
 import { DummyCodeComponent } from '@gitroom/frontend/components/new-launch/dummy.code.component';
 import { CreationMethodBadge } from '@gitroom/frontend/components/launches/creation.method.badge';
 import {
-  SettingsIcon,
-  ChevronDownIcon,
   CloseIcon,
   TrashIcon,
   DropdownArrowSmallIcon,
@@ -68,7 +66,6 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
   const router = useRouter();
   const { mutate: mutateSWR } = useSWRConfig();
   const { reloadCalendarView } = useCalendar();
-  const [showSettings, setShowSettings] = useState(false);
   const { data: shortlinkPreferenceData } = useShortlinkPreference();
   const { data: pipelines } = usePipelineList();
 
@@ -89,6 +86,8 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
     current,
     activateExitButton,
     setHide,
+    showSettings,
+    setShowSettings,
     publishingMode,
     setPublishingMode,
     pipelineId,
@@ -113,6 +112,8 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
       setSelectedIntegrations: state.setSelectedIntegrations,
       locked: state.locked,
       activateExitButton: state.activateExitButton,
+      showSettings: state.showSettings,
+      setShowSettings: state.setShowSettings,
       publishingMode: state.publishingMode,
       setPublishingMode: state.setPublishingMode,
       pipelineId: state.pipelineId,
@@ -196,39 +197,17 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
     }
   }, [hide]);
 
-  const currentIntegrationText = useMemo(() => {
-    if (current === 'global') {
-      return (
-        <div className="flex items-center gap-[10px]">
-          <div className="relative">
-            <SettingsIcon size={15} className="text-white" />
-          </div>
-          <div>Settings</div>
-        </div>
-      );
+  useEffect(() => {
+    if (!showSettings) {
+      return;
     }
 
-    const currentIntegration = integrations.find((p) => p.id === current)!;
-
-    return (
-      <div className="flex items-center gap-[10px]">
-        <div className="relative">
-          <img
-            src={`/icons/platforms/${currentIntegration.identifier}.png`}
-            className="w-[20px] h-[20px] rounded-[4px]"
-            alt={currentIntegration.identifier}
-          />
-          <SettingsIcon
-            size={15}
-            className="text-white absolute -end-[5px] -bottom-[5px]"
-          />
-        </div>
-        <div>
-          {currentIntegration.name} {t('channel_settings', 'Settings')}
-        </div>
-      </div>
-    );
-  }, [current]);
+    requestAnimationFrame(() => {
+      document
+        .querySelector('#wrapper-settings')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, [showSettings]);
 
   const changeCustomer = useCallback(
     (customer: string) => {
@@ -777,97 +756,60 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
             />
           </div>
           <div className="flex-1 flex flex-col gap-[16px]">
-            <div
-              className={clsx(
-                'flex-1 flex flex-col',
-                showSettings && 'hidden'
-              )}
+            <CustomScrollArea
+              id="social-content"
+              className="flex-1"
+              contentClassName="gap-[32px] flex flex-col min-h-full ps-[20px] pt-[20px] pb-[20px] pr-[28px]"
             >
-              <CustomScrollArea
-                id="social-content"
-                className="flex-1"
-                contentClassName="gap-[32px] flex flex-col min-h-full ps-[20px] pt-[20px] pb-[20px] pr-[28px]"
-              >
-                <div className="flex w-full">
-                  <div className="flex flex-1">
-                    <PicksSocialsComponent
-                      toolTip={true}
-                      disabled={pipelineMode}
-                    />
-                  </div>
-                  <div>
-                    {!dummy && !pipelineMode && (
-                      <SelectCustomer
-                        onChange={changeCustomer}
-                        integrations={integrations}
-                      />
-                    )}
-                  </div>
-                </div>
-                <div className="flex flex-1 gap-[6px] flex-col">
-                  <div>
-                    {!existingData.integration && <SelectCurrent />}
-                  </div>
-                  <div className="flex-1 flex flex-col">
-                    {!hide && <EditorWrapper totalPosts={1} value="" />}
-                  </div>
-                  <div
-                    id="social-empty"
-                    className={clsx(
-                      'pb-[16px]'
-                      // current !== 'global' && 'hidden'
-                    )}
+              <div className="flex w-full">
+                <div className="flex flex-1">
+                  <PicksSocialsComponent
+                    toolTip={true}
+                    disabled={pipelineMode}
                   />
                 </div>
-              </CustomScrollArea>
-            </div>
-            <div
-              id="wrapper-settings"
-              className={clsx(
-                'pb-[20px] px-[20px] select-none',
-                showSettings && 'flex-1 flex pt-[20px]',
-                current === 'global' && 'hidden'
-              )}
-            >
-              <div className="flex-1 flex flex-col rounded-[12px] gap-[12px] overflow-hidden bg-newSettings">
-                <div
-                  onClick={() => setShowSettings(!showSettings)}
-                  className={clsx(
-                    'bg-[#eb3825] rounded-[12px] flex items-center gap-[8px] cursor-pointer p-[12px]',
-                    showSettings ? '!rounded-b-none' : ''
-                  )}
-                >
-                  <div className="flex-1 text-[14px] font-[600] text-white">
-                    {currentIntegrationText}
-                  </div>
-                  <div>
-                    <ChevronDownIcon
-                      rotated={showSettings}
-                      className="text-white"
+                <div>
+                  {!dummy && !pipelineMode && (
+                    <SelectCustomer
+                      onChange={changeCustomer}
+                      integrations={integrations}
                     />
-                  </div>
-                </div>
-                <div
-                  className={clsx(
-                    !showSettings ? 'hidden' : 'flex-1',
-                    'text-[14px] text-textColor font-[500] relative'
                   )}
-                >
-                  <CustomScrollArea
-                    className="absolute inset-0"
-                    contentClassName="flex flex-col pr-[16px]"
-                  >
-                    <div
-                      id="social-settings"
-                      className="flex flex-col gap-[20px] bg-newBgColor"
-                    />
-                  </CustomScrollArea>
                 </div>
-                <style>
-                  {`#social-settings [data-id="${current}"] {display: block !important;}`}
-                </style>
               </div>
-            </div>
+              <div className="flex flex-1 gap-[6px] flex-col">
+                <div>
+                  {!existingData.integration && <SelectCurrent />}
+                </div>
+                <div className="flex-1 flex flex-col">
+                  {!hide && <EditorWrapper totalPosts={1} value="" />}
+                </div>
+                <div
+                  id="social-empty"
+                  className={clsx(
+                    'pb-[16px]'
+                    // current !== 'global' && 'hidden'
+                  )}
+                />
+              </div>
+              <div
+                id="wrapper-settings"
+                className={clsx(
+                  'select-none',
+                  showSettings ? 'block' : 'hidden'
+                )}
+              >
+                <div className="flex flex-col rounded-[12px] gap-[12px] bg-newSettings">
+                  <div
+                    id="social-settings"
+                    className="flex flex-col gap-[20px] bg-newBgColor"
+                  />
+                  <style>
+                    {`#social-settings [data-id="${current}"] {display: block !important;}`}
+                  </style>
+                </div>
+              </div>
+            </CustomScrollArea>
           </div>
         </section>
         <section className="min-w-0 flex flex-col">

@@ -1,6 +1,6 @@
 'use client';
 
-import { FC, useCallback, useMemo, useState } from 'react';
+import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { Button } from '@gitroom/react/form/button';
 import { Slider } from '@gitroom/react/form/slider';
@@ -32,7 +32,7 @@ import {
   IntegrationListItem,
   useIntegrationList,
 } from '@gitroom/frontend/components/launches/helpers/use.integration.list';
-import { setLastChannelId } from '@gitroom/frontend/components/launches/helpers/last-channel';
+import { resolveChannelId, setLastChannelId } from '@gitroom/frontend/components/launches/helpers/last-channel';
 
 export default function RulesPage() {
   const t = useT();
@@ -47,11 +47,27 @@ export default function RulesPage() {
   const deleteRule = useDeleteRule();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [selectedChannelId, setSelectedChannelId] = useState<string>();
+  const hasRestoredChannel = useRef(false);
 
   const visibleRules = useMemo(
     () => filterRulesByChannel(rules || [], selectedChannelId),
     [rules, selectedChannelId]
   );
+
+  useEffect(() => {
+    if (hasRestoredChannel.current || !integrations.length) {
+      return;
+    }
+    hasRestoredChannel.current = true;
+    const restored = resolveChannelId({
+      eligibleIds: integrations.map((integration) => integration.id),
+      currentId: undefined,
+      fallbackId: integrations[0]?.id,
+    });
+    if (restored) {
+      setSelectedChannelId(restored);
+    }
+  }, [integrations]);
 
   const handleChannelSelect = useCallback(
     (integration: IntegrationListItem) => {

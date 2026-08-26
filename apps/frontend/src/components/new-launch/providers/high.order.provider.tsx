@@ -309,8 +309,8 @@ export const withProvider = function <T extends object>(params: {
             {(SettingsComponent || !!data?.internalPlugs?.length) &&
               createPortal(
                 <div data-id={props.id} className={isGlobal ? 'bg-newSettings pb-[12px] px-[12px]' : 'hidden bg-newSettings px-[12px] pb-[12px]'}>
-                  {isGlobal && (
-                    <style>{`#wrapper-settings {display: flex !important} #social-empty {display: block !important;}`}</style>
+                  {(isGlobal || current) && (
+                    <style>{`#composer-settings-button {display: flex !important} #social-empty {display: block !important;}`}</style>
                   )}
                   {isGlobal && (
                     <div className="flex py-[20px] items-center gap-[15px]">
@@ -344,7 +344,7 @@ export const withProvider = function <T extends object>(params: {
             {current &&
               !SettingsComponent &&
               createPortal(
-                <style>{`#wrapper-settings {display: none !important;} #social-empty {display: block !important;}`}</style>,
+                <style>{`#composer-settings-button {display: none !important;} #wrapper-settings {display: none !important;} #social-empty {display: block !important;}`}</style>,
                 document.querySelector('#social-settings') ||
                 document.createElement('div')
               )}
