@@ -5,7 +5,9 @@ describe('customFetch admin_auth handling', () => {
   const originalDocument = global.document;
 
   beforeEach(() => {
-    global.fetch = jest.fn().mockResolvedValue(new Response('{}', { status: 200 }));
+    global.fetch = jest
+      .fn()
+      .mockResolvedValue(new Response('{}', { status: 200 }));
   });
 
   afterEach(() => {
@@ -18,7 +20,12 @@ describe('customFetch admin_auth handling', () => {
       cookie: 'auth=session-token; admin_auth=step-up-token',
     } as Document;
 
-    const fetchFn = customFetch({ baseUrl: 'http://api.test' }, undefined, undefined, false);
+    const fetchFn = customFetch(
+      { baseUrl: 'http://api.test' },
+      undefined,
+      undefined,
+      false
+    );
     await fetchFn('/admin-auth/status');
 
     expect(global.fetch).toHaveBeenCalledWith(
@@ -37,7 +44,12 @@ describe('customFetch admin_auth handling', () => {
       cookie: 'admin_auth=step-up-token',
     } as Document;
 
-    const fetchFn = customFetch({ baseUrl: 'http://api.test' }, undefined, undefined, false);
+    const fetchFn = customFetch(
+      { baseUrl: 'http://api.test' },
+      undefined,
+      undefined,
+      false
+    );
     await fetchFn('/admin-auth/status');
 
     expect(global.fetch).toHaveBeenCalledWith(
@@ -56,7 +68,9 @@ describe('customFetch passkey_auth handling', () => {
   const originalDocument = global.document;
 
   beforeEach(() => {
-    global.fetch = jest.fn().mockResolvedValue(new Response('{}', { status: 200 }));
+    global.fetch = jest
+      .fn()
+      .mockResolvedValue(new Response('{}', { status: 200 }));
   });
 
   afterEach(() => {
@@ -69,7 +83,12 @@ describe('customFetch passkey_auth handling', () => {
       cookie: 'auth=session-token; passkey_auth=account-passkey-token',
     } as Document;
 
-    const fetchFn = customFetch({ baseUrl: 'http://api.test' }, undefined, undefined, false);
+    const fetchFn = customFetch(
+      { baseUrl: 'http://api.test' },
+      undefined,
+      undefined,
+      false
+    );
     await fetchFn('/user/passkey/status');
 
     expect(global.fetch).toHaveBeenCalledWith(
@@ -88,7 +107,12 @@ describe('customFetch passkey_auth handling', () => {
       cookie: 'passkey_auth=account-passkey-token',
     } as Document;
 
-    const fetchFn = customFetch({ baseUrl: 'http://api.test' }, undefined, undefined, false);
+    const fetchFn = customFetch(
+      { baseUrl: 'http://api.test' },
+      undefined,
+      undefined,
+      false
+    );
     await fetchFn('/user/passkey/status');
 
     expect(global.fetch).toHaveBeenCalledWith(

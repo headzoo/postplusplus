@@ -3,6 +3,8 @@
 import { FC, KeyboardEvent, MouseEvent, useCallback } from 'react';
 import clsx from 'clsx';
 import Link from 'next/link';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
 import ImageWithFallback from '@gitroom/react/helpers/image.with.fallback';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import {
@@ -17,7 +19,11 @@ import {
   getFollowerBoardColumnAction,
 } from '@gitroom/frontend/components/followers/follower.segments';
 import { CustomScrollArea } from '@gitroom/frontend/components/ui/custom.scroll.area';
-import { HelpIcon, MoreIcon, TagIcon } from '@gitroom/frontend/components/ui/icons';
+import {
+  HelpIcon,
+  MoreIcon,
+  TagIcon,
+} from '@gitroom/frontend/components/ui/icons';
 import {
   DismissTriageOptions,
   useRelationshipTriageDismiss,
@@ -31,6 +37,23 @@ import {
   useFollowers,
 } from '@gitroom/frontend/components/followers/use.followers';
 import { LeadFitDismissReason } from '@gitroom/nestjs-libraries/dtos/integrations/lead-fit-feedback.types';
+
+dayjs.extend(relativeTime);
+
+const CONVERSION_TYPE_LABELS: Record<string, string> = {
+  follower_gained: 'Follower gained',
+  website_goal: 'Website goal',
+  amplification_threshold: 'Amplification',
+  support_sla_hit: 'Support SLA',
+  support_issue_resolved: 'Support resolved',
+};
+
+const formatConversionTypeLabel = (conversionType: string) =>
+  CONVERSION_TYPE_LABELS[conversionType] ??
+  conversionType
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
 
 const BOARD_GRID_CLASS =
   'grid grid-cols-1 gap-[12px] sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5';
@@ -87,6 +110,15 @@ export const FollowerBoardRow: FC<{
       : null;
     const displayName =
       follower.name || handle || t('followers_unknown', 'Unknown');
+    const conversionSubtitle =
+      segment.slug === 'conversions' &&
+        follower.latestConversionType &&
+        follower.lastConvertedAt
+        ? t('followers_board_conversion_subtitle', '{{type}} · {{when}}', {
+          type: formatConversionTypeLabel(follower.latestConversionType),
+          when: dayjs(follower.lastConvertedAt).fromNow(),
+        })
+        : null;
 
     const handleRowClick = () => {
       onOpen();
@@ -211,6 +243,11 @@ export const FollowerBoardRow: FC<{
             ) : (
               <p className="truncate text-[12px] text-textItemBlur">{handle}</p>
             ))}
+          {conversionSubtitle && (
+            <p className="truncate text-[11px] text-textItemBlur">
+              {conversionSubtitle}
+            </p>
+          )}
         </div>
         {showMenu && (
           <button
@@ -353,7 +390,10 @@ export const FollowerBoardColumn: FC<{
     const Icon = segment.icon;
     const countLabel = formatSegmentCount(total);
     const segmentLabel = t(segment.key, segment.defaultLabel);
-    const segmentDescription = t(segment.descriptionKey, segment.defaultDescription);
+    const segmentDescription = t(
+      segment.descriptionKey,
+      segment.defaultDescription
+    );
 
     return (
       <div
@@ -386,11 +426,9 @@ export const FollowerBoardColumn: FC<{
           <button
             type="button"
             className="shrink-0 text-textItemBlur hover:text-newTextColor cursor-help"
-            aria-label={t(
-              'followers_board_column_help',
-              'About {{segment}}',
-              { segment: segmentLabel }
-            )}
+            aria-label={t('followers_board_column_help', 'About {{segment}}', {
+              segment: segmentLabel,
+            })}
             data-testid="followers-board-column-help"
             data-tooltip-id="tooltip"
             data-tooltip-content={segmentDescription}
@@ -428,9 +466,7 @@ export const FollowerBoardColumn: FC<{
     );
   };
 
-const listRowSegment = (
-  list: FollowerList
-): FollowerSegmentDefinition => ({
+const listRowSegment = (list: FollowerList): FollowerSegmentDefinition => ({
   slug: 'all',
   key: 'followers_custom_list',
   defaultLabel: list.name,
@@ -545,10 +581,7 @@ export const FollowerBoard: FC<{
   onUnfollow,
 }) => {
     return (
-      <div
-        className={BOARD_GRID_CLASS}
-        data-testid="followers-board"
-      >
+      <div className={BOARD_GRID_CLASS} data-testid="followers-board">
         {columns.map((column) => (
           <FollowerBoardColumn
             key={column.segment.slug}

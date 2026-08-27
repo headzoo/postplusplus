@@ -65,9 +65,7 @@ export const NotificationOpenComponent = () => {
       id="notification-popup"
       className="opacity-0 animate-normalFadeDown mt-[10px] absolute w-[420px] mobile:w-[min(420px,calc(100vw-24px))] min-h-[200px] top-[100%] end-0 bg-third text-textColor rounded-[16px] flex flex-col border border-tableBorder z-[600]"
     >
-      <div
-        className={`p-[16px] border-b border-tableBorder font-bold`}
-      >
+      <div className={`p-[16px] border-b border-tableBorder font-bold`}>
         {t('notifications', 'Notifications')}
       </div>
 

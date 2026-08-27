@@ -113,12 +113,15 @@ export const MemeGenerator: FC<{
     [templates, search]
   );
 
-  const selectTemplate = useCallback((template: ImgflipTemplate) => {
-    invalidateInFlightGeneration();
-    setSelectedTemplate(template);
-    setCaptions(Array.from({ length: template.boxCount }, () => ''));
-    setGenerateError(null);
-  }, [invalidateInFlightGeneration]);
+  const selectTemplate = useCallback(
+    (template: ImgflipTemplate) => {
+      invalidateInFlightGeneration();
+      setSelectedTemplate(template);
+      setCaptions(Array.from({ length: template.boxCount }, () => ''));
+      setGenerateError(null);
+    },
+    [invalidateInFlightGeneration]
+  );
 
   useEffect(() => {
     if (!selectedTemplate && filteredTemplates.length > 0) {
@@ -192,7 +195,10 @@ export const MemeGenerator: FC<{
         return;
       }
       setGenerateError(
-        t('failed_to_generate_meme', 'Failed to generate meme. Please try again.')
+        t(
+          'failed_to_generate_meme',
+          'Failed to generate meme. Please try again.'
+        )
       );
     } finally {
       setGenerating(false);
@@ -206,12 +212,7 @@ export const MemeGenerator: FC<{
     captionsMatch(captions, preview.captions);
 
   const saveMeme = useCallback(async () => {
-    if (
-      !previewMatchesCurrentInputs ||
-      !preview?.url ||
-      saving ||
-      generating
-    ) {
+    if (!previewMatchesCurrentInputs || !preview?.url || saving || generating) {
       return;
     }
     setSaving(true);
@@ -333,23 +334,23 @@ export const MemeGenerator: FC<{
                   const label = `${t('meme_text', 'Text')} ${index + 1}`;
                   const inputId = `meme-caption-${index}`;
                   return (
-                  <label
-                    key={`caption-${index}`}
-                    htmlFor={inputId}
-                    className="flex flex-col gap-[4px] text-[12px]"
-                  >
-                    <span>{label}</span>
-                    <textarea
-                      id={inputId}
-                      value={caption}
-                      maxLength={MAX_CAPTION_LENGTH}
-                      rows={2}
-                      onChange={(event) =>
-                        updateCaption(index, event.target.value)
-                      }
-                      className="w-full rounded-[8px] bg-newColColor px-[10px] py-[8px] text-[13px] outline-none border border-newBorder resize-y min-h-[44px]"
-                    />
-                  </label>
+                    <label
+                      key={`caption-${index}`}
+                      htmlFor={inputId}
+                      className="flex flex-col gap-[4px] text-[12px]"
+                    >
+                      <span>{label}</span>
+                      <textarea
+                        id={inputId}
+                        value={caption}
+                        maxLength={MAX_CAPTION_LENGTH}
+                        rows={2}
+                        onChange={(event) =>
+                          updateCaption(index, event.target.value)
+                        }
+                        className="w-full rounded-[8px] bg-newColColor px-[10px] py-[8px] text-[13px] outline-none border border-newBorder resize-y min-h-[44px]"
+                      />
+                    </label>
                   );
                 })}
               </div>
@@ -400,7 +401,9 @@ export const MemeGenerator: FC<{
                     src={preview.url}
                     alt={
                       selectedTemplate
-                        ? `${t('meme_preview', 'Preview of')} ${selectedTemplate.name}`
+                        ? `${t('meme_preview', 'Preview of')} ${
+                            selectedTemplate.name
+                          }`
                         : t('meme_preview_image', 'Meme preview')
                     }
                     className="max-w-full max-h-[280px] object-contain rounded-[6px]"
@@ -473,9 +476,7 @@ export const MemeComposerButton: FC<{
       title: t('meme_generator', 'Meme Generator'),
       size: '900px',
       maxSize: '95vw',
-      children: (
-        <MemeGenerator onSave={(media) => appendImages([media])} />
-      ),
+      children: <MemeGenerator onSave={(media) => appendImages([media])} />,
     });
   }, [appendImages, modals, onOpen, t]);
 

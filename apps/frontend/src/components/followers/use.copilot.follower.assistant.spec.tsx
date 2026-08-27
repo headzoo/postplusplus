@@ -12,9 +12,7 @@ import {
 
 const Probe: React.FC = () => {
   const request = useFollowerCopilotLaunchRequest();
-  return (
-    <div data-testid="draft">{request?.draftMessage ?? ''}</div>
-  );
+  return <div data-testid="draft">{request?.draftMessage ?? ''}</div>;
 };
 
 describe('use.copilot.follower.assistant', () => {

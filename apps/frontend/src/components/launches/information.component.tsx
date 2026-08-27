@@ -143,13 +143,7 @@ export const InformationComponent: FC<{
     }
 
     return true;
-  }, [
-    totalAllowedChars,
-    totalChars,
-    isInternal,
-    chars,
-    showStripLinkWarning,
-  ]);
+  }, [totalAllowedChars, totalChars, isInternal, chars, showStripLinkWarning]);
 
   const showDetails =
     (isGlobal && selectedIntegrations.length > 0) ||
@@ -191,12 +185,22 @@ export const InformationComponent: FC<{
       {isValid ? <Valid /> : <Invalid />}
 
       {!isGlobal && (
-        <div className={clsx("text-[10px] font-[600] flex justify-center items-center", !isValid && 'text-white')}>
+        <div
+          className={clsx(
+            'text-[10px] font-[600] flex justify-center items-center',
+            !isValid && 'text-white'
+          )}
+        >
           {totalChars}/{totalAllowedChars}
         </div>
       )}
       {isGlobal && globalDisplayLimit !== null && (
-        <div className={clsx("text-[10px] font-[600] flex justify-center items-center", !isValid && 'text-white')}>
+        <div
+          className={clsx(
+            'text-[10px] font-[600] flex justify-center items-center',
+            !isValid && 'text-white'
+          )}
+        >
           {totalChars}/{globalDisplayLimit}
         </div>
       )}
@@ -229,7 +233,10 @@ export const InformationComponent: FC<{
                 isGlobal && selectedIntegrations.length && 'mb-[12px]'
               )}
             >
-              {t('your_post_should_have_at_least_one_character_or_one_image', 'Your post should have at least one character or one image.')}
+              {t(
+                'your_post_should_have_at_least_one_character_or_one_image',
+                'Your post should have at least one character or one image.'
+              )}
             </div>
           )}
           {isGlobal && (

@@ -28,16 +28,12 @@ describe('copilot.assistant.popup.size', () => {
   });
 
   it('clamps width and height to min and max', () => {
-    expect(
-      clampCopilotPopupSize({ width: 100, height: 50 })
-    ).toEqual({
+    expect(clampCopilotPopupSize({ width: 100, height: 50 })).toEqual({
       width: COPILOT_POPUP_MIN_WIDTH,
       height: COPILOT_POPUP_MIN_HEIGHT,
     });
 
-    expect(
-      clampCopilotPopupSize({ width: 5000, height: 5000 })
-    ).toEqual({
+    expect(clampCopilotPopupSize({ width: 5000, height: 5000 })).toEqual({
       width: 1264,
       height: 704,
     });

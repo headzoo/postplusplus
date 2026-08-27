@@ -1,13 +1,18 @@
 jest.mock(
   '@gitroom/nestjs-libraries/database/prisma/integrations/integration.service',
   () => ({
-    IntegrationService: class IntegrationService { },
+    IntegrationService: class IntegrationService {},
   })
 );
 
 let capturedAgentOptions: {
-  tools: Record<string, { id?: string; mcp?: { annotations?: Record<string, unknown> } }>;
-  instructions: (context: { requestContext: { get: (key: string) => unknown } }) => string;
+  tools: Record<
+    string,
+    { id?: string; mcp?: { annotations?: Record<string, unknown> } }
+  >;
+  instructions: (context: {
+    requestContext: { get: (key: string) => unknown };
+  }) => string;
 };
 
 jest.mock('@mastra/core/agent', () => ({
@@ -27,7 +32,7 @@ jest.mock('@ai-sdk/openai', () => ({
 }));
 
 jest.mock('@mastra/memory', () => ({
-  Memory: class Memory { },
+  Memory: class Memory {},
 }));
 
 jest.mock('@gitroom/nestjs-libraries/chat/mastra.store', () => ({
@@ -279,7 +284,8 @@ describe('follower tools cross-surface contracts', () => {
         );
       }
       expect(
-        exposed.find((tool) => tool.id === 'removeFollowerListMembers')?.annotations
+        exposed.find((tool) => tool.id === 'removeFollowerListMembers')
+          ?.annotations
       ).toEqual(
         expect.objectContaining({
           ...followerWriteToolAnnotations,
@@ -293,17 +299,27 @@ describe('follower tools cross-surface contracts', () => {
     it('loads the same follower tool names for the postiz agent and MCP listTools', async () => {
       const integrationService = createIntegrationService();
       const moduleRef = {
-        get: jest.fn((toolClass: (typeof FOLLOWER_TOOL_CLASSES)[number] | { name?: string }) => {
-          if (FOLLOWER_TOOL_CLASSES.includes(toolClass as (typeof FOLLOWER_TOOL_CLASSES)[number])) {
-            return new (toolClass as (typeof FOLLOWER_TOOL_CLASSES)[number])(
-              integrationService as unknown as IntegrationService
-            );
+        get: jest.fn(
+          (
+            toolClass:
+              | (typeof FOLLOWER_TOOL_CLASSES)[number]
+              | { name?: string }
+          ) => {
+            if (
+              FOLLOWER_TOOL_CLASSES.includes(
+                toolClass as (typeof FOLLOWER_TOOL_CLASSES)[number]
+              )
+            ) {
+              return new (toolClass as (typeof FOLLOWER_TOOL_CLASSES)[number])(
+                integrationService as unknown as IntegrationService
+              );
+            }
+            return {
+              name: 'other-tool',
+              run: async () => ({ id: 'other-tool' }),
+            };
           }
-          return {
-            name: 'other-tool',
-            run: async () => ({ id: 'other-tool' }),
-          };
-        }),
+        ),
       };
       const service = new LoadToolsService(moduleRef as any);
       const agent = await service.agent();
@@ -315,7 +331,9 @@ describe('follower tools cross-surface contracts', () => {
       }
       expect(
         Object.keys(capturedAgentOptions.tools).filter((name) =>
-          FOLLOWER_TOOL_NAMES.includes(name as (typeof FOLLOWER_TOOL_NAMES)[number])
+          FOLLOWER_TOOL_NAMES.includes(
+            name as (typeof FOLLOWER_TOOL_NAMES)[number]
+          )
         )
       ).toEqual([...FOLLOWER_TOOL_NAMES]);
     });
@@ -591,7 +609,12 @@ describe('follower tools cross-surface contracts', () => {
 
     it('summarizes stored category and named-list counts without filtered page totals', async () => {
       integrationService.getFollowers.mockImplementation(
-        (_org, _actor, _channelId, query: { triage?: string; audience?: string }) => {
+        (
+          _org,
+          _actor,
+          _channelId,
+          query: { triage?: string; audience?: string }
+        ) => {
           if (!query.triage && !query.audience) {
             return Promise.resolve({ items: [], hasMore: false, total: 10 });
           }
@@ -613,13 +636,14 @@ describe('follower tools cross-surface contracts', () => {
       expect(result.output.lists).toEqual([
         { id: 'list-1', name: 'VIP', total: 6 },
       ]);
-      expect(FOLLOWER_TRIAGE_FILTERS.every((category) => category in result.output.categories)).toBe(
-        true
-      );
-      expect(integrationService.getStoredFollowerAudienceCounts).toHaveBeenCalledWith(
-        { id: organizationId },
-        channelId
-      );
+      expect(
+        FOLLOWER_TRIAGE_FILTERS.every(
+          (category) => category in result.output.categories
+        )
+      ).toBe(true);
+      expect(
+        integrationService.getStoredFollowerAudienceCounts
+      ).toHaveBeenCalledWith({ id: organizationId }, channelId);
       expect(integrationService.getFollowers).toHaveBeenCalledTimes(1);
     });
 
@@ -852,7 +876,10 @@ describe('follower tools cross-surface contracts', () => {
       ).run();
 
       await expect(
-        tool.execute!({ channelId: 'foreign-channel', limit: 20 }, createMcpContext('org-2'))
+        tool.execute!(
+          { channelId: 'foreign-channel', limit: 20 },
+          createMcpContext('org-2')
+        )
       ).rejects.toMatchObject({
         status: 404,
         message: 'Integration not found',
@@ -945,14 +972,18 @@ describe('follower tools cross-surface contracts', () => {
         integrationService as unknown as IntegrationService
       ).run();
 
-      expect(() => requireFollowerWriteActor(undefined)).toThrow(BadRequestException);
+      expect(() => requireFollowerWriteActor(undefined)).toThrow(
+        BadRequestException
+      );
       await expect(
         tool.execute!(
           { channelId, listId: 'list-1', onlyFollowing: true },
           createMcpContext()
         )
       ).rejects.toBeInstanceOf(BadRequestException);
-      expect(integrationService.removeFollowerListMembers).not.toHaveBeenCalled();
+      expect(
+        integrationService.removeFollowerListMembers
+      ).not.toHaveBeenCalled();
     });
 
     it('rejects removeFollowerListMembers inputs that mix or omit selectors', () => {

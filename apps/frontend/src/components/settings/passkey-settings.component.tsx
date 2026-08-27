@@ -116,10 +116,7 @@ const PasskeySettingsComponent = () => {
       );
     } catch (err) {
       toaster.show(
-        ceremonyError(
-          err,
-          'Unable to disable your passkey. Please try again.'
-        ),
+        ceremonyError(err, 'Unable to disable your passkey. Please try again.'),
         'warning'
       );
     } finally {

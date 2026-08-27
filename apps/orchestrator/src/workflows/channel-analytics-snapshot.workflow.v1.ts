@@ -1,8 +1,4 @@
-import {
-  continueAsNew,
-  proxyActivities,
-  sleep,
-} from '@temporalio/workflow';
+import { continueAsNew, proxyActivities, sleep } from '@temporalio/workflow';
 import {
   ChannelAnalyticsCaptureMode,
   ChannelAnalyticsSnapshotActivity,
@@ -65,7 +61,9 @@ export async function channelAnalyticsSnapshotWorkflowV1(
       }
       if (page.hasMore) {
         if (!page.nextCursor) {
-          throw new Error('Analytics page indicated more results without a cursor');
+          throw new Error(
+            'Analytics page indicated more results without a cursor'
+          );
         }
         return continueAsNew<typeof channelAnalyticsSnapshotWorkflowV1>({
           after: request.after,
@@ -111,7 +109,10 @@ function advanceCandidate(
   request: ChannelAnalyticsSnapshotWorkflowRequest,
   candidate: ChannelAnalyticsSnapshotCandidate
 ): Promise<never> {
-  if (request.batch && request.batch.index + 1 < request.batch.candidates.length) {
+  if (
+    request.batch &&
+    request.batch.index + 1 < request.batch.candidates.length
+  ) {
     return continueAsNew<typeof channelAnalyticsSnapshotWorkflowV1>({
       after: request.after,
       batch: { ...request.batch, index: request.batch.index + 1 },

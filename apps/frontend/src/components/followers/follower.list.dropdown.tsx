@@ -1,12 +1,6 @@
 'use client';
 
-import {
-  FC,
-  KeyboardEvent,
-  MouseEvent,
-  useCallback,
-  useState,
-} from 'react';
+import { FC, KeyboardEvent, MouseEvent, useCallback, useState } from 'react';
 import clsx from 'clsx';
 import { useClickOutside } from '@mantine/hooks';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
@@ -134,10 +128,7 @@ export const FollowerListDropdown: FC<{
             })
           ) : (
             <p className="px-[8px] py-[6px] text-[13px] text-textItemBlur">
-              {t(
-                'followers_lists_empty_menu',
-                'Create a custom list first.'
-              )}
+              {t('followers_lists_empty_menu', 'Create a custom list first.')}
             </p>
           )}
         </div>

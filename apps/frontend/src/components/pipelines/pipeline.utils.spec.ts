@@ -198,9 +198,7 @@ describe('getPipelineScheduleWeek', () => {
     expect(week.startDate).toBe('2025-11-02T04:00:00.000Z');
     expect(week.endDate).toBe('2025-11-09T05:00:00.000Z');
     expect(dayjs(week.endDate).diff(week.startDate, 'hour')).toBe(169);
-    expect(dayjs.utc('2025-11-09T04:59:59.999Z').isBefore(week.end)).toBe(
-      true
-    );
+    expect(dayjs.utc('2025-11-09T04:59:59.999Z').isBefore(week.end)).toBe(true);
     expect(week.days.map((day) => day.format('YYYY-MM-DD'))).toEqual([
       '2025-11-02',
       '2025-11-03',
@@ -217,22 +215,30 @@ describe('PIPELINE_COLOR_PALETTE', () => {
   it('contains 14 swatches including the default primary', () => {
     expect(PIPELINE_COLOR_PALETTE).toHaveLength(14);
     expect(
-      PIPELINE_COLOR_PALETTE.some((swatch) => swatch.value === PIPELINE_DEFAULT_COLOR)
+      PIPELINE_COLOR_PALETTE.some(
+        (swatch) => swatch.value === PIPELINE_DEFAULT_COLOR
+      )
     ).toBe(true);
   });
 });
 
 describe('resolveCalendarPostHeaderColor', () => {
   it('prefers pipeline color over tag color', () => {
-    expect(resolveCalendarPostHeaderColor('#eb3825', '#FF0000')).toBe('#eb3825');
+    expect(resolveCalendarPostHeaderColor('#eb3825', '#FF0000')).toBe(
+      '#eb3825'
+    );
   });
 
   it('uses tag color when pipeline color is absent', () => {
-    expect(resolveCalendarPostHeaderColor(undefined, '#FF0000')).toBe('#FF0000');
+    expect(resolveCalendarPostHeaderColor(undefined, '#FF0000')).toBe(
+      '#FF0000'
+    );
   });
 
   it('returns undefined when neither color is present', () => {
-    expect(resolveCalendarPostHeaderColor(undefined, undefined)).toBeUndefined();
+    expect(
+      resolveCalendarPostHeaderColor(undefined, undefined)
+    ).toBeUndefined();
   });
 });
 
@@ -241,9 +247,9 @@ describe('getReadableForegroundColor', () => {
     'meets WCAG AA contrast for %s (%s)',
     (_label, backgroundColor) => {
       const foregroundColor = getReadableForegroundColor(backgroundColor);
-      expect(getContrastRatio(foregroundColor, backgroundColor)).toBeGreaterThanOrEqual(
-        4.5
-      );
+      expect(
+        getContrastRatio(foregroundColor, backgroundColor)
+      ).toBeGreaterThanOrEqual(4.5);
     }
   );
 
@@ -290,7 +296,7 @@ const mockResponse = (
     ok,
     status,
     json: async () => body,
-  }) as Response;
+  } as Response);
 
 describe('loadPipelineGlobalSchedule', () => {
   it('returns parsed occurrences for successful responses', async () => {
@@ -311,7 +317,10 @@ describe('loadPipelineGlobalSchedule', () => {
     const fetchFn = jest.fn(async () => mockResponse(true, occurrences));
 
     await expect(
-      loadPipelineGlobalSchedule(fetchFn, '/pipelines/schedule?startDate=a&endDate=b')
+      loadPipelineGlobalSchedule(
+        fetchFn,
+        '/pipelines/schedule?startDate=a&endDate=b'
+      )
     ).resolves.toEqual(occurrences);
   });
 
@@ -321,7 +330,10 @@ describe('loadPipelineGlobalSchedule', () => {
     );
 
     await expect(
-      loadPipelineGlobalSchedule(fetchFn, '/pipelines/schedule?startDate=a&endDate=b')
+      loadPipelineGlobalSchedule(
+        fetchFn,
+        '/pipelines/schedule?startDate=a&endDate=b'
+      )
     ).rejects.toThrow('Invalid date range');
   });
 
@@ -335,7 +347,10 @@ describe('loadPipelineGlobalSchedule', () => {
     );
 
     await expect(
-      loadPipelineGlobalSchedule(fetchFn, '/pipelines/schedule?startDate=a&endDate=b')
+      loadPipelineGlobalSchedule(
+        fetchFn,
+        '/pipelines/schedule?startDate=a&endDate=b'
+      )
     ).rejects.toThrow('startDate must be valid, endDate must be valid');
   });
 });
@@ -356,31 +371,19 @@ describe('formatPipelineSlotShort', () => {
 
   it('uses weekday and time for slots in the same week', () => {
     expect(
-      formatPipelineSlotShort(
-        '2026-08-23T17:00:00.000Z',
-        NEW_YORK,
-        now
-      )
+      formatPipelineSlotShort('2026-08-23T17:00:00.000Z', NEW_YORK, now)
     ).toBe('Sun 1:00 PM');
   });
 
   it('omits the year for slots later in the same year', () => {
     expect(
-      formatPipelineSlotShort(
-        '2026-10-15T17:00:00.000Z',
-        NEW_YORK,
-        now
-      )
+      formatPipelineSlotShort('2026-10-15T17:00:00.000Z', NEW_YORK, now)
     ).toBe('Oct 15 · 1:00 PM');
   });
 
   it('includes the year for slots in a different year', () => {
     expect(
-      formatPipelineSlotShort(
-        '2027-01-10T17:00:00.000Z',
-        NEW_YORK,
-        now
-      )
+      formatPipelineSlotShort('2027-01-10T17:00:00.000Z', NEW_YORK, now)
     ).toBe('Jan 10, 2027 · 12:00 PM');
   });
 
@@ -404,12 +407,9 @@ describe('filterPipelinesByChannel', () => {
       additionalSettings: '',
       changeNickName: false,
       time: [],
-    }) as Integrations;
+    } as Integrations);
 
-  const pipeline = (
-    id: string,
-    channelIds: string[]
-  ): PipelineSummary => ({
+  const pipeline = (id: string, channelIds: string[]): PipelineSummary => ({
     id,
     name: id,
     timezone: 'UTC',
@@ -457,12 +457,9 @@ describe('filterScheduleOccurrencesByChannel', () => {
       additionalSettings: '',
       changeNickName: false,
       time: [],
-    }) as Integrations;
+    } as Integrations);
 
-  const pipeline = (
-    id: string,
-    channelIds: string[]
-  ): PipelineSummary => ({
+  const pipeline = (id: string, channelIds: string[]): PipelineSummary => ({
     id,
     name: id,
     timezone: 'UTC',
@@ -558,9 +555,9 @@ describe('filterScheduleOccurrencesByPipeline', () => {
     expect(filterScheduleOccurrencesByPipeline(occurrences)).toEqual(
       occurrences
     );
-    expect(
-      filterScheduleOccurrencesByPipeline(occurrences, undefined)
-    ).toEqual(occurrences);
+    expect(filterScheduleOccurrencesByPipeline(occurrences, undefined)).toEqual(
+      occurrences
+    );
   });
 
   it('keeps only occurrences for the selected pipeline', () => {

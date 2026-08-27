@@ -9,7 +9,9 @@ type QueueItem = {
   deletedAt: Date | null;
 };
 
-function createRankingRepository(initialItems: Array<{ id: string; position: number }>) {
+function createRankingRepository(
+  initialItems: Array<{ id: string; position: number }>
+) {
   const items: QueueItem[] = initialItems.map((item) => ({
     ...item,
     status: 'QUEUED',
@@ -49,7 +51,9 @@ function createRankingRepository(initialItems: Array<{ id: string; position: num
 
   const transaction = {
     model: {
-      $transaction: jest.fn(async (callback: any) => callback({ pipelineQueueItem })),
+      $transaction: jest.fn(async (callback: any) =>
+        callback({ pipelineQueueItem })
+      ),
     },
   };
 
@@ -97,10 +101,9 @@ describe('Pipeline sparse ranking', () => {
               findFirst: jest.fn().mockResolvedValue({ id: 'pipeline' }),
             },
             pipelineQueueItem: {
-              findMany: jest.fn().mockResolvedValue([
-                { id: 'first' },
-                { id: 'second' },
-              ]),
+              findMany: jest
+                .fn()
+                .mockResolvedValue([{ id: 'first' }, { id: 'second' }]),
               updateMany,
             },
           })
@@ -175,9 +178,13 @@ describe('Pipeline sparse ranking', () => {
       'second',
     ]);
     for (let index = 1; index < ordered.length; index++) {
-      expect(ordered[index].position).toBeGreaterThan(ordered[index - 1].position);
+      expect(ordered[index].position).toBeGreaterThan(
+        ordered[index - 1].position
+      );
     }
-    expect(new Set(ordered.map((item) => item.position)).size).toBe(ordered.length);
+    expect(new Set(ordered.map((item) => item.position)).size).toBe(
+      ordered.length
+    );
   });
 
   it('supports negative head positions for repeated prepends', async () => {
@@ -201,11 +208,20 @@ describe('Pipeline sparse ranking', () => {
       { id: 'middle', position: 99 },
     ]);
 
-    await repository.repositionItem('org', 'middle', 'pipeline', undefined, 'first');
+    await repository.repositionItem(
+      'org',
+      'middle',
+      'pipeline',
+      undefined,
+      'first'
+    );
 
     expect(positionsOf(items)).toEqual([
       { id: 'first', position: QUEUE_POSITION_INCREMENT },
-      { id: 'middle', position: QUEUE_POSITION_INCREMENT + QUEUE_POSITION_INCREMENT / 2 },
+      {
+        id: 'middle',
+        position: QUEUE_POSITION_INCREMENT + QUEUE_POSITION_INCREMENT / 2,
+      },
       { id: 'second', position: 2 * QUEUE_POSITION_INCREMENT },
     ]);
     expect(new Set(items.map((item) => item.position)).size).toBe(items.length);
@@ -214,7 +230,12 @@ describe('Pipeline sparse ranking', () => {
   it('assigns unique positions when moving into another pipeline at the front', async () => {
     const items: QueueItem[] = [
       { id: 'moving', position: 5, status: 'QUEUED', deletedAt: null },
-      { id: 'destination-head', position: 0, status: 'QUEUED', deletedAt: null },
+      {
+        id: 'destination-head',
+        position: 0,
+        status: 'QUEUED',
+        deletedAt: null,
+      },
     ];
     const pipelineQueueItem = {
       findFirst: jest.fn(async ({ where }: any) => {
@@ -262,9 +283,16 @@ describe('Pipeline sparse ranking', () => {
       transaction as any
     );
 
-    await repository.moveItem('org', 'moving', 'destination', 'destination-head');
+    await repository.moveItem(
+      'org',
+      'moving',
+      'destination',
+      'destination-head'
+    );
 
-    expect(items.find((item) => item.id === 'moving')?.position).toBe(-QUEUE_POSITION_INCREMENT);
+    expect(items.find((item) => item.id === 'moving')?.position).toBe(
+      -QUEUE_POSITION_INCREMENT
+    );
     expect(new Set(items.map((item) => item.position)).size).toBe(items.length);
   });
 });

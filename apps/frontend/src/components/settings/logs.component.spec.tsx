@@ -163,9 +163,7 @@ describe('WebhookLogsPanel', () => {
 
     expect(screen.getByLabelText('Direction')).toBeTruthy();
     expect(screen.getByLabelText('Event type')).toBeTruthy();
-    expect(
-      screen.getByPlaceholderText('Search source or target')
-    ).toBeTruthy();
+    expect(screen.getByPlaceholderText('Search source or target')).toBeTruthy();
     expect(useWebhookLogs).toHaveBeenCalledWith(0, 20, '', '', '');
 
     fireEvent.change(screen.getByLabelText('Event type'), {

@@ -1,4 +1,10 @@
-import { IsDefined, IsOptional, IsString, IsUrl, MaxLength } from 'class-validator';
+import {
+  IsDefined,
+  IsOptional,
+  IsString,
+  IsUrl,
+  MaxLength,
+} from 'class-validator';
 
 export class CreateOAuthAppDto {
   @IsString()

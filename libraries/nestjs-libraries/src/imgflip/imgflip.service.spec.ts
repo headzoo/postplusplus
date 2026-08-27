@@ -23,7 +23,7 @@ const response = (body: unknown, ok = true) =>
   ({
     ok,
     json: jest.fn().mockResolvedValue(body),
-  }) as unknown as Response;
+  } as unknown as Response);
 
 describe('ImgflipService', () => {
   const originalFetch = global.fetch;
@@ -107,9 +107,9 @@ describe('ImgflipService', () => {
     fetchMock.mockRejectedValueOnce(new Error('network failure'));
     await expect(service.getTemplates()).resolves.toHaveLength(1);
 
-    const coldService = new ImgflipService(
-      { uploadFromUrl } as unknown as MediaService
-    );
+    const coldService = new ImgflipService({
+      uploadFromUrl,
+    } as unknown as MediaService);
     fetchMock.mockRejectedValueOnce(new Error('network failure'));
     await expect(coldService.getTemplates()).rejects.toBeInstanceOf(
       BadGatewayException

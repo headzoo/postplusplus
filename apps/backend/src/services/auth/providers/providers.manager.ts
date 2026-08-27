@@ -10,9 +10,7 @@ export class AuthProviderManager {
     const metadata =
       Reflect.getMetadata('auth-provider', AuthProviderAbstract) || [];
 
-    const found = metadata.find(
-      (m: any) => m.provider === provider
-    );
+    const found = metadata.find((m: any) => m.provider === provider);
 
     if (!found) {
       throw new Error(`Auth provider ${provider} not found`);

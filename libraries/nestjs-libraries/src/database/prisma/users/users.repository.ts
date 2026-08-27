@@ -18,7 +18,7 @@ export class UsersRepository {
     private _userDismissedAlert: PrismaRepository<'userDismissedAlert'>,
     private _integration: PrismaRepository<'integration'>,
     private _transaction: PrismaTransaction
-  ) { }
+  ) {}
 
   async switchUserCredentials(currentUserId: string, targetUserId: string) {
     const current = await this._user.model.user.findUnique({
@@ -256,13 +256,13 @@ export class UsersRepository {
         bio: body.bio,
         picture: body.picture
           ? {
-            connect: {
-              id: body.picture.id,
-            },
-          }
+              connect: {
+                id: body.picture.id,
+              },
+            }
           : {
-            disconnect: true,
-          },
+              disconnect: true,
+            },
       },
     });
   }
@@ -328,16 +328,15 @@ export class UsersRepository {
       return [];
     }
 
-    const ownedIntegrations = await this._integration.model.integration.findMany(
-      {
+    const ownedIntegrations =
+      await this._integration.model.integration.findMany({
         where: {
           organizationId,
           deletedAt: null,
           id: { in: integrationIds },
         },
         select: { id: true },
-      }
-    );
+      });
     if (ownedIntegrations.length !== integrationIds.length) {
       throw new BadRequestException('Invalid integration');
     }
@@ -384,13 +383,12 @@ export class UsersRepository {
   }
 
   async getDismissedAlerts(userId: string) {
-    const rows = await this._userDismissedAlert.model.userDismissedAlert.findMany(
-      {
+    const rows =
+      await this._userDismissedAlert.model.userDismissedAlert.findMany({
         where: { userId },
         select: { alertKey: true },
         orderBy: { alertKey: 'asc' },
-      }
-    );
+      });
     return { keys: rows.map((row) => row.alertKey) };
   }
 

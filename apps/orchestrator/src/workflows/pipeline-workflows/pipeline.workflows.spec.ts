@@ -54,8 +54,8 @@ jest.mock('@temporalio/workflow', () => ({
   continueAsNew,
   defineSignal: (name: string) => name,
   setHandler: jest.fn(),
-  ActivityFailure: class ActivityFailure extends Error { },
-  ApplicationFailure: class ApplicationFailure extends Error { },
+  ActivityFailure: class ActivityFailure extends Error {},
+  ApplicationFailure: class ApplicationFailure extends Error {},
 }));
 
 jest.mock(
@@ -82,10 +82,16 @@ describe('Pipeline Temporal workflow boundaries', () => {
       executionId: 'execution',
       roots: [
         { postId: 'twitter-root', organizationId: 'org', taskQueue: 'x' },
-        { postId: 'linkedin-root', organizationId: 'org', taskQueue: 'linkedin' },
+        {
+          postId: 'linkedin-root',
+          organizationId: 'org',
+          taskQueue: 'linkedin',
+        },
       ],
     });
-    startChild.mockImplementation(async () => ({ result: async () => undefined }));
+    startChild.mockImplementation(async () => ({
+      result: async () => undefined,
+    }));
     finalizePipelineSlot.mockResolvedValue({ outcome: 'PUBLISHED' });
 
     await expect(
@@ -103,7 +109,9 @@ describe('Pipeline Temporal workflow boundaries', () => {
       expect.objectContaining({
         workflowId: 'post_twitter-root',
         taskQueue: 'main',
-        args: [{ taskQueue: 'x', postId: 'twitter-root', organizationId: 'org' }],
+        args: [
+          { taskQueue: 'x', postId: 'twitter-root', organizationId: 'org' },
+        ],
         typedSearchAttributes: expect.anything(),
       })
     );
@@ -121,7 +129,9 @@ describe('Pipeline Temporal workflow boundaries', () => {
         ],
       })
     );
-    expect(finalizePipelineSlot).toHaveBeenCalledWith({ executionId: 'execution' });
+    expect(finalizePipelineSlot).toHaveBeenCalledWith({
+      executionId: 'execution',
+    });
   });
 
   it('finalizes a claimed slot after a child failure without replaying provider work', async () => {
@@ -143,7 +153,9 @@ describe('Pipeline Temporal workflow boundaries', () => {
         scheduledFor: '2026-08-10T10:00:00.000Z',
       })
     ).resolves.toMatchObject({ outcome: 'FAILED' });
-    expect(finalizePipelineSlot).toHaveBeenCalledWith({ executionId: 'execution' });
+    expect(finalizePipelineSlot).toHaveBeenCalledWith({
+      executionId: 'execution',
+    });
   });
 
   it('uses occurrence IDs for scheduler children and tolerates duplicate ticks', async () => {
@@ -164,7 +176,9 @@ describe('Pipeline Temporal workflow boundaries', () => {
     );
     sleep.mockRejectedValue(new Error('stop after first tick'));
 
-    await expect(pipelineSchedulerWorkflowV1()).rejects.toThrow('stop after first tick');
+    await expect(pipelineSchedulerWorkflowV1()).rejects.toThrow(
+      'stop after first tick'
+    );
     expect(startChild).toHaveBeenCalledWith(
       expect.any(Function),
       expect.objectContaining({
@@ -226,7 +240,9 @@ describe('Pipeline Temporal workflow boundaries', () => {
   });
 
   it('sleeps and retries after discovery exhausts its activity retries', async () => {
-    discoverDuePipelineSlots.mockRejectedValue(new Error('discovery exhausted'));
+    discoverDuePipelineSlots.mockRejectedValue(
+      new Error('discovery exhausted')
+    );
     sleep.mockRejectedValue(new Error('stop after failed discovery'));
 
     await expect(pipelineSchedulerWorkflowV1()).rejects.toThrow(
@@ -281,8 +297,7 @@ describe('Pipeline Temporal workflow boundaries', () => {
     expect(startChild).toHaveBeenCalledWith(
       pipelineSlotWorkflowV2,
       expect.objectContaining({
-        workflowId:
-          'pipeline-v2:pipeline:pipeline:3:2026-08-10T11:00:00.000Z',
+        workflowId: 'pipeline-v2:pipeline:pipeline:3:2026-08-10T11:00:00.000Z',
       })
     );
   });
@@ -559,7 +574,11 @@ describe('Pipeline Temporal workflow boundaries', () => {
       organizationId: 'org',
     });
 
-    expect(resolvePostRulesV109).toHaveBeenCalledWith('org', 'post', 'integration');
+    expect(resolvePostRulesV109).toHaveBeenCalledWith(
+      'org',
+      'post',
+      'integration'
+    );
     expect(processPostRuleV109).toHaveBeenCalledTimes(2);
     expect(processPostRuleV109).toHaveBeenNthCalledWith(1, {
       organizationId: 'org',
@@ -945,7 +964,9 @@ describe('Pipeline Temporal workflow boundaries', () => {
     });
 
     const sleepCalls = (sleep as jest.Mock).mock.calls;
-    const ruleSleeps = sleepCalls.filter(call => call[0] >= 900 && call[0] <= 2100);
+    const ruleSleeps = sleepCalls.filter(
+      (call) => call[0] >= 900 && call[0] <= 2100
+    );
     expect(ruleSleeps.length).toBe(2);
     expect(ruleSleeps[0][0]).toBeGreaterThanOrEqual(900);
     expect(ruleSleeps[0][0]).toBeLessThanOrEqual(1100);
@@ -1004,7 +1025,9 @@ describe('Pipeline Temporal workflow boundaries', () => {
     });
 
     const sleepCalls = (sleep as jest.Mock).mock.calls;
-    const ruleDelaySleep = sleepCalls.find(call => call[0] >= 4000 && call[0] <= 5000);
+    const ruleDelaySleep = sleepCalls.find(
+      (call) => call[0] >= 4000 && call[0] <= 5000
+    );
     expect(ruleDelaySleep).toBeDefined();
     expect(ruleDelaySleep![0]).toBeGreaterThan(0);
   });
@@ -1062,7 +1085,9 @@ describe('Pipeline Temporal workflow boundaries', () => {
     });
 
     const sleepCalls = (sleep as jest.Mock).mock.calls;
-    const threadCommentDelay = sleepCalls.find(call => call[0] >= 100000 && call[0] <= 120000);
+    const threadCommentDelay = sleepCalls.find(
+      (call) => call[0] >= 100000 && call[0] <= 120000
+    );
     expect(threadCommentDelay).toBeDefined();
     expect(threadCommentDelay![0]).toBeGreaterThan(0);
   });

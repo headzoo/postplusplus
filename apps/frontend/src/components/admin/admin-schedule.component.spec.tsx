@@ -3,7 +3,13 @@
  */
 
 import React from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import { AdminScheduleComponent } from './admin-schedule.component';
 
 const mockUseSWR = jest.fn();
@@ -36,11 +42,14 @@ jest.mock('@gitroom/frontend/components/layout/new-modal', () => ({
   useModals: () => ({ openModal: mockOpenModal }),
 }));
 
-jest.mock('@gitroom/frontend/components/admin/admin-schedule.logs.modal', () => ({
-  AdminScheduleLogsModal: ({ keySlug }: { keySlug: string }) => (
-    <div>Logs modal {keySlug}</div>
-  ),
-}));
+jest.mock(
+  '@gitroom/frontend/components/admin/admin-schedule.logs.modal',
+  () => ({
+    AdminScheduleLogsModal: ({ keySlug }: { keySlug: string }) => (
+      <div>Logs modal {keySlug}</div>
+    ),
+  })
+);
 
 const scheduleByKey: Record<string, unknown> = {
   '/admin/schedule/relationship-grades': {
@@ -190,7 +199,9 @@ describe('AdminScheduleComponent', () => {
     render(<AdminScheduleComponent />);
 
     await act(async () => {
-      fireEvent.click(screen.getAllByRole('button', { name: 'Trigger now' })[0]);
+      fireEvent.click(
+        screen.getAllByRole('button', { name: 'Trigger now' })[0]
+      );
     });
 
     await waitFor(() => {
@@ -284,7 +295,9 @@ describe('AdminScheduleComponent', () => {
     );
 
     await act(async () => {
-      fireEvent.click(screen.getAllByRole('button', { name: 'Trigger now' })[2]);
+      fireEvent.click(
+        screen.getAllByRole('button', { name: 'Trigger now' })[2]
+      );
     });
 
     await waitFor(() => {

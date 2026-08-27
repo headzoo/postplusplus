@@ -53,7 +53,9 @@ describe('FileProvider', () => {
     const manager = new IntegrationManager();
 
     expect(provider.isConfigured()).toBe(false);
-    expect(await provider.authenticate()).toBe('File channel is not configured');
+    expect(await provider.authenticate()).toBe(
+      'File channel is not configured'
+    );
     expect(manager.getAllowedSocialsIntegrations()).not.toContain('file');
     expect((await manager.getAllIntegrations()).social).not.toEqual(
       expect.arrayContaining([expect.objectContaining({ identifier: 'file' })])
@@ -92,7 +94,12 @@ describe('FileProvider', () => {
 
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2025-01-02T03:04:05.000Z'));
-    const [response] = await provider.post('', '', post('Héllo file'), {} as any);
+    const [response] = await provider.post(
+      '',
+      '',
+      post('Héllo file'),
+      {} as any
+    );
 
     expect(response).toMatchObject({
       id: 'root-post',
@@ -121,8 +128,12 @@ describe('FileProvider', () => {
     expect(first.postId).toBe('2025-01-02-03-04-06.txt');
     expect(second.postId).toBe('2025-01-02-03-04-07.txt');
     expect(first.postId).toMatch(/^\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}\.txt$/);
-    expect(await readFile(join(directory, initialFilename), 'utf8')).toBe('existing');
+    expect(await readFile(join(directory, initialFilename), 'utf8')).toBe(
+      'existing'
+    );
     expect(await readFile(join(directory, first.postId), 'utf8')).toBe('first');
-    expect(await readFile(join(directory, second.postId), 'utf8')).toBe('second');
+    expect(await readFile(join(directory, second.postId), 'utf8')).toBe(
+      'second'
+    );
   });
 });

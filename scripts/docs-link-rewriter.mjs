@@ -16,7 +16,8 @@ const isGithubLineAnchor = (anchor) => GITHUB_LINE_ANCHOR_PATTERN.test(anchor);
  * @param {string} href Link path without hash or query.
  * @returns {string} Normalized path.
  */
-const normalizePath = (href) => href.replace(/^\.\//, '').replace(/^(?:\.\.\/)+/, '');
+const normalizePath = (href) =>
+  href.replace(/^\.\//, '').replace(/^(?:\.\.\/)+/, '');
 
 /**
  * Resolves a relative href against an optional source directory in the repo.
@@ -30,7 +31,9 @@ const resolveRepoPath = (href, sourceDir) => {
     return normalizePath(href);
   }
 
-  return path.posix.normalize(path.posix.join(sourceDir.replace(/\\/g, '/'), href));
+  return path.posix.normalize(
+    path.posix.join(sourceDir.replace(/\\/g, '/'), href)
+  );
 };
 
 /**
@@ -94,7 +97,11 @@ export const rewriteDocsHref = (href, options = {}) => {
     return href;
   }
 
-  if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('mailto:')) {
+  if (
+    href.startsWith('http://') ||
+    href.startsWith('https://') ||
+    href.startsWith('mailto:')
+  ) {
     return href;
   }
 
@@ -114,7 +121,10 @@ export const rewriteDocsHref = (href, options = {}) => {
   if (suffix.startsWith('#') && anchorMap) {
     const anchor = suffix.slice(1);
 
-    if (!isGithubLineAnchor(anchor) && isReadmeRelativePath(pathPart, sourceDir)) {
+    if (
+      !isGithubLineAnchor(anchor) &&
+      isReadmeRelativePath(pathPart, sourceDir)
+    ) {
       suffix = resolveAnchorHref(anchor, anchorMap);
       suffix = suffix.startsWith('/') ? suffix : `/${suffix}`;
     }
@@ -161,6 +171,9 @@ export const rewriteDocsHref = (href, options = {}) => {
  * @returns {string} Markdown with rewritten links.
  */
 export const rewriteMarkdownLinks = (markdown, options = {}) =>
-  markdown.replace(/(!?\[[^\]]*\]\()([^)]+)(\))/g, (_match, prefix, href, suffix) => {
-    return `${prefix}${rewriteDocsHref(href, options)}${suffix}`;
-  });
+  markdown.replace(
+    /(!?\[[^\]]*\]\()([^)]+)(\))/g,
+    (_match, prefix, href, suffix) => {
+      return `${prefix}${rewriteDocsHref(href, options)}${suffix}`;
+    }
+  );

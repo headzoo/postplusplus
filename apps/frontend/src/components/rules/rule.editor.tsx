@@ -47,13 +47,19 @@ export const RuleEditor: FC<{
   const [enabled, setEnabled] = useState(true);
   const [action, setAction] = useState<PostRuleAction>('REMOVE');
   const [initialDelayHours, setInitialDelayHours] = useState(0);
-  const [evaluationIntervalHours, setEvaluationIntervalHours] = useState<number | undefined>(24);
+  const [evaluationIntervalHours, setEvaluationIntervalHours] = useState<
+    number | undefined
+  >(24);
   const [maxEvaluations, setMaxEvaluations] = useState<number | undefined>(3);
-  const [conditionMatch, setConditionMatch] = useState<PostRuleConditionMatch>('ANY');
+  const [conditionMatch, setConditionMatch] =
+    useState<PostRuleConditionMatch>('ANY');
   const [conditions, setConditions] = useState<PostRuleCondition[]>([]);
   const [autoPlugContent, setAutoPlugContent] = useState('');
-  const [rescheduleConfig, setRescheduleConfig] = useState<PostRuleRescheduleConfig | null>(null);
-  const [maxRescheduleAttempts, setMaxRescheduleAttempts] = useState<number | undefined>(undefined);
+  const [rescheduleConfig, setRescheduleConfig] =
+    useState<PostRuleRescheduleConfig | null>(null);
+  const [maxRescheduleAttempts, setMaxRescheduleAttempts] = useState<
+    number | undefined
+  >(undefined);
   const [integrationIds, setIntegrationIds] = useState<string[]>([]);
   const [pipelineIds, setPipelineIds] = useState<string[]>([]);
 
@@ -68,7 +74,9 @@ export const RuleEditor: FC<{
       setConditionMatch(rule.conditionMatch);
       setConditions(rule.conditions);
       if (rule.action === 'AUTO_PLUG' && rule.actionConfig) {
-        setAutoPlugContent((rule.actionConfig as { content?: string }).content || '');
+        setAutoPlugContent(
+          (rule.actionConfig as { content?: string }).content || ''
+        );
       }
       setRescheduleConfig(rule.rescheduleConfig);
       setMaxRescheduleAttempts(rule.maxRescheduleAttempts ?? undefined);
@@ -115,12 +123,18 @@ export const RuleEditor: FC<{
     }
 
     if (action === 'AUTO_PLUG' && !autoPlugContent.trim()) {
-      toaster.show('Please enter plug content for Auto Plug action.', 'warning');
+      toaster.show(
+        'Please enter plug content for Auto Plug action.',
+        'warning'
+      );
       return;
     }
 
     if (integrationIds.length === 0 && pipelineIds.length === 0) {
-      toaster.show('Please assign at least one channel or Pipeline.', 'warning');
+      toaster.show(
+        'Please assign at least one channel or Pipeline.',
+        'warning'
+      );
       return;
     }
 
@@ -136,7 +150,9 @@ export const RuleEditor: FC<{
         conditionMatch,
         conditions,
         actionConfig:
-          action === 'AUTO_PLUG' ? { content: autoPlugContent.trim() } : undefined,
+          action === 'AUTO_PLUG'
+            ? { content: autoPlugContent.trim() }
+            : undefined,
         rescheduleConfig,
         maxRescheduleAttempts,
       };
@@ -216,7 +232,9 @@ export const RuleEditor: FC<{
   return (
     <div className="flex flex-col gap-[20px] p-[20px] max-h-[80vh] overflow-y-auto">
       <div className="flex flex-col gap-[12px]">
-        <label className="text-[14px] font-[600]">{t('rule_name', 'Rule Name')}</label>
+        <label className="text-[14px] font-[600]">
+          {t('rule_name', 'Rule Name')}
+        </label>
         <input
           type="text"
           value={name}
@@ -227,7 +245,9 @@ export const RuleEditor: FC<{
       </div>
 
       <div className="flex flex-col gap-[12px]">
-        <label className="text-[14px] font-[600]">{t('action', 'Action')}</label>
+        <label className="text-[14px] font-[600]">
+          {t('action', 'Action')}
+        </label>
         <select
           value={action}
           onChange={(e) => handleActionChange(e.target.value as PostRuleAction)}
@@ -275,11 +295,16 @@ export const RuleEditor: FC<{
 
       {action === 'AUTO_PLUG' && (
         <div className="flex flex-col gap-[12px]">
-          <label className="text-[14px] font-[600]">{t('plug_content', 'Plug Content')}</label>
+          <label className="text-[14px] font-[600]">
+            {t('plug_content', 'Plug Content')}
+          </label>
           <textarea
             value={autoPlugContent}
             onChange={(e) => setAutoPlugContent(e.target.value)}
-            placeholder={t('enter_plug_content', 'Enter the content for the plug')}
+            placeholder={t(
+              'enter_plug_content',
+              'Enter the content for the plug'
+            )}
             className="min-h-[100px] w-full rounded-[8px] border border-newBorder bg-newBgColorInner px-[12px] py-[8px] text-[14px] outline-none"
           />
         </div>
@@ -294,7 +319,9 @@ export const RuleEditor: FC<{
           min={0}
           max={720}
           value={initialDelayHours}
-          onChange={(e) => setInitialDelayHours(parseInt(e.target.value, 10) || 0)}
+          onChange={(e) =>
+            setInitialDelayHours(parseInt(e.target.value, 10) || 0)
+          }
           className="h-[44px] w-full rounded-[8px] border border-newBorder bg-newBgColorInner px-[12px] text-[14px] outline-none"
         />
         <p className="text-[12px] opacity-70">
@@ -317,7 +344,9 @@ export const RuleEditor: FC<{
               max={720}
               value={evaluationIntervalHours ?? ''}
               onChange={(e) =>
-                setEvaluationIntervalHours(parseInt(e.target.value, 10) || undefined)
+                setEvaluationIntervalHours(
+                  parseInt(e.target.value, 10) || undefined
+                )
               }
               className="h-[44px] w-full rounded-[8px] border border-newBorder bg-newBgColorInner px-[12px] text-[14px] outline-none"
             />
@@ -338,7 +367,9 @@ export const RuleEditor: FC<{
               min={1}
               max={100}
               value={maxEvaluations ?? ''}
-              onChange={(e) => setMaxEvaluations(parseInt(e.target.value, 10) || undefined)}
+              onChange={(e) =>
+                setMaxEvaluations(parseInt(e.target.value, 10) || undefined)
+              }
               className="h-[44px] w-full rounded-[8px] border border-newBorder bg-newBgColorInner px-[12px] text-[14px] outline-none"
             />
             <p className="text-[12px] opacity-70">
@@ -352,7 +383,9 @@ export const RuleEditor: FC<{
       )}
 
       <div className="flex flex-col gap-[12px]">
-        <label className="text-[14px] font-[600]">{t('conditions', 'Conditions')}</label>
+        <label className="text-[14px] font-[600]">
+          {t('conditions', 'Conditions')}
+        </label>
         <ConditionEditor
           action={action}
           capabilities={capabilities}

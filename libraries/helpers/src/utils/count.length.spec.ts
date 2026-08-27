@@ -28,15 +28,11 @@ describe('isXPremium', () => {
   });
 
   it('is true when Premium is enabled', () => {
-    expect(
-      isXPremium([{ title: 'Premium', value: true }])
-    ).toBe(true);
+    expect(isXPremium([{ title: 'Premium', value: true }])).toBe(true);
   });
 
   it('supports the legacy Verified setting', () => {
-    expect(
-      isXPremium([{ title: 'Verified', value: true }])
-    ).toBe(true);
+    expect(isXPremium([{ title: 'Verified', value: true }])).toBe(true);
   });
 
   it('accepts a boolean from legacy callers', () => {
@@ -65,8 +61,8 @@ describe('xMaxLength', () => {
 
   it('returns the article limit regardless of premium', () => {
     expect(xMaxLength(false, 'article')).toBe(X_ARTICLE_MAX_LENGTH);
-    expect(
-      xMaxLength([{ title: 'Premium', value: true }], 'article')
-    ).toBe(X_ARTICLE_MAX_LENGTH);
+    expect(xMaxLength([{ title: 'Premium', value: true }], 'article')).toBe(
+      X_ARTICLE_MAX_LENGTH
+    );
   });
 });

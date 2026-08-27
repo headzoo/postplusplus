@@ -47,7 +47,7 @@ export const Checkbox = forwardRef<
     <div className="flex gap-[10px]">
       <div
         ref={ref}
-        {...disableForm ? {} : form.register(props.name!)}
+        {...(disableForm ? {} : form.register(props.name!))}
         onClick={changeStatus}
         className={clsx(
           'cursor-pointer rounded-[4px] select-none w-[24px] h-[24px] justify-center items-center flex text-white',

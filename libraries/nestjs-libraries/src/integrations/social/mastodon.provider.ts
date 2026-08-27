@@ -91,7 +91,9 @@ export class MastodonProvider extends SocialAbstract implements SocialProvider {
     try {
       const instance = this.resolveMastodonInstanceUrl(request.integration);
       const url = new URL(
-        `/api/v1/accounts/${encodeURIComponent(request.integration.internalId)}`,
+        `/api/v1/accounts/${encodeURIComponent(
+          request.integration.internalId
+        )}`,
         instance
       );
       const response = await this.fetch(url.toString(), {
@@ -218,10 +220,10 @@ export class MastodonProvider extends SocialAbstract implements SocialProvider {
           : {}),
         ...(account.note
           ? {
-            bio: String(account.note)
-              .replace(/<[^>]*>/g, '')
-              .trim(),
-          }
+              bio: String(account.note)
+                .replace(/<[^>]*>/g, '')
+                .trim(),
+            }
           : {}),
         ...(Number.isFinite(Number(account.followers_count))
           ? { followersCount: Number(account.followers_count) }
@@ -235,19 +237,19 @@ export class MastodonProvider extends SocialAbstract implements SocialProvider {
         this.followerLink(response.headers.get('link'), 'next')
       )
         ? {
-          nextCursor: this.encodeFollowerCursor(
-            this.followerLink(response.headers.get('link'), 'next')
-          ),
-        }
+            nextCursor: this.encodeFollowerCursor(
+              this.followerLink(response.headers.get('link'), 'next')
+            ),
+          }
         : {}),
       ...(this.encodeFollowerCursor(
         this.followerLink(response.headers.get('link'), 'prev')
       )
         ? {
-          previousCursor: this.encodeFollowerCursor(
-            this.followerLink(response.headers.get('link'), 'prev')
-          ),
-        }
+            previousCursor: this.encodeFollowerCursor(
+              this.followerLink(response.headers.get('link'), 'prev')
+            ),
+          }
         : {}),
       hasMore: !!this.encodeFollowerCursor(
         this.followerLink(response.headers.get('link'), 'next')
@@ -333,10 +335,10 @@ export class MastodonProvider extends SocialAbstract implements SocialProvider {
           : {}),
         ...(account.note
           ? {
-            bio: String(account.note)
-              .replace(/<[^>]*>/g, '')
-              .trim(),
-          }
+              bio: String(account.note)
+                .replace(/<[^>]*>/g, '')
+                .trim(),
+            }
           : {}),
         ...(Number.isFinite(Number(account.followers_count))
           ? { followersCount: Number(account.followers_count) }
@@ -437,7 +439,9 @@ export class MastodonProvider extends SocialAbstract implements SocialProvider {
     const items = (Array.isArray(statuses) ? statuses : []).map((status) => {
       const media: MemberPostMedia[] =
         status.media_attachments?.flatMap((attachment) => {
-          const mediaUrl = this.httpUrl(attachment.url || attachment.preview_url);
+          const mediaUrl = this.httpUrl(
+            attachment.url || attachment.preview_url
+          );
           if (!mediaUrl) {
             return [];
           }
@@ -445,8 +449,8 @@ export class MastodonProvider extends SocialAbstract implements SocialProvider {
             attachment.type === 'video' || attachment.type === 'gifv'
               ? 'video'
               : attachment.type === 'image'
-                ? 'image'
-                : undefined;
+              ? 'image'
+              : undefined;
           return mediaType
             ? [{ url: mediaUrl, type: mediaType }]
             : [{ url: mediaUrl }];
@@ -477,8 +481,8 @@ export class MastodonProvider extends SocialAbstract implements SocialProvider {
     const instance = process.env.MASTODON_URL || 'https://mastodon.social';
     return integration.profile
       ? `${instance.replace(/\/$/, '')}/@${encodeURIComponent(
-        integration.profile
-      )}`
+          integration.profile
+        )}`
       : undefined;
   }
 

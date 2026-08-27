@@ -11,7 +11,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    
 
     strategy:
       matrix:
@@ -39,15 +38,15 @@ jobs:
         run: |
           echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
 
-#      - name: Setup pnpm cache
-#        uses: actions/cache@v4
-#        with:
-#          path: |
-#            ${{ env.STORE_PATH }}
-#            ${{ github.workspace }}/.next/cache
-#          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ hashFiles('**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx') }}
-#          restore-keys: |
-#            ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}-
+      #      - name: Setup pnpm cache
+      #        uses: actions/cache@v4
+      #        with:
+      #          path: |
+      #            ${{ env.STORE_PATH }}
+      #            ${{ github.workspace }}/.next/cache
+      #          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ hashFiles('**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx') }}
+      #          restore-keys: |
+      #            ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}-
 
       - name: Install dependencies
         run: pnpm install

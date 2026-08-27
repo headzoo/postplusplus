@@ -20,13 +20,10 @@ export const AdminGuard: FC<{ children: ReactNode }> = ({ children }) => {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { data: status, error } = useAdminAuthStatus();
-  const returnTo = useMemo(
-    () => {
-      const query = searchParams.toString();
-      return getSafeAdminReturnTo(`${pathname}${query ? `?${query}` : ''}`);
-    },
-    [pathname, searchParams]
-  );
+  const returnTo = useMemo(() => {
+    const query = searchParams.toString();
+    return getSafeAdminReturnTo(`${pathname}${query ? `?${query}` : ''}`);
+  }, [pathname, searchParams]);
 
   useEffect(() => {
     if (user && !user.admin) {
@@ -37,11 +34,15 @@ export const AdminGuard: FC<{ children: ReactNode }> = ({ children }) => {
       return;
     }
     if (!status.enrolled) {
-      router.replace(`/admin/passkey/setup?returnTo=${encodeURIComponent(returnTo)}`);
+      router.replace(
+        `/admin/passkey/setup?returnTo=${encodeURIComponent(returnTo)}`
+      );
       return;
     }
     if (!status.verified) {
-      router.replace(`/admin/passkey/verify?returnTo=${encodeURIComponent(returnTo)}`);
+      router.replace(
+        `/admin/passkey/verify?returnTo=${encodeURIComponent(returnTo)}`
+      );
     }
   }, [returnTo, router, status, user]);
 
@@ -81,7 +82,11 @@ export const AdminLayout: FC = () => {
       { tab: 'users', label: t('users', 'Users'), path: '/admin/users' },
       { tab: 'errors', label: t('errors', 'Errors'), path: '/admin/errors' },
       { tab: 'stats', label: t('stats', 'Stats'), path: '/admin/stats' },
-      { tab: 'schedule', label: t('schedule', 'Schedule'), path: '/admin/schedule' },
+      {
+        tab: 'schedule',
+        label: t('schedule', 'Schedule'),
+        path: '/admin/schedule',
+      },
     ],
     [t]
   );

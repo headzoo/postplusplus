@@ -73,10 +73,13 @@ describe('AdminAuthController', () => {
     service.getStatus.mockResolvedValue({ enrolled: true, verified: false });
 
     await expect(
-      controller.status(operator as any, {
-        cookies: { [ADMIN_AUTH_COOKIE]: 'cookie-token' },
-        headers: {},
-      } as any)
+      controller.status(
+        operator as any,
+        {
+          cookies: { [ADMIN_AUTH_COOKIE]: 'cookie-token' },
+          headers: {},
+        } as any
+      )
     ).resolves.toEqual({ enrolled: true, verified: false });
     expect(service.getStatus).toHaveBeenCalledWith(operator, 'cookie-token');
   });
@@ -142,7 +145,11 @@ describe('AdminAuthController', () => {
     });
     const response = buildResponse();
 
-    await controller.verify(operator as any, assertionBody as any, response as any);
+    await controller.verify(
+      operator as any,
+      assertionBody as any,
+      response as any
+    );
 
     expect(response.header).toHaveBeenCalledWith(
       ADMIN_AUTH_HEADER,

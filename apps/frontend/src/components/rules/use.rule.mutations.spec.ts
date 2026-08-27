@@ -22,14 +22,18 @@ jest.mock('swr', () => ({
 }));
 
 const mockFetch = useFetch as jest.MockedFunction<typeof useFetch>;
-const mockUseSWRConfig = useSWRConfig as jest.MockedFunction<typeof useSWRConfig>;
+const mockUseSWRConfig = useSWRConfig as jest.MockedFunction<
+  typeof useSWRConfig
+>;
 
 describe('useCreateRule', () => {
   const mutate = jest.fn().mockResolvedValue(undefined);
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockUseSWRConfig.mockReturnValue({ mutate } as ReturnType<typeof useSWRConfig>);
+    mockUseSWRConfig.mockReturnValue({ mutate } as ReturnType<
+      typeof useSWRConfig
+    >);
   });
 
   it('should create a rule successfully', async () => {
@@ -93,7 +97,9 @@ describe('useUpdateRule', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockUseSWRConfig.mockReturnValue({ mutate } as ReturnType<typeof useSWRConfig>);
+    mockUseSWRConfig.mockReturnValue({ mutate } as ReturnType<
+      typeof useSWRConfig
+    >);
   });
 
   it('should update a rule successfully', async () => {
@@ -136,7 +142,9 @@ describe('useDeleteRule', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockUseSWRConfig.mockReturnValue({ mutate } as ReturnType<typeof useSWRConfig>);
+    mockUseSWRConfig.mockReturnValue({ mutate } as ReturnType<
+      typeof useSWRConfig
+    >);
   });
 
   it('should delete a rule successfully', async () => {
@@ -164,7 +172,9 @@ describe('useSetRuleActivation', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockUseSWRConfig.mockReturnValue({ mutate } as ReturnType<typeof useSWRConfig>);
+    mockUseSWRConfig.mockReturnValue({ mutate } as ReturnType<
+      typeof useSWRConfig
+    >);
   });
 
   it('should update rule activation successfully', async () => {
@@ -200,7 +210,9 @@ describe('useReplaceRuleAssignments', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockUseSWRConfig.mockReturnValue({ mutate } as ReturnType<typeof useSWRConfig>);
+    mockUseSWRConfig.mockReturnValue({ mutate } as ReturnType<
+      typeof useSWRConfig
+    >);
   });
 
   it('should replace assignments successfully', async () => {

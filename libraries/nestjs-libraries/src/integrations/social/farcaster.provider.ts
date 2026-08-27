@@ -30,12 +30,11 @@ const client = new NeynarAPIClient({
   apiKey: process.env.NEYNAR_SECRET_KEY || '00000000-000-0000-000-000000000000',
 });
 
-@Rules(
-  'Farcaster/Warpcast can only accept pictures'
-)
+@Rules('Farcaster/Warpcast can only accept pictures')
 export class FarcasterProvider
   extends SocialAbstract
-  implements SocialProvider {
+  implements SocialProvider
+{
   identifier = 'wrapcast';
   name = 'Farcaster';
   analyticsSnapshot = {
@@ -88,7 +87,10 @@ export class FarcasterProvider
       const user = response.users?.[0] as
         | { follower_count?: number }
         | undefined;
-      if (typeof user?.follower_count === 'number' && user.follower_count >= 0) {
+      if (
+        typeof user?.follower_count === 'number' &&
+        user.follower_count >= 0
+      ) {
         points.push({
           metricKey: 'followers',
           label: 'Followers',
@@ -149,9 +151,7 @@ export class FarcasterProvider
           ? { followingCount: user.following_count }
           : {}),
         ...(user.score !== undefined ? { influenceScore: user.score } : {}),
-        ...(user.registered_at
-          ? { accountCreatedAt: user.registered_at }
-          : {}),
+        ...(user.registered_at ? { accountCreatedAt: user.registered_at } : {}),
       })),
       ...(nextCursor ? { nextCursor } : {}),
       hasMore: !!nextCursor,
@@ -195,7 +195,9 @@ export class FarcasterProvider
       });
     } catch (error) {
       throw new Error(
-        error instanceof Error ? error.message : 'Could not unfollow on Farcaster'
+        error instanceof Error
+          ? error.message
+          : 'Could not unfollow on Farcaster'
       );
     }
   }
@@ -236,10 +238,10 @@ export class FarcasterProvider
         ...(isHttpUrl(user.pfp_url) ? { picture: user.pfp_url } : {}),
         ...(user.username
           ? {
-            profileUrl: `https://warpcast.com/${encodeURIComponent(
-              user.username
-            )}`,
-          }
+              profileUrl: `https://warpcast.com/${encodeURIComponent(
+                user.username
+              )}`,
+            }
           : {}),
         ...(user.profile?.bio?.text ? { bio: user.profile.bio.text } : {}),
         ...(user.follower_count !== undefined
@@ -249,9 +251,7 @@ export class FarcasterProvider
           ? { followingCount: user.following_count }
           : {}),
         ...(user.score !== undefined ? { influenceScore: user.score } : {}),
-        ...(user.registered_at
-          ? { accountCreatedAt: user.registered_at }
-          : {}),
+        ...(user.registered_at ? { accountCreatedAt: user.registered_at } : {}),
       });
 
       if (target.kind === 'fid') {
@@ -374,7 +374,7 @@ export class FarcasterProvider
 
     const channels =
       !firstPost?.settings?.subreddit ||
-        firstPost?.settings?.subreddit.length === 0
+      firstPost?.settings?.subreddit.length === 0
         ? [undefined]
         : firstPost?.settings?.subreddit;
 

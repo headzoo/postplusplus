@@ -23,7 +23,7 @@ export class ThirdPartyController {
 
   constructor(
     private _thirdPartyManager: ThirdPartyManager,
-    private _mediaService: MediaService,
+    private _mediaService: MediaService
   ) {}
 
   @Get('/list')
@@ -89,7 +89,11 @@ export class ThirdPartyController {
     );
 
     const file = await this.storage.uploadSimple(loadedData);
-    return this._mediaService.saveFile(organization.id, file.split('/').pop(), file);
+    return this._mediaService.saveFile(
+      organization.id,
+      file.split('/').pop(),
+      file
+    );
   }
 
   @Post('/function/:id/:functionName')

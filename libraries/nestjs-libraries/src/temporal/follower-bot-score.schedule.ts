@@ -18,9 +18,9 @@ export type FollowerBotScoreScheduleConfig = {
 };
 
 export const DEFAULT_FOLLOWER_BOT_SCORE_SCHEDULE: FollowerBotScoreScheduleConfig =
-{
-  intervalHours: FOLLOWER_BOT_SCORE_SCHEDULE_INTERVAL_HOURS,
-};
+  {
+    intervalHours: FOLLOWER_BOT_SCORE_SCHEDULE_INTERVAL_HOURS,
+  };
 
 export function normalizeFollowerBotScoreSchedule(
   value: Partial<FollowerBotScoreScheduleConfig> | null | undefined
@@ -28,7 +28,10 @@ export function normalizeFollowerBotScoreSchedule(
   const intervalHours = Number(
     value?.intervalHours ?? DEFAULT_FOLLOWER_BOT_SCORE_SCHEDULE.intervalHours
   );
-  if (!Number.isInteger(intervalHours) || intervalHours < FOLLOWER_BOT_SCORE_SCHEDULE_MIN_HOURS) {
+  if (
+    !Number.isInteger(intervalHours) ||
+    intervalHours < FOLLOWER_BOT_SCORE_SCHEDULE_MIN_HOURS
+  ) {
     throw new RangeError('intervalHours must be an integer of at least 1');
   }
   if (intervalHours > FOLLOWER_BOT_SCORE_SCHEDULE_MAX_HOURS) {

@@ -85,8 +85,8 @@ export function extractFirstComposerUrl(
 
   const textSource =
     typeof DOMParser !== 'undefined'
-      ? new DOMParser().parseFromString(content, 'text/html').body?.textContent ||
-        ''
+      ? new DOMParser().parseFromString(content, 'text/html').body
+          ?.textContent || ''
       : content.replace(/<[^>]+>/g, ' ');
 
   const fromText = extractFromText(textSource);

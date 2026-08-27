@@ -88,9 +88,7 @@ export default function OAuthAuthorizePage() {
           <div className="flex justify-center mb-[24px]">
             <Logo />
           </div>
-          <div className="text-[16px] text-gray-400">
-            Please wait...
-          </div>
+          <div className="text-[16px] text-gray-400">Please wait...</div>
           <div className="mt-[32px] flex justify-center">
             <div className="w-[48px] h-[48px] border-[3px] border-[#eb3825] border-t-transparent rounded-full animate-spin" />
           </div>
@@ -126,9 +124,7 @@ export default function OAuthAuthorizePage() {
           <div className="text-[28px] font-semibold mb-[12px]">
             Authorization Error
           </div>
-          <div className="text-[16px] text-gray-400 max-w-[400px]">
-            {error}
-          </div>
+          <div className="text-[16px] text-gray-400 max-w-[400px]">{error}</div>
         </div>
       </div>
     );
@@ -175,8 +171,8 @@ export default function OAuthAuthorizePage() {
 
           <div className="border-t border-[#2A2929] pt-[16px]">
             <div className="text-[14px] text-gray-400 mb-[12px]">
-              This application is requesting access to your Post Plus Plus account. It
-              will be able to:
+              This application is requesting access to your Post Plus Plus
+              account. It will be able to:
             </div>
             <ul className="text-[14px] list-disc list-inside space-y-[4px]">
               <li>Access your integrations and channels</li>

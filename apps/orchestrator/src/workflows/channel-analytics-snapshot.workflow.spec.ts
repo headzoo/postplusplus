@@ -20,9 +20,16 @@ import { channelAnalyticsSnapshotWorkflowV1 } from './channel-analytics-snapshot
 
 describe('channelAnalyticsSnapshotWorkflowV1', () => {
   const candidate = { id: 'integration', organizationId: 'organization' };
-  const nextCandidate = { id: 'next-integration', organizationId: 'organization' };
+  const nextCandidate = {
+    id: 'next-integration',
+    organizationId: 'organization',
+  };
   const snapshotAt = '2026-08-15T12:00:00.000Z';
-  const batch = { candidates: [candidate, nextCandidate], index: 0, snapshotAt };
+  const batch = {
+    candidates: [candidate, nextCandidate],
+    index: 0,
+    snapshotAt,
+  };
 
   beforeEach(() => {
     jest.resetAllMocks();
@@ -40,7 +47,12 @@ describe('channelAnalyticsSnapshotWorkflowV1', () => {
     await channelAnalyticsSnapshotWorkflowV1({
       after: 'before',
       batch,
-      active: { candidate, snapshotAt, mode: 'post_lifetime', cursor: 'current' },
+      active: {
+        candidate,
+        snapshotAt,
+        mode: 'post_lifetime',
+        cursor: 'current',
+      },
     });
 
     expect(capturePersistPage).toHaveBeenCalledWith({
@@ -88,7 +100,10 @@ describe('channelAnalyticsSnapshotWorkflowV1', () => {
   });
 
   it('starts a bounded batch from a scan result', async () => {
-    listDueCandidates.mockResolvedValue({ asOf: snapshotAt, candidates: [candidate] });
+    listDueCandidates.mockResolvedValue({
+      asOf: snapshotAt,
+      candidates: [candidate],
+    });
 
     await channelAnalyticsSnapshotWorkflowV1({ after: 'before' });
 
@@ -111,7 +126,10 @@ describe('channelAnalyticsSnapshotWorkflowV1', () => {
     capturePersistPage.mockResolvedValue({ mode: 'daily', hasMore: false });
     const finalBatch = { candidates: [candidate], index: 0, snapshotAt };
 
-    await channelAnalyticsSnapshotWorkflowV1({ after: 'before', batch: finalBatch });
+    await channelAnalyticsSnapshotWorkflowV1({
+      after: 'before',
+      batch: finalBatch,
+    });
 
     expect(continueAsNew).toHaveBeenCalledWith({ after: candidate.id });
   });

@@ -7,16 +7,17 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { LeadDismissModal } from './lead.dismiss.modal';
 
 jest.mock('@gitroom/react/translation/get.transation.service.client', () => ({
-  useT: () => (key: string, fallback: string, params?: Record<string, unknown>) => {
-    if (!params) {
-      return fallback;
-    }
-    return Object.entries(params).reduce(
-      (result, [name, value]) =>
-        result.replace(new RegExp(`{{${name}}}`, 'g'), String(value)),
-      fallback
-    );
-  },
+  useT:
+    () => (key: string, fallback: string, params?: Record<string, unknown>) => {
+      if (!params) {
+        return fallback;
+      }
+      return Object.entries(params).reduce(
+        (result, [name, value]) =>
+          result.replace(new RegExp(`{{${name}}}`, 'g'), String(value)),
+        fallback
+      );
+    },
 }));
 
 const closeCurrent = jest.fn();
@@ -138,11 +139,15 @@ describe('LeadDismissModal', () => {
     );
 
     expect(screen.queryByRole('button', { name: 'Follow' })).toBeNull();
-    expect(screen.queryByRole('heading', { name: 'Add to followed' })).toBeNull();
+    expect(
+      screen.queryByRole('heading', { name: 'Add to followed' })
+    ).toBeNull();
 
     rerender(<LeadDismissModal resolution={resolution} canFollow={true} />);
 
-    expect(screen.getByRole('heading', { name: 'Add to followed' })).toBeTruthy();
+    expect(
+      screen.getByRole('heading', { name: 'Add to followed' })
+    ).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Follow' }));
 
     expect(resolution).toHaveBeenCalledWith({ action: 'follow' });
@@ -152,7 +157,9 @@ describe('LeadDismissModal', () => {
   it('separates remove-from-leads heading from the reason prompt', () => {
     render(<LeadDismissModal resolution={jest.fn()} />);
 
-    expect(screen.getByRole('heading', { name: 'Remove from Leads' })).toBeTruthy();
+    expect(
+      screen.getByRole('heading', { name: 'Remove from Leads' })
+    ).toBeTruthy();
     expect(screen.getByText('Choose why they are not a lead')).toBeTruthy();
   });
 

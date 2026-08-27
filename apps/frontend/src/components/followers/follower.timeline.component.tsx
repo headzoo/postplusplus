@@ -121,9 +121,13 @@ export const FollowerTimelineComponent: FC = () => {
   const params = useParams();
   const searchParams = useSearchParams();
   const integrationId =
-    typeof params?.view === 'string' ? decodeFollowerPathSegment(params.view) : '';
+    typeof params?.view === 'string'
+      ? decodeFollowerPathSegment(params.view)
+      : '';
   const rawHandle =
-    typeof params?.handle === 'string' ? decodeFollowerPathSegment(params.handle) : '';
+    typeof params?.handle === 'string'
+      ? decodeFollowerPathSegment(params.handle)
+      : '';
   const username = rawHandle.startsWith('@')
     ? normalizeFollowerSearch(rawHandle)
     : undefined;
@@ -137,8 +141,8 @@ export const FollowerTimelineComponent: FC = () => {
     externalIdFromQuery
       ? { externalId: externalIdFromQuery }
       : username
-        ? { username }
-        : undefined
+      ? { username }
+      : undefined
   );
 
   const timelineIdentity = useMemo(() => {
@@ -222,7 +226,10 @@ export const FollowerTimelineComponent: FC = () => {
         <p className="text-[16px] text-newTextColor">
           {t('followers_timeline_invalid', 'This timeline link is invalid.')}
         </p>
-        <Link href="/followers" className="text-[14px] text-newTextColor hover:underline">
+        <Link
+          href="/followers"
+          className="text-[14px] text-newTextColor hover:underline"
+        >
           {t('followers_back_to_followers', 'Back to followers')}
         </Link>
       </div>
@@ -234,8 +241,8 @@ export const FollowerTimelineComponent: FC = () => {
   const handle = follower?.username
     ? `@${follower.username}`
     : username
-      ? `@${username}`
-      : undefined;
+    ? `@${username}`
+    : undefined;
 
   return (
     <div className="flex flex-col gap-[20px] max-w-[720px] mx-auto w-full py-[24px] px-[16px]">
@@ -287,7 +294,9 @@ export const FollowerTimelineComponent: FC = () => {
               'We could not load this timeline right now.'
             )}
           </p>
-          <Button onClick={() => mutate()}>{t('followers_retry', 'Retry')}</Button>
+          <Button onClick={() => mutate()}>
+            {t('followers_retry', 'Retry')}
+          </Button>
         </div>
       )}
 
@@ -312,10 +321,7 @@ export const FollowerTimelineComponent: FC = () => {
           </div>
           {(cursorHistory.length > 0 || timelinePage.hasMore) && (
             <div className="flex items-center justify-between gap-[12px]">
-              <Button
-                disabled={!cursorHistory.length}
-                onClick={handlePrevious}
-              >
+              <Button disabled={!cursorHistory.length} onClick={handlePrevious}>
                 {t('followers_previous_page', 'Previous')}
               </Button>
               <Button disabled={!timelinePage.hasMore} onClick={handleNext}>

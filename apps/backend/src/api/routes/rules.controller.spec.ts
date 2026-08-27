@@ -25,7 +25,10 @@ describe('RulesController', () => {
   it('exposes capability discovery without org scope', () => {
     service.getCapabilities.mockReturnValue({ actions: [], providers: [] });
 
-    expect(controller.getCapabilities()).toEqual({ actions: [], providers: [] });
+    expect(controller.getCapabilities()).toEqual({
+      actions: [],
+      providers: [],
+    });
     expect(service.getCapabilities).toHaveBeenCalled();
   });
 
@@ -42,7 +45,9 @@ describe('RulesController', () => {
       pipelineIds: [],
     });
 
-    await expect(controller.listRules(organization)).resolves.toEqual([{ id: 'rule-1' }]);
+    await expect(controller.listRules(organization)).resolves.toEqual([
+      { id: 'rule-1' },
+    ]);
     await expect(controller.getRule(organization, 'rule-1')).resolves.toEqual({
       id: 'rule-1',
     });
@@ -64,7 +69,9 @@ describe('RulesController', () => {
         conditions: [],
       })
     ).resolves.toEqual({ id: 'rule-1' });
-    await expect(controller.deleteRule(organization, 'rule-1')).resolves.toEqual({
+    await expect(
+      controller.deleteRule(organization, 'rule-1')
+    ).resolves.toEqual({
       id: 'rule-1',
     });
     await expect(
@@ -84,7 +91,11 @@ describe('RulesController', () => {
     expect(service.list).toHaveBeenCalledWith('org-1');
     expect(service.getById).toHaveBeenCalledWith('org-1', 'rule-1');
     expect(service.create).toHaveBeenCalledWith('org-1', expect.any(Object));
-    expect(service.update).toHaveBeenCalledWith('org-1', 'rule-1', expect.any(Object));
+    expect(service.update).toHaveBeenCalledWith(
+      'org-1',
+      'rule-1',
+      expect.any(Object)
+    );
     expect(service.delete).toHaveBeenCalledWith('org-1', 'rule-1');
     expect(service.setEnabled).toHaveBeenCalledWith('org-1', 'rule-1', {
       enabled: false,

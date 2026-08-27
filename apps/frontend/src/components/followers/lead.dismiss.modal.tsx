@@ -91,10 +91,7 @@ export const LeadDismissModal: FC<{
         <option value="">
           {lists.length
             ? t('followers_lead_select_list', 'Select a list…')
-            : t(
-              'followers_lists_empty_menu',
-              'Create a custom list first.'
-            )}
+            : t('followers_lists_empty_menu', 'Create a custom list first.')}
         </option>
         {lists.map((list) => (
           <option key={list.id} value={list.id}>
@@ -149,9 +146,7 @@ export const LeadDismissModal: FC<{
         </Button>
       </div>
       <div className="mt-[28px]">
-        <Button onClick={cancel}>
-          {t('cancel', 'Cancel')}
-        </Button>
+        <Button onClick={cancel}>{t('cancel', 'Cancel')}</Button>
       </div>
     </div>
   );

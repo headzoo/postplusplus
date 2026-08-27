@@ -83,9 +83,7 @@ describe('useCopilotFollowerPageProperties', () => {
 
     unmount();
     expect(properties.followerPage).toBeUndefined();
-    expect(
-      renderHook(() => useActiveFollowerPage()).result.current
-    ).toBeNull();
+    expect(renderHook(() => useActiveFollowerPage()).result.current).toBeNull();
   });
 
   it('does not publish a page without a selected channel', () => {

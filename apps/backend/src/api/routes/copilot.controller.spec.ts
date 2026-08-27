@@ -28,11 +28,11 @@ jest.mock('@mastra/core/di', () => ({
 
 jest.mock(
   '@gitroom/nestjs-libraries/database/prisma/subscriptions/subscription.service',
-  () => ({ SubscriptionService: class SubscriptionService { } })
+  () => ({ SubscriptionService: class SubscriptionService {} })
 );
 
 jest.mock('@gitroom/nestjs-libraries/chat/mastra.service', () => ({
-  MastraService: class MastraService { },
+  MastraService: class MastraService {},
 }));
 
 import { CopilotController } from './copilot.controller';
@@ -70,7 +70,8 @@ describe('CopilotController', () => {
             category: {
               key: 'hot_lead',
               label: 'Hot',
-              meaning: "Their effort exceeds the channel's, including unreciprocated inbound engagement.",
+              meaning:
+                "Their effort exceeds the channel's, including unreciprocated inbound engagement.",
             },
             pagination: { size: 24, number: 1 },
           },
@@ -118,21 +119,24 @@ describe('CopilotController', () => {
     expect(context.get('pipeline')).toEqual(
       request.body.variables.properties.pipeline
     );
-    expect(context.get('followerPage')).toEqual(expect.objectContaining({
-      kind: 'list',
-      route: '/followers/hot',
-      channel: expect.objectContaining({
-        id: 'channel-1',
-        name: 'Postiz',
-        platform: 'x',
-      }),
-      category: expect.objectContaining({
-        key: 'hot_lead',
-        label: 'Hot',
-        meaning: "Their effort exceeds the channel's, including unreciprocated inbound engagement.",
-      }),
-      pagination: { size: 24, number: 1 },
-    }));
+    expect(context.get('followerPage')).toEqual(
+      expect.objectContaining({
+        kind: 'list',
+        route: '/followers/hot',
+        channel: expect.objectContaining({
+          id: 'channel-1',
+          name: 'Postiz',
+          platform: 'x',
+        }),
+        category: expect.objectContaining({
+          key: 'hot_lead',
+          label: 'Hot',
+          meaning:
+            "Their effort exceeds the channel's, including unreciprocated inbound engagement.",
+        }),
+        pagination: { size: 24, number: 1 },
+      })
+    );
     expect(context.get('organization')).toBe(JSON.stringify(organization));
     expect(context.get('user')).toBe(JSON.stringify({ userId: user.id }));
     expect(context.get('ui')).toBe('true');
@@ -174,7 +178,9 @@ describe('CopilotController', () => {
     const chatContext = getLocalAgents.mock.calls[0][0].requestContext;
     const agentContext = getLocalAgents.mock.calls[1][0].requestContext;
 
-    expect(chatContext.get('followerPage')).toEqual(agentContext.get('followerPage'));
+    expect(chatContext.get('followerPage')).toEqual(
+      agentContext.get('followerPage')
+    );
     expect(chatContext.get('user')).toEqual(agentContext.get('user'));
     expect(chatContext.get('ui')).toBe('true');
     expect(chatContext.get('followerPage')).toEqual(

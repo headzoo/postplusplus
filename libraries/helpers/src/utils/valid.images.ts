@@ -9,9 +9,11 @@ import striptags from 'striptags';
 export class ValidContent implements ValidatorConstraintInterface {
   validate(contentRaw: string, args: ValidationArguments) {
     const content = striptags(contentRaw || '');
+    const object = args.object as { image?: unknown[] };
     if (
-      // @ts-ignore
-      (!args?.object?.image || !Array.isArray(args?.object?.image) || !args?.object?.image.length) &&
+      (!object.image ||
+        !Array.isArray(object.image) ||
+        !object.image.length) &&
       (!content || typeof content !== 'string' || content?.trim() === '')
     ) {
       return false;

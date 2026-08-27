@@ -4,7 +4,11 @@ import { FollowerTimelineComponent } from '@gitroom/frontend/components/follower
 import { isGeneralServerSide } from '@gitroom/helpers/utils/is.general.server.side';
 
 export const metadata: Metadata = {
-  title: `${isGeneralServerSide() ? 'Follower Timeline : Post++' : 'Gitroom Follower Timeline'}`,
+  title: `${
+    isGeneralServerSide()
+      ? 'Follower Timeline : Post++'
+      : 'Gitroom Follower Timeline'
+  }`,
   description: '',
 };
 

@@ -69,8 +69,13 @@ const AddAnnouncementModal: FC<{ close: () => void }> = ({ close }) => {
             <div
               key={opt.value}
               onClick={() => setColor(opt.value)}
-              className={`flex-1 text-center py-[8px] rounded-[8px] text-white text-[13px] cursor-pointer transition-opacity ${opt.className} ${color === opt.value ? 'opacity-100 ring-2 ring-white' : 'opacity-40'
-                }`}
+              className={`flex-1 text-center py-[8px] rounded-[8px] text-white text-[13px] cursor-pointer transition-opacity ${
+                opt.className
+              } ${
+                color === opt.value
+                  ? 'opacity-100 ring-2 ring-white'
+                  : 'opacity-40'
+              }`}
             >
               {opt.label}
             </div>

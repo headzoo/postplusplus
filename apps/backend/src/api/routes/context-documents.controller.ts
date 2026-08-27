@@ -25,7 +25,7 @@ import {
 @ApiTags('Context Documents')
 @Controller('/context-documents')
 export class ContextDocumentsController {
-  constructor(private _contextDocumentService: ContextDocumentService) { }
+  constructor(private _contextDocumentService: ContextDocumentService) {}
 
   @Get('/')
   listDocuments(@GetOrgFromRequest() org: Organization) {
@@ -70,10 +70,7 @@ export class ContextDocumentsController {
   }
 
   @Get('/:id')
-  getDocument(
-    @GetOrgFromRequest() org: Organization,
-    @Param('id') id: string
-  ) {
+  getDocument(@GetOrgFromRequest() org: Organization, @Param('id') id: string) {
     return this._contextDocumentService.getDocumentById(org.id, id);
   }
 

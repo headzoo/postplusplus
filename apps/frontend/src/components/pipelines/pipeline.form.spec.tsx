@@ -49,15 +49,21 @@ jest.mock('@gitroom/react/form/select', () => ({
     </label>
   ),
 }));
-jest.mock('@gitroom/frontend/components/launches/helpers/use.integration.list', () => ({
-  useIntegrationList: () => ({
-    data: [{ id: 'channel', disabled: false }],
-    isLoading: false,
-  }),
-}));
-jest.mock('@gitroom/frontend/components/launches/helpers/pick.platform.component', () => ({
-  PickPlatforms: () => null,
-}));
+jest.mock(
+  '@gitroom/frontend/components/launches/helpers/use.integration.list',
+  () => ({
+    useIntegrationList: () => ({
+      data: [{ id: 'channel', disabled: false }],
+      isLoading: false,
+    }),
+  })
+);
+jest.mock(
+  '@gitroom/frontend/components/launches/helpers/pick.platform.component',
+  () => ({
+    PickPlatforms: () => null,
+  })
+);
 jest.mock('./use.pipeline.create', () => ({
   useCreatePipeline: () => jest.fn(),
 }));
@@ -67,7 +73,11 @@ jest.mock('./use.pipeline.update', () => ({
 jest.mock(
   '@gitroom/frontend/components/context-documents/context-document.assignment-picker',
   () => ({
-    ContextDocumentAssignmentPicker: ({ selectedIds, onChange, knownDocuments }: any) => (
+    ContextDocumentAssignmentPicker: ({
+      selectedIds,
+      onChange,
+      knownDocuments,
+    }: any) => (
       <div>
         <output data-testid="selected-ids">{selectedIds.join(',')}</output>
         <output data-testid="known-documents">
@@ -129,11 +139,15 @@ describe('PipelineForm', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     expect(
-      screen.getByText('Deselect blocked agent skill assignments before saving this Pipeline.')
+      screen.getByText(
+        'Deselect blocked agent skill assignments before saving this Pipeline.'
+      )
     ).toBeTruthy();
     expect(updatePipeline).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Remove legacy skill' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Remove legacy skill' })
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() =>

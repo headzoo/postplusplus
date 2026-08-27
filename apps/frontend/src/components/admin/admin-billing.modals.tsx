@@ -105,7 +105,7 @@ const ApplyCouponModal: FC<{ close: () => void }> = ({ close }) => {
       if (!response.ok || !json.cancelled) {
         toast.show(
           json.reason ||
-          t('cancel_coupon_failed', 'Could not cancel the coupon'),
+            t('cancel_coupon_failed', 'Could not cancel the coupon'),
           'warning'
         );
         return;
@@ -213,8 +213,8 @@ const ApplyCouponModal: FC<{ close: () => void }> = ({ close }) => {
               {info.period === 'MONTHLY'
                 ? t('monthly', 'Monthly')
                 : info.period === 'YEARLY'
-                  ? t('annual', 'Annual')
-                  : '-'}
+                ? t('annual', 'Annual')
+                : '-'}
             </div>
             <div>
               {t('apply_coupon_lifetime', 'Lifetime deal:')}{' '}
@@ -225,7 +225,10 @@ const ApplyCouponModal: FC<{ close: () => void }> = ({ close }) => {
               {!info.coupons.length && t('none', 'None')}
             </div>
             {info.coupons.map((coupon, index) => (
-              <div key={index} className="ps-[10px] flex items-center gap-[10px]">
+              <div
+                key={index}
+                className="ps-[10px] flex items-center gap-[10px]"
+              >
                 <div>
                   -{' '}
                   {coupon.type === 'percentage'
@@ -234,15 +237,15 @@ const ApplyCouponModal: FC<{ close: () => void }> = ({ close }) => {
                   {t('apply_coupon_off', 'off,')}{' '}
                   {coupon.duration === 'repeating'
                     ? `${coupon.durationInMonths} ${t(
-                      'apply_coupon_months_total',
-                      'month(s) total,'
-                    )} ${coupon.remainingMonths} ${t(
-                      'apply_coupon_months_left',
-                      'month(s) left'
-                    )}`
+                        'apply_coupon_months_total',
+                        'month(s) total,'
+                      )} ${coupon.remainingMonths} ${t(
+                        'apply_coupon_months_left',
+                        'month(s) left'
+                      )}`
                     : coupon.duration === 'forever'
-                      ? t('apply_coupon_forever', 'forever')
-                      : t('apply_coupon_once', 'next billing cycle only')}
+                    ? t('apply_coupon_forever', 'forever')
+                    : t('apply_coupon_once', 'next billing cycle only')}
                 </div>
                 <Button
                   onClick={handleCancelCoupon}
@@ -434,12 +437,13 @@ const ChargesModal: FC<{ close: () => void }> = ({ close }) => {
                 >
                   <td className="p-[8px]">
                     <div
-                      className={`w-[20px] h-[20px] rounded-[4px] border-2 flex items-center justify-center ${charge.refunded
+                      className={`w-[20px] h-[20px] rounded-[4px] border-2 flex items-center justify-center ${
+                        charge.refunded
                           ? 'border-newTextColor/20 opacity-40'
                           : selected.has(charge.id)
-                            ? 'bg-forth border-forth'
-                            : 'border-newTextColor/40'
-                        }`}
+                          ? 'bg-forth border-forth'
+                          : 'border-newTextColor/40'
+                      }`}
                     >
                       {(selected.has(charge.id) || charge.refunded) && (
                         <svg

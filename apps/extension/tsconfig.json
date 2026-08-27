@@ -17,10 +17,5 @@
     "noEmit": true,
     "jsx": "react-jsx"
   },
-  "include": [
-    "src",
-    "utils",
-    "vite.config.base.ts",
-    "vite.config.chrome.ts"
-  ]
+  "include": ["src", "utils", "vite.config.base.ts", "vite.config.chrome.ts"]
 }

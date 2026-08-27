@@ -135,7 +135,9 @@ function LayoutContextInner(params: { children: ReactNode }) {
         if (body?.code === 'ACCOUNT_PASSKEY_REQUIRED') {
           if (!window.location.pathname.startsWith('/passkey/verify')) {
             const returnTo = `${window.location.pathname}${window.location.search}`;
-            window.location.href = `/passkey/verify?returnTo=${encodeURIComponent(returnTo)}`;
+            window.location.href = `/passkey/verify?returnTo=${encodeURIComponent(
+              returnTo
+            )}`;
           }
           return true;
         }
@@ -147,7 +149,9 @@ function LayoutContextInner(params: { children: ReactNode }) {
             window.location.pathname,
             window.location.search
           );
-          window.location.href = `/admin/passkey/verify?returnTo=${encodeURIComponent(returnTo)}`;
+          window.location.href = `/admin/passkey/verify?returnTo=${encodeURIComponent(
+            returnTo
+          )}`;
         }
         return true;
       }
@@ -167,8 +171,7 @@ function LayoutContextInner(params: { children: ReactNode }) {
           await deleteDialog(
             'You are currently on trial, in order to use the feature you must finish the trial',
             'Finish the trial, charge me now',
-            'Trial',
-
+            'Trial'
           )
         ) {
           window.open('/billing?finishTrial=true', '_blank');

@@ -89,8 +89,9 @@ const formatOccurrenceDetails = (
     timeZoneName: 'short',
   }).format(new Date(occurrence.scheduledFor));
   const sourceDay = PIPELINE_DAYS[occurrence.dayOfWeek]?.label;
-  return `${scheduledFor} · ${occurrence.pipelineTimezone} · ${occurrence.active ? 'Active' : 'Paused'
-    } · Source: ${sourceDay} ${minuteOfDayToTime(occurrence.minuteOfDay)}`;
+  return `${scheduledFor} · ${occurrence.pipelineTimezone} · ${
+    occurrence.active ? 'Active' : 'Paused'
+  } · Source: ${sourceDay} ${minuteOfDayToTime(occurrence.minuteOfDay)}`;
 };
 
 const PipelineScheduleOccurrencePill: FC<{
@@ -110,92 +111,92 @@ const PipelineScheduleOccurrencePill: FC<{
   removeLabel,
   slotLabel,
 }) => {
-    const [{ isDragging }, drag] = useDrag(
-      () => ({
-        type: PIPELINE_SCHEDULE_DRAG_TYPE,
-        item: {
-          source: {
-            dayOfWeek: occurrence.dayOfWeek,
-            minuteOfDay: occurrence.minuteOfDay,
-          },
-          occurrenceId: occurrence.id,
-          pipelineId: occurrence.pipelineId,
-          pipelineName: occurrence.pipelineName,
-          pipelineTimezone: occurrence.pipelineTimezone,
-          pipelineColor: occurrence.pipelineColor,
-          active: occurrence.active,
-          expectedScheduleRevision: occurrence.scheduleRevision,
-        } satisfies PipelineScheduleDragItem,
-        canDrag: !pending,
-        collect: (monitor) => ({ isDragging: monitor.isDragging() }),
-      }),
-      [occurrence, pending]
-    );
-    const sourceDay = PIPELINE_DAYS[occurrence.dayOfWeek]?.label;
-    const sourceTime = minuteOfDayToTime(occurrence.minuteOfDay);
-    const details = formatOccurrenceDetails(occurrence, displayTimezone);
-    const activeForeground = occurrence.active
-      ? getReadableForegroundColor(occurrence.pipelineColor)
-      : undefined;
+  const [{ isDragging }, drag] = useDrag(
+    () => ({
+      type: PIPELINE_SCHEDULE_DRAG_TYPE,
+      item: {
+        source: {
+          dayOfWeek: occurrence.dayOfWeek,
+          minuteOfDay: occurrence.minuteOfDay,
+        },
+        occurrenceId: occurrence.id,
+        pipelineId: occurrence.pipelineId,
+        pipelineName: occurrence.pipelineName,
+        pipelineTimezone: occurrence.pipelineTimezone,
+        pipelineColor: occurrence.pipelineColor,
+        active: occurrence.active,
+        expectedScheduleRevision: occurrence.scheduleRevision,
+      } satisfies PipelineScheduleDragItem,
+      canDrag: !pending,
+      collect: (monitor) => ({ isDragging: monitor.isDragging() }),
+    }),
+    [occurrence, pending]
+  );
+  const sourceDay = PIPELINE_DAYS[occurrence.dayOfWeek]?.label;
+  const sourceTime = minuteOfDayToTime(occurrence.minuteOfDay);
+  const details = formatOccurrenceDetails(occurrence, displayTimezone);
+  const activeForeground = occurrence.active
+    ? getReadableForegroundColor(occurrence.pipelineColor)
+    : undefined;
 
-    return (
-      <div
-        // @ts-ignore react-dnd connector type
-        ref={drag}
-        title={details}
-        className={clsx(
-          'flex min-w-0 items-center justify-between gap-[4px] rounded-[6px] px-[7px] py-[5px] text-[12px]',
-          !pending && 'cursor-grab active:cursor-grabbing',
-          isDragging && 'opacity-40',
-          occurrence.active
-            ? ''
-            : 'border border-newBorder bg-newBgColorInner text-textColor opacity-60'
-        )}
-        style={
-          occurrence.active
-            ? {
+  return (
+    <div
+      // @ts-ignore react-dnd connector type
+      ref={drag}
+      title={details}
+      className={clsx(
+        'flex min-w-0 items-center justify-between gap-[4px] rounded-[6px] px-[7px] py-[5px] text-[12px]',
+        !pending && 'cursor-grab active:cursor-grabbing',
+        isDragging && 'opacity-40',
+        occurrence.active
+          ? ''
+          : 'border border-newBorder bg-newBgColorInner text-textColor opacity-60'
+      )}
+      style={
+        occurrence.active
+          ? {
               backgroundColor: occurrence.pipelineColor,
               color: activeForeground,
             }
-            : undefined
-        }
+          : undefined
+      }
+    >
+      <span
+        className="min-w-0 truncate"
+        aria-label={`${occurrence.pipelineName}. ${details}`}
       >
-        <span
-          className="min-w-0 truncate"
-          aria-label={`${occurrence.pipelineName}. ${details}`}
-        >
-          {occurrence.pipelineName}
+        {occurrence.pipelineName}
+      </span>
+      {!occurrence.active && (
+        <span className="shrink-0 rounded-[3px] border border-current px-[3px] py-[1px] text-[10px]">
+          {pausedLabel}
         </span>
-        {!occurrence.active && (
-          <span className="shrink-0 rounded-[3px] border border-current px-[3px] py-[1px] text-[10px]">
-            {pausedLabel}
-          </span>
-        )}
-        <button
-          type="button"
-          disabled={pending}
-          onClick={() => onRemove(occurrence)}
-          className="inline-flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded hover:bg-newBgColor/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-btnPrimary disabled:cursor-not-allowed"
-          aria-label={`${removeLabel} ${occurrence.pipelineName} ${sourceDay} ${sourceTime} ${slotLabel}`}
+      )}
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() => onRemove(occurrence)}
+        className="inline-flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded hover:bg-newBgColor/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-btnPrimary disabled:cursor-not-allowed"
+        aria-label={`${removeLabel} ${occurrence.pipelineName} ${sourceDay} ${sourceTime} ${slotLabel}`}
+      >
+        <svg
+          viewBox="0 0 12 12"
+          className="h-[10px] w-[10px]"
+          aria-hidden="true"
+          focusable="false"
         >
-          <svg
-            viewBox="0 0 12 12"
-            className="h-[10px] w-[10px]"
-            aria-hidden="true"
-            focusable="false"
-          >
-            <path
-              d="M2.5 2.5l7 7M9.5 2.5l-7 7"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-            />
-          </svg>
-        </button>
-      </div>
-    );
-  };
+          <path
+            d="M2.5 2.5l7 7M9.5 2.5l-7 7"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+        </svg>
+      </button>
+    </div>
+  );
+};
 
 const PipelineScheduleDropZone: FC<{
   date: string;
@@ -227,8 +228,8 @@ const PipelineScheduleDropZone: FC<{
       className={clsx(
         'flex min-h-[32px] flex-1 flex-col gap-[4px] rounded-[4px]',
         isOver &&
-        canDrop &&
-        'bg-btnPrimary/10 outline outline-1 outline-btnPrimary/40',
+          canDrop &&
+          'bg-btnPrimary/10 outline outline-1 outline-btnPrimary/40',
         className
       )}
     >
@@ -343,8 +344,9 @@ export const PipelineGlobalSchedule: FC = () => {
     }
     for (const occurrence of visibleOccurrences) {
       const localTime = dayjs(occurrence.scheduledFor).tz(displayTimezone);
-      const key = `${localTime.format('YYYY-MM-DD')}:${localTime.hour()}:${localTime.minute() >= 30 ? 30 : 0
-        }`;
+      const key = `${localTime.format('YYYY-MM-DD')}:${localTime.hour()}:${
+        localTime.minute() >= 30 ? 30 : 0
+      }`;
       cells.set(key, [...(cells.get(key) || []), occurrence]);
     }
     return cells;
@@ -484,11 +486,13 @@ export const PipelineGlobalSchedule: FC = () => {
       const targetDay = PIPELINE_DAYS[target.dayOfWeek]?.label;
       const approved = await decision.open({
         title: t('move_pipeline_schedule_slot', 'Move Pipeline schedule slot?'),
-        description: `Moving "${item.pipelineName
-          }" from ${sourceDay} at ${minuteOfDayToTime(
-            item.source.minuteOfDay
-          )} to ${targetDay} at ${minuteOfDayToTime(target.minuteOfDay)} (${item.pipelineTimezone
-          }) will update this recurring source slot for every future week.`,
+        description: `Moving "${
+          item.pipelineName
+        }" from ${sourceDay} at ${minuteOfDayToTime(
+          item.source.minuteOfDay
+        )} to ${targetDay} at ${minuteOfDayToTime(target.minuteOfDay)} (${
+          item.pipelineTimezone
+        }) will update this recurring source slot for every future week.`,
         approveLabel: t('confirm', 'Confirm'),
         cancelLabel: t('cancel', 'Cancel'),
       });
@@ -580,150 +584,147 @@ export const PipelineGlobalSchedule: FC = () => {
         )}
       </ChannelsSidebar>
       <DNDProvider>
-      <div className="bg-newBgColorInner flex flex-1 flex-col min-h-0 min-w-0 gap-[12px] p-[20px] overflow-hidden text-textColor">
-        <Button
-          secondary
-          className="self-start"
-          onClick={() => router.push('/pipelines')}
-        >
-          <span className="inline-flex items-center gap-[4px]">
-            <ChevronLeftIcon size={16} />
-            {t('pipelines', 'Pipelines')}
-          </span>
-        </Button>
+        <div className="bg-newBgColorInner flex flex-1 flex-col min-h-0 min-w-0 gap-[12px] p-[20px] overflow-hidden text-textColor">
+          <Button
+            secondary
+            className="self-start"
+            onClick={() => router.push('/pipelines')}
+          >
+            <span className="inline-flex items-center gap-[4px]">
+              <ChevronLeftIcon size={16} />
+              {t('pipelines', 'Pipelines')}
+            </span>
+          </Button>
 
-        {scheduleError && (
-          <div className="rounded-[12px] border border-red-500/30 bg-newBgColor px-[16px] py-[12px] text-[14px] text-red-500">
-            {scheduleError}
-          </div>
-        )}
+          {scheduleError && (
+            <div className="rounded-[12px] border border-red-500/30 bg-newBgColor px-[16px] py-[12px] text-[14px] text-red-500">
+              {scheduleError}
+            </div>
+          )}
 
-        {!displayTimezone || isLoading ? (
-          <div className="flex min-h-[320px] items-center justify-center rounded-[12px] border border-newBorder bg-newBgColor">
-            <LoadingComponent />
-          </div>
-        ) : error ? (
-          <div className="rounded-[12px] border border-red-500/30 bg-newBgColor px-[16px] py-[12px] text-[14px] text-red-500">
-            {t(
-              'pipeline_schedule_load_error',
-              'Failed to load Pipeline schedules for this week. Please refresh and try again.'
-            )}
-          </div>
-        ) : selectedChannelId && !matchingPipelines.length ? (
-          <div className="rounded-[12px] border border-newBorder bg-newBgColor p-[32px] flex flex-col items-center justify-center gap-[12px] text-center">
-            <div className="text-[18px] font-[600]">
+          {!displayTimezone || isLoading ? (
+            <div className="flex min-h-[320px] items-center justify-center rounded-[12px] border border-newBorder bg-newBgColor">
+              <LoadingComponent />
+            </div>
+          ) : error ? (
+            <div className="rounded-[12px] border border-red-500/30 bg-newBgColor px-[16px] py-[12px] text-[14px] text-red-500">
               {t(
-                'no_pipelines_for_channel',
-                'No Pipelines for this channel'
+                'pipeline_schedule_load_error',
+                'Failed to load Pipeline schedules for this week. Please refresh and try again.'
               )}
             </div>
-            <div className="text-[14px] opacity-70 max-w-[520px]">
-              {t(
-                'no_pipelines_for_channel_description',
-                'None of your Pipelines include this channel. Select a different channel or click it again to show all Pipelines.'
-              )}
-            </div>
-          </div>
-        ) : !visibleOccurrences.length ? (
-          <div className="rounded-[12px] border border-newBorder bg-newBgColor px-[16px] py-[32px] text-center text-[14px] opacity-70">
-            {t(
-              'pipeline_schedule_empty',
-              'No configured Pipeline schedules this week.'
-            )}
-          </div>
-        ) : (
-          <div className="relative flex flex-1 flex-col min-h-0">
-            <div
-              ref={scrollRef}
-              className="flex-1 min-h-0 overflow-auto rounded-[10px] border border-newBorder bg-newBorder scrollbar scrollbar-thumb-newBorder scrollbar-track-newBgColor"
-            >
-              <div className="grid min-w-[1004px] grid-cols-[80px_repeat(7,_minmax(132px,_1fr))] gap-px">
-                <div className="sticky start-0 top-0 z-30 h-[62px] bg-newTableHeader" />
-                {week!.days.map((date) => {
-                  const dateKey = date.format('YYYY-MM-DD');
-                  return (
-                    <div
-                      key={dateKey}
-                      className="sticky top-0 z-20 flex h-[62px] flex-col items-center justify-center bg-newTableHeader px-[8px] text-center text-[14px] font-[500] text-newTableText"
-                    >
-                      <span>{formatDateHeader(date, displayTimezone)}</span>
-                      {dateKey === today && (
-                        <span className="text-[12px] text-newTableTextFocused">
-                          {t('today', 'Today')}
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
-                {HOURS.map((hour) => (
-                  <Fragment key={hour}>
-                    <div
-                      data-hour={hour}
-                      className="sticky start-0 z-10 flex min-h-[76px] items-start justify-end bg-newBgColor px-[12px] pt-[10px] text-[13px] text-newTableText scroll-mt-[62px]"
-                    >
-                      {formatHour(hour)}
-                    </div>
-                    {week!.days.map((date) => {
-                      const firstHalfOccurrences =
-                        occurrencesByCell.get(
-                          `${date.format('YYYY-MM-DD')}:${hour}:0`
-                        ) || [];
-                      const secondHalfOccurrences =
-                        occurrencesByCell.get(
-                          `${date.format('YYYY-MM-DD')}:${hour}:30`
-                        ) || [];
-                      return (
-                        <div
-                          key={`${date.format('YYYY-MM-DD')}-${hour}`}
-                          className={clsx(
-                            'flex min-h-[76px] flex-col gap-[4px] bg-newBgColor p-[6px]',
-                            date.format('YYYY-MM-DD') === today &&
-                            'bg-newBgColorInner'
-                          )}
-                        >
-                          {[0, 30].map((minute) => {
-                            const occurrences =
-                              minute === 0
-                                ? firstHalfOccurrences
-                                : secondHalfOccurrences;
-                            return (
-                              <PipelineScheduleDropZone
-                                key={minute}
-                                date={date.format('YYYY-MM-DD')}
-                                minuteOfDay={hour * 60 + minute}
-                                onDrop={moveSlot}
-                              >
-                                {occurrences.map((occurrence) => (
-                                  <PipelineScheduleOccurrencePill
-                                    key={occurrence.id}
-                                    occurrence={occurrence}
-                                    displayTimezone={displayTimezone}
-                                    pending={pendingOccurrenceIds.has(
-                                      occurrence.id
-                                    )}
-                                    onRemove={removeSlot}
-                                    pausedLabel={t('paused', 'Paused')}
-                                    removeLabel={t('remove', 'Remove')}
-                                    slotLabel={t(
-                                      'pipeline_schedule_slot',
-                                      'Pipeline schedule slot'
-                                    )}
-                                  />
-                                ))}
-                              </PipelineScheduleDropZone>
-                            );
-                          })}
-                        </div>
-                      );
-                    })}
-                  </Fragment>
-                ))}
+          ) : selectedChannelId && !matchingPipelines.length ? (
+            <div className="rounded-[12px] border border-newBorder bg-newBgColor p-[32px] flex flex-col items-center justify-center gap-[12px] text-center">
+              <div className="text-[18px] font-[600]">
+                {t('no_pipelines_for_channel', 'No Pipelines for this channel')}
+              </div>
+              <div className="text-[14px] opacity-70 max-w-[520px]">
+                {t(
+                  'no_pipelines_for_channel_description',
+                  'None of your Pipelines include this channel. Select a different channel or click it again to show all Pipelines.'
+                )}
               </div>
             </div>
-          </div>
-        )}
-      </div>
-    </DNDProvider>
+          ) : !visibleOccurrences.length ? (
+            <div className="rounded-[12px] border border-newBorder bg-newBgColor px-[16px] py-[32px] text-center text-[14px] opacity-70">
+              {t(
+                'pipeline_schedule_empty',
+                'No configured Pipeline schedules this week.'
+              )}
+            </div>
+          ) : (
+            <div className="relative flex flex-1 flex-col min-h-0">
+              <div
+                ref={scrollRef}
+                className="flex-1 min-h-0 overflow-auto rounded-[10px] border border-newBorder bg-newBorder scrollbar scrollbar-thumb-newBorder scrollbar-track-newBgColor"
+              >
+                <div className="grid min-w-[1004px] grid-cols-[80px_repeat(7,_minmax(132px,_1fr))] gap-px">
+                  <div className="sticky start-0 top-0 z-30 h-[62px] bg-newTableHeader" />
+                  {week!.days.map((date) => {
+                    const dateKey = date.format('YYYY-MM-DD');
+                    return (
+                      <div
+                        key={dateKey}
+                        className="sticky top-0 z-20 flex h-[62px] flex-col items-center justify-center bg-newTableHeader px-[8px] text-center text-[14px] font-[500] text-newTableText"
+                      >
+                        <span>{formatDateHeader(date, displayTimezone)}</span>
+                        {dateKey === today && (
+                          <span className="text-[12px] text-newTableTextFocused">
+                            {t('today', 'Today')}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {HOURS.map((hour) => (
+                    <Fragment key={hour}>
+                      <div
+                        data-hour={hour}
+                        className="sticky start-0 z-10 flex min-h-[76px] items-start justify-end bg-newBgColor px-[12px] pt-[10px] text-[13px] text-newTableText scroll-mt-[62px]"
+                      >
+                        {formatHour(hour)}
+                      </div>
+                      {week!.days.map((date) => {
+                        const firstHalfOccurrences =
+                          occurrencesByCell.get(
+                            `${date.format('YYYY-MM-DD')}:${hour}:0`
+                          ) || [];
+                        const secondHalfOccurrences =
+                          occurrencesByCell.get(
+                            `${date.format('YYYY-MM-DD')}:${hour}:30`
+                          ) || [];
+                        return (
+                          <div
+                            key={`${date.format('YYYY-MM-DD')}-${hour}`}
+                            className={clsx(
+                              'flex min-h-[76px] flex-col gap-[4px] bg-newBgColor p-[6px]',
+                              date.format('YYYY-MM-DD') === today &&
+                                'bg-newBgColorInner'
+                            )}
+                          >
+                            {[0, 30].map((minute) => {
+                              const occurrences =
+                                minute === 0
+                                  ? firstHalfOccurrences
+                                  : secondHalfOccurrences;
+                              return (
+                                <PipelineScheduleDropZone
+                                  key={minute}
+                                  date={date.format('YYYY-MM-DD')}
+                                  minuteOfDay={hour * 60 + minute}
+                                  onDrop={moveSlot}
+                                >
+                                  {occurrences.map((occurrence) => (
+                                    <PipelineScheduleOccurrencePill
+                                      key={occurrence.id}
+                                      occurrence={occurrence}
+                                      displayTimezone={displayTimezone}
+                                      pending={pendingOccurrenceIds.has(
+                                        occurrence.id
+                                      )}
+                                      onRemove={removeSlot}
+                                      pausedLabel={t('paused', 'Paused')}
+                                      removeLabel={t('remove', 'Remove')}
+                                      slotLabel={t(
+                                        'pipeline_schedule_slot',
+                                        'Pipeline schedule slot'
+                                      )}
+                                    />
+                                  ))}
+                                </PipelineScheduleDropZone>
+                              );
+                            })}
+                          </div>
+                        );
+                      })}
+                    </Fragment>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </DNDProvider>
     </>
   );
 };

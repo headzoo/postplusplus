@@ -113,10 +113,7 @@ export class MediaService {
     }
 
     if (hasExtension(media.path, 'mp4')) {
-      throw new HttpException(
-        'Alt text can only be generated for images',
-        400
-      );
+      throw new HttpException('Alt text can only be generated for images', 400);
     }
 
     const total = await this._subscriptionService.checkCredits(org);

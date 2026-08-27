@@ -128,7 +128,9 @@ export class PipelinePlugService {
     const provider = this._integrationManager
       .getAllPlugs()
       .find((entry) => entry.identifier === providerIdentifier);
-    const plug = provider?.plugs.find((entry: any) => entry.methodName === body.func);
+    const plug = provider?.plugs.find(
+      (entry: any) => entry.methodName === body.func
+    );
     if (!plug) {
       throw new BadRequestException('Unsupported plug function');
     }
@@ -137,9 +139,13 @@ export class PipelinePlugService {
     if (
       new Set(submittedFields).size !== submittedFields.length ||
       submittedFields.length !== expectedFields.length ||
-      [...submittedFields].sort().some((field, index) => field !== expectedFields[index])
+      [...submittedFields]
+        .sort()
+        .some((field, index) => field !== expectedFields[index])
     ) {
-      throw new BadRequestException('Plug fields do not match the provider definition');
+      throw new BadRequestException(
+        'Plug fields do not match the provider definition'
+      );
     }
   }
 
@@ -158,13 +164,15 @@ export class PipelinePlugService {
       if (!metadata) {
         return [];
       }
-      return [{
-        type: 'global' as const,
-        source,
-        plugId: record.id,
-        delay: metadata.runEveryMilliseconds,
-        totalRuns: metadata.totalRuns,
-      }];
+      return [
+        {
+          type: 'global' as const,
+          source,
+          plugId: record.id,
+          delay: metadata.runEveryMilliseconds,
+          totalRuns: metadata.totalRuns,
+        },
+      ];
     });
   }
 }

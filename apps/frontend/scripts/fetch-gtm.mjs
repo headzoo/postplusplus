@@ -32,7 +32,9 @@ if (!id) {
   process.exit(0);
 }
 
-const url = `https://www.googletagmanager.com/gtm.js?id=${encodeURIComponent(id)}`;
+const url = `https://www.googletagmanager.com/gtm.js?id=${encodeURIComponent(
+  id
+)}`;
 try {
   console.log(`[fetch-gtm] fetching ${url}`);
   const res = await fetch(url);

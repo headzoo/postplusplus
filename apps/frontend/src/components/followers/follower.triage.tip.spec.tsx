@@ -75,9 +75,7 @@ describe('FollowerTriageTip', () => {
       screen.getByTestId('followers-triage-tip').getAttribute('data-triage-tip')
     ).toBe('all');
     expect(
-      screen.getByText(
-        /Focus on Hot and Mutual users first/
-      )
+      screen.getByText(/Focus on Hot and Mutual users first/)
     ).toBeTruthy();
   });
 

@@ -19,22 +19,18 @@ export const metadata: Metadata = {
   title: `${isGeneralServerSide() ? 'Preview : Post++' : 'Gitroom Preview'}`,
   description: '',
 };
-export default async function Auth(
-  props: {
-    params: Promise<{
-      id: string;
-    }>;
-    searchParams?: Promise<{
-      share?: string;
-    }>;
-  }
-) {
+export default async function Auth(props: {
+  params: Promise<{
+    id: string;
+  }>;
+  searchParams?: Promise<{
+    share?: string;
+  }>;
+}) {
   const searchParams = await props.searchParams;
   const params = await props.params;
 
-  const {
-    id
-  } = params;
+  const { id } = params;
 
   const post = await (await internalFetch(`/public/posts/${id}`)).json();
   const t = await getT();

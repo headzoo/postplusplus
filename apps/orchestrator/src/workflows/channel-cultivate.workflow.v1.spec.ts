@@ -1,6 +1,8 @@
 const listDueCandidatesV1 = jest.fn();
 const materializeDailyPicksV1 = jest.fn();
-const continueAsNew = jest.fn((args) => Promise.resolve({ continued: true, args }));
+const continueAsNew = jest.fn((args) =>
+  Promise.resolve({ continued: true, args })
+);
 
 jest.mock('@temporalio/workflow', () => ({
   continueAsNew,

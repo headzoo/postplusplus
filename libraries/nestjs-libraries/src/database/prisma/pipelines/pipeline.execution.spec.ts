@@ -73,9 +73,11 @@ describe('Pipeline execution', () => {
         organizationId: 'org',
         pipelineQueueItem: { pipelineId: 'pipeline' },
       }),
-      getActiveForExecution: jest.fn().mockResolvedValue([
-        { id: 'pipeline-plug', plugFunction: 'autoRepostPost' },
-      ]),
+      getActiveForExecution: jest
+        .fn()
+        .mockResolvedValue([
+          { id: 'pipeline-plug', plugFunction: 'autoRepostPost' },
+        ]),
     };
     const channelPlugs = { getPlugs: jest.fn() };
     const service = new PipelinePlugService(
@@ -112,9 +114,11 @@ describe('Pipeline execution', () => {
       }),
     };
     const channelPlugs = {
-      getPlugs: jest.fn().mockResolvedValue([
-        { id: 'channel-plug', plugFunction: 'autoRepostPost' },
-      ]),
+      getPlugs: jest
+        .fn()
+        .mockResolvedValue([
+          { id: 'channel-plug', plugFunction: 'autoRepostPost' },
+        ]),
     };
     const service = new PipelinePlugService(
       pipelinePlugs as any,
@@ -261,7 +265,9 @@ describe('Pipeline execution', () => {
       } as any
     );
 
-    await expect(repository.activate('org', 'pipeline', 'plug', false)).resolves.toEqual({
+    await expect(
+      repository.activate('org', 'pipeline', 'plug', false)
+    ).resolves.toEqual({
       count: 1,
     });
     expect(findFirst).toHaveBeenCalledWith({
@@ -340,9 +346,7 @@ describe('Pipeline execution', () => {
       pipeline: { findUnique: jest.fn().mockResolvedValue(pipeline()) },
       pipelineSlotExecution: {
         findUnique: jest.fn(async () =>
-          execution
-            ? { ...execution, pipelineQueueItem: item }
-            : null
+          execution ? { ...execution, pipelineQueueItem: item } : null
         ),
         create: jest.fn(async ({ data }) => {
           execution = { id: 'execution', ...data };
@@ -396,29 +400,32 @@ describe('Pipeline execution', () => {
       pipeline({ updatedAt: new Date('2026-08-10T10:00:30.000Z') }),
       'STALE_REVISION',
     ],
-  ])('skips %s candidates without reading the queue', async (_, value, reason) => {
-    const tx = {
-      pipeline: { findUnique: jest.fn().mockResolvedValue(value) },
-      pipelineSlotExecution: {
-        upsert: jest.fn().mockResolvedValue({ id: 'skipped' }),
-      },
-      pipelineQueueItem: { findFirst: jest.fn() },
-    };
-    const repository = new PipelineExecutionRepository(
-      { model: {} } as any,
-      {
-        model: {
-          $transaction: (run: (value: any) => any) => run(tx),
+  ])(
+    'skips %s candidates without reading the queue',
+    async (_, value, reason) => {
+      const tx = {
+        pipeline: { findUnique: jest.fn().mockResolvedValue(value) },
+        pipelineSlotExecution: {
+          upsert: jest.fn().mockResolvedValue({ id: 'skipped' }),
         },
-      } as any
-    );
+        pipelineQueueItem: { findFirst: jest.fn() },
+      };
+      const repository = new PipelineExecutionRepository(
+        { model: {} } as any,
+        {
+          model: {
+            $transaction: (run: (value: any) => any) => run(tx),
+          },
+        } as any
+      );
 
-    await expect(repository.claimSlot(request)).resolves.toMatchObject({
-      outcome: 'SKIPPED',
-      reason,
-    });
-    expect(tx.pipelineQueueItem.findFirst).not.toHaveBeenCalled();
-  });
+      await expect(repository.claimSlot(request)).resolves.toMatchObject({
+        outcome: 'SKIPPED',
+        reason,
+      });
+      expect(tx.pipelineQueueItem.findFirst).not.toHaveBeenCalled();
+    }
+  );
 
   it('records an empty slot without consuming content', async () => {
     const tx = {
@@ -702,7 +709,9 @@ describe('Pipeline execution', () => {
       pipelineQueueItem: {
         findFirst: jest.fn().mockResolvedValue({
           id: 'item',
-          posts: [{ ...queueItem().posts[0], integrationId: 'different-channel' }],
+          posts: [
+            { ...queueItem().posts[0], integrationId: 'different-channel' },
+          ],
         }),
         update: jest.fn().mockResolvedValue({}),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
@@ -717,7 +726,8 @@ describe('Pipeline execution', () => {
     await expect(repository.claimSlot(request)).resolves.toMatchObject({
       outcome: 'FAILED',
       roots: [],
-      reason: 'Pipeline queue content no longer matches its configured integrations',
+      reason:
+        'Pipeline queue content no longer matches its configured integrations',
     });
   });
 });

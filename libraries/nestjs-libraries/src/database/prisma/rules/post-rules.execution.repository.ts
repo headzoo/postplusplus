@@ -461,11 +461,7 @@ export class PostRulesExecutionRepository {
     return { updated: result.count };
   }
 
-  getRootPostByGroup(
-    orgId: string,
-    group: string,
-    integrationId: string
-  ) {
+  getRootPostByGroup(orgId: string, group: string, integrationId: string) {
     return this._post.model.post.findFirst({
       where: {
         organizationId: orgId,

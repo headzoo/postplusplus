@@ -289,7 +289,11 @@ export class TelegramProvider extends SocialAbstract implements SocialProvider {
     const [commentPost] = postDetails;
     const replyToId = Number(lastCommentId || postId);
 
-    const messageId = await this.sendMessage(accessToken, commentPost, replyToId);
+    const messageId = await this.sendMessage(
+      accessToken,
+      commentPost,
+      replyToId
+    );
 
     if (messageId) {
       return [

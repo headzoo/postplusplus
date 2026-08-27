@@ -35,9 +35,12 @@ export type IntegrationListItem = Integration & {
 export const useIntegrationList = () => {
   const fetch = useFetch();
 
-  const load = useCallback(async (path: string): Promise<IntegrationListItem[]> => {
-    return (await (await fetch(path)).json()).integrations;
-  }, []);
+  const load = useCallback(
+    async (path: string): Promise<IntegrationListItem[]> => {
+      return (await (await fetch(path)).json()).integrations;
+    },
+    []
+  );
 
   return useSWR<IntegrationListItem[]>('/integrations/list', load, {
     revalidateOnFocus: false,

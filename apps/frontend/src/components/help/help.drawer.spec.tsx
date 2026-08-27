@@ -36,18 +36,27 @@ jest.mock('@gitroom/frontend/components/layout/organization.selector', () => ({
   OrganizationSelector: () => null,
 }));
 
-jest.mock('@gitroom/frontend/components/layout/chrome.extension.component', () => ({
-  ChromeExtensionComponent: () => null,
-}));
+jest.mock(
+  '@gitroom/frontend/components/layout/chrome.extension.component',
+  () => ({
+    ChromeExtensionComponent: () => null,
+  })
+);
 
-jest.mock('@gitroom/frontend/components/new-layout/sentry.feedback.component', () => ({
-  AttachToFeedbackIcon: () => null,
-}));
+jest.mock(
+  '@gitroom/frontend/components/new-layout/sentry.feedback.component',
+  () => ({
+    AttachToFeedbackIcon: () => null,
+  })
+);
 
-jest.mock('@gitroom/frontend/components/notifications/notification.component', () => ({
-  __esModule: true,
-  default: () => null,
-}));
+jest.mock(
+  '@gitroom/frontend/components/notifications/notification.component',
+  () => ({
+    __esModule: true,
+    default: () => null,
+  })
+);
 
 jest.mock('@gitroom/frontend/components/launches/new.post', () => ({
   NewPost: () => null,
@@ -103,7 +112,9 @@ describe('help.url', () => {
 
     Object.defineProperty(window, 'location', {
       configurable: true,
-      value: new URL('https://app.postiz.local/calendar?foo=bar&help=calendar#scheduling'),
+      value: new URL(
+        'https://app.postiz.local/calendar?foo=bar&help=calendar#scheduling'
+      ),
     });
 
     expect(readHelpFromLocation(window.location)).toEqual({
@@ -138,7 +149,9 @@ describe('help.url', () => {
   it('restores the host hash when clearing help', () => {
     Object.defineProperty(window, 'location', {
       configurable: true,
-      value: new URL('https://app.postiz.local/calendar?foo=bar&help=calendar#scheduling'),
+      value: new URL(
+        'https://app.postiz.local/calendar?foo=bar&help=calendar#scheduling'
+      ),
     });
 
     clearHelpUrl('host-section');
@@ -183,9 +196,7 @@ describe('HelpDrawer', () => {
   });
 
   it('renders an accessible dialog with responsive width classes', () => {
-    render(
-      <HelpDrawer open onClose={jest.fn()} triggerRef={triggerRef} />
-    );
+    render(<HelpDrawer open onClose={jest.fn()} triggerRef={triggerRef} />);
 
     const dialog = screen.getByRole('dialog', { name: 'Help' });
     expect((dialog as HTMLElement).style.width).toBe(
@@ -204,9 +215,7 @@ describe('HelpDrawer', () => {
   it('restores panel width from localStorage', () => {
     localStorage.setItem(HELP_DRAWER_WIDTH_KEY, '420');
 
-    render(
-      <HelpDrawer open onClose={jest.fn()} triggerRef={triggerRef} />
-    );
+    render(<HelpDrawer open onClose={jest.fn()} triggerRef={triggerRef} />);
 
     expect(
       (screen.getByRole('dialog', { name: 'Help' }) as HTMLElement).style.width
@@ -216,9 +225,7 @@ describe('HelpDrawer', () => {
   it('resizes the panel on drag and persists the width', () => {
     localStorage.setItem(HELP_DRAWER_WIDTH_KEY, '400');
 
-    render(
-      <HelpDrawer open onClose={jest.fn()} triggerRef={triggerRef} />
-    );
+    render(<HelpDrawer open onClose={jest.fn()} triggerRef={triggerRef} />);
 
     const handle = screen.getByRole('separator', { name: 'Resize help panel' });
     fireEvent.mouseDown(handle, { button: 0, clientX: 500 });
@@ -233,9 +240,7 @@ describe('HelpDrawer', () => {
 
   it('closes on backdrop click and Escape while locking body scroll', () => {
     const onClose = jest.fn();
-    render(
-      <HelpDrawer open onClose={onClose} triggerRef={triggerRef} />
-    );
+    render(<HelpDrawer open onClose={onClose} triggerRef={triggerRef} />);
 
     expect(document.body.style.overflow).toBe('hidden');
 
@@ -250,12 +255,12 @@ describe('HelpDrawer', () => {
   it('passes deep-link slug and hash from the current location', async () => {
     Object.defineProperty(window, 'location', {
       configurable: true,
-      value: new URL('https://app.postiz.local/calendar?help=calendar#scheduling'),
+      value: new URL(
+        'https://app.postiz.local/calendar?help=calendar#scheduling'
+      ),
     });
 
-    render(
-      <HelpDrawer open onClose={jest.fn()} triggerRef={triggerRef} />
-    );
+    render(<HelpDrawer open onClose={jest.fn()} triggerRef={triggerRef} />);
 
     expect(await screen.findByText('Calendar')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Back' })).toBeTruthy();
@@ -264,7 +269,9 @@ describe('HelpDrawer', () => {
   it('applies client navigation changes without browser history events', async () => {
     Object.defineProperty(window, 'location', {
       configurable: true,
-      value: new URL('https://app.postiz.local/calendar?help=calendar#scheduling'),
+      value: new URL(
+        'https://app.postiz.local/calendar?help=calendar#scheduling'
+      ),
     });
 
     const { rerender } = render(

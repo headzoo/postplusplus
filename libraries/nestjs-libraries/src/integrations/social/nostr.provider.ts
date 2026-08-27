@@ -33,7 +33,8 @@ export class NostrProvider extends SocialAbstract implements SocialProvider {
   isBetweenSteps = false;
   scopes = [] as string[];
   editor = 'normal' as const;
-  toolTip = 'Make sure you private a HEX key of your Nostr private key, you can get it from websites like iris.to'
+  toolTip =
+    'Make sure you private a HEX key of your Nostr private key, you can get it from websites like iris.to';
 
   maxLength() {
     return 100000;
@@ -162,9 +163,7 @@ export class NostrProvider extends SocialAbstract implements SocialProvider {
 
   private buildContent(post: PostDetails): string {
     const mediaContent = post.media?.map((m) => m.path).join('\n\n') || '';
-    return mediaContent
-      ? `${post.message}\n\n${mediaContent}`
-      : post.message;
+    return mediaContent ? `${post.message}\n\n${mediaContent}` : post.message;
   }
 
   async post(

@@ -1,5 +1,14 @@
-import { IsDefined, IsString, IsUrl, ValidateIf, Validate } from 'class-validator';
-import { ValidUrlExtension, ValidUrlPath } from '@gitroom/helpers/utils/valid.url.path';
+import {
+  IsDefined,
+  IsString,
+  IsUrl,
+  ValidateIf,
+  Validate,
+} from 'class-validator';
+import {
+  ValidUrlExtension,
+  ValidUrlPath,
+} from '@gitroom/helpers/utils/valid.url.path';
 
 export class MediaDto {
   @IsString()

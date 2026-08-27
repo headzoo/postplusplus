@@ -61,13 +61,11 @@ export function webhookTargetIdentity(
   };
 }
 
-export function logEventType(
-  event?: {
-    eventType?: string;
-    kind?: string;
-    metadata?: { referenceType?: string };
-  }
-) {
+export function logEventType(event?: {
+  eventType?: string;
+  kind?: string;
+  metadata?: { referenceType?: string };
+}) {
   const eventType = event?.eventType;
   if (eventType !== 'post.create') {
     return eventType;
@@ -172,7 +170,10 @@ export function shouldOmitHttpLogBody(contentType?: string, body?: unknown) {
 }
 
 export async function readCappedHttpLogBody(
-  response: { body?: ReadableStream<Uint8Array> | null; headers?: { get(name: string): string | null } },
+  response: {
+    body?: ReadableStream<Uint8Array> | null;
+    headers?: { get(name: string): string | null };
+  },
   max = MAX_HTTP_LOG_BODY
 ) {
   const contentType = response.headers?.get('content-type') || undefined;
@@ -253,10 +254,16 @@ function isBinaryBody(body: unknown) {
   if (typeof ReadableStream !== 'undefined' && body instanceof ReadableStream) {
     return true;
   }
-  if (body instanceof Uint8Array && (typeof Buffer === 'undefined' || !Buffer.isBuffer(body))) {
+  if (
+    body instanceof Uint8Array &&
+    (typeof Buffer === 'undefined' || !Buffer.isBuffer(body))
+  ) {
     return true;
   }
-  return typeof body === 'object' && typeof (body as { pipe?: unknown }).pipe === 'function';
+  return (
+    typeof body === 'object' &&
+    typeof (body as { pipe?: unknown }).pipe === 'function'
+  );
 }
 
 function normalizeHeaders(headers?: unknown): HttpLogHeaders {
@@ -265,12 +272,18 @@ function normalizeHeaders(headers?: unknown): HttpLogHeaders {
   }
   if (typeof Headers !== 'undefined' && headers instanceof Headers) {
     return Object.fromEntries(
-      [...headers.entries()].map(([key, value]) => [key, redactHeaderValue(key, value)])
+      [...headers.entries()].map(([key, value]) => [
+        key,
+        redactHeaderValue(key, value),
+      ])
     );
   }
   if (Array.isArray(headers)) {
     return Object.fromEntries(
-      headers.map(([key, value]) => [String(key), redactHeaderValue(String(key), value)])
+      headers.map(([key, value]) => [
+        String(key),
+        redactHeaderValue(String(key), value),
+      ])
     );
   }
   if (typeof headers === 'object') {

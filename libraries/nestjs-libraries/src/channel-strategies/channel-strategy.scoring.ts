@@ -55,7 +55,7 @@ export function scoreInteractionCounts(
     (score, kind) =>
       score +
       (counts?.[kind]?.[direction] ?? 0) *
-      getInteractionScore(profile, kind, direction),
+        getInteractionScore(profile, kind, direction),
     0
   );
 }
@@ -86,8 +86,7 @@ export function getRelationshipTriage(
   if (
     effortScore >= profile.meaningfulActivityThreshold &&
     (reciprocationScore === 0 ||
-      effortScore >=
-      profile.overInvestedDirectionalRatio * reciprocationScore)
+      effortScore >= profile.overInvestedDirectionalRatio * reciprocationScore)
   ) {
     return 'over_invested';
   }
@@ -123,10 +122,10 @@ export function calculateRelationshipGrade(
     Math.max(
       0,
       profile.inboundPriorityWeight * reciprocation +
-      profile.reciprocityRewardWeight * Math.min(effort, reciprocation) +
-      profile.selectedOutboundContributionWeight * effort -
-      profile.outboundExcessPenaltyWeight *
-      Math.max(effort - reciprocation, 0)
+        profile.reciprocityRewardWeight * Math.min(effort, reciprocation) +
+        profile.selectedOutboundContributionWeight * effort -
+        profile.outboundExcessPenaltyWeight *
+          Math.max(effort - reciprocation, 0)
     )
   );
   return {
@@ -158,9 +157,7 @@ export function assertRelationshipScoringProfile(
     ),
   ];
   if (
-    !values.every(
-      (value) => Number.isFinite(value) && value >= 0
-    ) ||
+    !values.every((value) => Number.isFinite(value) && value >= 0) ||
     !Number.isInteger(profile.formulaVersion) ||
     profile.formulaVersion < 1 ||
     profile.scoreCap <= 0 ||

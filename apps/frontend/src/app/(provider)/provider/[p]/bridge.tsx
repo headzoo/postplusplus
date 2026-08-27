@@ -33,9 +33,7 @@ declare global {
   }
 }
 
-const ProviderPreviewBridge: FC<{ provider: string }> = ({
-  provider,
-}) => {
+const ProviderPreviewBridge: FC<{ provider: string }> = ({ provider }) => {
   // Read __PROVIDER_INIT__ in an effect, not via a useState lazy
   // initializer. The initializer would run on the server (where `window`
   // is undefined → {}), and during hydration React reuses the server

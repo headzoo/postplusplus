@@ -95,8 +95,8 @@ describe('post-rules.domain', () => {
         pipelineId: 'pipeline-1',
       },
     });
-    expect(issues.some((issue) => issue.property === 'maxRescheduleAttempts')).toBe(
-      true
-    );
+    expect(
+      issues.some((issue) => issue.property === 'maxRescheduleAttempts')
+    ).toBe(true);
   });
 });

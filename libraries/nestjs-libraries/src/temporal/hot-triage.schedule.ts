@@ -38,9 +38,9 @@ export type HotMaterializationScheduleConfig = {
 };
 
 export const DEFAULT_HOT_MATERIALIZATION_SCHEDULE: HotMaterializationScheduleConfig =
-{
-  intervalHours: HOT_MATERIALIZATION_SCHEDULE_INTERVAL_HOURS,
-};
+  {
+    intervalHours: HOT_MATERIALIZATION_SCHEDULE_INTERVAL_HOURS,
+  };
 
 export function normalizeHotMaterializationSchedule(
   value: Partial<HotMaterializationScheduleConfig> | null | undefined

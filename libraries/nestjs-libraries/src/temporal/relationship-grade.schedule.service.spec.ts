@@ -2,12 +2,15 @@ import { RelationshipGradeScheduleService } from './relationship-grade.schedule.
 import { DEFAULT_RELATIONSHIP_GRADE_SCHEDULE } from './relationship-grade.schedule';
 
 describe('RelationshipGradeScheduleService', () => {
-  const createService = (schedule: {
-    create: jest.Mock;
-    getHandle: jest.Mock;
-  }, workflow: {
-    getHandle: jest.Mock;
-  }) =>
+  const createService = (
+    schedule: {
+      create: jest.Mock;
+      getHandle: jest.Mock;
+    },
+    workflow: {
+      getHandle: jest.Mock;
+    }
+  ) =>
     new RelationshipGradeScheduleService(
       {
         client: { getRawClient: () => ({ schedule, workflow }) },
@@ -17,8 +20,11 @@ describe('RelationshipGradeScheduleService', () => {
 
   it('creates a default schedule when none exists', async () => {
     const create = jest.fn().mockResolvedValue(undefined);
-    const describe = jest.fn()
-      .mockRejectedValueOnce(Object.assign(new Error('not found'), { name: 'ScheduleNotFoundError' }))
+    const describe = jest
+      .fn()
+      .mockRejectedValueOnce(
+        Object.assign(new Error('not found'), { name: 'ScheduleNotFoundError' })
+      )
       .mockResolvedValue({
         state: { paused: false },
         action: { args: [{ cadence: DEFAULT_RELATIONSHIP_GRADE_SCHEDULE }] },
@@ -32,9 +38,13 @@ describe('RelationshipGradeScheduleService', () => {
     };
     const workflow = {
       getHandle: jest.fn().mockReturnValue({
-        describe: jest.fn().mockRejectedValue(
-          Object.assign(new Error('not found'), { name: 'WorkflowNotFoundError' })
-        ),
+        describe: jest
+          .fn()
+          .mockRejectedValue(
+            Object.assign(new Error('not found'), {
+              name: 'WorkflowNotFoundError',
+            })
+          ),
       }),
     };
     const service = createService(schedule, workflow);

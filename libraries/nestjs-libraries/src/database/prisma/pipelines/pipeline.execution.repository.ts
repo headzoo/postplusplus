@@ -54,8 +54,9 @@ export class PipelineExecutionRepository {
           },
           select: { pipelineId: true, scheduledFor: true },
         })
-      ).map((execution: any) =>
-        `${execution.pipelineId}:${execution.scheduledFor.toISOString()}`
+      ).map(
+        (execution: any) =>
+          `${execution.pipelineId}:${execution.scheduledFor.toISOString()}`
       )
     );
 
@@ -214,12 +215,7 @@ export class PipelineExecutionRepository {
         },
       });
       if (!item) {
-        return this.createSkipped(
-          tx,
-          request,
-          scheduledFor,
-          'EMPTY'
-        );
+        return this.createSkipped(tx, request, scheduledFor, 'EMPTY');
       }
 
       const roots = item.posts.filter((post: any) => !post.parentPostId);
@@ -289,7 +285,9 @@ export class PipelineExecutionRepository {
         data: { state: 'QUEUE', publishDate: scheduledFor, error: null },
       });
       if (claimed.count !== 1 || queued.count !== item.posts.length) {
-        throw new Error('Pipeline queue item changed while it was being claimed');
+        throw new Error(
+          'Pipeline queue item changed while it was being claimed'
+        );
       }
 
       return {
@@ -436,10 +434,7 @@ export class PipelineExecutionRepository {
         });
       } catch (caught: any) {
         error = caught;
-        if (
-          caught?.code !== 'P2034' ||
-          attempt === TRANSACTION_ATTEMPTS - 1
-        ) {
+        if (caught?.code !== 'P2034' || attempt === TRANSACTION_ATTEMPTS - 1) {
           throw caught;
         }
       }

@@ -71,10 +71,14 @@ describe('ContextDocumentAssignmentPicker', () => {
     expect(screen.getByText('campaign-review.skill.md')).toBeTruthy();
     expect(screen.getByText('Skill')).toBeTruthy();
     expect(
-      screen.getByText('Skills cannot be attached to Pipelines. Deselect this skill before saving.')
+      screen.getByText(
+        'Skills cannot be attached to Pipelines. Deselect this skill before saving.'
+      )
     ).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: /campaign-review\.skill\.md/i }));
+    fireEvent.click(
+      screen.getByRole('button', { name: /campaign-review\.skill\.md/i })
+    );
     expect(onChange).toHaveBeenCalledWith([]);
   });
 });

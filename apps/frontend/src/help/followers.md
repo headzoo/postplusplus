@@ -19,7 +19,7 @@ Only channels that expose follower identities show in the left sidebar—not eve
 ## Browse, search, and sort
 
 1. Select a channel in the left list.
-2. On **All**, review the summary cards and board columns (**Leads**, **Hot**, **Mutual**, **Cultivate**, **Followed**, **Quiet**, **Costly**, **Ignored**, **Unfollowed**, **Bots**). Each column lists people in that segment (scroll within a column when needed); **View all** opens the full card grid for that segment.
+2. On **All**, review the summary cards and board columns (**Leads**, **Hot**, **Mutual**, **Cultivate**, **Followed**, **Conversions**, **Quiet**, **Costly**, **Ignored**, **Unfollowed**, **Bots**). Each column lists people in that segment (scroll within a column when needed); **View all** opens the full card grid for that segment.
 3. Use **Search** for username or display name (searching on All switches from the board to the card grid).
 4. Open **Filters** for **Sort by**, **Direction**, **Time window** (**Week**, **Month**, **90 Day**, **Year**), and **Per page** (12 / 24 / 48).
 5. On a filtered tab or after **View all**, move with **Previous** / **Next**.
@@ -32,19 +32,20 @@ Empty search: **No followers match this search**.
 
 Use the pill tabs above the board or grid:
 
-| Filter         | Meaning                                                             |
-| -------------- | ------------------------------------------------------------------- |
-| **All**        | Overview board plus everyone when searching                         |
-| **Leads**      | Interacting non-followers (and warm-network prospects)              |
-| **Followed**   | People you followed who have not followed back yet                  |
-| **Hot**        | Hourly materialized picks for relationships that need reciprocation |
-| **Mutual**     | Effort is balanced                                                  |
-| **Cultivate**  | Warm relationship that needs outbound attention                     |
-| **Quiet**      | Little activity either way                                          |
-| **Ignored**    | People you’ve hidden from other views                               |
-| **Unfollowed** | People you still follow who used to follow you and no longer do     |
-| **Costly**     | The channel’s effort exceeds theirs                                 |
-| **Bots**       | Likely automated accounts                                           |
+| Filter          | Meaning                                                             |
+| --------------- | ------------------------------------------------------------------- |
+| **All**         | Overview board plus everyone when searching                         |
+| **Leads**       | Interacting non-followers (and warm-network prospects)              |
+| **Followed**    | People you followed who have not followed back yet                  |
+| **Conversions** | People with at least one recorded conversion on this channel        |
+| **Hot**         | Hourly materialized picks for relationships that need reciprocation |
+| **Mutual**      | Effort is balanced                                                  |
+| **Cultivate**   | Warm relationship that needs outbound attention                     |
+| **Quiet**       | Little activity either way                                          |
+| **Ignored**     | People you’ve hidden from other views                               |
+| **Unfollowed**  | People you still follow who used to follow you and no longer do     |
+| **Costly**      | The channel’s effort exceeds theirs                                 |
+| **Bots**        | Likely automated accounts                                           |
 
 Summary cards show counts for **All Followers**, **Leads**, **Mutual**, **Hot**, **Cultivate**, **Followed**, **Quiet**, and **Ignored**. Category counts are CRM segments—not a sum of platform followers.
 

@@ -80,7 +80,11 @@ describe('AuthMiddleware original operator context', () => {
   it('keeps the original operator while impersonation replaces the request user', async () => {
     organizationService.getUserOrg.mockResolvedValue({
       user: { ...impersonatedUser },
-      organization: { id: 'org-2', paymentId: null, users: [{ userId: impersonatedUser.id }] },
+      organization: {
+        id: 'org-2',
+        paymentId: null,
+        users: [{ userId: impersonatedUser.id }],
+      },
     });
     const request = buildRequest({ impersonate: impersonatedUser.id });
 

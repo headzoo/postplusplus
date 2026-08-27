@@ -81,9 +81,12 @@ jest.mock('@gitroom/frontend/components/launches/helpers/dnd.provider', () => ({
   DNDProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-jest.mock('@gitroom/frontend/components/launches/add.provider.component', () => ({
-  AddProviderButton: () => null,
-}));
+jest.mock(
+  '@gitroom/frontend/components/launches/add.provider.component',
+  () => ({
+    AddProviderButton: () => null,
+  })
+);
 
 jest.mock('@gitroom/frontend/components/launches/generator/generator', () => ({
   GeneratorComponent: () => null,
@@ -97,9 +100,12 @@ jest.mock('@gitroom/frontend/components/launches/menu/menu', () => ({
   Menu: () => null,
 }));
 
-jest.mock('@gitroom/frontend/components/launches/helpers/use.integration.list', () => ({
-  useIntegrationList: jest.fn(),
-}));
+jest.mock(
+  '@gitroom/frontend/components/launches/helpers/use.integration.list',
+  () => ({
+    useIntegrationList: jest.fn(),
+  })
+);
 
 jest.mock('@gitroom/react/helpers/image.with.fallback', () => ({
   __esModule: true,

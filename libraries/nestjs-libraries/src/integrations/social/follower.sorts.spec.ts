@@ -17,7 +17,9 @@ describe('follower.sorts', () => {
     expect(FOLLOWER_AUDIENCES).toContain('hot');
     expect(FOLLOWER_AUDIENCES).toContain('unfollowed');
     expect(FOLLOWER_CATEGORY_DESCRIPTIONS.hot).toContain('materialized');
-    expect(FOLLOWER_CATEGORY_DESCRIPTIONS.unfollowed).toContain('used to follow');
+    expect(FOLLOWER_CATEGORY_DESCRIPTIONS.unfollowed).toContain(
+      'used to follow'
+    );
   });
 
   const followers = [
@@ -44,9 +46,9 @@ describe('follower.sorts', () => {
   });
 
   it('sorts followers by name ascending', () => {
-    expect(sortFollowers(followers, 'name', 'asc').map((item) => item.id)).toEqual(
-      ['a', 'b']
-    );
+    expect(
+      sortFollowers(followers, 'name', 'asc').map((item) => item.id)
+    ).toEqual(['a', 'b']);
   });
 
   it('normalizes follower search by trimming and stripping a leading @', () => {

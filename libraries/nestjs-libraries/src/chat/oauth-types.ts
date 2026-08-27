@@ -19,7 +19,10 @@ export interface MCPServerOAuthConfig {
   scopesSupported?: string[];
   resourceName?: string;
   resourceDocumentation?: string;
-  validateToken?: (token: string, resource: string) => Promise<TokenValidationResult>;
+  validateToken?: (
+    token: string,
+    resource: string
+  ) => Promise<TokenValidationResult>;
 }
 
 /**
@@ -59,11 +62,15 @@ function escapeHeaderValue(value: string): string {
   return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
 
-export function generateWWWAuthenticateHeader(options: OAuthResponseOptions = {}): string {
+export function generateWWWAuthenticateHeader(
+  options: OAuthResponseOptions = {}
+): string {
   const params: string[] = [];
 
   if (options.resourceMetadataUrl) {
-    params.push(`resource_metadata="${escapeHeaderValue(options.resourceMetadataUrl)}"`);
+    params.push(
+      `resource_metadata="${escapeHeaderValue(options.resourceMetadataUrl)}"`
+    );
   }
 
   if (options.additionalParams) {
@@ -79,7 +86,9 @@ export function generateWWWAuthenticateHeader(options: OAuthResponseOptions = {}
   return `Bearer ${params.join(', ')}`;
 }
 
-export function generateProtectedResourceMetadata(config: MCPServerOAuthConfig): OAuthProtectedResourceMetadata {
+export function generateProtectedResourceMetadata(
+  config: MCPServerOAuthConfig
+): OAuthProtectedResourceMetadata {
   return {
     resource: config.resource,
     authorization_servers: config.authorizationServers,
@@ -92,12 +101,15 @@ export function generateProtectedResourceMetadata(config: MCPServerOAuthConfig):
   };
 }
 
-export function extractBearerToken(authHeader: string | null | undefined): string | undefined {
+export function extractBearerToken(
+  authHeader: string | null | undefined
+): string | undefined {
   if (!authHeader) return undefined;
 
   const prefix = 'bearer ';
   if (authHeader.length <= prefix.length) return undefined;
-  if (authHeader.slice(0, prefix.length).toLowerCase() !== prefix) return undefined;
+  if (authHeader.slice(0, prefix.length).toLowerCase() !== prefix)
+    return undefined;
 
   const token = authHeader.slice(prefix.length).trim();
   return token || undefined;

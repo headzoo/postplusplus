@@ -40,8 +40,8 @@ export const AddPostButton: FC<{
             ...(props.postComment === PostComment.ALL
               ? ['add_comment_or_post', 'Add comment or post']
               : props.postComment === PostComment.POST
-                ? ['add_post', 'Add post']
-                : ['add_comment', 'Add comment'])
+              ? ['add_post', 'Add post']
+              : ['add_comment', 'Add comment'])
           )}
         </div>
       </div>

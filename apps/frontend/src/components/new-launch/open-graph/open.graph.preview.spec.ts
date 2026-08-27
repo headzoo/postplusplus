@@ -153,8 +153,9 @@ describe('useOpenGraphPreview', () => {
     }));
     useFetch.mockReturnValue(fetchMock);
 
-    let fetcher: ((key: [string, string]) => Promise<OpenGraphResponse>) | null =
-      null;
+    let fetcher:
+      | ((key: [string, string]) => Promise<OpenGraphResponse>)
+      | null = null;
     useSWR.mockImplementation(
       (
         _key: unknown,
@@ -183,8 +184,9 @@ describe('useOpenGraphPreview', () => {
       }))
     );
 
-    let fetcher: ((key: [string, string]) => Promise<OpenGraphResponse>) | null =
-      null;
+    let fetcher:
+      | ((key: [string, string]) => Promise<OpenGraphResponse>)
+      | null = null;
     useSWR.mockImplementation(
       (
         _key: unknown,

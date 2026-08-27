@@ -75,7 +75,9 @@ export const PlatformAnalytics = () => {
 
   const currentIntegration = useMemo(
     () =>
-      analyticsIntegrations.find((integration) => integration.id === selectedId),
+      analyticsIntegrations.find(
+        (integration) => integration.id === selectedId
+      ),
     [analyticsIntegrations, selectedId]
   );
   const options = useMemo(() => {

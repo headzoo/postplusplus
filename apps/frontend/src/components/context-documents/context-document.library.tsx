@@ -164,7 +164,11 @@ const ContextDocumentEditor: FC<{
         title: t('context_document_large_title', 'Large document warning'),
         description: t(
           'context_document_large_description',
-          `"${documentName}" is ${formatContextDocumentSize(byteLength)} (${byteLength.toLocaleString()} bytes). Documents at or above ${formatContextDocumentSize(CONTEXT_DOCUMENT_LARGE_WARNING_BYTES)} may be too large for reliable agent use. Consider splitting it into smaller files.`
+          `"${documentName}" is ${formatContextDocumentSize(
+            byteLength
+          )} (${byteLength.toLocaleString()} bytes). Documents at or above ${formatContextDocumentSize(
+            CONTEXT_DOCUMENT_LARGE_WARNING_BYTES
+          )} may be too large for reliable agent use. Consider splitting it into smaller files.`
         ),
         approveLabel: t('context_document_save_anyway', 'Save anyway'),
         cancelLabel: t('cancel', 'Cancel'),
@@ -193,10 +197,10 @@ const ContextDocumentEditor: FC<{
     } catch (err: any) {
       toaster.show(
         err?.message ||
-        t(
-          'context_document_save_error',
-          'Failed to save document. Please try again.'
-        ),
+          t(
+            'context_document_save_error',
+            'Failed to save document. Please try again.'
+          ),
         'warning'
       );
     } finally {
@@ -374,7 +378,11 @@ const ContextDocumentEditor: FC<{
                   );
                 },
                 img: ({ alt = '', ...props }) => (
-                  <img {...props} alt={alt} className="my-4 max-w-full rounded" />
+                  <img
+                    {...props}
+                    alt={alt}
+                    className="my-4 max-w-full rounded"
+                  />
                 ),
                 code: ({ children, ...props }) => (
                   <code
@@ -466,10 +474,10 @@ const ContextDocumentNameModal: FC<{
     } catch (err: any) {
       setError(
         err?.message ||
-        t(
-          'context_document_name_save_error',
-          'We could not save this document name.'
-        )
+          t(
+            'context_document_name_save_error',
+            'We could not save this document name.'
+          )
       );
     } finally {
       setSaving(false);
@@ -487,11 +495,13 @@ const ContextDocumentNameModal: FC<{
         onChange={(event) => setValue(event.target.value)}
         placeholder="NOTES.md"
       />
-      {error && (
-        <p className="mt-[8px] text-[13px] text-red-400">{error}</p>
-      )}
+      {error && <p className="mt-[8px] text-[13px] text-red-400">{error}</p>}
       <div className="mt-[16px] flex justify-end gap-[8px]">
-        <Button onClick={() => modal.closeCurrent()} disabled={saving} secondary>
+        <Button
+          onClick={() => modal.closeCurrent()}
+          disabled={saving}
+          secondary
+        >
           {t('cancel', 'Cancel')}
         </Button>
         <Button onClick={save} loading={saving} disabled={!value.trim()}>
@@ -575,7 +585,15 @@ const ContextDocumentCard: FC<{
   onRename: () => void;
   onReplace: () => void;
   onDelete: () => void;
-}> = ({ document, pending, uploading, onOpen, onRename, onReplace, onDelete }) => {
+}> = ({
+  document,
+  pending,
+  uploading,
+  onOpen,
+  onRename,
+  onReplace,
+  onDelete,
+}) => {
   const t = useT();
   const skillSlug =
     document.skill?.slug || getContextDocumentSkillSlug(document.name);
@@ -688,9 +706,11 @@ export const ContextDocumentLibrary: FC = () => {
   }, [documents.length, search]);
 
   const openEditor = useCallback(
-    (document: Pick<ContextDocumentMetadata, 'id' | 'name'> & {
-      skill?: ContextDocumentMetadata['skill'];
-    }) => {
+    (
+      document: Pick<ContextDocumentMetadata, 'id' | 'name'> & {
+        skill?: ContextDocumentMetadata['skill'];
+      }
+    ) => {
       const skillSlug =
         document.skill?.slug || getContextDocumentSkillSlug(document.name);
       const skillConflict =
@@ -803,16 +823,24 @@ export const ContextDocumentLibrary: FC = () => {
         return;
       }
 
-      const existing = data?.find((document) => document.name === normalizedName);
+      const existing = data?.find(
+        (document) => document.name === normalizedName
+      );
 
       if (existing) {
         const approved = await decision.open({
-          title: t('context_document_replace_title', 'Replace existing document?'),
+          title: t(
+            'context_document_replace_title',
+            'Replace existing document?'
+          ),
           description: t(
             'context_document_replace_description',
             `"${normalizedName}" already exists in your organization library. Uploading will replace its content while keeping the same document id. Pipeline assignments will continue to reference this document.`
           ),
-          approveLabel: t('context_document_replace_confirm', 'Replace document'),
+          approveLabel: t(
+            'context_document_replace_confirm',
+            'Replace document'
+          ),
           cancelLabel: t('cancel', 'Cancel'),
         });
 
@@ -826,7 +854,11 @@ export const ContextDocumentLibrary: FC = () => {
           title: t('context_document_large_title', 'Large document warning'),
           description: t(
             'context_document_large_description',
-            `"${normalizedName}" is ${formatContextDocumentSize(file.size)} (${file.size.toLocaleString()} bytes). Documents at or above ${formatContextDocumentSize(CONTEXT_DOCUMENT_LARGE_WARNING_BYTES)} may be too large for reliable agent use. Consider splitting it into smaller files.`
+            `"${normalizedName}" is ${formatContextDocumentSize(
+              file.size
+            )} (${file.size.toLocaleString()} bytes). Documents at or above ${formatContextDocumentSize(
+              CONTEXT_DOCUMENT_LARGE_WARNING_BYTES
+            )} may be too large for reliable agent use. Consider splitting it into smaller files.`
           ),
           approveLabel: t('context_document_upload_anyway', 'Upload anyway'),
           cancelLabel: t('cancel', 'Cancel'),
@@ -846,13 +878,13 @@ export const ContextDocumentLibrary: FC = () => {
         toaster.show(
           existing
             ? t(
-              'context_document_replaced_success',
-              'Document replaced successfully.'
-            )
+                'context_document_replaced_success',
+                'Document replaced successfully.'
+              )
             : t(
-              'context_document_uploaded_success',
-              'Document uploaded successfully.'
-            ),
+                'context_document_uploaded_success',
+                'Document uploaded successfully.'
+              ),
           'success'
         );
 
@@ -862,10 +894,10 @@ export const ContextDocumentLibrary: FC = () => {
       } catch (err: any) {
         toaster.show(
           err?.message ||
-          t(
-            'context_document_upload_error',
-            'Failed to upload document. Please try again.'
-          ),
+            t(
+              'context_document_upload_error',
+              'Failed to upload document. Please try again.'
+            ),
           'warning'
         );
       } finally {
@@ -906,10 +938,10 @@ export const ContextDocumentLibrary: FC = () => {
       } catch (err: any) {
         toaster.show(
           err?.message ||
-          t(
-            'context_document_delete_error',
-            'Failed to delete document. Please try again.'
-          ),
+            t(
+              'context_document_delete_error',
+              'Failed to delete document. Please try again.'
+            ),
           'warning'
         );
       } finally {
@@ -1012,9 +1044,7 @@ export const ContextDocumentLibrary: FC = () => {
             )}
           </div>
           <div className="flex gap-[8px] flex-wrap justify-center">
-            <Button onClick={openCreateModal}>
-              {t('create', 'Create')}
-            </Button>
+            <Button onClick={openCreateModal}>{t('create', 'Create')}</Button>
             <Button onClick={handleUploadClick} loading={uploading} secondary>
               {t('context_document_upload', '+ Upload')}
             </Button>

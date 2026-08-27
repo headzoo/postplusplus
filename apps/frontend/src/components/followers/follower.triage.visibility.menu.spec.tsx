@@ -18,7 +18,10 @@ describe('FollowerTriageVisibilityMenu', () => {
   it('opens the menu and toggles a triage visibility checkbox', () => {
     const onToggle = jest.fn();
     render(
-      <FollowerTriageVisibilityMenu hiddenSlugs={new Set()} onToggle={onToggle} />
+      <FollowerTriageVisibilityMenu
+        hiddenSlugs={new Set()}
+        onToggle={onToggle}
+      />
     );
 
     fireEvent.click(screen.getByTestId('followers-triage-visibility-button'));
@@ -40,8 +43,8 @@ describe('FollowerTriageVisibilityMenu', () => {
       />
     );
 
-    expect(screen.getByTestId('followers-triage-visibility-button').textContent).toContain(
-      '(2)'
-    );
+    expect(
+      screen.getByTestId('followers-triage-visibility-button').textContent
+    ).toContain('(2)');
   });
 });

@@ -76,7 +76,10 @@ const FirstStep: FC = (props) => {
           if (data?.error) {
             throw new Error(
               data.message ||
-              t('generation_failed', 'Failed to generate posts, please try again.')
+                t(
+                  'generation_failed',
+                  'Failed to generate posts, please try again.'
+                )
             );
           }
 
@@ -146,14 +149,20 @@ const FirstStep: FC = (props) => {
         });
         if (!response.body) {
           throw new Error(
-            t('generation_failed', 'Failed to generate posts, please try again.')
+            t(
+              'generation_failed',
+              'Failed to generate posts, please try again.'
+            )
           );
         }
         const reader = response.body.getReader();
         const load = await generateStep(reader);
         if (!load?.content) {
           throw new Error(
-            t('generation_failed', 'Failed to generate posts, please try again.')
+            t(
+              'generation_failed',
+              'Failed to generate posts, please try again.'
+            )
           );
         }
         const messages = load.content.map((p: any, index: number) => {
@@ -162,8 +171,8 @@ const FirstStep: FC = (props) => {
               content: load.hook + '\n' + p.content,
               ...(p?.image?.path
                 ? {
-                  image: [p.image],
-                }
+                    image: [p.image],
+                  }
                 : {}),
             };
           }
@@ -171,8 +180,8 @@ const FirstStep: FC = (props) => {
             content: p.content,
             ...(p?.image?.path
               ? {
-                image: [p.image],
-              }
+                  image: [p.image],
+                }
               : {}),
           };
         });
@@ -197,7 +206,10 @@ const FirstStep: FC = (props) => {
       } catch (e: any) {
         toaster.show(
           e?.message ||
-          t('generation_failed', 'Failed to generate posts, please try again.'),
+            t(
+              'generation_failed',
+              'Failed to generate posts, please try again.'
+            ),
           'warning'
         );
       } finally {

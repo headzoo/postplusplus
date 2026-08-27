@@ -29,7 +29,8 @@ dayjs.extend(utc);
 )
 export class LinkedinPageProvider
   extends LinkedinProvider
-  implements SocialProvider {
+  implements SocialProvider
+{
   override identifier = 'linkedin-page';
   analyticsSnapshot = {
     capture: (request: ChannelAnalyticsCaptureRequest) =>
@@ -84,8 +85,8 @@ export class LinkedinPageProvider
   override profileUrl(integration: Integration) {
     return integration.profile
       ? `https://www.linkedin.com/company/${encodeURIComponent(
-        integration.profile
-      )}`
+          integration.profile
+        )}`
       : undefined;
   }
 
@@ -146,7 +147,7 @@ export class LinkedinPageProvider
     integration: Integration,
     originalIntegration: Integration,
     postId: string,
-    information: any,
+    information: any
   ) {
     return super.addComment(
       integration,
@@ -175,10 +176,11 @@ export class LinkedinPageProvider
   override async generateAuthUrl() {
     const state = makeId(6);
     const codeVerifier = makeId(30);
-    const url = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&prompt=none&client_id=${process.env.LINKEDIN_CLIENT_ID
-      }&redirect_uri=${encodeURIComponent(
-        `${process.env.FRONTEND_URL}/integrations/social/linkedin-page`
-      )}&state=${state}&scope=${encodeURIComponent(this.scopes.join(' '))}`;
+    const url = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&prompt=none&client_id=${
+      process.env.LINKEDIN_CLIENT_ID
+    }&redirect_uri=${encodeURIComponent(
+      `${process.env.FRONTEND_URL}/integrations/social/linkedin-page`
+    )}&state=${state}&scope=${encodeURIComponent(this.scopes.join(' '))}`;
     return {
       url,
       codeVerifier,
@@ -490,7 +492,9 @@ export class LinkedinPageProvider
   ): Promise<ChannelAnalyticsCapturePage> {
     const toDay = dayjs.utc(request.toDay || request.snapshotAt).startOf('day');
     const fromDay = dayjs
-      .utc(request.fromDay || dayjs.utc(request.snapshotAt).subtract(180, 'day'))
+      .utc(
+        request.fromDay || dayjs.utc(request.snapshotAt).subtract(180, 'day')
+      )
       .startOf('day');
     const endDate = toDay.unix() * 1000;
     const startDate = fromDay.unix() * 1000;
@@ -508,9 +512,7 @@ export class LinkedinPageProvider
         `organizationPageStatistics?q=organization&organization=${organization}&timeIntervals=${timeIntervals}`,
         `organizationalEntityFollowerStatistics?q=organizationalEntity&organizationalEntity=${organization}&timeIntervals=${timeIntervals}`,
         `organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${organization}&timeIntervals=${timeIntervals}`,
-      ].map((path) =>
-        fetch(`https://api.linkedin.com/v2/${path}`, { headers })
-      )
+      ].map((path) => fetch(`https://api.linkedin.com/v2/${path}`, { headers }))
     );
     const [page, followers, shares] = await Promise.all(
       responses.map((response) => response.json())
@@ -518,7 +520,7 @@ export class LinkedinPageProvider
     if (
       responses.some((response) => !response.ok) ||
       [page, followers, shares].some(
-        (body) => body?.serviceErrorCode || body?.message && !body?.elements
+        (body) => body?.serviceErrorCode || (body?.message && !body?.elements)
       )
     ) {
       throw new Error('LinkedIn analytics request failed');
@@ -626,7 +628,9 @@ export class LinkedinPageProvider
     // Fetch share statistics for the specific post
     const shareStatsUrl = `https://api.linkedin.com/v2/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${encodeURIComponent(
       `urn:li:organization:${integrationId}`
-    )}&shares=List(${encodeURIComponent(postId)})&timeIntervals=(timeRange:(start:${startDate},end:${endDate}),timeGranularityType:DAY)`;
+    )}&shares=List(${encodeURIComponent(
+      postId
+    )})&timeIntervals=(timeRange:(start:${startDate},end:${endDate}),timeGranularityType:DAY)`;
 
     const { elements: shareElements }: { elements: PostShareStatElement[] } =
       await (
@@ -766,7 +770,9 @@ export class LinkedinPageProvider
         commentsSummary,
       } = await (
         await this.fetch(
-          `https://api.linkedin.com/v2/socialActions/${encodeURIComponent(externalPostId)}`,
+          `https://api.linkedin.com/v2/socialActions/${encodeURIComponent(
+            externalPostId
+          )}`,
           {
             method: 'GET',
             headers: {
@@ -808,15 +814,18 @@ export class LinkedinPageProvider
     externalPostId: string
   ): Promise<PostRulesRemovePostResult> {
     try {
-      await this.fetch(`https://api.linkedin.com/rest/posts/${externalPostId}`, {
-        method: 'DELETE',
-        headers: {
-          'X-Restli-Protocol-Version': '2.0.0',
-          'Content-Type': 'application/json',
-          'LinkedIn-Version': '202601',
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
+      await this.fetch(
+        `https://api.linkedin.com/rest/posts/${externalPostId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'X-Restli-Protocol-Version': '2.0.0',
+            'Content-Type': 'application/json',
+            'LinkedIn-Version': '202601',
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
       return { status: 'removed' };
     } catch (err: any) {
       if (err?.status === 404) {

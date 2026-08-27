@@ -182,11 +182,7 @@ export const ResizableCopilotWindow: FC<WindowProps> = ({
   }, [adjustForMobile, handleClickOutside, handleKeyDown]);
 
   const handleResizePointerDown = useCallback(
-    (
-      event:
-        | ReactPointerEvent<Element>
-        | ReactMouseEvent<Element>
-    ) => {
+    (event: ReactPointerEvent<Element> | ReactMouseEvent<Element>) => {
       if (isMobileViewport || event.button !== 0 || resizingRef.current) {
         return;
       }
@@ -263,7 +259,11 @@ export const ResizableCopilotWindow: FC<WindowProps> = ({
 
   return (
     <div
-      className={clsx('copilotKitWindow', open && 'open', isResizing && 'select-none')}
+      className={clsx(
+        'copilotKitWindow',
+        open && 'open',
+        isResizing && 'select-none'
+      )}
       ref={windowRef}
       style={
         isMobileViewport

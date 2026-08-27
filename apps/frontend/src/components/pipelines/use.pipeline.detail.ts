@@ -11,7 +11,9 @@ export const usePipelineDetail = (id?: string) => {
   const fetch = useFetch();
 
   const load = useCallback(async () => {
-    return (await fetch(pipelineDetailKey(id!))).json() as Promise<PipelineDetail>;
+    return (
+      await fetch(pipelineDetailKey(id!))
+    ).json() as Promise<PipelineDetail>;
   }, [fetch, id]);
 
   return useSWR<PipelineDetail>(id ? pipelineDetailKey(id) : null, load, {

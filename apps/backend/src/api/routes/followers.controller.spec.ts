@@ -1,6 +1,6 @@
 jest.mock(
   '@gitroom/nestjs-libraries/database/prisma/integrations/integration.service',
-  () => ({ IntegrationService: class IntegrationService { } })
+  () => ({ IntegrationService: class IntegrationService {} })
 );
 
 import { FollowersController } from './followers.controller';
@@ -84,7 +84,12 @@ describe('FollowersController', () => {
     await expect(
       controller.getFollowers(org, user, 'channel-a', query)
     ).resolves.toEqual({ items: [], hasMore: false });
-    expect(service.getFollowers).toHaveBeenCalledWith(org, user, 'channel-a', query);
+    expect(service.getFollowers).toHaveBeenCalledWith(
+      org,
+      user,
+      'channel-a',
+      query
+    );
   });
 
   it('rejects combining listId with triage or audience', async () => {
@@ -100,14 +105,10 @@ describe('FollowersController', () => {
 
     await expect(validate(valid)).resolves.toHaveLength(0);
     await expect(validate(withTriage)).resolves.toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ property: 'listId' }),
-      ])
+      expect.arrayContaining([expect.objectContaining({ property: 'listId' })])
     );
     await expect(validate(withAudience)).resolves.toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ property: 'listId' }),
-      ])
+      expect.arrayContaining([expect.objectContaining({ property: 'listId' })])
     );
   });
 
@@ -117,7 +118,9 @@ describe('FollowersController', () => {
     const controllerWithLists = new FollowersController(service as any);
 
     await expect(
-      controllerWithLists.createFollowerList(org, user, 'channel-a', { name: 'VIP' })
+      controllerWithLists.createFollowerList(org, user, 'channel-a', {
+        name: 'VIP',
+      })
     ).resolves.toEqual(list);
     expect(service.createFollowerList).toHaveBeenCalledWith(
       org,
@@ -128,14 +131,16 @@ describe('FollowersController', () => {
   });
 
   it('accepts only the follower triage filter allowlist', async () => {
-    const valid = Object.assign(new FollowersQueryDto(), { triage: 'engaged_not_yet' });
-    const invalid = Object.assign(new FollowersQueryDto(), { triage: 'arbitrary' });
+    const valid = Object.assign(new FollowersQueryDto(), {
+      triage: 'engaged_not_yet',
+    });
+    const invalid = Object.assign(new FollowersQueryDto(), {
+      triage: 'arbitrary',
+    });
 
     await expect(validate(valid)).resolves.toHaveLength(0);
     await expect(validate(invalid)).resolves.toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ property: 'triage' }),
-      ])
+      expect.arrayContaining([expect.objectContaining({ property: 'triage' })])
     );
   });
 
@@ -178,7 +183,9 @@ describe('FollowersController', () => {
   });
 
   it('accepts the followed audience and rejects it combined with triage', async () => {
-    const valid = Object.assign(new FollowersQueryDto(), { audience: 'followed' });
+    const valid = Object.assign(new FollowersQueryDto(), {
+      audience: 'followed',
+    });
     const combined = Object.assign(new FollowersQueryDto(), {
       audience: 'followed',
       triage: 'hot_lead',
@@ -231,7 +238,9 @@ describe('FollowersController', () => {
     service.getFollowerMemberDetails.mockResolvedValue(detail);
 
     await expect(
-      controller.getFollowerMember(org, user, 'channel-a', { externalId: 'follower-a' })
+      controller.getFollowerMember(org, user, 'channel-a', {
+        externalId: 'follower-a',
+      })
     ).resolves.toEqual(detail);
     expect(service.getFollowerMemberDetails).toHaveBeenCalledWith(
       org,
@@ -478,9 +487,7 @@ describe('FollowersController', () => {
     });
 
     await expect(validate(leadWithoutReasons)).resolves.toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ property: 'reasons' }),
-      ])
+      expect.arrayContaining([expect.objectContaining({ property: 'reasons' })])
     );
     await expect(validate(leadWithReasons)).resolves.toHaveLength(0);
     await expect(validate(leadSnooze)).resolves.toHaveLength(0);
@@ -558,9 +565,7 @@ describe('FollowersController', () => {
     await expect(validate(validEngaged)).resolves.toHaveLength(0);
     await expect(validate(validCultivate)).resolves.toHaveLength(0);
     await expect(validate(invalid)).resolves.toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ property: 'triage' }),
-      ])
+      expect.arrayContaining([expect.objectContaining({ property: 'triage' })])
     );
   });
 

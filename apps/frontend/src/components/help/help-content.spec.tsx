@@ -150,7 +150,9 @@ describe('HelpContent', () => {
     } as ReturnType<typeof useHelpManifest>);
 
     render(<HelpContent open />);
-    expect(screen.getByText('Plan scheduled posts across channels.')).toBeTruthy();
+    expect(
+      screen.getByText('Plan scheduled posts across channels.')
+    ).toBeTruthy();
     expect(
       screen.queryByText(/Calendar Plan scheduled posts across channels/)
     ).toBeNull();
@@ -190,7 +192,9 @@ describe('HelpContent', () => {
     );
 
     expect(
-      await screen.findByText('That section could not be found in this article.')
+      await screen.findByText(
+        'That section could not be found in this article.'
+      )
     ).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Back' })).toBeTruthy();
   });
@@ -208,9 +212,9 @@ describe('HelpMarkdown', () => {
       />
     );
 
-    expect(screen.getByRole('heading', { name: 'Scheduling' }).getAttribute('id')).toBe(
-      'scheduling'
-    );
+    expect(
+      screen.getByRole('heading', { name: 'Scheduling' }).getAttribute('id')
+    ).toBe('scheduling');
     fireEvent.click(screen.getByRole('link', { name: 'Pipeline help' }));
     expect(onNavigate).toHaveBeenCalledWith('pipelines', 'queue');
 

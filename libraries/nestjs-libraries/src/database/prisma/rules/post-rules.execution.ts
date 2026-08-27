@@ -105,9 +105,7 @@ export const evaluatePostRuleConditions = (
   return {
     status: 'EVALUATED',
     matched:
-      conditionMatch === 'ALL'
-        ? results.every(Boolean)
-        : results.some(Boolean),
+      conditionMatch === 'ALL' ? results.every(Boolean) : results.some(Boolean),
   };
 };
 
@@ -229,7 +227,8 @@ export const orderPostGroupForRemoval = <T extends PostRuleGroupMember>(
   };
 
   return [...members].sort(
-    (first, second) => depth(second) - depth(first) || first.id.localeCompare(second.id)
+    (first, second) =>
+      depth(second) - depth(first) || first.id.localeCompare(second.id)
   );
 };
 

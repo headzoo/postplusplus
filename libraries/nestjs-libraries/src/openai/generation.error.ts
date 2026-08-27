@@ -38,5 +38,8 @@ export function generationError(err: any): HttpException {
 
   // Not a recognized safety rejection (e.g. an invalid-parameter 400) — return
   // a generic message rather than mislabeling it as a content-safety issue.
-  return new HttpException('AI generation failed, please try again later.', 500);
+  return new HttpException(
+    'AI generation failed, please try again later.',
+    500
+  );
 }

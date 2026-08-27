@@ -22,7 +22,10 @@ import { MastraService } from '@gitroom/nestjs-libraries/chat/mastra.service';
 import { Request, Response } from 'express';
 import { RequestContext } from '@mastra/core/di';
 import { CheckPolicies } from '@gitroom/backend/services/auth/permissions/permissions.ability';
-import { AuthorizationActions, Sections } from '@gitroom/backend/services/auth/permissions/permission.exception.class';
+import {
+  AuthorizationActions,
+  Sections,
+} from '@gitroom/backend/services/auth/permissions/permission.exception.class';
 import type { SelectedPipelineContext } from '@gitroom/nestjs-libraries/chat/load.tools.service';
 import {
   formatFollowerPageContext,
@@ -72,11 +75,11 @@ const isSelectedPipelineContext = (
   Array.isArray(value.channels) &&
   Array.isArray(value.contextDocuments);
 
-const isFollowerPageContext = (
-  value: unknown
-): value is FollowerPageContext =>
+const isFollowerPageContext = (value: unknown): value is FollowerPageContext =>
   isRecord(value) &&
-  (value.kind === 'list' || value.kind === 'detail' || value.kind === 'timeline') &&
+  (value.kind === 'list' ||
+    value.kind === 'detail' ||
+    value.kind === 'timeline') &&
   typeof value.route === 'string' &&
   isRecord(value.channel) &&
   typeof value.channel.id === 'string' &&

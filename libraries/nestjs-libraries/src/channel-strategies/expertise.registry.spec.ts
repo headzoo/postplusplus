@@ -61,7 +61,9 @@ describe('expertiseRegistry', () => {
         )
       ).toBe(true);
       expect(
-        definition.triageTags.every((tag) => TRIAGE_PIPELINE_KINDS.includes(tag))
+        definition.triageTags.every((tag) =>
+          TRIAGE_PIPELINE_KINDS.includes(tag)
+        )
       ).toBe(true);
     }
   });

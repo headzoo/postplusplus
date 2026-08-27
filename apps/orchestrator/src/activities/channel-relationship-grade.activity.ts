@@ -17,7 +17,7 @@ export class ChannelRelationshipGradeActivity {
     private _repository: ChannelInteractionRepository,
     private _channelInteractionService: ChannelInteractionService,
     private _adminScheduleLogService: AdminScheduleLogService
-  ) { }
+  ) {}
 
   @ActivityMethod()
   async listDueCandidates(after?: string, asOf?: string) {
@@ -63,11 +63,13 @@ export class ChannelRelationshipGradeActivity {
   }
 
   @ActivityMethod()
-  async listDueCandidatesV2(request: {
-    after?: string;
-    asOf?: string;
-    cadence?: RelationshipGradeScheduleConfig;
-  } = {}) {
+  async listDueCandidatesV2(
+    request: {
+      after?: string;
+      asOf?: string;
+      cadence?: RelationshipGradeScheduleConfig;
+    } = {}
+  ) {
     const snapshotAt = this.parseTimestamp(request.asOf, 'asOf');
     const result = await this._repository.listDueRelationshipGradeCandidates(
       snapshotAt,
@@ -112,7 +114,11 @@ export class ChannelRelationshipGradeActivity {
         );
       await this._adminScheduleLogService.append({
         scheduleKey: 'relationship-grades',
-        message: `Snapshot batch for channel ${request.candidate.id}: processed ${result.processed}${result.hasMore ? ' (more pending)' : ''}`,
+        message: `Snapshot batch for channel ${
+          request.candidate.id
+        }: processed ${result.processed}${
+          result.hasMore ? ' (more pending)' : ''
+        }`,
         meta: {
           integrationId: request.candidate.id,
           organizationId: request.candidate.organizationId,

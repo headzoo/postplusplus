@@ -383,7 +383,10 @@ export const useLaunchStore = create<StoreState>()((set) => ({
           if (item.integration.id === integrationId) {
             const targetIndex = direction === 'up' ? index - 1 : index + 1;
 
-            if (targetIndex < 0 || targetIndex >= item.integrationValue.length) {
+            if (
+              targetIndex < 0 ||
+              targetIndex >= item.integrationValue.length
+            ) {
               return item;
             }
 

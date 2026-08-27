@@ -68,13 +68,16 @@ export type ChannelDetails = {
 export const useChannelDetails = (integrationId?: string) => {
   const fetch = useFetch();
 
-  const load = useCallback(async (path: string) => {
-    const response = await fetch(path);
-    if (!response.ok) {
-      throw new Error('Failed to load channel details');
-    }
-    return (await response.json()) as ChannelDetails;
-  }, [fetch]);
+  const load = useCallback(
+    async (path: string) => {
+      const response = await fetch(path);
+      if (!response.ok) {
+        throw new Error('Failed to load channel details');
+      }
+      return (await response.json()) as ChannelDetails;
+    },
+    [fetch]
+  );
 
   return useSWR<ChannelDetails>(
     integrationId ? `/integrations/${integrationId}/channel-details` : null,

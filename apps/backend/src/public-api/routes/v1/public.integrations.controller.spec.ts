@@ -2,21 +2,36 @@ jest.mock('@gitroom/nestjs-libraries/integrations/integration.manager', () => ({
   IntegrationManager: class IntegrationManager {},
   socialIntegrationList: [],
 }));
-jest.mock('@gitroom/nestjs-libraries/database/prisma/posts/posts.service', () => ({
-  PostsService: class PostsService {},
-}));
-jest.mock('@gitroom/nestjs-libraries/database/prisma/media/media.service', () => ({
-  MediaService: class MediaService {},
-}));
-jest.mock('@gitroom/nestjs-libraries/database/prisma/notifications/notification.service', () => ({
-  NotificationService: class NotificationService {},
-}));
-jest.mock('@gitroom/nestjs-libraries/integrations/refresh.integration.service', () => ({
-  RefreshIntegrationService: class RefreshIntegrationService {},
-}));
-jest.mock('@gitroom/nestjs-libraries/database/prisma/conversions/conversion.service', () => ({
-  ConversionService: class ConversionService {},
-}));
+jest.mock(
+  '@gitroom/nestjs-libraries/database/prisma/posts/posts.service',
+  () => ({
+    PostsService: class PostsService {},
+  })
+);
+jest.mock(
+  '@gitroom/nestjs-libraries/database/prisma/media/media.service',
+  () => ({
+    MediaService: class MediaService {},
+  })
+);
+jest.mock(
+  '@gitroom/nestjs-libraries/database/prisma/notifications/notification.service',
+  () => ({
+    NotificationService: class NotificationService {},
+  })
+);
+jest.mock(
+  '@gitroom/nestjs-libraries/integrations/refresh.integration.service',
+  () => ({
+    RefreshIntegrationService: class RefreshIntegrationService {},
+  })
+);
+jest.mock(
+  '@gitroom/nestjs-libraries/database/prisma/conversions/conversion.service',
+  () => ({
+    ConversionService: class ConversionService {},
+  })
+);
 jest.mock('@sentry/nestjs', () => ({
   metrics: { count: jest.fn() },
 }));

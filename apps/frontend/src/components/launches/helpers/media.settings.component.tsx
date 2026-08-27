@@ -33,7 +33,7 @@ export const MediaSettingsLayout = () => {
       path: string;
       thumbnail: string;
       alt: string;
-    }) => { },
+    }) => {},
   } as any);
   useEffect(() => {
     postUrlEmitter.on(
@@ -93,14 +93,14 @@ export const useMediaSettings = () => {
 export const CreateThumbnail: FC<{
   onSelect: (blob: Blob, timestampMs: number) => void;
   media:
-  | {
-    id: string;
-    name: string;
-    path: string;
-    thumbnail?: string;
-    alt?: string;
-  }
-  | undefined;
+    | {
+        id: string;
+        name: string;
+        path: string;
+        thumbnail?: string;
+        alt?: string;
+      }
+    | undefined;
   altText?: string;
   onAltTextChange?: (altText: string) => void;
 }> = (props) => {
@@ -244,8 +244,9 @@ export const CreateThumbnail: FC<{
               onChange={handleSeek}
               className="w-full h-2 bg-fifth rounded-lg appearance-none cursor-pointer slider"
               style={{
-                background: `linear-gradient(to right, #4f46e5 0%, #4f46e5 ${(currentTime / duration) * 100
-                  }%, #374151 ${(currentTime / duration) * 100}%, #374151 100%)`,
+                background: `linear-gradient(to right, #4f46e5 0%, #4f46e5 ${
+                  (currentTime / duration) * 100
+                }%, #374151 ${(currentTime / duration) * 100}%, #374151 100%)`,
               }}
             />
             <div className="flex justify-between text-sm text-textColor">
@@ -302,15 +303,15 @@ export const MediaComponentInner: FC<{
     alt: string;
   }) => void;
   media:
-  | {
-    id: string;
-    name: string;
-    path: string;
-    thumbnail: string;
-    alt: string;
-    thumbnailTimestamp?: number;
-  }
-  | undefined;
+    | {
+        id: string;
+        name: string;
+        path: string;
+        thumbnail: string;
+        alt: string;
+        thumbnailTimestamp?: number;
+      }
+    | undefined;
 }> = (props) => {
   const { onClose, onSelect, media } = props;
   const setActivateExitButton = useLaunchStore((e) => e.setActivateExitButton);

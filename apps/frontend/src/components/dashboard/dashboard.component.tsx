@@ -66,12 +66,12 @@ const ChannelState = ({
       ? 'Analytics collection started. This may take a few minutes.'
       : 'No analytics data for this period'
     : channel.state === 'unsupported'
-      ? 'Analytics not supported'
-      : channel.state === 'unavailable'
-        ? 'Reconnect or refresh this channel to view analytics'
-        : channel.state === 'disabled'
-          ? 'Channel disabled'
-          : null;
+    ? 'Analytics not supported'
+    : channel.state === 'unavailable'
+    ? 'Reconnect or refresh this channel to view analytics'
+    : channel.state === 'disabled'
+    ? 'Channel disabled'
+    : null;
 
   if (!message) {
     return null;
@@ -109,60 +109,64 @@ const SortableAnalyticsCard: FC<{
   onReorderLocal,
   onDragEnd,
 }) => {
-    const metricKey = dashboardMetricIdentity(metric);
-    const [{ isDragging }, drag] = useDrag(
-      () => ({
-        type: dashboardStatDragType,
-        item: { id: metricKey, index },
-        end: () => {
-          onDragEnd();
-        },
-        collect: (monitor) => ({ isDragging: monitor.isDragging() }),
-      }),
-      [index, metricKey, onDragEnd]
-    );
-    const [, drop] = useDrop(
-      () => ({
-        accept: dashboardStatDragType,
-        hover: (dragged: { id: string; index: number; lastTargetId?: string }) => {
-          if (dragged.id === metricKey || dragged.lastTargetId === metricKey) {
-            return;
-          }
-          if (dragged.index !== index) {
-            onReorderLocal(dragged.index, index);
-            dragged.index = index;
-          }
-          dragged.lastTargetId = metricKey;
-        },
-        drop: () => {
-          onDragEnd();
-        },
-      }),
-      [index, metricKey, onDragEnd, onReorderLocal]
-    );
+  const metricKey = dashboardMetricIdentity(metric);
+  const [{ isDragging }, drag] = useDrag(
+    () => ({
+      type: dashboardStatDragType,
+      item: { id: metricKey, index },
+      end: () => {
+        onDragEnd();
+      },
+      collect: (monitor) => ({ isDragging: monitor.isDragging() }),
+    }),
+    [index, metricKey, onDragEnd]
+  );
+  const [, drop] = useDrop(
+    () => ({
+      accept: dashboardStatDragType,
+      hover: (dragged: {
+        id: string;
+        index: number;
+        lastTargetId?: string;
+      }) => {
+        if (dragged.id === metricKey || dragged.lastTargetId === metricKey) {
+          return;
+        }
+        if (dragged.index !== index) {
+          onReorderLocal(dragged.index, index);
+          dragged.index = index;
+        }
+        dragged.lastTargetId = metricKey;
+      },
+      drop: () => {
+        onDragEnd();
+      },
+    }),
+    [index, metricKey, onDragEnd, onReorderLocal]
+  );
 
-    return (
-      <div
-        // @ts-ignore react-dnd connector type
-        ref={(node) => {
-          drop(node);
+  return (
+    <div
+      // @ts-ignore react-dnd connector type
+      ref={(node) => {
+        drop(node);
+      }}
+    >
+      <AnalyticsCard
+        item={metric}
+        total={analyticsTotal(metric)}
+        index={index}
+        integrationId={integrationId}
+        onBarClick={onBarClick}
+        onRemove={onRemove}
+        isDragging={isDragging}
+        dragHandleRef={(node) => {
+          drag(node);
         }}
-      >
-        <AnalyticsCard
-          item={metric}
-          total={analyticsTotal(metric)}
-          index={index}
-          integrationId={integrationId}
-          onBarClick={onBarClick}
-          onRemove={onRemove}
-          isDragging={isDragging}
-          dragHandleRef={(node) => {
-            drag(node);
-          }}
-        />
-      </div>
-    );
-  };
+      />
+    </div>
+  );
+};
 
 const AddHiddenStatsButton: FC<{
   hiddenMetrics: DashboardAnalyticsMetric[];
@@ -237,10 +241,8 @@ export const Dashboard = () => {
     isLoading: integrationsLoading,
     mutate: mutateIntegrations,
   } = useIntegrationList();
-  const {
-    data: noticeStatus,
-    mutate: mutateNoticeStatus,
-  } = useIntegrationNoticeStatus();
+  const { data: noticeStatus, mutate: mutateNoticeStatus } =
+    useIntegrationNoticeStatus();
   const groupedIntegrations = useMemo(
     () => groupChannelsByCustomer(integrations),
     [integrations]
@@ -258,10 +260,7 @@ export const Dashboard = () => {
     setSelectedIntegrationId(nextId);
   }, [groupedIntegrations, integrations, selectedIntegrationId]);
 
-  const {
-    data: channels,
-    isLoading: analyticsLoading,
-  } = useDashboardAnalytics(
+  const { data: channels, isLoading: analyticsLoading } = useDashboardAnalytics(
     date,
     selectedIntegrationId,
     polling ? 15_000 : 0
@@ -303,7 +302,10 @@ export const Dashboard = () => {
 
   const layout = useMemo(() => {
     if (!selectedChannel || !selectedIntegrationId) {
-      return { visible: [] as DashboardAnalyticsMetric[], hidden: [] as DashboardAnalyticsMetric[] };
+      return {
+        visible: [] as DashboardAnalyticsMetric[],
+        hidden: [] as DashboardAnalyticsMetric[],
+      };
     }
     const applied = applyDashboardAnalyticsPreferences(
       selectedChannel.analytics,
@@ -397,7 +399,9 @@ export const Dashboard = () => {
   );
   const continueIntegration = useCallback(
     (integration: IntegrationListItem) => () => {
-      router.push(`/calendar?added=${integration.identifier}&continue=${integration.id}`);
+      router.push(
+        `/calendar?added=${integration.identifier}&continue=${integration.id}`
+      );
     },
     [router]
   );
@@ -548,7 +552,8 @@ export const Dashboard = () => {
                   </h2>
                   {selectedIntegration && (
                     <p className="text-[13px] text-newTableText truncate">
-                      {selectedIntegration.display || selectedIntegration.identifier}
+                      {selectedIntegration.display ||
+                        selectedIntegration.identifier}
                     </p>
                   )}
                 </div>
@@ -603,9 +608,9 @@ export const Dashboard = () => {
                       <div className="grid grid-cols-1 gap-[16px] sm:grid-cols-2 xl:grid-cols-3">
                         {layout.visible.map((metric, index) => (
                           <SortableAnalyticsCard
-                            key={`${selectedChannel.id}-${dashboardMetricIdentity(
-                              metric
-                            )}`}
+                            key={`${
+                              selectedChannel.id
+                            }-${dashboardMetricIdentity(metric)}`}
                             metric={metric}
                             index={index}
                             integrationId={selectedChannel.id}

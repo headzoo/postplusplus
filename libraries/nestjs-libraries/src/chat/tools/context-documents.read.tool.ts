@@ -16,16 +16,13 @@ const readContextDocumentInputSchema = z
       .optional()
       .describe('The exact context document name from listContextDocuments'),
   })
-  .refine(
-    (input) => Boolean(input.documentId) !== Boolean(input.name),
-    {
-      message: 'Provide exactly one of documentId or name.',
-    }
-  );
+  .refine((input) => Boolean(input.documentId) !== Boolean(input.name), {
+    message: 'Provide exactly one of documentId or name.',
+  });
 
 @Injectable()
 export class ContextDocumentReadTool implements AgentToolInterface {
-  constructor(private _contextDocumentService: ContextDocumentService) { }
+  constructor(private _contextDocumentService: ContextDocumentService) {}
   name = 'readContextDocument';
 
   run() {
@@ -66,13 +63,13 @@ Read only documents relevant to the user's request — do not read every documen
 
         const document = inputData.documentId
           ? await this._contextDocumentService.getDocumentById(
-            organizationId,
-            inputData.documentId
-          )
+              organizationId,
+              inputData.documentId
+            )
           : await this._contextDocumentService.getDocumentByName(
-            organizationId,
-            inputData.name!
-          );
+              organizationId,
+              inputData.name!
+            );
 
         return {
           output: {

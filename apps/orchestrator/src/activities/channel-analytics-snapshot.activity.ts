@@ -36,7 +36,7 @@ export class ChannelAnalyticsSnapshotActivity {
     private _integrationManager: IntegrationManager,
     private _refreshIntegrationService: RefreshIntegrationService,
     private _channelInteractionService: ChannelInteractionService
-  ) { }
+  ) {}
 
   @ActivityMethod()
   async listDueCandidates(after?: string) {
@@ -99,9 +99,7 @@ export class ChannelAnalyticsSnapshotActivity {
 
     if (page.kind === 'post_lifetime' && provider.postLikers) {
       const tweetIds = Array.from(
-        new Set<string>(
-          page.points.map((point) => point.externalPostId)
-        )
+        new Set<string>(page.points.map((point) => point.externalPostId))
       );
       if (tweetIds.length) {
         try {
@@ -122,8 +120,9 @@ export class ChannelAnalyticsSnapshotActivity {
           }
         } catch (error) {
           console.log(
-            `Failed to sync inbound likes for integration ${request.candidate.id}: ${error instanceof Error ? error.message : 'unknown error'
-            }`
+            `Failed to sync inbound likes for integration ${
+              request.candidate.id
+            }: ${error instanceof Error ? error.message : 'unknown error'}`
           );
         }
       }
@@ -196,9 +195,7 @@ export class ChannelAnalyticsSnapshotActivity {
     try {
       const toDay = utcDay(snapshotAt);
       const fromDay = new Date(toDay);
-      fromDay.setUTCDate(
-        fromDay.getUTCDate() - (CAPTURE_WINDOW_DAYS - 1)
-      );
+      fromDay.setUTCDate(fromDay.getUTCDate() - (CAPTURE_WINDOW_DAYS - 1));
       return await provider.analyticsSnapshot!.capture({
         integration: liveIntegration,
         accessToken: liveIntegration.token,

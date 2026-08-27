@@ -10,4 +10,3 @@ export class EmailNotificationsDto {
   @IsBoolean()
   sendStreakEmails: boolean;
 }
-

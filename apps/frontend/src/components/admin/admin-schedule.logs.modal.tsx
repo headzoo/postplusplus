@@ -142,7 +142,9 @@ export const AdminScheduleLogsModal: FC<{ keySlug: AdminScheduleLogSlug }> = ({
                       {row.level}
                     </span>
                   </div>
-                  <div className="whitespace-pre-wrap break-words">{row.message}</div>
+                  <div className="whitespace-pre-wrap break-words">
+                    {row.message}
+                  </div>
                   {meta ? (
                     <pre className="mt-[8px] text-[11px] bg-sixth p-[8px] rounded overflow-auto max-h-[20vh] whitespace-pre-wrap break-all opacity-80">
                       {meta}

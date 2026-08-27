@@ -25,7 +25,10 @@ export class PipelineManager {
     createdBy: 'API' | 'AUTOPOST' = 'API',
     idempotencyKey?: string
   ) {
-    const pipeline = await this._pipelineRepository.getPipeline(orgId, body.pipelineId);
+    const pipeline = await this._pipelineRepository.getPipeline(
+      orgId,
+      body.pipelineId
+    );
     if (!pipeline) {
       throw new NotFoundException('Pipeline not found');
     }
@@ -44,7 +47,9 @@ export class PipelineManager {
       .filter((item) => isActivePipelineIntegration(item.integration))
       .map((item) => item.integrationId)
       .sort();
-    const postChannels = body.post.posts.map((item) => item.integration.id).sort();
+    const postChannels = body.post.posts
+      .map((item) => item.integration.id)
+      .sort();
     if (
       pipelineChannels.length !== postChannels.length ||
       pipelineChannels.some((id, index) => id !== postChannels[index])
@@ -54,7 +59,10 @@ export class PipelineManager {
       );
     }
 
-    const validations = await this._postsService.validatePosts(orgId, body.post.posts);
+    const validations = await this._postsService.validatePosts(
+      orgId,
+      body.post.posts
+    );
     const invalid = validations.find(
       (validation: any) =>
         !validation.valid ||
@@ -64,7 +72,9 @@ export class PipelineManager {
     );
     if (invalid) {
       throw new BadRequestException(
-        `${invalid.name}: ${invalid.settingsError || invalid.errors || 'Invalid post'}`
+        `${invalid.name}: ${
+          invalid.settingsError || invalid.errors || 'Invalid post'
+        }`
       );
     }
 
@@ -123,7 +133,9 @@ export class PipelineManager {
 
   schedulePosts(orgId: string, postIds: string[], date: string) {
     return Promise.all(
-      postIds.map((id) => this._postsService.changeDate(orgId, id, date, 'schedule'))
+      postIds.map((id) =>
+        this._postsService.changeDate(orgId, id, date, 'schedule')
+      )
     );
   }
 
@@ -147,7 +159,8 @@ export class PipelineManager {
     );
     if (failedPostIds.length) {
       throw new ServiceUnavailableException({
-        message: 'Some scheduled posts could not start their publishing workflow',
+        message:
+          'Some scheduled posts could not start their publishing workflow',
         failedPostIds,
       });
     }

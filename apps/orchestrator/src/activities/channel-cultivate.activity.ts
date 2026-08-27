@@ -24,7 +24,7 @@ export class ChannelCultivateActivity {
     private _channelInteractionService: ChannelInteractionService,
     private _integrationService: IntegrationService,
     private _adminScheduleLogService: AdminScheduleLogService
-  ) { }
+  ) {}
 
   @ActivityMethod()
   async listDueCandidatesV1(request: { after?: string } = {}) {
@@ -177,9 +177,11 @@ export class ChannelCultivateActivity {
       }
       await this._adminScheduleLogService.append({
         scheduleKey: 'follower-cultivate',
-        message: `Cultivate picks for channel ${request.candidate.id}: stored=${result.pickCount
-          } candidates=${result.candidateCount} visible=${result.visibleCount ?? result.pickCount
-          }`,
+        message: `Cultivate picks for channel ${request.candidate.id}: stored=${
+          result.pickCount
+        } candidates=${result.candidateCount} visible=${
+          result.visibleCount ?? result.pickCount
+        }`,
         meta: {
           hour: result.hour,
           organizationId: request.candidate.organizationId,

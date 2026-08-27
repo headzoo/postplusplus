@@ -159,13 +159,7 @@ const getMcpConfig = (
   }
 };
 
-const CopyButton = ({
-  text,
-  label,
-}: {
-  text: string;
-  label: string;
-}) => {
+const CopyButton = ({ text, label }: { text: string; label: string }) => {
   const toaster = useToaster();
   return (
     <button
@@ -218,7 +212,10 @@ const McpSection = ({
 
   const maskedConfig = revealed
     ? config
-    : config.replace(new RegExp(user.publicApi.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), '*'.repeat(user.publicApi.length));
+    : config.replace(
+        new RegExp(user.publicApi.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
+        '*'.repeat(user.publicApi.length)
+      );
 
   const maskedRemoteUrl = revealed
     ? remoteUrl
@@ -244,7 +241,20 @@ const McpSection = ({
             href="https://docs.postplusplus.com/mcp/introduction"
             target="_blank"
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+              <polyline points="15 3 21 3 21 9" />
+              <line x1="10" y1="14" x2="21" y2="3" />
+            </svg>
             {t('read_the_docs', 'Docs')}
           </a>
         </div>
@@ -346,10 +356,7 @@ const McpSection = ({
               label={t('copy', 'Copy')}
             />
             {method === 'header' && (
-              <CopyButton
-                text={cliUrl}
-                label={t('copy_url', 'Copy URL')}
-              />
+              <CopyButton text={cliUrl} label={t('copy_url', 'Copy URL')} />
             )}
           </div>
         </div>
@@ -432,7 +439,20 @@ const CliSection = ({ apiKey }: { apiKey: string }) => {
             href="https://docs.postplusplus.com/cli/introduction"
             target="_blank"
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+              <polyline points="15 3 21 3 21 9" />
+              <line x1="10" y1="14" x2="21" y2="3" />
+            </svg>
             {t('read_the_docs', 'Docs')}
           </a>
         </div>
@@ -588,15 +608,41 @@ const PublicApiContent = () => {
               href="https://docs.postplusplus.com/public-api"
               target="_blank"
             >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
-            {t('read_the_docs', 'Docs')}
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+                <polyline points="15 3 21 3 21 9" />
+                <line x1="10" y1="14" x2="21" y2="3" />
+              </svg>
+              {t('read_the_docs', 'Docs')}
             </a>
             <a
               className="cursor-pointer px-[16px] h-[36px] bg-[#eb3825] hover:bg-[#c42e1e] text-white transition-colors rounded-[8px] text-[13px] font-[600] flex items-center gap-[6px]"
               href="https://www.npmjs.com/package/n8n-nodes-postiz"
               target="_blank"
             >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+                <polyline points="15 3 21 3 21 9" />
+                <line x1="10" y1="14" x2="21" y2="3" />
+              </svg>
               {t('n8n_node', 'N8N Node')}
             </a>
           </div>
@@ -745,9 +791,7 @@ export const PublicComponent = () => {
             )}
             onClick={() => setSubTab(tab)}
           >
-            {tab === 'api'
-              ? t('access', 'Access')
-              : t('apps', 'Apps')}
+            {tab === 'api' ? t('access', 'Access') : t('apps', 'Apps')}
           </button>
         ))}
       </div>

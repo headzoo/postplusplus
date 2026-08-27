@@ -1,5 +1,11 @@
 import { Type } from 'class-transformer';
-import { IsIn, IsNumber, IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  IsIn,
+  IsNumber,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class UpdateFollowerGradeDto {
   @IsString()

@@ -9,17 +9,20 @@ import { Textarea } from '@gitroom/react/form/textarea';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { LoadingComponent } from '@gitroom/frontend/components/layout/loading';
-import {
-  useDecisionModal,
-} from '@gitroom/frontend/components/layout/new-modal';
+import { useDecisionModal } from '@gitroom/frontend/components/layout/new-modal';
 import { FollowerRelationshipChart } from '@gitroom/frontend/components/followers/follower.relationship.chart';
-import { DismissTriageOptions, FollowerIdentityBadges } from '@gitroom/frontend/components/followers/follower.card';
+import {
+  DismissTriageOptions,
+  FollowerIdentityBadges,
+} from '@gitroom/frontend/components/followers/follower.card';
 import { RelationshipStars } from '@gitroom/frontend/components/followers/follower.relationship.stars';
 import { CustomScrollArea } from '@gitroom/frontend/components/ui/custom.scroll.area';
-import { ResetIcon, TimelineIcon, SparkleIcon } from '@gitroom/frontend/components/ui/icons';
 import {
-  launchFollowerCopilotChat,
-} from '@gitroom/frontend/components/followers/use.copilot.follower.assistant';
+  ResetIcon,
+  TimelineIcon,
+  SparkleIcon,
+} from '@gitroom/frontend/components/ui/icons';
+import { launchFollowerCopilotChat } from '@gitroom/frontend/components/followers/use.copilot.follower.assistant';
 import {
   ChannelInteractionKind,
   FollowerMemberDetail,
@@ -41,7 +44,10 @@ import { LeadFitDismissReason } from '@gitroom/nestjs-libraries/dtos/integration
 
 const INTERACTION_SENTENCE_LABELS: Record<
   ChannelInteractionKind,
-  { inbound: { key: string; defaultLabel: string }; outbound: { key: string; defaultLabel: string } }
+  {
+    inbound: { key: string; defaultLabel: string };
+    outbound: { key: string; defaultLabel: string };
+  }
 > = {
   like: {
     inbound: {
@@ -145,16 +151,17 @@ const InteractionRow: FC<{
 }> = ({ interaction }) => {
   const t = useT();
   const labels = INTERACTION_SENTENCE_LABELS[interaction.kind];
-  const direction = interaction.direction === 'inbound' ? 'inbound' : 'outbound';
+  const direction =
+    interaction.direction === 'inbound' ? 'inbound' : 'outbound';
   const sentence = labels?.[direction];
   const headline = sentence
     ? t(sentence.key, sentence.defaultLabel)
     : t(
-      `followers_interaction_${interaction.kind}_${direction}`,
-      interaction.direction === 'inbound'
-        ? `They ${interaction.kind} you`
-        : `You ${interaction.kind} them`
-    );
+        `followers_interaction_${interaction.kind}_${direction}`,
+        interaction.direction === 'inbound'
+          ? `They ${interaction.kind} you`
+          : `You ${interaction.kind} them`
+      );
   const timestamp = formatDate(interaction.timestamp);
 
   return (
@@ -213,7 +220,10 @@ const NoteCard: FC<{
       await onDelete(note.id);
     } catch {
       setError(
-        t('followers_note_delete_error', 'Could not delete this note. Try again.')
+        t(
+          'followers_note_delete_error',
+          'Could not delete this note. Try again.'
+        )
       );
     } finally {
       setIsPending(false);
@@ -238,10 +248,7 @@ const NoteCard: FC<{
           />
           {error && <p className="text-[13px] text-red-400">{error}</p>}
           <div className="flex gap-[8px]">
-            <Button
-              disabled={isPending || !draft.trim()}
-              onClick={handleSave}
-            >
+            <Button disabled={isPending || !draft.trim()} onClick={handleSave}>
               {t('save', 'Save')}
             </Button>
             <Button
@@ -337,8 +344,14 @@ const FollowerDetailContent: FC<{
     externalId,
     revalidateDetail
   );
-  const { ignoreTriage, followMember, addMember, removeMember, ignoreFollower, unignoreFollower } =
-    useFollowerListMutations(integrationId);
+  const {
+    ignoreTriage,
+    followMember,
+    addMember,
+    removeMember,
+    ignoreFollower,
+    unignoreFollower,
+  } = useFollowerListMutations(integrationId);
 
   const handleDismissTriage = useCallback(
     async (
@@ -355,7 +368,10 @@ const FollowerDetailContent: FC<{
           toast.show(
             error instanceof Error
               ? error.message
-              : t('followers_lead_follow_error', 'Could not follow this profile'),
+              : t(
+                  'followers_lead_follow_error',
+                  'Could not follow this profile'
+                ),
             'warning'
           );
         }
@@ -411,7 +427,8 @@ const FollowerDetailContent: FC<{
     () =>
       [...detail.notes].sort(
         (left, right) =>
-          new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()
+          new Date(right.createdAt).getTime() -
+          new Date(left.createdAt).getTime()
       ),
     [detail.notes]
   );
@@ -563,42 +580,46 @@ const FollowerDetailContent: FC<{
                   {handle}
                 </a>
               ) : (
-                <p className="text-[13px] text-textItemBlur truncate">{handle}</p>
+                <p className="text-[13px] text-textItemBlur truncate">
+                  {handle}
+                </p>
               ))}
             {(Number.isFinite(follower.followingCount) ||
               Number.isFinite(follower.followersCount) ||
               accountCreatedAt) && (
-                <div className="mt-[6px] grid grid-cols-1 gap-x-[20px] gap-y-[6px] text-[13px] sm:grid-cols-2 xl:grid-cols-3">
-                  {Number.isFinite(follower.followingCount) && (
-                    <span className="min-w-0">
-                      <span className="font-[700] text-newTextColor">
-                        {formatCompactCount(follower.followingCount!)}
-                      </span>{' '}
-                      <span className="text-textItemBlur">
-                        {t('followers_following_label', 'Following')}
-                      </span>
+              <div className="mt-[6px] grid grid-cols-1 gap-x-[20px] gap-y-[6px] text-[13px] sm:grid-cols-2 xl:grid-cols-3">
+                {Number.isFinite(follower.followingCount) && (
+                  <span className="min-w-0">
+                    <span className="font-[700] text-newTextColor">
+                      {formatCompactCount(follower.followingCount!)}
+                    </span>{' '}
+                    <span className="text-textItemBlur">
+                      {t('followers_following_label', 'Following')}
                     </span>
-                  )}
-                  {Number.isFinite(follower.followersCount) && (
-                    <span className="min-w-0">
-                      <span className="font-[700] text-newTextColor">
-                        {formatCompactCount(follower.followersCount!)}
-                      </span>{' '}
-                      <span className="text-textItemBlur">
-                        {t('followers_followers_label', 'Followers')}
-                      </span>
+                  </span>
+                )}
+                {Number.isFinite(follower.followersCount) && (
+                  <span className="min-w-0">
+                    <span className="font-[700] text-newTextColor">
+                      {formatCompactCount(follower.followersCount!)}
+                    </span>{' '}
+                    <span className="text-textItemBlur">
+                      {t('followers_followers_label', 'Followers')}
                     </span>
-                  )}
-                  {accountCreatedAt && (
-                    <span className="min-w-0">
-                      <span className="font-[700] text-newTextColor">
-                        {t('followers_joined_label', 'Joined')}
-                      </span>{' '}
-                      <span className="text-textItemBlur">{accountCreatedAt}</span>
+                  </span>
+                )}
+                {accountCreatedAt && (
+                  <span className="min-w-0">
+                    <span className="font-[700] text-newTextColor">
+                      {t('followers_joined_label', 'Joined')}
+                    </span>{' '}
+                    <span className="text-textItemBlur">
+                      {accountCreatedAt}
                     </span>
-                  )}
-                </div>
-              )}
+                  </span>
+                )}
+              </div>
+            )}
             {follower.bio && (
               <p className="mt-[8px] whitespace-pre-wrap break-words text-[13px] text-newTextColor">
                 {follower.bio}
@@ -644,49 +665,45 @@ const FollowerDetailContent: FC<{
       {(follower.botGrade != null ||
         follower.isBot != null ||
         follower.botConfidence != null) && (
-          <section className="flex flex-col gap-[8px] text-[13px] text-textItemBlur">
-            <h4 className="text-[16px] font-[600] text-newTextColor">
-              {t('followers_bot_classification', 'Bot classification')}
-            </h4>
-            <div className="flex max-w-full flex-wrap items-center gap-x-[8px] gap-y-[4px]">
-              <span className="min-w-0 max-w-full break-words">
-                {follower.isBot === true
-                  ? t('followers_bot_status_likely', 'Likely bot')
-                  : follower.isBot === false
-                    ? t('followers_bot_status_unlikely', 'Likely human')
-                    : t('followers_bot_status_uncertain', 'Not enough data')}
-              </span>
-              {follower.botGrade != null && (
-                <>
-                  <span aria-hidden="true" className="shrink-0">
-                    ·
-                  </span>
-                  <span className="min-w-0 max-w-full break-words">
-                    {t('followers_bot_grade_label', 'Grade {{grade}} of 5', {
-                      grade: String(follower.botGrade),
-                    })}
-                  </span>
-                </>
-              )}
-              {follower.botConfidence != null && (
-                <>
-                  <span aria-hidden="true" className="shrink-0">
-                    ·
-                  </span>
-                  <span className="min-w-0 max-w-full break-words">
-                    {t(
-                      'followers_bot_confidence_label',
-                      'Confidence {{pct}}%',
-                      {
-                        pct: String(Math.round(follower.botConfidence * 100)),
-                      }
-                    )}
-                  </span>
-                </>
-              )}
-            </div>
-          </section>
-        )}
+        <section className="flex flex-col gap-[8px] text-[13px] text-textItemBlur">
+          <h4 className="text-[16px] font-[600] text-newTextColor">
+            {t('followers_bot_classification', 'Bot classification')}
+          </h4>
+          <div className="flex max-w-full flex-wrap items-center gap-x-[8px] gap-y-[4px]">
+            <span className="min-w-0 max-w-full break-words">
+              {follower.isBot === true
+                ? t('followers_bot_status_likely', 'Likely bot')
+                : follower.isBot === false
+                ? t('followers_bot_status_unlikely', 'Likely human')
+                : t('followers_bot_status_uncertain', 'Not enough data')}
+            </span>
+            {follower.botGrade != null && (
+              <>
+                <span aria-hidden="true" className="shrink-0">
+                  ·
+                </span>
+                <span className="min-w-0 max-w-full break-words">
+                  {t('followers_bot_grade_label', 'Grade {{grade}} of 5', {
+                    grade: String(follower.botGrade),
+                  })}
+                </span>
+              </>
+            )}
+            {follower.botConfidence != null && (
+              <>
+                <span aria-hidden="true" className="shrink-0">
+                  ·
+                </span>
+                <span className="min-w-0 max-w-full break-words">
+                  {t('followers_bot_confidence_label', 'Confidence {{pct}}%', {
+                    pct: String(Math.round(follower.botConfidence * 100)),
+                  })}
+                </span>
+              </>
+            )}
+          </div>
+        </section>
+      )}
 
       <section className="flex min-w-0 flex-col gap-[12px]">
         <div className="grid grid-cols-1 gap-[16px] sm:grid-cols-3">
@@ -755,9 +772,7 @@ const FollowerDetailContent: FC<{
             )}
           </div>
         </div>
-        {scoreError && (
-          <p className="text-[13px] text-red-400">{scoreError}</p>
-        )}
+        {scoreError && <p className="text-[13px] text-red-400">{scoreError}</p>}
         {current && (
           <div className="flex flex-col gap-[8px]">
             <div className="flex flex-wrap items-center gap-x-[12px] gap-y-[6px] text-[13px] text-textItemBlur">
@@ -766,7 +781,8 @@ const FollowerDetailContent: FC<{
                   'followers_grade_snapshot',
                   'Snapshot {{date}} · {{days}}-day window',
                   {
-                    date: formatShortDate(current.snapshotAt) || current.snapshotAt,
+                    date:
+                      formatShortDate(current.snapshotAt) || current.snapshotAt,
                     days: detail.relationship.windowDays,
                   }
                 )}
@@ -790,7 +806,9 @@ const FollowerDetailContent: FC<{
                   gap:
                     current.reciprocationScore - current.effortScore >= 0
                       ? `+${current.reciprocationScore - current.effortScore}`
-                      : String(current.reciprocationScore - current.effortScore),
+                      : String(
+                          current.reciprocationScore - current.effortScore
+                        ),
                 }
               )}
             </p>
@@ -850,7 +868,10 @@ const FollowerDetailContent: FC<{
           <CustomScrollArea maxHeight="300px">
             <ul className="flex flex-col gap-[8px]">
               {detail.interactions.map((interaction) => (
-                <InteractionRow key={interaction.id} interaction={interaction} />
+                <InteractionRow
+                  key={interaction.id}
+                  interaction={interaction}
+                />
               ))}
             </ul>
           </CustomScrollArea>

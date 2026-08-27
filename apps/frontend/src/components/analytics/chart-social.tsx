@@ -46,8 +46,7 @@ export const downsampleAnalyticsPoints = (
     const row = sorted.slice(index, index + chunkSize);
     const first = row[0];
     const last = row[row.length - 1];
-    const date =
-      row.length === 1 ? first.date : `${first.date} - ${last.date}`;
+    const date = row.length === 1 ? first.date : `${first.date} - ${last.date}`;
 
     let total: number;
     if (valueMode === 'sum') {
@@ -198,8 +197,7 @@ export const ChartSocial: FC<{
             borderColor: colors.border,
             borderWidth: chartType === 'line' ? 2 : 0,
             label: 'Total',
-            backgroundColor:
-              chartType === 'line' ? gradient : colors.start,
+            backgroundColor: chartType === 'line' ? gradient : colors.start,
             fill: chartType === 'line',
             data: list.map((row) => row.total),
             tension: 0.4,

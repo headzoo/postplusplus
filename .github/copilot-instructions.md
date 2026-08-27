@@ -1,7 +1,7 @@
-
 # Copilot Coding Agent Instructions for Postiz
 
 ## Project Architecture
+
 - Monorepo managed by NX, with apps in `apps/` and shared code in `libraries/`.
 - Main services: `frontend` (Next.js), `backend` (NestJS), `cron`, `commands`, `extension`, `sdk`, and `workers`.
 - Data layer uses Prisma ORM (`libraries/nestjs-libraries/src/database/prisma/schema.prisma`) with PostgreSQL as the default database.
@@ -10,6 +10,7 @@
 - Social login integrations (Instagram, Facebook) and Make.com/N8N integrations.
 
 ## Developer Workflows
+
 - Use Node.js 20.17.0 and pnpm 8+.
 - Install dependencies: `pnpm install`
 - Build all apps: `pnpm run build`
@@ -20,6 +21,7 @@
 - Docker: `docker compose -f ./docker-compose.dev.yaml up -d`
 
 ## Conventions & Patterns
+
 - Use conventional commits (`feat:`, `fix:`, `chore:`).
 - PRs should include clear descriptions, related issue links, and UI screenshots/GIFs if relevant.
 - Comments are required for complex logic.
@@ -28,11 +30,13 @@
 - Make sure to keep the `.env.example` file updated with new environment variables.
 
 ## Integration Points
+
 - External APIs: Social media (Instagram, Facebook), Make.com, N8N, Resend, Stripe, etc.
 - SDK (`apps/sdk`) provides programmatic access to Postiz features.
 - Extension (`apps/extension`) is built with Vite, React, TypeScript, and Tailwind CSS.
 
 ## Key Files & Directories
+
 - `apps/` — Main services and applications
 - `libraries/` — Shared code and modules
 - `docker-compose.dev.yaml` — Local development Docker setup
@@ -43,6 +47,7 @@
 - `libraries/nestjs-libraries/src/database/prisma/schema.prisma` — Database schema
 
 ## Documentation
+
 - Main docs: https://docs.postiz.com/
 - Developer guide: https://docs.postiz.com/developer-guide
 - Public API: https://docs.postiz.com/public-api
@@ -63,7 +68,7 @@ The Sentry initialization needs to be updated to enable the logs feature.
 ### Baseline
 
 ```javascript
-import * as Sentry from "@sentry/nextjs";
+import * as Sentry from '@sentry/nextjs';
 
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
@@ -79,7 +84,7 @@ Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
   integrations: [
     // send console.log, console.error, and console.warn calls as logs to Sentry
-    Sentry.consoleLoggingIntegration({ levels: ["log", "error", "warn"] }),
+    Sentry.consoleLoggingIntegration({ levels: ['log', 'error', 'warn'] }),
   ],
 });
 ```
@@ -89,23 +94,23 @@ Sentry.init({
 `logger.fmt` is a template literal function that should be used to bring variables into the structured logs.
 
 ```javascript
-import * as Sentry from "@sentry/nextjs";
+import * as Sentry from '@sentry/nextjs';
 
 const { logger } = Sentry;
 
-logger.trace("Starting database connection", { database: "users" });
+logger.trace('Starting database connection', { database: 'users' });
 logger.debug(logger.fmt`Cache miss for user: ${userId}`);
-logger.info("Updated profile", { profileId: 345 });
-logger.warn("Rate limit reached for endpoint", {
-  endpoint: "/api/results/",
+logger.info('Updated profile', { profileId: 345 });
+logger.warn('Rate limit reached for endpoint', {
+  endpoint: '/api/results/',
   isEnterprise: false,
 });
-logger.error("Failed to process payment", {
-  orderId: "order_123",
+logger.error('Failed to process payment', {
+  orderId: 'order_123',
   amount: 99.99,
 });
-logger.fatal("Database connection pool exhausted", {
-  database: "users",
+logger.fatal('Database connection pool exhausted', {
+  database: 'users',
   activeConnections: 100,
 });
 ```
@@ -113,4 +118,3 @@ logger.fatal("Database connection pool exhausted", {
 ---
 
 For questions or unclear conventions, check the main README or ask for clarification in your PR description.
-

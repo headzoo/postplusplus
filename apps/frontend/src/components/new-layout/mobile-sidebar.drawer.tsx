@@ -46,7 +46,9 @@ export const MobileSidebarDrawer: FC<{
         tabIndex={open ? 0 : -1}
         className={clsx(
           'absolute inset-0 bg-primary/80 transition-opacity duration-200',
-          open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+          open
+            ? 'opacity-100 pointer-events-auto'
+            : 'opacity-0 pointer-events-none'
         )}
       />
       <aside

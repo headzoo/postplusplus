@@ -19,7 +19,9 @@ type CopilotAssistantPopupProps = {
   children?: ReactNode;
 };
 
-export const CopilotAssistantPopup: FC<CopilotAssistantPopupProps> = (props) => {
+export const CopilotAssistantPopup: FC<CopilotAssistantPopupProps> = (
+  props
+) => {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -30,10 +32,7 @@ export const CopilotAssistantPopup: FC<CopilotAssistantPopupProps> = (props) => 
     return null;
   }
 
-  return createPortal(
-    <CopilotAssistantPopupChat {...props} />,
-    document.body
-  );
+  return createPortal(<CopilotAssistantPopupChat {...props} />, document.body);
 };
 
 const CopilotAssistantPopupChat: FC<CopilotAssistantPopupProps> = ({
@@ -52,8 +51,8 @@ const CopilotAssistantPopupChat: FC<CopilotAssistantPopupProps> = ({
     conversationStarted && suggestions !== undefined
       ? { suggestions: [] as SuggestionItem[] }
       : suggestions?.length
-        ? { suggestions }
-        : {};
+      ? { suggestions }
+      : {};
 
   return (
     <CopilotPopup

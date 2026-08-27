@@ -28,7 +28,7 @@ export class HotMaterializationScheduleService {
   constructor(
     private _temporalService: TemporalService,
     private _adminScheduleLogService: AdminScheduleLogService
-  ) { }
+  ) {}
 
   async install() {
     try {
@@ -149,7 +149,10 @@ export class HotMaterializationScheduleService {
       });
     } catch (error) {
       if (!this.isAlreadyRunning(error)) {
-        this._logger.error('Failed to create Hot materialization schedule', error);
+        this._logger.error(
+          'Failed to create Hot materialization schedule',
+          error
+        );
         await this._adminScheduleLogService.append({
           scheduleKey: 'hot-triage',
           level: 'ERROR',
@@ -169,7 +172,9 @@ export class HotMaterializationScheduleService {
 
   private mapStatus(
     description: Awaited<
-      ReturnType<ReturnType<HotMaterializationScheduleService['getHandle']>['describe']>
+      ReturnType<
+        ReturnType<HotMaterializationScheduleService['getHandle']>['describe']
+      >
     >,
     exists: boolean
   ): HotMaterializationScheduleStatus {
@@ -204,9 +209,7 @@ export class HotMaterializationScheduleService {
       return undefined;
     }
     if ('cadence' in value) {
-      return this.cadenceFromUnknown(
-        (value as { cadence?: unknown }).cadence
-      );
+      return this.cadenceFromUnknown((value as { cadence?: unknown }).cadence);
     }
     return value as Partial<HotMaterializationScheduleConfig>;
   }

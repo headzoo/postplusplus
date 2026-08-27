@@ -47,9 +47,7 @@ export const groupChannelsByCustomer = (
     ).map((values) => ({
       id: values[0].customer?.id || '',
       name: values[0].customer?.name || '',
-      position: values[0].customer?.id
-        ? values[0].customer?.position ?? 0
-        : -1,
+      position: values[0].customer?.id ? values[0].customer?.position ?? 0 : -1,
       values: orderBy(
         values,
         ['type', 'disabled', 'identifier'],
@@ -118,10 +116,7 @@ export const ChannelsSidebar = ({
   const { billingEnabled } = useVariables();
   const t = useT();
   const [collapseMenu, setCollapseMenu] = useCookie('collapseMenu', '0');
-  const [hideSidebar, setHideSidebar] = useCookie(
-    'channelsSidebarHidden',
-    '1'
-  );
+  const [hideSidebar, setHideSidebar] = useCookie('channelsSidebarHidden', '1');
   const [mode] = useCookie('mode', 'dark');
   const [mounted, setMounted] = useState(false);
   const collapsed = collapseMenu === '1';
@@ -148,7 +143,7 @@ export const ChannelsSidebar = ({
               'mobile:fixed mobile:z-[520] mobile:bottom-0',
               collapsed ? 'w-[100px]' : 'w-[260px]',
               mobileHidden &&
-              'mobile:-translate-x-full mobile:rtl:translate-x-full mobile:pointer-events-none'
+                'mobile:-translate-x-full mobile:rtl:translate-x-full mobile:pointer-events-none'
             )}
           >
             <div className="bg-newBgColorInner p-[20px] flex flex-col gap-[15px] h-full overflow-x-hidden overflow-y-auto scrollbar scrollbar-thumb-fifth scrollbar-track-newBgColor mobile:shadow-lg">
@@ -319,159 +314,161 @@ const ChannelMenuRow: FC<
   selectedIds,
   onSelect,
 }) => {
-    const user = useUser();
-    const canDrag = enableDrag;
-    const [{ }, drag, dragPreview] = useDrag(
-      () => ({
-        type: 'menu',
-        item: { id: integration.id },
-        canDrag,
-      }),
-      [canDrag, integration.id]
-    );
-    const totalNonDisabledChannels = useMemo(
-      () => integrations.filter((item) => !item.disabled).length,
-      [integrations]
-    );
-    const unreadCount = noticeStatuses?.[integration.id]?.unreadCount || 0;
-    const isUnselected =
-      !!selectedIds && !selectedIds.includes(integration.id);
-    const showMenu = !!mutate && !!onUpdate && !!onRefreshChannel;
+  const user = useUser();
+  const canDrag = enableDrag;
+  const [{}, drag, dragPreview] = useDrag(
+    () => ({
+      type: 'menu',
+      item: { id: integration.id },
+      canDrag,
+    }),
+    [canDrag, integration.id]
+  );
+  const totalNonDisabledChannels = useMemo(
+    () => integrations.filter((item) => !item.disabled).length,
+    [integrations]
+  );
+  const unreadCount = noticeStatuses?.[integration.id]?.unreadCount || 0;
+  const isUnselected = !!selectedIds && !selectedIds.includes(integration.id);
+  const showMenu = !!mutate && !!onUpdate && !!onRefreshChannel;
 
-    const handleRowClick = () => {
-      if (onSelect) {
-        onSelect(integration);
-        return;
-      }
-      if (integration.refreshNeeded && onRefreshChannel) {
-        onRefreshChannel(integration)();
-      }
-    };
+  const handleRowClick = () => {
+    if (onSelect) {
+      onSelect(integration);
+      return;
+    }
+    if (integration.refreshNeeded && onRefreshChannel) {
+      onRefreshChannel(integration)();
+    }
+  };
 
-    const handleOverlayClick = (event: MouseEvent<HTMLDivElement>) => {
-      event.stopPropagation();
-      if (integration.refreshNeeded) {
-        onRefreshChannel?.(integration)();
-        return;
-      }
-      onContinueIntegration?.(integration)();
-    };
+  const handleOverlayClick = (event: MouseEvent<HTMLDivElement>) => {
+    event.stopPropagation();
+    if (integration.refreshNeeded) {
+      onRefreshChannel?.(integration)();
+      return;
+    }
+    onContinueIntegration?.(integration)();
+  };
 
-    return (
-      <div
-        ref={(node) => {
-          if (canDrag) {
-            dragPreview(node);
-          }
-        }}
-        onClick={onSelect || integration.refreshNeeded ? handleRowClick : undefined}
-        {...(integration.refreshNeeded &&
-          !onSelect && {
+  return (
+    <div
+      ref={(node) => {
+        if (canDrag) {
+          dragPreview(node);
+        }
+      }}
+      onClick={
+        onSelect || integration.refreshNeeded ? handleRowClick : undefined
+      }
+      {...(integration.refreshNeeded &&
+        !onSelect && {
           'data-tooltip-id': 'tooltip',
           'data-tooltip-content': 'Channel disconnected, click to reconnect.',
         })}
-        {...(collapsed && {
-          'data-tooltip-id': 'tooltip',
-          'data-tooltip-content': integration.name,
-        })}
+      {...(collapsed && {
+        'data-tooltip-id': 'tooltip',
+        'data-tooltip-content': integration.name,
+      })}
+      className={clsx(
+        'flex gap-[12px] items-center py-2 bg-newBgColorInner hover:bg-boxHover group/profile transition-all rounded-[8px]',
+        (onSelect || integration.refreshNeeded) && 'cursor-pointer',
+        isUnselected && 'opacity-20 hover:opacity-100',
+        !showMenu && 'group-[.sidebar]:justify-center'
+      )}
+    >
+      <div
         className={clsx(
-          'flex gap-[12px] items-center py-2 bg-newBgColorInner hover:bg-boxHover group/profile transition-all rounded-[8px]',
-          (onSelect || integration.refreshNeeded) && 'cursor-pointer',
-          isUnselected && 'opacity-20 hover:opacity-100',
-          !showMenu && 'group-[.sidebar]:justify-center'
+          'relative gap-[6px] flex justify-center items-center',
+          integration.disabled && 'opacity-50'
         )}
       >
-        <div
-          className={clsx(
-            'relative gap-[6px] flex justify-center items-center',
-            integration.disabled && 'opacity-50'
+        {(integration.inBetweenSteps || integration.refreshNeeded) &&
+          (onRefreshChannel || onContinueIntegration) && (
+            <div
+              className="absolute start-0 top-0 w-[39px] h-[46px] cursor-pointer"
+              onClick={handleOverlayClick}
+            >
+              <div className="bg-red-500 w-[15px] h-[15px] rounded-full start-[5px] top-[5px] absolute z-[200] text-[10px] flex justify-center items-center">
+                !
+              </div>
+              <div className="bg-primary/60 w-[39px] h-[46px] start-0 top-0 absolute rounded-full z-[199]" />
+            </div>
           )}
-        >
-          {(integration.inBetweenSteps || integration.refreshNeeded) &&
-            (onRefreshChannel || onContinueIntegration) && (
-              <div
-                className="absolute start-0 top-0 w-[39px] h-[46px] cursor-pointer"
-                onClick={handleOverlayClick}
-              >
-                <div className="bg-red-500 w-[15px] h-[15px] rounded-full start-[5px] top-[5px] absolute z-[200] text-[10px] flex justify-center items-center">
-                  !
-                </div>
-                <div className="bg-primary/60 w-[39px] h-[46px] start-0 top-0 absolute rounded-full z-[199]" />
-              </div>
-            )}
-          {unreadCount > 0 &&
-            !integration.inBetweenSteps &&
-            !integration.refreshNeeded && (
-              <div
-                className="absolute z-[200] start-[26px] top-[-2px] min-w-[16px] h-[16px] px-[4px] rounded-full bg-[#FF3EA2] text-[10px] text-white flex items-center justify-center border border-fifth"
-                data-tooltip-id="tooltip"
-                data-tooltip-content={`${unreadCount} unread notice${unreadCount === 1 ? '' : 's'
-                  }`}
-              >
-                {unreadCount > 99 ? '99+' : unreadCount}
-              </div>
-            )}
-          <ImageWithFallback
-            fallbackSrc="/no-picture.jpg"
-            src={integration.picture || '/no-picture.jpg'}
-            className="rounded-[8px] min-w-[36px] min-h-[36px]"
-            alt={integration.identifier}
-            width={36}
-            height={36}
-          />
-          <SafeImage
-            src={`/icons/platforms/${integration.identifier}.png`}
-            className="rounded-[8px] absolute z-[3] bottom-[5px] -end-[5px] border border-fifth"
-            alt={integration.identifier}
-            width={18}
-            height={18}
-          />
-        </div>
-        <div
-          ref={(node) => {
-            if (canDrag) {
-              drag(node);
-            }
-          }}
-          {...(integration.disabled &&
-            totalNonDisabledChannels === user?.totalChannels
-            ? {
+        {unreadCount > 0 &&
+          !integration.inBetweenSteps &&
+          !integration.refreshNeeded && (
+            <div
+              className="absolute z-[200] start-[26px] top-[-2px] min-w-[16px] h-[16px] px-[4px] rounded-full bg-[#FF3EA2] text-[10px] text-white flex items-center justify-center border border-fifth"
+              data-tooltip-id="tooltip"
+              data-tooltip-content={`${unreadCount} unread notice${
+                unreadCount === 1 ? '' : 's'
+              }`}
+            >
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </div>
+          )}
+        <ImageWithFallback
+          fallbackSrc="/no-picture.jpg"
+          src={integration.picture || '/no-picture.jpg'}
+          className="rounded-[8px] min-w-[36px] min-h-[36px]"
+          alt={integration.identifier}
+          width={36}
+          height={36}
+        />
+        <SafeImage
+          src={`/icons/platforms/${integration.identifier}.png`}
+          className="rounded-[8px] absolute z-[3] bottom-[5px] -end-[5px] border border-fifth"
+          alt={integration.identifier}
+          width={18}
+          height={18}
+        />
+      </div>
+      <div
+        ref={(node) => {
+          if (canDrag) {
+            drag(node);
+          }
+        }}
+        {...(integration.disabled &&
+        totalNonDisabledChannels === user?.totalChannels
+          ? {
               'data-tooltip-id': 'tooltip',
               'data-tooltip-content':
                 'This channel is disabled, please upgrade your plan to enable it.',
             }
-            : {})}
-          role={canDrag ? 'handle' : undefined}
-          className={clsx(
-            'group-[.sidebar]:hidden flex-1 min-w-0 whitespace-nowrap text-ellipsis overflow-hidden',
-            canDrag && 'cursor-move',
-            integration.disabled && 'opacity-50'
-          )}
-        >
-          {integration.name}
-        </div>
-        {showMenu && (
-          <Menu
-            canChangeProfilePicture={integration.changeProfilePicture}
-            canChangeNickName={integration.changeNickName}
-            integration={integration}
-            integrations={integrations}
-            refreshChannel={onRefreshChannel}
-            mutate={mutate}
-            onChange={onUpdate}
-            onPostSuccess={mutate}
-            canEnable={
-              user?.totalChannels! > totalNonDisabledChannels &&
-              integration.disabled
-            }
-            canDisable={!integration.disabled}
-            hasUnreadNotices={unreadCount > 0}
-            onClearNotices={onClearNotices}
-          />
+          : {})}
+        role={canDrag ? 'handle' : undefined}
+        className={clsx(
+          'group-[.sidebar]:hidden flex-1 min-w-0 whitespace-nowrap text-ellipsis overflow-hidden',
+          canDrag && 'cursor-move',
+          integration.disabled && 'opacity-50'
         )}
+      >
+        {integration.name}
       </div>
-    );
-  };
+      {showMenu && (
+        <Menu
+          canChangeProfilePicture={integration.changeProfilePicture}
+          canChangeNickName={integration.changeNickName}
+          integration={integration}
+          integrations={integrations}
+          refreshChannel={onRefreshChannel}
+          mutate={mutate}
+          onChange={onUpdate}
+          onPostSuccess={mutate}
+          canEnable={
+            user?.totalChannels! > totalNonDisabledChannels &&
+            integration.disabled
+          }
+          canDisable={!integration.disabled}
+          hasUnreadNotices={unreadCount > 0}
+          onClearNotices={onClearNotices}
+        />
+      )}
+    </div>
+  );
+};
 
 const CustomerGroupMenu: FC<{
   canMoveUp: boolean;
@@ -577,104 +574,107 @@ const ChannelMenuGroup: FC<
   onRenameGroup,
   ...props
 }) => {
-    const t = useT();
-    const modal = useModals();
-    const [isOpen, setIsOpen] = useState(
-      () =>
-        typeof window === 'undefined' ||
-        !!+(localStorage.getItem(`${group.name}_isOpen`) || '1')
-    );
-    const [{ isOver }, drop] = useDrop(
-      () => ({
-        accept: 'menu',
-        canDrop: () => !!onGroupChange,
-        drop: (item: { id: string }) => onGroupChange?.(item.id, group.id),
-        collect: (monitor) => ({
-          isOver: !!monitor.isOver() && !!monitor.canDrop(),
-        }),
+  const t = useT();
+  const modal = useModals();
+  const [isOpen, setIsOpen] = useState(
+    () =>
+      typeof window === 'undefined' ||
+      !!+(localStorage.getItem(`${group.name}_isOpen`) || '1')
+  );
+  const [{ isOver }, drop] = useDrop(
+    () => ({
+      accept: 'menu',
+      canDrop: () => !!onGroupChange,
+      drop: (item: { id: string }) => onGroupChange?.(item.id, group.id),
+      collect: (monitor) => ({
+        isOver: !!monitor.isOver() && !!monitor.canDrop(),
       }),
-      [onGroupChange, group.id]
-    );
-    const changeOpenClose = useCallback(() => {
-      setIsOpen((open) => {
-        localStorage.setItem(`${group.name}_isOpen`, open ? '0' : '1');
-        return !open;
-      });
-    }, [group.name]);
+    }),
+    [onGroupChange, group.id]
+  );
+  const changeOpenClose = useCallback(() => {
+    setIsOpen((open) => {
+      localStorage.setItem(`${group.name}_isOpen`, open ? '0' : '1');
+      return !open;
+    });
+  }, [group.name]);
 
-    const openRename = useCallback(() => {
-      modal.openModal({
-        title: t('rename_group', 'Rename group'),
-        classNames: {
-          modal: 'md',
-        },
-        children: (
-          <CustomerRenameModal
-            name={group.name}
-            onSave={(name) => onRenameGroup(group.id, name)}
-          />
-        ),
-      });
-    }, [group.id, group.name, modal, onRenameGroup, t]);
+  const openRename = useCallback(() => {
+    modal.openModal({
+      title: t('rename_group', 'Rename group'),
+      classNames: {
+        modal: 'md',
+      },
+      children: (
+        <CustomerRenameModal
+          name={group.name}
+          onSave={(name) => onRenameGroup(group.id, name)}
+        />
+      ),
+    });
+  }, [group.id, group.name, modal, onRenameGroup, t]);
 
-    return (
-      <div
-        className="gap-[8px] flex flex-col relative"
-        ref={(node) => {
-          drop(node);
-        }}
-      >
-        {isOver && (
-          <div className="absolute start-0 top-0 w-full h-full pointer-events-none">
-            <div className="bg-white/30 w-full h-full p-[8px] box-content rounded-md" />
-          </div>
-        )}
-        {!!group.name && (
-          <div className="flex items-center justify-between gap-[4px]">
-            <button
-              className="flex flex-1 min-w-0 items-center gap-[5px] cursor-pointer text-start"
-              onClick={changeOpenClose}
-              type="button"
-            >
-              <span className="shrink-0">
-                <OpenClose isOpen={isOpen} />
-              </span>
-              <span
-                className="min-w-0 flex-1 truncate"
-                {...(collapsed && {
-                  'data-tooltip-id': 'tooltip',
-                  'data-tooltip-content': group.name,
-                })}
-              >
-                {group.name}
-              </span>
-            </button>
-            {!collapsed && (
-              <CustomerGroupMenu
-                canMoveUp={groupIndex > 0}
-                canMoveDown={groupIndex < namedGroupCount - 1}
-                onMove={(direction) => onReorderGroup(group.id, direction)}
-                onRename={openRename}
-              />
-            )}
-          </div>
-        )}
-        <div
-          className={clsx('gap-[12px] flex flex-col relative', !isOpen && 'hidden')}
-        >
-          {group.values.map((integration) => (
-            <ChannelMenuRow
-              {...props}
-              collapsed={collapsed}
-              enableDrag={!!onGroupChange}
-              key={integration.id}
-              integration={integration}
-            />
-          ))}
+  return (
+    <div
+      className="gap-[8px] flex flex-col relative"
+      ref={(node) => {
+        drop(node);
+      }}
+    >
+      {isOver && (
+        <div className="absolute start-0 top-0 w-full h-full pointer-events-none">
+          <div className="bg-white/30 w-full h-full p-[8px] box-content rounded-md" />
         </div>
+      )}
+      {!!group.name && (
+        <div className="flex items-center justify-between gap-[4px]">
+          <button
+            className="flex flex-1 min-w-0 items-center gap-[5px] cursor-pointer text-start"
+            onClick={changeOpenClose}
+            type="button"
+          >
+            <span className="shrink-0">
+              <OpenClose isOpen={isOpen} />
+            </span>
+            <span
+              className="min-w-0 flex-1 truncate"
+              {...(collapsed && {
+                'data-tooltip-id': 'tooltip',
+                'data-tooltip-content': group.name,
+              })}
+            >
+              {group.name}
+            </span>
+          </button>
+          {!collapsed && (
+            <CustomerGroupMenu
+              canMoveUp={groupIndex > 0}
+              canMoveDown={groupIndex < namedGroupCount - 1}
+              onMove={(direction) => onReorderGroup(group.id, direction)}
+              onRename={openRename}
+            />
+          )}
+        </div>
+      )}
+      <div
+        className={clsx(
+          'gap-[12px] flex flex-col relative',
+          !isOpen && 'hidden'
+        )}
+      >
+        {group.values.map((integration) => (
+          <ChannelMenuRow
+            {...props}
+            collapsed={collapsed}
+            enableDrag={!!onGroupChange}
+            key={integration.id}
+            integration={integration}
+          />
+        ))}
       </div>
-    );
-  };
+    </div>
+  );
+};
 
 export const ChannelMenu: FC<ChannelMenuProps & { collapsed: boolean }> = ({
   integrations,
@@ -732,9 +732,9 @@ export const ChannelMenu: FC<ChannelMenuProps & { collapsed: boolean }> = ({
           (current || integrations).map((integration) =>
             integration.customer?.id === customerId
               ? {
-                ...integration,
-                customer: { ...integration.customer, name },
-              }
+                  ...integration,
+                  customer: { ...integration.customer, name },
+                }
               : integration
           ),
         { revalidate: true }

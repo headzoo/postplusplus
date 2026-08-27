@@ -48,7 +48,11 @@ describe('channelInteractionMaintenanceWorkflowV1', () => {
 
     await channelInteractionMaintenanceWorkflowV1({
       after: 'before',
-      followerSync: { candidate, generation: 'generation', cursor: 'current-page' },
+      followerSync: {
+        candidate,
+        generation: 'generation',
+        cursor: 'current-page',
+      },
     });
 
     expect(fetchAndApplyFollowerPage).toHaveBeenCalledWith({
@@ -75,7 +79,10 @@ describe('channelInteractionMaintenanceWorkflowV1', () => {
       followerSync: { candidate, generation: 'generation' },
     });
 
-    expect(abortFollowerSync).toHaveBeenCalledWith({ candidate, generation: 'generation' });
+    expect(abortFollowerSync).toHaveBeenCalledWith({
+      candidate,
+      generation: 'generation',
+    });
     expect(completeFollowerSync).not.toHaveBeenCalled();
     expect(rebuildWindow).toHaveBeenCalledTimes(4);
     expect(continueAsNew).toHaveBeenCalledWith({ after: candidate.id });
@@ -83,8 +90,14 @@ describe('channelInteractionMaintenanceWorkflowV1', () => {
 
   it('starts a follower generation after reconciling one candidate', async () => {
     listCandidates.mockResolvedValue({ candidates: [candidate] });
-    reconcileSubscriptions.mockResolvedValue({ supported: true, state: 'active' });
-    beginFollowerSync.mockResolvedValue({ supported: true, generation: 'generation' });
+    reconcileSubscriptions.mockResolvedValue({
+      supported: true,
+      state: 'active',
+    });
+    beginFollowerSync.mockResolvedValue({
+      supported: true,
+      generation: 'generation',
+    });
 
     await channelInteractionMaintenanceWorkflowV1({ after: 'before' });
 
@@ -116,7 +129,10 @@ describe('channelInteractionMaintenanceWorkflowV1', () => {
 
     await channelInteractionMaintenanceWorkflowV1();
 
-    expect(condition).toHaveBeenCalledWith(expect.any(Function), 60 * 60 * 1000);
+    expect(condition).toHaveBeenCalledWith(
+      expect.any(Function),
+      60 * 60 * 1000
+    );
     expect(setHandler).toHaveBeenCalled();
     expect(continueAsNew).toHaveBeenCalledWith({});
   });
@@ -161,7 +177,11 @@ describe('channelInteractionMaintenanceWorkflowV2', () => {
 
     await channelInteractionMaintenanceWorkflowV2({
       after: 'before',
-      followerSync: { candidate, generation: 'generation', cursor: 'current-page' },
+      followerSync: {
+        candidate,
+        generation: 'generation',
+        cursor: 'current-page',
+      },
     });
 
     expect(fetchAndApplyFollowerPage).toHaveBeenCalledWith({

@@ -49,6 +49,6 @@ export class MediumSettingsDto {
   @ArrayMaxSize(4)
   @IsOptional()
   @ValidateNested({ each: true })
-  @Type(p => MediumTagsSettings)
+  @Type((p) => MediumTagsSettings)
   tags: MediumTagsSettings[];
 }

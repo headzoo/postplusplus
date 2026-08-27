@@ -59,8 +59,8 @@ export class FacebookProvider extends SocialAbstract implements SocialProvider {
     return integration.profile
       ? `https://www.facebook.com/${encodeURIComponent(integration.profile)}`
       : integration.internalId
-        ? `https://www.facebook.com/${encodeURIComponent(integration.internalId)}`
-        : undefined;
+      ? `https://www.facebook.com/${encodeURIComponent(integration.internalId)}`
+      : undefined;
   }
 
   dto = FacebookDto;
@@ -135,7 +135,7 @@ export class FacebookProvider extends SocialAbstract implements SocialProvider {
       return {
         type: 'bad-body' as const,
         value: 'Invalid file',
-      }
+      };
     }
 
     if (body.indexOf('1404102') > -1) {
@@ -1023,7 +1023,9 @@ export class FacebookProvider extends SocialAbstract implements SocialProvider {
   ): Promise<ChannelAnalyticsCapturePage> {
     const toDay = dayjs.utc(request.toDay || request.snapshotAt).startOf('day');
     const fromDay = dayjs
-      .utc(request.fromDay || dayjs.utc(request.snapshotAt).subtract(180, 'day'))
+      .utc(
+        request.fromDay || dayjs.utc(request.snapshotAt).subtract(180, 'day')
+      )
       .startOf('day');
     const until = toDay.endOf('day').unix();
     const since = fromDay.unix();
@@ -1096,7 +1098,11 @@ export class FacebookProvider extends SocialAbstract implements SocialProvider {
         : [];
     });
 
-    if (!points.some((point: { metricKey: string }) => point.metricKey === 'followers')) {
+    if (
+      !points.some(
+        (point: { metricKey: string }) => point.metricKey === 'followers'
+      )
+    ) {
       try {
         const pageResponse = await fetch(
           `https://graph.facebook.com/v23.0/${pageId}?fields=followers_count&access_token=${accessToken}`

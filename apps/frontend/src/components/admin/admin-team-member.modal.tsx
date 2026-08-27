@@ -38,7 +38,7 @@ const AddTeamMemberModal: FC<{ close: () => void }> = ({ close }) => {
         if (!response.ok) {
           toast.show(
             (await response.json()).message ||
-            t('could_not_add_member', 'Could not add the member'),
+              t('could_not_add_member', 'Could not add the member'),
             'warning'
           );
           return;

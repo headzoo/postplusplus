@@ -28,16 +28,12 @@ export const useContextDocumentContent = (id: string, skillSlug?: string) => {
     return response.json() as Promise<ContextDocumentContent>;
   }, [fetch, key]);
 
-  return useSWR<ContextDocumentContent>(
-    id ? key : null,
-    load,
-    {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-      revalidateIfStale: false,
-      revalidateOnMount: true,
-      refreshWhenHidden: false,
-      refreshWhenOffline: false,
-    }
-  );
+  return useSWR<ContextDocumentContent>(id ? key : null, load, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    revalidateIfStale: false,
+    revalidateOnMount: true,
+    refreshWhenHidden: false,
+    refreshWhenOffline: false,
+  });
 };

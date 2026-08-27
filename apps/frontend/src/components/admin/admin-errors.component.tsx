@@ -225,7 +225,11 @@ export const AdminErrorsComponent: FC = () => {
     (row: ErrorRow) => {
       copy(
         JSON.stringify(
-          { message: safeParse(row.message), body: safeParse(row.body), meta: row },
+          {
+            message: safeParse(row.message),
+            body: safeParse(row.body),
+            meta: row,
+          },
           null,
           2
         )
@@ -362,9 +366,7 @@ export const AdminErrorsComponent: FC = () => {
                 <div>
                   <span
                     className={
-                      isUnknown
-                        ? 'text-red-400 font-[600]'
-                        : 'opacity-90'
+                      isUnknown ? 'text-red-400 font-[600]' : 'opacity-90'
                     }
                   >
                     {row.platform}

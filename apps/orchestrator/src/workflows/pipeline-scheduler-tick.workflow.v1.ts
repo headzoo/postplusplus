@@ -1,11 +1,6 @@
 import { PipelineActivity } from '@gitroom/orchestrator/activities/pipeline.activity';
-import {
-  PipelineSlotWorkflowV1Request,
-} from '@gitroom/nestjs-libraries/database/prisma/pipelines/pipeline.execution';
-import {
-  proxyActivities,
-  startChild,
-} from '@temporalio/workflow';
+import { PipelineSlotWorkflowV1Request } from '@gitroom/nestjs-libraries/database/prisma/pipelines/pipeline.execution';
+import { proxyActivities, startChild } from '@temporalio/workflow';
 import { WorkflowIdReusePolicy } from '@temporalio/common';
 import { pipelineSlotWorkflowV2 } from './pipeline-workflows/pipeline.slot.workflow.v2';
 

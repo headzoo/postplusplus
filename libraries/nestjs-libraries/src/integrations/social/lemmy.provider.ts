@@ -144,7 +144,9 @@ export class LemmyProvider extends SocialAbstract implements SocialProvider {
     }
   }
 
-  private async getJwtAndService(integration: Integration): Promise<{ jwt: string; service: string }> {
+  private async getJwtAndService(
+    integration: Integration
+  ): Promise<{ jwt: string; service: string }> {
     const body = JSON.parse(
       AuthService.fixedDecryption(integration.customInstanceDetails!)
     );

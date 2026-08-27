@@ -21,9 +21,7 @@ export const OnboardingModal: FC<OnboardingModalProps> = ({ onClose }) => {
 
   return (
     <div className="w-full min-h-full flex-1 p-[40px] flex relative">
-      <style>
-        {`#support-discord {display: none}`}
-      </style>
+      <style>{`#support-discord {display: none}`}</style>
       <div className="flex flex-1 bg-newBgColorInner rounded-[20px] flex-col relative">
         <button
           className="outline-none absolute end-[20px] top-[20px] mantine-UnstyledButton-root mantine-ActionIcon-root hover:bg-tableBorder cursor-pointer mantine-Modal-close mantine-1dcetaa"

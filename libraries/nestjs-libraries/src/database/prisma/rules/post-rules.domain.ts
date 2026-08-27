@@ -137,11 +137,13 @@ export const validatePostRuleDefinition = (
   }
 
   if (input.action === 'AUTO_PLUG') {
-    const content = (input.actionConfig as { content?: string } | null)?.content;
+    const content = (input.actionConfig as { content?: string } | null)
+      ?.content;
     if (!content || content.trim().length < 3) {
       issues.push({
         property: 'actionConfig.content',
-        message: 'AUTO_PLUG requires actionConfig.content with at least 3 characters',
+        message:
+          'AUTO_PLUG requires actionConfig.content with at least 3 characters',
       });
     }
   }

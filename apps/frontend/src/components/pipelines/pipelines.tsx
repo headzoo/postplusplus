@@ -1,12 +1,23 @@
 'use client';
 
-import { FC, KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  FC,
+  KeyboardEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useRouter } from 'next/navigation';
 import clsx from 'clsx';
 import { useClickOutside } from '@mantine/hooks';
 import { Button } from '@gitroom/react/form/button';
 import { Slider } from '@gitroom/react/form/slider';
-import { useModals, useDecisionModal } from '@gitroom/frontend/components/layout/new-modal';
+import {
+  useModals,
+  useDecisionModal,
+} from '@gitroom/frontend/components/layout/new-modal';
 import { LoadingComponent } from '@gitroom/frontend/components/layout/loading';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
@@ -28,7 +39,10 @@ import {
   ChannelMenu,
   ChannelsSidebar,
 } from '@gitroom/frontend/components/launches/channels.sidebar';
-import { setLastChannelId, resolveChannelId } from '@gitroom/frontend/components/launches/helpers/last-channel';
+import {
+  setLastChannelId,
+  resolveChannelId,
+} from '@gitroom/frontend/components/launches/helpers/last-channel';
 import {
   IntegrationListItem,
   useIntegrationList,
@@ -137,13 +151,12 @@ const PipelineListCard: FC<{
                 </span>
               )}
               <span className={pipelineMetaChipClass}>
-                <span className="font-[600] text-textColor">{pipeline.queueCount}</span>
+                <span className="font-[600] text-textColor">
+                  {pipeline.queueCount}
+                </span>
                 {` ${t('queued', 'queued')}`}
               </span>
-              <span
-                className={pipelineMetaChipClass}
-                title={pipeline.timezone}
-              >
+              <span className={pipelineMetaChipClass} title={pipeline.timezone}>
                 {formatPipelineTimezoneLabel(pipeline.timezone)}
               </span>
               <span
@@ -271,7 +284,12 @@ export const Pipelines: FC = () => {
         classNames: {
           modal: 'w-[100%] max-w-[760px] text-textColor',
         },
-        children: <PipelineEditModal pipelineId={pipeline.id} onSaved={() => mutate()} />,
+        children: (
+          <PipelineEditModal
+            pipelineId={pipeline.id}
+            onSaved={() => mutate()}
+          />
+        ),
       });
     },
     [modal, mutate, t]
@@ -284,7 +302,10 @@ export const Pipelines: FC = () => {
         await setPipelineStatus(pipeline.id, value === 'on');
         await mutate();
       } catch (err: any) {
-        toaster.show(err?.message || 'Failed to update Pipeline status.', 'warning');
+        toaster.show(
+          err?.message || 'Failed to update Pipeline status.',
+          'warning'
+        );
       } finally {
         setPendingId(null);
       }
@@ -296,7 +317,13 @@ export const Pipelines: FC = () => {
     (pipeline: PipelineSummary) => async () => {
       const approved = await decision.open({
         title: t('delete_pipeline', 'Delete Pipeline?'),
-        description: `Deleting "${pipeline.name}" will remove the Pipeline schedule. ${pipeline.queueCount} queued item${pipeline.queueCount === 1 ? '' : 's'} will be preserved as drafts in your calendar — no content will be deleted.`,
+        description: `Deleting "${
+          pipeline.name
+        }" will remove the Pipeline schedule. ${
+          pipeline.queueCount
+        } queued item${
+          pipeline.queueCount === 1 ? '' : 's'
+        } will be preserved as drafts in your calendar — no content will be deleted.`,
         approveLabel: t('delete_pipeline_confirm', 'Delete Pipeline'),
         cancelLabel: t('cancel', 'Cancel'),
       });
@@ -307,7 +334,10 @@ export const Pipelines: FC = () => {
       try {
         await deletePipeline(pipeline.id);
         toaster.show(
-          t('pipeline_deleted_successfully', 'Pipeline deleted. Queued posts were kept as drafts.'),
+          t(
+            'pipeline_deleted_successfully',
+            'Pipeline deleted. Queued posts were kept as drafts.'
+          ),
           'success'
         );
         await mutate();
@@ -358,14 +388,20 @@ export const Pipelines: FC = () => {
 
         {error && (
           <div className="rounded-[12px] border border-red-500/30 bg-newBgColor px-[16px] py-[12px] text-[14px] text-red-500">
-            {t('pipelines_load_error', 'Failed to load Pipelines. Please refresh and try again.')}
+            {t(
+              'pipelines_load_error',
+              'Failed to load Pipelines. Please refresh and try again.'
+            )}
           </div>
         )}
 
         <div className="flex justify-between items-center gap-[12px] flex-wrap">
           <div className="flex items-center gap-[10px] flex-wrap">
             <Button onClick={openCreate}>{t('create', '+ Create')}</Button>
-            <Button secondary onClick={() => router.push('/pipelines/schedule')}>
+            <Button
+              secondary
+              onClick={() => router.push('/pipelines/schedule')}
+            >
               {t('pipeline_schedule', 'Schedule')}
             </Button>
           </div>
@@ -387,10 +423,7 @@ export const Pipelines: FC = () => {
         ) : !visiblePipelines.length ? (
           <div className="rounded-[12px] border border-newBorder bg-newBgColor p-[32px] flex flex-col items-center justify-center gap-[12px] text-center">
             <div className="text-[18px] font-[600]">
-              {t(
-                'no_pipelines_for_channel',
-                'No Pipelines for this channel'
-              )}
+              {t('no_pipelines_for_channel', 'No Pipelines for this channel')}
             </div>
             <div className="text-[14px] opacity-70 max-w-[520px]">
               {t(

@@ -1,14 +1,11 @@
 jest.mock(
   '@gitroom/nestjs-libraries/database/prisma/pipelines/pipeline.service',
   () => ({
-    PipelineService: class PipelineService { },
+    PipelineService: class PipelineService {},
   })
 );
 
-import {
-  BadRequestException,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ContextDocumentRepository } from '@gitroom/nestjs-libraries/database/prisma/context-documents/context-document.repository';
 import { ContextDocumentService } from '@gitroom/nestjs-libraries/database/prisma/context-documents/context-document.service';
 import { PipelineService } from '@gitroom/nestjs-libraries/database/prisma/pipelines/pipeline.service';
@@ -223,7 +220,9 @@ describe('pipeline context document tools', () => {
           updatedAt: updatedAt.toISOString(),
         },
       ]);
-      expect(result.output[0].contextDocuments[0]).not.toHaveProperty('content');
+      expect(result.output[0].contextDocuments[0]).not.toHaveProperty(
+        'content'
+      );
       expect(pipelineService.getPipelines).toHaveBeenCalledWith(organizationId);
     });
   });
@@ -234,16 +233,14 @@ describe('pipeline context document tools', () => {
 
     it('reads an attached document by id', async () => {
       const service = createContextDocumentService();
-      jest
-        .spyOn(service, 'getAttachedDocumentForPipeline')
-        .mockResolvedValue({
-          id: sampleDocument.id,
-          name: sampleDocument.name,
-          content: sampleDocument.content,
-          fileSize: sampleDocument.fileSize,
-          updatedAt: sampleDocument.updatedAt,
-          isLarge: false,
-        });
+      jest.spyOn(service, 'getAttachedDocumentForPipeline').mockResolvedValue({
+        id: sampleDocument.id,
+        name: sampleDocument.name,
+        content: sampleDocument.content,
+        fileSize: sampleDocument.fileSize,
+        updatedAt: sampleDocument.updatedAt,
+        isLarge: false,
+      });
 
       const tool = createReadTool(service);
       const result = await tool.execute!(
@@ -270,16 +267,14 @@ describe('pipeline context document tools', () => {
 
     it('reads an attached document by exact name', async () => {
       const service = createContextDocumentService();
-      jest
-        .spyOn(service, 'getAttachedDocumentForPipeline')
-        .mockResolvedValue({
-          id: sampleDocument.id,
-          name: sampleDocument.name,
-          content: sampleDocument.content,
-          fileSize: sampleDocument.fileSize,
-          updatedAt: sampleDocument.updatedAt,
-          isLarge: false,
-        });
+      jest.spyOn(service, 'getAttachedDocumentForPipeline').mockResolvedValue({
+        id: sampleDocument.id,
+        name: sampleDocument.name,
+        content: sampleDocument.content,
+        fileSize: sampleDocument.fileSize,
+        updatedAt: sampleDocument.updatedAt,
+        isLarge: false,
+      });
 
       const tool = createReadTool(service);
       const result = await tool.execute!(
@@ -300,10 +295,7 @@ describe('pipeline context document tools', () => {
 
     it('validates selector input before calling the service', async () => {
       const service = createContextDocumentService();
-      const getAttached = jest.spyOn(
-        service,
-        'getAttachedDocumentForPipeline'
-      );
+      const getAttached = jest.spyOn(service, 'getAttachedDocumentForPipeline');
       const tool = createReadTool(service);
 
       const missingSelector = await tool.execute!(
@@ -338,7 +330,9 @@ describe('pipeline context document tools', () => {
       const service = createContextDocumentService();
       jest
         .spyOn(service, 'getAttachedDocumentForPipeline')
-        .mockRejectedValue(new NotFoundException('Context document not found.'));
+        .mockRejectedValue(
+          new NotFoundException('Context document not found.')
+        );
 
       const tool = createReadTool(service);
 
@@ -355,16 +349,14 @@ describe('pipeline context document tools', () => {
 
     it('uses the authenticated organization id from request context', async () => {
       const service = createContextDocumentService();
-      jest
-        .spyOn(service, 'getAttachedDocumentForPipeline')
-        .mockResolvedValue({
-          id: sampleDocument.id,
-          name: sampleDocument.name,
-          content: sampleDocument.content,
-          fileSize: sampleDocument.fileSize,
-          updatedAt: sampleDocument.updatedAt,
-          isLarge: false,
-        });
+      jest.spyOn(service, 'getAttachedDocumentForPipeline').mockResolvedValue({
+        id: sampleDocument.id,
+        name: sampleDocument.name,
+        content: sampleDocument.content,
+        fileSize: sampleDocument.fileSize,
+        updatedAt: sampleDocument.updatedAt,
+        isLarge: false,
+      });
 
       const tool = createReadTool(service);
       const otherOrgId = 'org-2';
@@ -386,17 +378,15 @@ describe('pipeline context document tools', () => {
     it('propagates large-document warnings in tool output', async () => {
       const service = createContextDocumentService();
       const warning = 'This document is large.';
-      jest
-        .spyOn(service, 'getAttachedDocumentForPipeline')
-        .mockResolvedValue({
-          id: sampleDocument.id,
-          name: sampleDocument.name,
-          content: sampleDocument.content,
-          fileSize: CONTEXT_DOCUMENT_LARGE_WARNING_BYTES,
-          updatedAt: sampleDocument.updatedAt,
-          isLarge: true,
-          warning,
-        });
+      jest.spyOn(service, 'getAttachedDocumentForPipeline').mockResolvedValue({
+        id: sampleDocument.id,
+        name: sampleDocument.name,
+        content: sampleDocument.content,
+        fileSize: CONTEXT_DOCUMENT_LARGE_WARNING_BYTES,
+        updatedAt: sampleDocument.updatedAt,
+        isLarge: true,
+        warning,
+      });
 
       const tool = createReadTool(service);
       const result = await tool.execute!(

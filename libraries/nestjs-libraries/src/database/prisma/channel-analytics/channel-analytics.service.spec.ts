@@ -1,5 +1,5 @@
 jest.mock('@gitroom/nestjs-libraries/integrations/integration.manager', () => ({
-  IntegrationManager: class IntegrationManager { },
+  IntegrationManager: class IntegrationManager {},
   socialIntegrationList: [],
 }));
 
@@ -27,7 +27,9 @@ describe('ChannelAnalyticsService', () => {
     recordFailure: jest.fn(),
     getDailyPoints: jest.fn().mockResolvedValue([]),
     getLatestDailyPoints: jest.fn().mockResolvedValue([]),
-    findOwnedIntegration: jest.fn().mockResolvedValue({ id: 'integration', type: 'social' }),
+    findOwnedIntegration: jest
+      .fn()
+      .mockResolvedValue({ id: 'integration', type: 'social' }),
     getSyncState: jest.fn().mockResolvedValue(null),
   });
 
@@ -124,7 +126,12 @@ describe('ChannelAnalyticsService', () => {
         value: decimal(9),
       },
     ]);
-    const result = await createService(repository).getWindow('org', 'integration', 7, new Date('2026-08-14T12:00:00.000Z'));
+    const result = await createService(repository).getWindow(
+      'org',
+      'integration',
+      7,
+      new Date('2026-08-14T12:00:00.000Z')
+    );
     expect(
       result.metrics.map(({ metricKey, total }) => ({ metricKey, total }))
     ).toEqual([
@@ -153,7 +160,12 @@ describe('ChannelAnalyticsService', () => {
         value: decimal(2),
       },
     ]);
-    const result = await createService(repository).getWindow('org', 'integration', 7, new Date('2026-08-14T12:00:00.000Z'));
+    const result = await createService(repository).getWindow(
+      'org',
+      'integration',
+      7,
+      new Date('2026-08-14T12:00:00.000Z')
+    );
     expect(result.metrics[0].trend).toBeNull();
   });
 
@@ -180,7 +192,12 @@ describe('ChannelAnalyticsService', () => {
       },
     ]);
 
-    const result = await createService(repository).getWindow('org', 'integration', 7, new Date('2026-08-14T12:00:00.000Z'));
+    const result = await createService(repository).getWindow(
+      'org',
+      'integration',
+      7,
+      new Date('2026-08-14T12:00:00.000Z')
+    );
 
     expect(result.metrics[0]).toMatchObject({
       total: 4,
@@ -216,7 +233,12 @@ describe('ChannelAnalyticsService', () => {
       },
     ]);
 
-    const result = await createService(repository).getWindow('org', 'integration', 7, new Date('2026-08-14T12:00:00.000Z'));
+    const result = await createService(repository).getWindow(
+      'org',
+      'integration',
+      7,
+      new Date('2026-08-14T12:00:00.000Z')
+    );
 
     expect(result.metrics.map((metric) => metric.metricKey)).toEqual([
       'impressions',
@@ -253,7 +275,12 @@ describe('ChannelAnalyticsService', () => {
       },
     ]);
 
-    const result = await createService(repository).getWindow('org', 'integration', 7, new Date('2026-08-14T12:00:00.000Z'));
+    const result = await createService(repository).getWindow(
+      'org',
+      'integration',
+      7,
+      new Date('2026-08-14T12:00:00.000Z')
+    );
 
     const engagement = result.metrics.find(
       (metric) => metric.metricKey === 'engagement_rate'
@@ -264,7 +291,6 @@ describe('ChannelAnalyticsService', () => {
     expect(engagement).toMatchObject({ total: 6, trend: null });
     expect(followers).toMatchObject({ total: 120, trend: 33.33333333333333 });
   });
-
 
   it('persists post_lifetime accountPoints without coverage helpers', async () => {
     const repository = createRepository();
@@ -295,7 +321,12 @@ describe('ChannelAnalyticsService', () => {
       'org',
       'integration',
       snapshotAt,
-      [expect.objectContaining({ externalPostId: 'tweet-1', metricKey: 'like_count' })]
+      [
+        expect.objectContaining({
+          externalPostId: 'tweet-1',
+          metricKey: 'like_count',
+        }),
+      ]
     );
     expect(repository.persistAccountDailyPoints).toHaveBeenCalledWith(
       'org',
@@ -324,17 +355,21 @@ describe('ChannelAnalyticsService', () => {
     ]);
 
     await expect(
-      createService(repository).getLatestAccountAudienceTotal('org', 'integration')
+      createService(repository).getLatestAccountAudienceTotal(
+        'org',
+        'integration'
+      )
     ).resolves.toEqual({
       value: 1500,
       asOf: '2026-07-01',
       metricKey: 'followers',
       label: 'Followers',
     });
-    expect(repository.getLatestDailyPoints).toHaveBeenCalledWith('org', 'integration', [
-      'followers',
-      'subscribers',
-    ]);
+    expect(repository.getLatestDailyPoints).toHaveBeenCalledWith(
+      'org',
+      'integration',
+      ['followers', 'subscribers']
+    );
   });
 
   it('prefers followers over subscribers when both are present', async () => {
@@ -355,7 +390,10 @@ describe('ChannelAnalyticsService', () => {
     ]);
 
     await expect(
-      createService(repository).getLatestAccountAudienceTotal('org', 'integration')
+      createService(repository).getLatestAccountAudienceTotal(
+        'org',
+        'integration'
+      )
     ).resolves.toMatchObject({ metricKey: 'followers', value: 10 });
   });
 
@@ -371,7 +409,10 @@ describe('ChannelAnalyticsService', () => {
     ]);
 
     await expect(
-      createService(repository).getLatestAccountAudienceTotal('org', 'integration')
+      createService(repository).getLatestAccountAudienceTotal(
+        'org',
+        'integration'
+      )
     ).resolves.toEqual({
       value: 4242,
       asOf: '2026-08-10',
@@ -379,5 +420,4 @@ describe('ChannelAnalyticsService', () => {
       label: 'Subscribers',
     });
   });
-
 });

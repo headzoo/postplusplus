@@ -21,20 +21,26 @@ export class FollowersListTool implements AgentToolInterface {
       id: this.name,
       description: `List a bounded page of followers for one follower-capable channel. Sort keys must be advertised by listFollowerChannels; page-scoped sorts only order the fetched page, while database sorts use stored audience data. Custom-list pages (listId) can include people who now follow the channel; followedAt means they currently follow. Categories: ${followerCategoriesDescription}`,
       inputSchema: followerQueryWithChannelSchema,
-      mcp: { annotations: { ...followerToolAnnotations, title: 'List followers' } },
+      mcp: {
+        annotations: { ...followerToolAnnotations, title: 'List followers' },
+      },
       outputSchema: z.object({
         output: z.object({
-          followers: z.array(z.object({
-            id: z.string(),
-            name: z.string(),
-            username: z.string().optional(),
-            picture: z.string().url().optional(),
-            profileUrl: z.string().url().optional(),
-            followedAt: z.string().optional(),
-            relationshipGrade: z.number().nullable().optional(),
-            myGrade: z.number().nullable().optional(),
-            relationshipTriage: z.string().nullable().optional(),
-          }).passthrough()),
+          followers: z.array(
+            z
+              .object({
+                id: z.string(),
+                name: z.string(),
+                username: z.string().optional(),
+                picture: z.string().url().optional(),
+                profileUrl: z.string().url().optional(),
+                followedAt: z.string().optional(),
+                relationshipGrade: z.number().nullable().optional(),
+                myGrade: z.number().nullable().optional(),
+                relationshipTriage: z.string().nullable().optional(),
+              })
+              .passthrough()
+          ),
           total: z.number().nullable(),
           nextCursor: z.string().optional(),
           previousCursor: z.string().optional(),
@@ -44,7 +50,10 @@ export class FollowersListTool implements AgentToolInterface {
         }),
       }),
       execute: async (inputData, context) => {
-        const { organization, actor } = getFollowerToolContext(inputData, context);
+        const { organization, actor } = getFollowerToolContext(
+          inputData,
+          context
+        );
         const { channelId, ...query } = inputData;
         const page = await this._integrationService.getFollowers(
           organization,
@@ -56,14 +65,18 @@ export class FollowersListTool implements AgentToolInterface {
           output: {
             followers: page.items.map((follower) => ({
               ...follower,
-              ...(safeHttpUrl(follower.picture) ? { picture: safeHttpUrl(follower.picture) } : {}),
+              ...(safeHttpUrl(follower.picture)
+                ? { picture: safeHttpUrl(follower.picture) }
+                : {}),
               ...(safeHttpUrl(follower.profileUrl)
                 ? { profileUrl: safeHttpUrl(follower.profileUrl) }
                 : {}),
             })),
             total: page.total ?? null,
             ...(page.nextCursor ? { nextCursor: page.nextCursor } : {}),
-            ...(page.previousCursor ? { previousCursor: page.previousCursor } : {}),
+            ...(page.previousCursor
+              ? { previousCursor: page.previousCursor }
+              : {}),
             hasMore: page.hasMore,
             ...(page.window ? { window: page.window } : {}),
             ...(page.tracking ? { tracking: page.tracking } : {}),

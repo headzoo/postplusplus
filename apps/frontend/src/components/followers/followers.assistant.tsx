@@ -17,7 +17,8 @@ export const FollowersAssistant: FC = () => {
   const strategy = useMemo(
     () =>
       selectedChannelId
-        ? channels?.find((channel) => channel.id === selectedChannelId)?.strategy
+        ? channels?.find((channel) => channel.id === selectedChannelId)
+            ?.strategy
         : undefined,
     [channels, selectedChannelId]
   );
@@ -46,13 +47,13 @@ For engagement phrasing and tactics, you may call listExpertise to discover buil
       initialMessage={
         strategy
           ? t(
-            strategy.ui.assistantInitialCopy.key,
-            strategy.ui.assistantInitialCopy.defaultValue
-          )
+              strategy.ui.assistantInitialCopy.key,
+              strategy.ui.assistantInitialCopy.defaultValue
+            )
           : t(
-            'followers_assistant_initial_message',
-            'Hi! I can help you work with your followers, lists, and relationship insights.'
-          )
+              'followers_assistant_initial_message',
+              'Hi! I can help you work with your followers, lists, and relationship insights.'
+            )
       }
       suggestions={suggestions}
     >

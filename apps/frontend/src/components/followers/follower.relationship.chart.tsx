@@ -106,20 +106,24 @@ export const FollowerRelationshipChart: FC<{
                 const gradeLabel =
                   snapshot.grade == null
                     ? t(
-                      'followers_grade_not_enough_activity',
-                      'No grade (not enough tracked activity)'
-                    )
+                        'followers_grade_not_enough_activity',
+                        'No grade (not enough tracked activity)'
+                      )
                     : t('followers_chart_grade_value', 'Grade: {{grade}}', {
-                      grade: snapshot.grade,
-                    });
+                        grade: snapshot.grade,
+                      });
                 return [
                   formulaLabel,
                   gradeLabel,
                   `E: ${snapshot.effortScore}`,
                   `R: ${snapshot.reciprocationScore}`,
-                  `${t('followers_grade_reciprocity', 'Reciprocity: {{value}}', {
-                    value: formatReciprocity(snapshot.reciprocity),
-                  })}`,
+                  `${t(
+                    'followers_grade_reciprocity',
+                    'Reciprocity: {{value}}',
+                    {
+                      value: formatReciprocity(snapshot.reciprocity),
+                    }
+                  )}`,
                 ];
               },
             },

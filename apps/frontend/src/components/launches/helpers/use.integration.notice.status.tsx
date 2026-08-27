@@ -25,9 +25,10 @@ export type IntegrationNoticeStatusResponse = {
 export const useIntegrationNoticeStatus = () => {
   const fetch = useFetch();
 
-  const load = useCallback(async (): Promise<IntegrationNoticeStatusResponse> => {
-    return (await (await fetch('/integrations/notice-status')).json());
-  }, [fetch]);
+  const load =
+    useCallback(async (): Promise<IntegrationNoticeStatusResponse> => {
+      return await (await fetch('/integrations/notice-status')).json();
+    }, [fetch]);
 
   return useSWR<IntegrationNoticeStatusResponse>(
     '/integrations/notice-status',

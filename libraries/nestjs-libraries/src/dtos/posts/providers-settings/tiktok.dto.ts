@@ -1,5 +1,10 @@
 import {
-  IsBoolean, ValidateIf, IsIn, IsString, MaxLength, IsOptional
+  IsBoolean,
+  ValidateIf,
+  IsIn,
+  IsString,
+  MaxLength,
+  IsOptional,
 } from 'class-validator';
 import { JSONSchema } from 'class-validator-jsonschema';
 

@@ -17,7 +17,8 @@ export const FollowerListColorPicker: FC<{
   const t = useT();
   const [open, setOpen] = useState(false);
   const ref = useClickOutside(() => setOpen(false));
-  const activeColor = (color as FollowerSegmentColor | null | undefined) ?? 'neutral';
+  const activeColor =
+    (color as FollowerSegmentColor | null | undefined) ?? 'neutral';
   const activeClasses = FOLLOWER_SEGMENT_COLOR_CLASSES[activeColor];
 
   return (
@@ -46,10 +47,7 @@ export const FollowerListColorPicker: FC<{
         <div
           className="absolute start-0 z-20 mt-[8px] w-[min(280px,calc(100vw-40px))] rounded-[12px] border border-newTableBorder bg-newBgColorInner p-[14px] shadow-lg"
           role="dialog"
-          aria-label={t(
-            'followers_list_color_menu',
-            'Choose a list color'
-          )}
+          aria-label={t('followers_list_color_menu', 'Choose a list color')}
           data-testid="followers-list-color-menu"
         >
           <div className="flex flex-wrap gap-[8px]">

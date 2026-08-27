@@ -1,12 +1,6 @@
 'use client';
 
-import React, {
-  FC,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
+import React, { FC, useCallback, useEffect, useMemo, useState } from 'react';
 import useSWR from 'swr';
 import { useDebounce } from 'use-debounce';
 import clsx from 'clsx';
@@ -101,7 +95,10 @@ export const GifPicker: FC<{
     open && pageState.query === trimmedQuery ? pageState.offset : 0;
 
   const trending = useTrendingGifs(open && !trimmedQuery, offset);
-  const search = useGifSearch(open && trimmedQuery ? trimmedQuery : null, offset);
+  const search = useGifSearch(
+    open && trimmedQuery ? trimmedQuery : null,
+    offset
+  );
 
   const activeData = trimmedQuery ? search.data : trending.data;
   const isLoading = trimmedQuery ? search.isLoading : trending.isLoading;
@@ -126,10 +123,7 @@ export const GifPicker: FC<{
         return activeData;
       }
       const seen = new Set(prev.map((item) => item.id));
-      return [
-        ...prev,
-        ...activeData.filter((item) => !seen.has(item.id)),
-      ];
+      return [...prev, ...activeData.filter((item) => !seen.has(item.id))];
     });
     setHasMore(activeData.length >= PAGE_SIZE);
     setLoadingMore(false);
@@ -140,10 +134,7 @@ export const GifPicker: FC<{
       return;
     }
     setLoadingMore(false);
-    toaster.show(
-      t('failed_to_load_gifs', 'Failed to load GIFs'),
-      'warning'
-    );
+    toaster.show(t('failed_to_load_gifs', 'Failed to load GIFs'), 'warning');
   }, [error]);
 
   const onScroll = useCallback(

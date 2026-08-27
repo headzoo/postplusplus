@@ -26,4 +26,4 @@ export class UpdateSetsDto {
   @IsString()
   @IsDefined()
   content: string;
-} 
+}

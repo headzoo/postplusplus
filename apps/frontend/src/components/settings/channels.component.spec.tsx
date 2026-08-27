@@ -63,9 +63,12 @@ jest.mock('@gitroom/frontend/components/launches/channels.sidebar', () => ({
   ),
 }));
 
-jest.mock('@gitroom/frontend/components/launches/helpers/use.integration.list', () => ({
-  useIntegrationList: jest.fn(),
-}));
+jest.mock(
+  '@gitroom/frontend/components/launches/helpers/use.integration.list',
+  () => ({
+    useIntegrationList: jest.fn(),
+  })
+);
 
 jest.mock('./use.channel.details', () => ({
   useChannelDetails: jest.fn(),
@@ -291,7 +294,8 @@ describe('ChannelsSettings', () => {
           },
           description: {
             key: 'channelStrategies.lead_capture.description',
-            defaultValue: 'Surface high-intent inbound conversations and follows.',
+            defaultValue:
+              'Surface high-intent inbound conversations and follows.',
           },
         },
       },
@@ -302,14 +306,14 @@ describe('ChannelsSettings', () => {
     render(<ChannelsSettings />);
 
     expect(
-      screen.getByRole('radio', { name: /Capture leads/i }).getAttribute(
-        'aria-checked'
-      )
+      screen
+        .getByRole('radio', { name: /Capture leads/i })
+        .getAttribute('aria-checked')
     ).toBe('true');
     expect(
-      screen.getByRole('radio', { name: /Grow audience/i }).getAttribute(
-        'aria-checked'
-      )
+      screen
+        .getByRole('radio', { name: /Grow audience/i })
+        .getAttribute('aria-checked')
     ).toBe('false');
   });
 
@@ -325,13 +329,18 @@ describe('ChannelsSettings', () => {
     render(<ChannelsSettings />);
 
     fireEvent.click(screen.getByRole('radio', { name: /Capture leads/i }));
-    fireEvent.click(screen.getByRole('button', { name: 'Save channel strategy' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Save channel strategy' })
+    );
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith('/integrations/channel-a/strategy', {
-        method: 'PUT',
-        body: JSON.stringify({ strategyId: 'lead_capture' }),
-      });
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/integrations/channel-a/strategy',
+        {
+          method: 'PUT',
+          body: JSON.stringify({ strategyId: 'lead_capture' }),
+        }
+      );
       expect(mutateChannelDetails).toHaveBeenCalled();
       expect(globalMutate).toHaveBeenCalledWith('/integrations/list');
       expect(globalMutate).toHaveBeenCalledWith('/followers/channels');
@@ -353,16 +362,18 @@ describe('ChannelsSettings', () => {
     render(<ChannelsSettings />);
 
     fireEvent.click(screen.getByRole('radio', { name: /Capture leads/i }));
-    fireEvent.click(screen.getByRole('button', { name: 'Save channel strategy' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Save channel strategy' })
+    );
 
     await waitFor(() => {
       expect(toastShow).toHaveBeenCalledWith(
         'Could not update the channel strategy.'
       );
       expect(
-        screen.getByRole('radio', { name: /Grow audience/i }).getAttribute(
-          'aria-checked'
-        )
+        screen
+          .getByRole('radio', { name: /Grow audience/i })
+          .getAttribute('aria-checked')
       ).toBe('true');
     });
   });
@@ -380,17 +391,17 @@ describe('ChannelsSettings', () => {
 
     fireEvent.click(screen.getByRole('radio', { name: /Grow audience/i }));
     expect(
-      screen.getByRole('button', { name: 'Save channel strategy' }).hasAttribute(
-        'disabled'
-      )
+      screen
+        .getByRole('button', { name: 'Save channel strategy' })
+        .hasAttribute('disabled')
     ).toBe(true);
 
     fireEvent.click(screen.getByRole('radio', { name: /Capture leads/i }));
     fireEvent.click(screen.getByRole('radio', { name: /Grow audience/i }));
     expect(
-      screen.getByRole('button', { name: 'Save channel strategy' }).hasAttribute(
-        'disabled'
-      )
+      screen
+        .getByRole('button', { name: 'Save channel strategy' })
+        .hasAttribute('disabled')
     ).toBe(true);
   });
 
@@ -399,9 +410,7 @@ describe('ChannelsSettings', () => {
 
     expect(screen.getAllByText('Grow audience').length).toBeGreaterThan(0);
     expect(
-      screen.getByText(
-        'Recommended for new or growth-focused channels'
-      )
+      screen.getByText('Recommended for new or growth-focused channels')
     ).toBeTruthy();
 
     fireEvent.click(screen.getByRole('radio', { name: /Capture leads/i }));
@@ -419,22 +428,20 @@ describe('ChannelsSettings', () => {
 
     fireEvent.click(screen.getByRole('radio', { name: /Capture leads/i }));
     expect(
-      screen.getByRole('radio', { name: /Capture leads/i }).getAttribute(
-        'aria-checked'
-      )
+      screen
+        .getByRole('radio', { name: /Capture leads/i })
+        .getAttribute('aria-checked')
     ).toBe('true');
 
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
     expect(
-      screen.getByRole('radio', { name: /Grow audience/i }).getAttribute(
-        'aria-checked'
-      )
+      screen
+        .getByRole('radio', { name: /Grow audience/i })
+        .getAttribute('aria-checked')
     ).toBe('true');
     expect(
-      screen.getByText(
-        'Recommended for new or growth-focused channels'
-      )
+      screen.getByText('Recommended for new or growth-focused channels')
     ).toBeTruthy();
   });
 
@@ -448,7 +455,9 @@ describe('ChannelsSettings', () => {
     render(<ChannelsSettings />);
 
     expect(screen.getByText('Loading')).toBeTruthy();
-    expect(screen.queryByRole('radiogroup', { name: 'Channel strategy' })).toBeNull();
+    expect(
+      screen.queryByRole('radiogroup', { name: 'Channel strategy' })
+    ).toBeNull();
   });
 
   it('shows N/A for channels without follower identities', () => {
@@ -468,8 +477,12 @@ describe('ChannelsSettings', () => {
         'Not available for this channel because it does not expose follower identities.'
       )
     ).toBeTruthy();
-    expect(screen.queryByRole('radiogroup', { name: 'Channel strategy' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Save channel strategy' })).toBeNull();
+    expect(
+      screen.queryByRole('radiogroup', { name: 'Channel strategy' })
+    ).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: 'Save channel strategy' })
+    ).toBeNull();
     expect(screen.getByText('Link tracking')).toBeTruthy();
   });
 
@@ -539,7 +552,9 @@ describe('ChannelsSettings', () => {
   it('saves link tracking params and revalidates caches', async () => {
     fetchMock.mockResolvedValue({
       ok: true,
-      json: async () => ({ utmParams: 'utm_campaign=spring&utm_medium=social' }),
+      json: async () => ({
+        utmParams: 'utm_campaign=spring&utm_medium=social',
+      }),
     });
 
     render(<ChannelsSettings />);

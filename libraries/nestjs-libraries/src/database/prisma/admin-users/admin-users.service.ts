@@ -3,7 +3,7 @@ import { AdminUsersRepository } from '@gitroom/nestjs-libraries/database/prisma/
 
 @Injectable()
 export class AdminUsersService {
-  constructor(private _adminUsersRepository: AdminUsersRepository) { }
+  constructor(private _adminUsersRepository: AdminUsersRepository) {}
 
   listUserOrganizations(params: {
     page?: number;

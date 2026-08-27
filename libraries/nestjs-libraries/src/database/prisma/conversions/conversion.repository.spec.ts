@@ -14,6 +14,7 @@ const createHarness = () => {
       create: jest.fn().mockResolvedValue({ id: 'event' }),
       findFirst: jest.fn().mockResolvedValue({ id: 'event' }),
       findMany: jest.fn().mockResolvedValue([]),
+      groupBy: jest.fn().mockResolvedValue([]),
     },
     conversionClickAttribution: {
       create: jest.fn().mockResolvedValue({ id: 'click' }),
@@ -43,6 +44,10 @@ const createHarness = () => {
       findFirst: jest.fn(),
     },
     channelInteractionEvent: { findMany: jest.fn().mockResolvedValue([]) },
+    channelAudienceMember: {
+      count: jest.fn().mockResolvedValue(0),
+      findMany: jest.fn().mockResolvedValue([]),
+    },
   };
   const transaction = jest.fn((callback: (client: typeof tx) => unknown) =>
     callback(tx)
@@ -464,5 +469,67 @@ describe('ConversionRepository', () => {
       created: false,
     });
     expect(tx.conversionSupportCase.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('counts converted actors with stored audience profiles', async () => {
+    const { repository, tx } = createHarness();
+    tx.conversionEvent.groupBy.mockResolvedValueOnce([
+      { actorExternalId: 'actor-1' },
+      { actorExternalId: 'actor-2' },
+    ]);
+    tx.channelAudienceMember.count.mockResolvedValueOnce(1);
+
+    await expect(
+      repository.countDistinctConvertedActorsWithProfiles(
+        organizationId,
+        integrationId
+      )
+    ).resolves.toBe(1);
+    expect(tx.channelAudienceMember.count).toHaveBeenCalledWith({
+      where: {
+        organizationId,
+        integrationId,
+        externalId: { in: ['actor-1', 'actor-2'] },
+      },
+    });
+  });
+
+  it('pages converted actors ordered by latest conversion', async () => {
+    const { repository, tx } = createHarness();
+    const lastConvertedAt = new Date('2026-08-27T12:00:00.000Z');
+    tx.conversionEvent.groupBy.mockResolvedValueOnce([
+      {
+        actorExternalId: 'actor-1',
+        _max: { occurredAt: lastConvertedAt },
+        _count: { _all: 2 },
+      },
+    ]);
+    tx.channelAudienceMember.findMany.mockResolvedValueOnce([
+      { externalId: 'actor-1' },
+    ]);
+    tx.conversionEvent.findMany.mockResolvedValueOnce([
+      {
+        actorExternalId: 'actor-1',
+        occurredAt: lastConvertedAt,
+        conversionType: 'follower_gained',
+        id: 'event-1',
+      },
+    ]);
+
+    await expect(
+      repository.getConvertedActorsPage(organizationId, integrationId, {
+        limit: 24,
+      })
+    ).resolves.toEqual({
+      items: [
+        {
+          externalId: 'actor-1',
+          lastConvertedAt,
+          conversionCount: 2,
+          latestConversionType: 'follower_gained',
+        },
+      ],
+      hasMore: false,
+    });
   });
 });

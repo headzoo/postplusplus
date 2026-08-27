@@ -226,7 +226,9 @@ describe('context document agent tools', () => {
       const service = createContextDocumentService();
       jest
         .spyOn(service, 'getDocumentById')
-        .mockRejectedValue(new NotFoundException('Context document not found.'));
+        .mockRejectedValue(
+          new NotFoundException('Context document not found.')
+        );
 
       await expect(
         createReadTool(service).execute!(

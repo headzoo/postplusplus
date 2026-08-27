@@ -153,11 +153,11 @@ export class OpenaiService {
         try {
           return JSON.parse(
             '[' +
-            content
-              ?.slice(start + 1, end)
-              .replace(/\n/g, ' ')
-              .replace(/ {2,}/g, ' ') +
-            ']'
+              content
+                ?.slice(start + 1, end)
+                .replace(/\n/g, ' ')
+                .replace(/ {2,}/g, ' ') +
+              ']'
           );
         } catch (e) {
           return [];
@@ -202,8 +202,9 @@ export class OpenaiService {
           messages: [
             {
               role: 'system',
-              content: `You are an assistant that take a social media post and break it to a thread, each post must be minimum ${len - 10
-                } and maximum ${len} characters, keeping the exact wording and break lines, however make sure you split posts based on context`,
+              content: `You are an assistant that take a social media post and break it to a thread, each post must be minimum ${
+                len - 10
+              } and maximum ${len} characters, keeping the exact wording and break lines, however make sure you split posts based on context`,
             },
             {
               role: 'user',
@@ -407,11 +408,11 @@ Do not infer private traits. Omit candidates when deferral or no engagement is a
     const documents =
       input.channelDocuments.length > 0
         ? input.channelDocuments
-          .map(
-            (document) =>
-              `### ${document.name}\n${document.content.slice(0, 6000)}`
-          )
-          .join('\n\n')
+            .map(
+              (document) =>
+                `### ${document.name}\n${document.content.slice(0, 6000)}`
+            )
+            .join('\n\n')
         : '(No channel context documents attached.)';
 
     const parsed = (
@@ -455,7 +456,10 @@ If channel documents are missing, score conservatively from general profile qual
     return {
       score: Math.round(parsed.score),
       reason: parsed.reason.trim().slice(0, 280),
-      concerns: parsed.concerns.map((item) => item.trim()).filter(Boolean).slice(0, 5),
+      concerns: parsed.concerns
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .slice(0, 5),
       matchedTopics: parsed.matchedTopics
         .map((item) => item.trim())
         .filter(Boolean)

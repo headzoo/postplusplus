@@ -120,25 +120,34 @@ describe('AdminPasskeyService', () => {
         'a deactivated super-admin',
         { id: 'user-1', isSuperAdmin: true, activated: false },
       ],
-    ])('rejects %s on every ceremony with a plain 403', async (_label, principal) => {
-      await expectStatus(service.getStatus(principal as any, 'token'), 403);
-      await expectStatus(
-        service.createRegistrationOptions(principal as any),
-        403
-      );
-      await expectStatus(
-        service.verifyRegistration(principal as any, registrationResponse as any),
-        403
-      );
-      await expectStatus(service.createAssertionOptions(principal as any), 403);
-      await expectStatus(
-        service.verifyAssertion(principal as any, assertionResponse as any),
-        403
-      );
-      expect(repository.countCredentials).not.toHaveBeenCalled();
-      expect(verifyRegistrationResponseMock).not.toHaveBeenCalled();
-      expect(verifyAuthenticationResponseMock).not.toHaveBeenCalled();
-    });
+    ])(
+      'rejects %s on every ceremony with a plain 403',
+      async (_label, principal) => {
+        await expectStatus(service.getStatus(principal as any, 'token'), 403);
+        await expectStatus(
+          service.createRegistrationOptions(principal as any),
+          403
+        );
+        await expectStatus(
+          service.verifyRegistration(
+            principal as any,
+            registrationResponse as any
+          ),
+          403
+        );
+        await expectStatus(
+          service.createAssertionOptions(principal as any),
+          403
+        );
+        await expectStatus(
+          service.verifyAssertion(principal as any, assertionResponse as any),
+          403
+        );
+        expect(repository.countCredentials).not.toHaveBeenCalled();
+        expect(verifyRegistrationResponseMock).not.toHaveBeenCalled();
+        expect(verifyAuthenticationResponseMock).not.toHaveBeenCalled();
+      }
+    );
   });
 
   describe('status', () => {
@@ -172,9 +181,11 @@ describe('AdminPasskeyService', () => {
         expiresAt: new Date(Date.now() + 60_000),
       });
 
-      await expect(service.getStatus(operator, 'token')).resolves.toMatchObject({
-        verified: false,
-      });
+      await expect(service.getStatus(operator, 'token')).resolves.toMatchObject(
+        {
+          verified: false,
+        }
+      );
     });
 
     it('reports a session as unverified once the operator has no credential left', async () => {
@@ -187,10 +198,12 @@ describe('AdminPasskeyService', () => {
         expiresAt: new Date(Date.now() + 60_000),
       });
 
-      await expect(service.getStatus(operator, 'token')).resolves.toMatchObject({
-        enrolled: false,
-        verified: false,
-      });
+      await expect(service.getStatus(operator, 'token')).resolves.toMatchObject(
+        {
+          enrolled: false,
+          verified: false,
+        }
+      );
     });
 
     it('separates general validity from the fresh-action window', async () => {
@@ -206,14 +219,16 @@ describe('AdminPasskeyService', () => {
         expiresAt: new Date(Date.now() + 60_000),
       });
 
-      await expect(service.getStatus(operator, 'token')).resolves.toMatchObject({
-        enrolled: true,
-        verified: true,
-        fresh: false,
-        freshUntil: new Date(
-          authenticatedAt.getTime() + ADMIN_WEBAUTHN_FRESH_ACTION_TTL_MS
-        ).toISOString(),
-      });
+      await expect(service.getStatus(operator, 'token')).resolves.toMatchObject(
+        {
+          enrolled: true,
+          verified: true,
+          fresh: false,
+          freshUntil: new Date(
+            authenticatedAt.getTime() + ADMIN_WEBAUTHN_FRESH_ACTION_TTL_MS
+          ).toISOString(),
+        }
+      );
       expect(repository.findActiveSession).toHaveBeenCalledWith(
         hashAdminSessionToken('token'),
         expect.any(Date)
@@ -250,7 +265,9 @@ describe('AdminPasskeyService', () => {
       ).resolves.toEqual({ valid: false, reason: 'session' });
 
       repository.findActiveSession.mockResolvedValue(
-        session(new Date(Date.now() - ADMIN_WEBAUTHN_FRESH_ACTION_TTL_MS - 1_000))
+        session(
+          new Date(Date.now() - ADMIN_WEBAUTHN_FRESH_ACTION_TTL_MS - 1_000)
+        )
       );
       await expect(
         service.validateVerification(operator, 'token', 'fresh')
@@ -319,12 +336,14 @@ describe('AdminPasskeyService', () => {
 
     it('rejects a challenge that is unknown, expired or bound to another ceremony', async () => {
       repository.hasPendingChallenge.mockResolvedValue(false);
-      verifyRegistrationResponseMock.mockImplementation(async (options: any) => {
-        if (!(await options.expectedChallenge('unknown-challenge'))) {
-          throw new Error('Custom challenge verifier returned false');
+      verifyRegistrationResponseMock.mockImplementation(
+        async (options: any) => {
+          if (!(await options.expectedChallenge('unknown-challenge'))) {
+            throw new Error('Custom challenge verifier returned false');
+          }
+          return { verified: true } as any;
         }
-        return { verified: true } as any;
-      });
+      );
 
       await expectStatus(
         service.verifyRegistration(operator, registrationResponse as any),
@@ -353,36 +372,40 @@ describe('AdminPasskeyService', () => {
 
     it('verifies against the trusted origin and stores only a hashed session token', async () => {
       const authenticatedAt = new Date();
-      verifyRegistrationResponseMock.mockImplementation(async (options: any) => {
-        expect(options.expectedOrigin).toBe('https://admin.postiz.example');
-        expect(options.expectedRPID).toBe('admin.postiz.example');
-        expect(options.requireUserVerification).toBe(false);
-        await options.expectedChallenge('registration-challenge');
-        return {
-          verified: true,
-          registrationInfo: {
-            aaguid: 'aaguid-1',
-            credentialDeviceType: 'multiDevice',
-            credentialBackedUp: true,
-            credential: {
-              id: 'new-credential-id',
-              publicKey: Uint8Array.from([9, 9]),
-              counter: 0,
-              transports: ['internal'],
+      verifyRegistrationResponseMock.mockImplementation(
+        async (options: any) => {
+          expect(options.expectedOrigin).toBe('https://admin.postiz.example');
+          expect(options.expectedRPID).toBe('admin.postiz.example');
+          expect(options.requireUserVerification).toBe(false);
+          await options.expectedChallenge('registration-challenge');
+          return {
+            verified: true,
+            registrationInfo: {
+              aaguid: 'aaguid-1',
+              credentialDeviceType: 'multiDevice',
+              credentialBackedUp: true,
+              credential: {
+                id: 'new-credential-id',
+                publicKey: Uint8Array.from([9, 9]),
+                counter: 0,
+                transports: ['internal'],
+              },
             },
+          } as any;
+        }
+      );
+      repository.completeRegistration.mockImplementation(
+        async (input: any) => ({
+          outcome: 'created',
+          session: {
+            id: 'session-1',
+            userId: operator.id,
+            credentialId: 'credential-row-1',
+            authenticatedAt,
+            expiresAt: input.session.expiresAt,
           },
-        } as any;
-      });
-      repository.completeRegistration.mockImplementation(async (input: any) => ({
-        outcome: 'created',
-        session: {
-          id: 'session-1',
-          userId: operator.id,
-          credentialId: 'credential-row-1',
-          authenticatedAt,
-          expiresAt: input.session.expiresAt,
-        },
-      }));
+        })
+      );
 
       const issued = await service.verifyRegistration(
         operator,
@@ -399,13 +422,12 @@ describe('AdminPasskeyService', () => {
         backedUp: true,
         aaguid: 'aaguid-1',
       });
-      expect(input.session.tokenHash).toBe(
-        hashAdminSessionToken(issued.token)
-      );
+      expect(input.session.tokenHash).toBe(hashAdminSessionToken(issued.token));
       expect(input.session.tokenHash).not.toBe(issued.token);
       expect(Buffer.from(issued.token, 'base64url')).toHaveLength(32);
       expect(
-        input.session.expiresAt.getTime() - input.session.authenticatedAt.getTime()
+        input.session.expiresAt.getTime() -
+          input.session.authenticatedAt.getTime()
       ).toBe(ADMIN_VERIFICATION_SESSION_TTL_MS);
       expect(issued.freshUntil.getTime()).toBe(
         authenticatedAt.getTime() + ADMIN_WEBAUTHN_FRESH_ACTION_TTL_MS
@@ -413,22 +435,24 @@ describe('AdminPasskeyService', () => {
     });
 
     it('reports a replayed challenge or duplicate credential as a client error', async () => {
-      verifyRegistrationResponseMock.mockImplementation(async (options: any) => {
-        await options.expectedChallenge('registration-challenge');
-        return {
-          verified: true,
-          registrationInfo: {
-            aaguid: '',
-            credentialDeviceType: 'singleDevice',
-            credentialBackedUp: false,
-            credential: {
-              id: 'new-credential-id',
-              publicKey: Uint8Array.from([1]),
-              counter: 0,
+      verifyRegistrationResponseMock.mockImplementation(
+        async (options: any) => {
+          await options.expectedChallenge('registration-challenge');
+          return {
+            verified: true,
+            registrationInfo: {
+              aaguid: '',
+              credentialDeviceType: 'singleDevice',
+              credentialBackedUp: false,
+              credential: {
+                id: 'new-credential-id',
+                publicKey: Uint8Array.from([1]),
+                counter: 0,
+              },
             },
-          },
-        } as any;
-      });
+          } as any;
+        }
+      );
 
       repository.completeRegistration.mockResolvedValue({
         outcome: 'challenge-unavailable',
@@ -794,9 +818,9 @@ describe('AdminPasskeyService account passkeys', () => {
   });
 
   it('rejects inactive users from account passkey flows', () => {
-    expect(() =>
-      service.assertUser({ ...member, activated: false })
-    ).toThrow(HttpException);
+    expect(() => service.assertUser({ ...member, activated: false })).toThrow(
+      HttpException
+    );
   });
 
   it('treats a valid account session as general admin verification', async () => {
@@ -808,18 +832,20 @@ describe('AdminPasskeyService account passkeys', () => {
     };
     const now = new Date();
     repository.countCredentials.mockResolvedValue(1);
-    repository.findActiveSession.mockImplementation(async (tokenHash: string) => {
-      if (tokenHash === hashAdminSessionToken('account-token')) {
-        return {
-          id: 'session-1',
-          userId: admin.id,
-          credentialId: 'cred-1',
-          authenticatedAt: now,
-          expiresAt: new Date(now.getTime() + 60_000),
-        };
+    repository.findActiveSession.mockImplementation(
+      async (tokenHash: string) => {
+        if (tokenHash === hashAdminSessionToken('account-token')) {
+          return {
+            id: 'session-1',
+            userId: admin.id,
+            credentialId: 'cred-1',
+            authenticatedAt: now,
+            expiresAt: new Date(now.getTime() + 60_000),
+          };
+        }
+        return null;
       }
-      return null;
-    });
+    );
 
     await expect(
       service.validateVerification(admin, undefined, 'general', 'account-token')
@@ -882,10 +908,12 @@ describe('AdminPasskeyService account passkeys', () => {
 
     const input = repository.completeRegistration.mock.calls[0][0];
     expect(
-      input.session.expiresAt.getTime() - input.session.authenticatedAt.getTime()
+      input.session.expiresAt.getTime() -
+        input.session.authenticatedAt.getTime()
     ).toBe(ACCOUNT_PASSKEY_SESSION_TTL_MS);
     expect(
-      input.session.expiresAt.getTime() - input.session.authenticatedAt.getTime()
+      input.session.expiresAt.getTime() -
+        input.session.authenticatedAt.getTime()
     ).not.toBe(ADMIN_VERIFICATION_SESSION_TTL_MS);
     expect(issued.expiresAt.getTime()).toBe(input.session.expiresAt.getTime());
   });
@@ -894,21 +922,23 @@ describe('AdminPasskeyService account passkeys', () => {
     const authenticatedAt = new Date();
     repository.findCredential.mockResolvedValue(storedCredential);
     repository.hasPendingChallenge.mockResolvedValue(true);
-    verifyAuthenticationResponseMock.mockImplementation(async (options: any) => {
-      await options.expectedChallenge('assertion-challenge');
-      return {
-        verified: true,
-        authenticationInfo: {
-          credentialID: storedCredential.credentialId,
-          newCounter: 12,
-          userVerified: true,
-          credentialDeviceType: 'multiDevice',
-          credentialBackedUp: false,
-          origin: 'https://admin.postiz.example',
-          rpID: 'admin.postiz.example',
-        },
-      } as any;
-    });
+    verifyAuthenticationResponseMock.mockImplementation(
+      async (options: any) => {
+        await options.expectedChallenge('assertion-challenge');
+        return {
+          verified: true,
+          authenticationInfo: {
+            credentialID: storedCredential.credentialId,
+            newCounter: 12,
+            userVerified: true,
+            credentialDeviceType: 'multiDevice',
+            credentialBackedUp: false,
+            origin: 'https://admin.postiz.example',
+            rpID: 'admin.postiz.example',
+          },
+        } as any;
+      }
+    );
     repository.completeAssertion.mockImplementation(async (input: any) => ({
       outcome: 'verified',
       session: {
@@ -928,10 +958,12 @@ describe('AdminPasskeyService account passkeys', () => {
 
     const input = repository.completeAssertion.mock.calls[0][0];
     expect(
-      input.session.expiresAt.getTime() - input.session.authenticatedAt.getTime()
+      input.session.expiresAt.getTime() -
+        input.session.authenticatedAt.getTime()
     ).toBe(ACCOUNT_PASSKEY_SESSION_TTL_MS);
     expect(
-      input.session.expiresAt.getTime() - input.session.authenticatedAt.getTime()
+      input.session.expiresAt.getTime() -
+        input.session.authenticatedAt.getTime()
     ).not.toBe(ADMIN_VERIFICATION_SESSION_TTL_MS);
     expect(issued.expiresAt.getTime()).toBe(input.session.expiresAt.getTime());
   });

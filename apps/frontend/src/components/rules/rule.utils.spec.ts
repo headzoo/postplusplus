@@ -27,7 +27,9 @@ const listItem = (
 
 describe('rule.utils cutover copy', () => {
   it('explains legacy Plugs were not migrated and must be recreated', () => {
-    expect(RULES_EMPTY_STATE_CUTOVER_NOTE).toMatch(/legacy plugs were not migrated/i);
+    expect(RULES_EMPTY_STATE_CUTOVER_NOTE).toMatch(
+      /legacy plugs were not migrated/i
+    );
     expect(RULES_EMPTY_STATE_CUTOVER_NOTE).toMatch(/recreate/i);
     expect(RULES_EMPTY_STATE_CUTOVER_NOTE).not.toMatch(/\/plugs/);
   });
@@ -61,7 +63,10 @@ describe('filterRulesByChannel', () => {
     ];
 
     expect(filterRulesByChannel(rules, 'channel-1')).toEqual([rules[0]]);
-    expect(filterRulesByChannel(rules, 'channel-2')).toEqual([rules[0], rules[1]]);
+    expect(filterRulesByChannel(rules, 'channel-2')).toEqual([
+      rules[0],
+      rules[1],
+    ]);
     expect(filterRulesByChannel(rules, 'channel-3')).toEqual([]);
   });
 });

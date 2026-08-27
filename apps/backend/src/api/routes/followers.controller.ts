@@ -36,7 +36,7 @@ import { GetUserFromRequest } from '@gitroom/nestjs-libraries/user/user.from.req
 @ApiTags('Followers')
 @Controller('/followers')
 export class FollowersController {
-  constructor(private _integrationService: IntegrationService) { }
+  constructor(private _integrationService: IntegrationService) {}
 
   @Get('/channels')
   getChannels(@GetOrgFromRequest() org: Organization) {
@@ -280,7 +280,11 @@ export class FollowersController {
     @Param('integrationId') integrationId: string,
     @Param('listId') listId: string
   ) {
-    return this._integrationService.deleteFollowerList(org, integrationId, listId);
+    return this._integrationService.deleteFollowerList(
+      org,
+      integrationId,
+      listId
+    );
   }
 
   @Post('/:integrationId/lists/:listId/members')
@@ -339,6 +343,11 @@ export class FollowersController {
     @Param('integrationId') integrationId: string,
     @Query() query: FollowersQueryDto
   ) {
-    return this._integrationService.getFollowers(org, user, integrationId, query);
+    return this._integrationService.getFollowers(
+      org,
+      user,
+      integrationId,
+      query
+    );
   }
 }

@@ -6,10 +6,7 @@ export abstract class AuthProviderAbstract {
   abstract getUser(
     providerToken: string
   ): Promise<{ email: string; id: string }> | false;
-  async postRegistration(
-    providerToken: string,
-    orgId: string
-  ): Promise<void> {}
+  async postRegistration(providerToken: string, orgId: string): Promise<void> {}
 }
 
 export interface AuthProviderParams {

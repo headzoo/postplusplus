@@ -399,39 +399,39 @@ export const TopMenu: FC<{
       {
         // @ts-ignore
         user?.orgId &&
-        // @ts-ignore
-        (user.tier !== 'FREE' || !isGeneral || !billingEnabled) &&
-        firstMenu
-          .filter((f) => {
-            if (f.hide) {
-              return false;
-            }
-            if (f.requireBilling && !billingEnabled) {
-              return false;
-            }
-            if (f.name === 'Billing' && user?.isLifetime) {
-              return false;
-            }
-            if (f.superAdminOnly) {
-              return !!user?.admin;
-            }
-            if (f.role) {
-              return f.role.includes(user?.role!);
-            }
-            return true;
-          })
-          .map((item) => (
-            <MenuItem
-              path={item.path}
-              label={item.name}
-              icon={item.icon}
-              key={item.name}
-              layout={layout}
-              collapsed={collapsed}
-              onClick={item.onClick}
-              onNavigate={onNavigate}
-            />
-          ))
+          // @ts-ignore
+          (user.tier !== 'FREE' || !isGeneral || !billingEnabled) &&
+          firstMenu
+            .filter((f) => {
+              if (f.hide) {
+                return false;
+              }
+              if (f.requireBilling && !billingEnabled) {
+                return false;
+              }
+              if (f.name === 'Billing' && user?.isLifetime) {
+                return false;
+              }
+              if (f.superAdminOnly) {
+                return !!user?.admin;
+              }
+              if (f.role) {
+                return f.role.includes(user?.role!);
+              }
+              return true;
+            })
+            .map((item) => (
+              <MenuItem
+                path={item.path}
+                label={item.name}
+                icon={item.icon}
+                key={item.name}
+                layout={layout}
+                collapsed={collapsed}
+                onClick={item.onClick}
+                onNavigate={onNavigate}
+              />
+            ))
       }
       <div className="mt-[24px] flex flex-col gap-[4px]">
         {secondMenu

@@ -21,21 +21,23 @@ export const RenderOptions: FC<{
 }> = (props) => {
   const { options, onClick, value } = props;
   const mapValues = useMemo(() => {
-    return options?.map((p) => ({
-      children: (
-        <>
-          {p === 'self'
-            ? 'Post'
-            : p === 'link'
-            ? 'Link'
-            : p === 'media'
-            ? 'Media'
-            : ''}
-        </>
-      ),
-      id: p,
-      onClick: () => onClick(p),
-    })) || [];
+    return (
+      options?.map((p) => ({
+        children: (
+          <>
+            {p === 'self'
+              ? 'Post'
+              : p === 'link'
+              ? 'Link'
+              : p === 'media'
+              ? 'Media'
+              : ''}
+          </>
+        ),
+        id: p,
+        onClick: () => onClick(p),
+      })) || []
+    );
   }, [options]);
   return (
     <div className="flex">

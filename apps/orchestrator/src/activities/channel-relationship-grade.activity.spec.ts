@@ -1,5 +1,5 @@
 jest.mock('@gitroom/nestjs-libraries/integrations/integration.manager', () => ({
-  IntegrationManager: class IntegrationManager { },
+  IntegrationManager: class IntegrationManager {},
   socialIntegrationList: [],
 }));
 
@@ -116,7 +116,9 @@ describe('ChannelRelationshipGradeActivity', () => {
     await expect(
       activity.snapshotNextBatchV2({ candidate, snapshotAt: 'not-a-date' })
     ).rejects.toThrow('snapshotAt must be a valid timestamp');
-    expect(repository.listDueRelationshipGradeCandidates).not.toHaveBeenCalled();
+    expect(
+      repository.listDueRelationshipGradeCandidates
+    ).not.toHaveBeenCalled();
     expect(service.buildRelationshipGradeSnapshotBatch).not.toHaveBeenCalled();
   });
 });

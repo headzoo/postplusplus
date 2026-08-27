@@ -35,9 +35,7 @@ export const UnfollowConfirmModal: FC<{
         <Button onClick={confirm}>
           {t('followers_unfollow_confirm', 'Unfollow')}
         </Button>
-        <Button onClick={cancel}>
-          {t('cancel', 'Cancel')}
-        </Button>
+        <Button onClick={cancel}>{t('cancel', 'Cancel')}</Button>
       </div>
     </div>
   );
@@ -53,9 +51,7 @@ export const useUnfollowConfirmModal = () => {
         modals.openModal({
           title: t('followers_unfollow_title', 'Unfollow this profile?'),
           children: () => (
-            <UnfollowConfirmModal
-              resolution={(action) => resolve(action)}
-            />
+            <UnfollowConfirmModal resolution={(action) => resolve(action)} />
           ),
         });
       }),

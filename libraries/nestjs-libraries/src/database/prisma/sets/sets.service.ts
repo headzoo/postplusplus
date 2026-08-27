@@ -21,4 +21,4 @@ export class SetsService {
   deleteSet(orgId: string, id: string) {
     return this._setsRepository.deleteSet(orgId, id);
   }
-} 
+}

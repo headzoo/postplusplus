@@ -132,7 +132,9 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
     (pipeline) => pipeline.id === pipelineId
   );
   const pipelineMode =
-    publishingMode === 'pipeline' && !!selectedPipeline && !existingData?.integration;
+    publishingMode === 'pipeline' &&
+    !!selectedPipeline &&
+    !existingData?.integration;
 
   const selectPipeline = useCallback(
     (nextPipelineId: string) => {
@@ -154,12 +156,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
       setPublishingMode('pipeline');
       setLastPipelineId(pipeline.id);
     },
-    [
-      activePipelines,
-      setPipelineId,
-      setPublishingMode,
-      setSelectedIntegrations,
-    ]
+    [activePipelines, setPipelineId, setPublishingMode, setSelectedIntegrations]
   );
 
   const restoredPipelineRef = useRef(false);
@@ -238,8 +235,8 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
     existingData?.channels?.length
       ? existingData.channels.map((channel) => channel.posts?.[0])
       : existingData?.posts?.length
-        ? [existingData.posts[0]]
-        : []
+      ? [existingData.posts[0]]
+      : []
   ).filter((post) => post?.state === 'PUBLISHED');
   const cannotEditPublished =
     publishedRoots.length > 0 &&
@@ -273,15 +270,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
         }))
         .sort((a, b) => a.id.localeCompare(b.id)),
     });
-  }, [
-    editor,
-    global,
-    internal,
-    tags,
-    date,
-    repeater,
-    selectedIntegrations,
-  ]);
+  }, [editor, global, internal, tags, date, repeater, selectedIntegrations]);
 
   // Existing posts keep hydrating after first paint (editor mode, TipTap HTML
   // normalization, provider settings). Refresh the baseline until state is idle,
@@ -323,11 +312,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
     }
 
     return hasComposerText();
-  }, [
-    isEditingExistingPost,
-    getComposerSnapshot,
-    hasComposerText,
-  ]);
+  }, [isEditingExistingPost, getComposerSnapshot, hasComposerText]);
 
   const closeComposer = useCallback(() => {
     if (customClose) {
@@ -521,11 +506,11 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
         for (const item of notEnoughChars) {
           toaster.show(
             `${capitalize(item.identifier.split('-')[0])} (${item.name}):` +
-            ' ' +
-            t(
-              'post_needs_content_or_image',
-              'Your post should have at least one character or one image.'
-            ),
+              ' ' +
+              t(
+                'post_needs_content_or_image',
+                'Your post should have at least one character or one image.'
+              ),
             'warning'
           );
           setLoading(false);
@@ -537,8 +522,9 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
           for (const item of checkAllValid) {
             if (item.valid === false) {
               toaster.show(
-                `${capitalize(item.identifier.split('-')[0])} (${item.name}): ${item.settingsError ||
-                t('please_fix_your_settings', 'Please fix your settings')
+                `${capitalize(item.identifier.split('-')[0])} (${item.name}): ${
+                  item.settingsError ||
+                  t('please_fix_your_settings', 'Please fix your settings')
                 }`,
                 'warning'
               );
@@ -550,7 +536,8 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
 
             if (item.errors !== true) {
               toaster.show(
-                `${capitalize(item.identifier.split('-')[0])} (${item.name}): ${item.errors
+                `${capitalize(item.identifier.split('-')[0])} (${item.name}): ${
+                  item.errors
                 }`,
                 'warning'
               );
@@ -625,14 +612,14 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
       };
       const pipelineData = shouldEnqueueInPipeline
         ? {
-          pipelineId: selectedPipeline!.id,
-          post: {
-            type: 'draft' as const,
-            tags,
-            shortLink,
-            posts,
-          },
-        }
+            pipelineId: selectedPipeline!.id,
+            post: {
+              type: 'draft' as const,
+              tags,
+              shortLink,
+              posts,
+            },
+          }
         : undefined;
 
       if (dummy) {
@@ -668,9 +655,9 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
             addEditSets
               ? addEditSets(data)
               : await fetch('/posts', {
-                method: 'POST',
-                body: JSON.stringify(data),
-              });
+                  method: 'POST',
+                  body: JSON.stringify(data),
+                });
           }
         } catch (error: any) {
           toaster.show(
@@ -694,8 +681,8 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
             shouldEnqueueInPipeline
               ? t('added_to_pipeline', 'Added to Pipeline')
               : !existingData.integration
-                ? t('added_successfully', 'Added successfully')
-                : t('updated_successfully', 'Updated successfully')
+              ? t('added_successfully', 'Added successfully')
+              : t('updated_successfully', 'Updated successfully')
           );
         }
         if (customClose) {
@@ -778,9 +765,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                 </div>
               </div>
               <div className="flex flex-1 gap-[6px] flex-col">
-                <div>
-                  {!existingData.integration && <SelectCurrent />}
-                </div>
+                <div>{!existingData.integration && <SelectCurrent />}</div>
                 <div className="flex-1 flex flex-col">
                   {!hide && <EditorWrapper totalPosts={1} value="" />}
                 </div>
@@ -904,9 +889,9 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                     {!selectedPipeline!.active
                       ? t('pipeline_paused', 'Paused')
                       : formatPipelineSlot(
-                        selectedPipeline!.projectedEnqueueFor,
-                        selectedPipeline!.timezone
-                      )}
+                          selectedPipeline!.projectedEnqueueFor,
+                          selectedPipeline!.timezone
+                        )}
                   </div>
                 </div>
               )}
@@ -916,12 +901,12 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                 <div
                   {...(cannotEditPublished
                     ? {
-                      'data-tooltip-id': 'tooltip',
-                      'data-tooltip-content': t(
-                        'cannot_edit_published_post',
-                        'This channel does not support editing published posts'
-                      ),
-                    }
+                        'data-tooltip-id': 'tooltip',
+                        'data-tooltip-content': t(
+                          'cannot_edit_published_post',
+                          'This channel does not support editing published posts'
+                        ),
+                      }
                     : {})}
                 >
                   <button
@@ -970,8 +955,8 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                       pipelineMode
                         ? 'schedule'
                         : publishingMode === 'now'
-                          ? 'now'
-                          : 'schedule'
+                        ? 'now'
+                        : 'schedule'
                     )}
                     className="text-white relative min-w-[180px] whitespace-nowrap btnSub disabled:cursor-not-allowed disabled:opacity-80 outline-none gap-[8px] flex justify-center items-center h-[44px] rounded-[8px] bg-[#eb3825] ps-[20px] pe-[16px]"
                   >
@@ -989,16 +974,16 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                       {selectedIntegrations.length === 0
                         ? t('check_circles_above', 'Check the circles above')
                         : dummy
-                          ? t('create_output', 'Create output')
-                          : pipelineMode
-                            ? t('add_to_pipeline', 'Add to Pipeline')
-                            : publishingMode === 'now'
-                              ? t('post_now', 'Post Now')
-                              : !existingData?.integration
-                                ? t('add_to_calendar', 'Add to calendar')
-                                : existingData?.posts?.[0]?.state === 'DRAFT'
-                                  ? t('schedule', 'Schedule')
-                                  : t('update', 'Update')}
+                        ? t('create_output', 'Create output')
+                        : pipelineMode
+                        ? t('add_to_pipeline', 'Add to Pipeline')
+                        : publishingMode === 'now'
+                        ? t('post_now', 'Post Now')
+                        : !existingData?.integration
+                        ? t('add_to_calendar', 'Add to calendar')
+                        : existingData?.posts?.[0]?.state === 'DRAFT'
+                        ? t('schedule', 'Schedule')
+                        : t('update', 'Update')}
                     </div>
                     {!dummy && (
                       <div className="flex justify-center items-center h-[20px] w-[20px] pt-[4px] arrow-change">
@@ -1042,4 +1027,3 @@ After using the addPostFor{num} it will create a new addPostContentFor{num+ 1} f
     </div>
   );
 };
-

@@ -9,7 +9,10 @@ import { useClickOutside } from '@mantine/hooks';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { useLaunchStore } from '@gitroom/frontend/components/new-launch/store';
 import { useShallow } from 'zustand/react/shallow';
-import { UserIcon, DropdownArrowIcon } from '@gitroom/frontend/components/ui/icons';
+import {
+  UserIcon,
+  DropdownArrowIcon,
+} from '@gitroom/frontend/components/ui/icons';
 
 export const SelectCustomer: FC<{
   onChange: (value: string) => void;
@@ -76,7 +79,10 @@ export const SelectCustomer: FC<{
     <div className="relative select-none z-[500]" ref={ref}>
       <div
         data-tooltip-id="tooltip"
-        data-tooltip-content={t('select_customer_tooltip', 'Select Channel Group')}
+        data-tooltip-content={t(
+          'select_customer_tooltip',
+          'Select Channel Group'
+        )}
         onClick={openClose}
         className={clsx(
           'relative z-[20] cursor-pointer h-[42px] rounded-[8px] pl-[16px] pr-[12px] gap-[8px] border flex items-center',

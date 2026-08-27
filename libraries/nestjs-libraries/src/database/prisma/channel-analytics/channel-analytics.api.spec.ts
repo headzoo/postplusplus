@@ -1,5 +1,5 @@
 jest.mock('@gitroom/nestjs-libraries/integrations/integration.manager', () => ({
-  IntegrationManager: class IntegrationManager { },
+  IntegrationManager: class IntegrationManager {},
   socialIntegrationList: [],
 }));
 

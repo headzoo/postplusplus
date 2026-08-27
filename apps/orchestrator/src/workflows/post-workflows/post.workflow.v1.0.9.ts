@@ -188,10 +188,7 @@ export async function postWorkflowV109({
     type: 'retry' | 'stop' | 'bad-body' | 'timeout' | 'unknown';
     message: string;
   }> => {
-    if (
-      err instanceof ActivityFailure &&
-      err.cause instanceof TimeoutFailure
-    ) {
+    if (err instanceof ActivityFailure && err.cause instanceof TimeoutFailure) {
       return { type: 'timeout', message: '' };
     }
 
@@ -232,7 +229,8 @@ export async function postWorkflowV109({
       )}`,
       `Your post was sent to ${capitalize(
         post.integration?.providerIdentifier
-      )}, but we couldn't confirm it was published. Please check your ${post?.integration?.name
+      )}, but we couldn't confirm it was published. Please check your ${
+        post?.integration?.name
       } account before posting again to avoid duplicates.`,
       true,
       false,
@@ -287,7 +285,8 @@ export async function postWorkflowV109({
           await inAppNotification(
             post.organizationId,
             `Error posting on ${post.integration?.providerIdentifier} for ${post?.integration?.name}`,
-            `An error occurred while posting on ${post.integration?.providerIdentifier
+            `An error occurred while posting on ${
+              post.integration?.providerIdentifier
             }${handle.message ? `: ${handle.message}` : ``}`,
             true,
             false,
@@ -411,9 +410,11 @@ export async function postWorkflowV109({
         if (handle.type === 'bad-body') {
           await inAppNotification(
             post.organizationId,
-            `Error posting${i === 0 ? ' ' : ' comments '}on ${post.integration?.providerIdentifier
+            `Error posting${i === 0 ? ' ' : ' comments '}on ${
+              post.integration?.providerIdentifier
             } for ${post?.integration?.name}`,
-            `An error occurred while posting${i === 0 ? ' ' : ' comments '}on ${post.integration?.providerIdentifier
+            `An error occurred while posting${i === 0 ? ' ' : ' comments '}on ${
+              post.integration?.providerIdentifier
             }${handle.message ? `: ${handle.message}` : ``}`,
             true,
             false,
@@ -451,20 +452,17 @@ export async function postWorkflowV109({
   const repeatPost = !post.intervalInDays
     ? []
     : [
-      {
-        type: 'repeat-post' as const,
-        delay: post.intervalInDays * 24 * 60 * 60 * 1000,
-      },
-    ];
+        {
+          type: 'repeat-post' as const,
+          delay: post.intervalInDays * 24 * 60 * 60 * 1000,
+        },
+      ];
 
   const list: Array<
     | (typeof internalPlugsList)[number]
     | (typeof rulesWorkItems)[number]
     | (typeof repeatPost)[number]
-  > = sortBy(
-    [...internalPlugsList, ...rulesWorkItems, ...repeatPost],
-    'delay'
-  );
+  > = sortBy([...internalPlugsList, ...rulesWorkItems, ...repeatPost], 'delay');
 
   while (list.length > 0) {
     const todo = list.shift()!;
@@ -477,7 +475,10 @@ export async function postWorkflowV109({
     if (todo.type === 'internal-plug') {
       for (const _ of iterate) {
         try {
-          await processInternalPlug({ ...(todo as any), post: postsResults[0].postId });
+          await processInternalPlug({
+            ...(todo as any),
+            post: postsResults[0].postId,
+          });
         } catch (err) {
           const handle = await handleActivityError(err, () =>
             getIntegrationById(organizationId, (todo as any).integration)
@@ -510,7 +511,9 @@ export async function postWorkflowV109({
           if (result.status === 'PROCESSING') {
             retryAttempt++;
             if (retryAttempt < maxRetries) {
-              await sleep(Math.min(30000 * Math.pow(2, retryAttempt - 1), 300000));
+              await sleep(
+                Math.min(30000 * Math.pow(2, retryAttempt - 1), 300000)
+              );
               continue;
             }
             break;
@@ -519,7 +522,9 @@ export async function postWorkflowV109({
           if (result.status === 'FAILED') {
             retryAttempt++;
             if (retryAttempt < maxRetries) {
-              await sleep(Math.min(30000 * Math.pow(2, retryAttempt - 1), 300000));
+              await sleep(
+                Math.min(30000 * Math.pow(2, retryAttempt - 1), 300000)
+              );
               continue;
             }
             break;
@@ -553,7 +558,9 @@ export async function postWorkflowV109({
 
           retryAttempt++;
           if (retryAttempt < maxRetries) {
-            await sleep(Math.min(30000 * Math.pow(2, retryAttempt - 1), 300000));
+            await sleep(
+              Math.min(30000 * Math.pow(2, retryAttempt - 1), 300000)
+            );
             continue;
           }
 

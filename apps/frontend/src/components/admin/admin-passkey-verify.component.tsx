@@ -38,7 +38,9 @@ export const AdminPasskeyVerifyComponent = () => {
       return;
     }
     if (status && !status.enrolled) {
-      router.replace(`/admin/passkey/setup?returnTo=${encodeURIComponent(returnTo)}`);
+      router.replace(
+        `/admin/passkey/setup?returnTo=${encodeURIComponent(returnTo)}`
+      );
       return;
     }
     if (status?.verified && status.fresh) {

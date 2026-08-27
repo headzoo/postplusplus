@@ -77,7 +77,11 @@ async function start() {
     console.log('Backend started successfully on port ' + port);
 
     void startMcp(app).catch((error) => {
-      Logger.error('Failed to initialize MCP after backend startup', error, 'MCP');
+      Logger.error(
+        'Failed to initialize MCP after backend startup',
+        error,
+        'MCP'
+      );
     });
 
     checkConfiguration(); // Do this last, so that users will see obvious issues at the end of the startup log without having to scroll up.

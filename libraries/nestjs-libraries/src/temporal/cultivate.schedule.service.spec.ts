@@ -16,14 +16,14 @@ describe('CultivateMaterializationScheduleService', () => {
     workflow: {
       getHandle: jest.Mock;
     } = {
-        getHandle: jest.fn().mockReturnValue({
-          describe: jest.fn().mockRejectedValue(
-            Object.assign(new Error('not found'), {
-              name: 'WorkflowNotFoundError',
-            })
-          ),
-        }),
-      }
+      getHandle: jest.fn().mockReturnValue({
+        describe: jest.fn().mockRejectedValue(
+          Object.assign(new Error('not found'), {
+            name: 'WorkflowNotFoundError',
+          })
+        ),
+      }),
+    }
   ) =>
     new CultivateMaterializationScheduleService(
       {

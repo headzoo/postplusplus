@@ -1,4 +1,12 @@
-import { IsDefined, IsIn, IsInt, IsNumber, IsString, Max, Min } from 'class-validator';
+import {
+  IsDefined,
+  IsIn,
+  IsInt,
+  IsNumber,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
 
 export class AdminApplyCouponDto {
   @IsString()

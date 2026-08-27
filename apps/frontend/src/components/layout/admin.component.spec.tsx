@@ -35,9 +35,12 @@ jest.mock('@gitroom/frontend/components/admin/admin-errors.component', () => ({
 jest.mock('@gitroom/frontend/components/admin/admin-stats.component', () => ({
   AdminStatsComponent: () => null,
 }));
-jest.mock('@gitroom/frontend/components/admin/admin-schedule.component', () => ({
-  AdminScheduleComponent: () => null,
-}));
+jest.mock(
+  '@gitroom/frontend/components/admin/admin-schedule.component',
+  () => ({
+    AdminScheduleComponent: () => null,
+  })
+);
 
 describe('AdminGuard', () => {
   beforeEach(() => {

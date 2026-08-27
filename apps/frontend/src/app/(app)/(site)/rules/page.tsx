@@ -4,11 +4,17 @@ import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { Button } from '@gitroom/react/form/button';
 import { Slider } from '@gitroom/react/form/slider';
-import { useModals, useDecisionModal } from '@gitroom/frontend/components/layout/new-modal';
+import {
+  useModals,
+  useDecisionModal,
+} from '@gitroom/frontend/components/layout/new-modal';
 import { LoadingComponent } from '@gitroom/frontend/components/layout/loading';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
-import { useRulesList, RULES_KEY } from '@gitroom/frontend/components/rules/use.rules.list';
+import {
+  useRulesList,
+  RULES_KEY,
+} from '@gitroom/frontend/components/rules/use.rules.list';
 import { useRuleCapabilities } from '@gitroom/frontend/components/rules/use.rule.capabilities';
 import {
   useDeleteRule,
@@ -32,7 +38,10 @@ import {
   IntegrationListItem,
   useIntegrationList,
 } from '@gitroom/frontend/components/launches/helpers/use.integration.list';
-import { resolveChannelId, setLastChannelId } from '@gitroom/frontend/components/launches/helpers/last-channel';
+import {
+  resolveChannelId,
+  setLastChannelId,
+} from '@gitroom/frontend/components/launches/helpers/last-channel';
 
 export default function RulesPage() {
   const t = useT();
@@ -113,7 +122,10 @@ export default function RulesPage() {
         await setRuleActivation(rule.id, { enabled: value === 'on' });
         await mutate();
       } catch (err: any) {
-        toaster.show(err?.message || 'Failed to update Rule activation.', 'warning');
+        toaster.show(
+          err?.message || 'Failed to update Rule activation.',
+          'warning'
+        );
       } finally {
         setPendingId(null);
       }
@@ -187,7 +199,10 @@ export default function RulesPage() {
 
         {error && (
           <div className="rounded-[12px] border border-red-500/30 bg-newBgColor px-[16px] py-[12px] text-[14px] text-red-500">
-            {t('rules_load_error', 'Failed to load Rules. Please refresh and try again.')}
+            {t(
+              'rules_load_error',
+              'Failed to load Rules. Please refresh and try again.'
+            )}
           </div>
         )}
 
@@ -232,7 +247,9 @@ export default function RulesPage() {
                 <div className="px-[20px] py-[16px] border-b border-newBorder flex flex-col gap-[12px] lg:flex-row lg:items-center lg:justify-between">
                   <div className="flex flex-col gap-[8px] min-w-0">
                     <div className="flex items-center gap-[10px] flex-wrap">
-                      <div className="text-[18px] font-[600] truncate">{rule.name}</div>
+                      <div className="text-[18px] font-[600] truncate">
+                        {rule.name}
+                      </div>
                       <span
                         className={clsx(
                           'text-[12px] px-[8px] py-[2px] rounded-full border',
@@ -259,7 +276,9 @@ export default function RulesPage() {
                     </Button>
                     <div className="flex items-center gap-[8px] px-[8px]">
                       <span className="text-[12px] opacity-70">
-                        {rule.enabled ? t('disable', 'Disable') : t('enable', 'Enable')}
+                        {rule.enabled
+                          ? t('disable', 'Disable')
+                          : t('enable', 'Enable')}
                       </span>
                       <Slider
                         value={rule.enabled ? 'on' : 'off'}
@@ -275,7 +294,10 @@ export default function RulesPage() {
                       {t('conditions', 'Conditions')}
                     </div>
                     <div className="text-[14px]">
-                      {formatConditionPreview(rule.conditionMatch, rule.conditions)}
+                      {formatConditionPreview(
+                        rule.conditionMatch,
+                        rule.conditions
+                      )}
                     </div>
                   </div>
                   <div className="flex flex-col gap-[6px]">
@@ -298,7 +320,10 @@ export default function RulesPage() {
                     <div className="text-[14px]">
                       {rule.integrationCount} {t('channels', 'channels')}
                       {rule.pipelineCount > 0 &&
-                        `, ${rule.pipelineCount} ${t('pipelines', 'pipelines')}`}
+                        `, ${rule.pipelineCount} ${t(
+                          'pipelines',
+                          'pipelines'
+                        )}`}
                     </div>
                   </div>
                 </div>

@@ -13,11 +13,15 @@ describe('FollowerBotScoreScheduleDto', () => {
 
   it('rejects intervals below one hour', async () => {
     const errors = await run({ intervalHours: 0 });
-    expect(errors.some((error) => error.property === 'intervalHours')).toBe(true);
+    expect(errors.some((error) => error.property === 'intervalHours')).toBe(
+      true
+    );
   });
 
   it('rejects intervals above one week', async () => {
     const errors = await run({ intervalHours: 169 });
-    expect(errors.some((error) => error.property === 'intervalHours')).toBe(true);
+    expect(errors.some((error) => error.property === 'intervalHours')).toBe(
+      true
+    );
   });
 });

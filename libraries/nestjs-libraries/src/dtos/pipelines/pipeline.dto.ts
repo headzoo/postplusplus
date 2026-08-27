@@ -130,7 +130,9 @@ export class PipelineStatusDto {
   active: boolean;
 }
 
-export class PipelinePostDto extends OmitType(CreatePostDto, ['date'] as const) {}
+export class PipelinePostDto extends OmitType(CreatePostDto, [
+  'date',
+] as const) {}
 
 export class EnqueuePipelinePostDto {
   @IsString()

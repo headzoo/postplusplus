@@ -15,10 +15,7 @@ export class ApprovedAppsController {
   }
 
   @Delete('/:id')
-  async revoke(
-    @GetUserFromRequest() user: User,
-    @Param('id') id: string
-  ) {
+  async revoke(@GetUserFromRequest() user: User, @Param('id') id: string) {
     return this._oauthService.revokeApp(user.id, id);
   }
 }

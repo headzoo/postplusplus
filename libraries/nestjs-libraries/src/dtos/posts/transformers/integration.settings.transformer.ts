@@ -24,7 +24,10 @@ export class IntegrationSettingsTransformer {
       }
     } catch (error) {
       // If there's an error fetching the integration, we'll let validation handle it
-      console.error('Error fetching integration for settings transform:', error);
+      console.error(
+        'Error fetching integration for settings transform:',
+        error
+      );
     }
 
     return post;
@@ -38,4 +41,4 @@ export const TransformIntegrationSettings = (orgId: string) => {
     // since we need async database access
     return value;
   });
-}; 
+};

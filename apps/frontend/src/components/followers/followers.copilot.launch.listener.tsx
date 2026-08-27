@@ -12,10 +12,7 @@ export const FollowersCopilotLaunchListener: FC = () => {
   const lastLaunchTokenRef = useRef(0);
 
   useEffect(() => {
-    if (
-      !launchRequest ||
-      launchRequest.token === lastLaunchTokenRef.current
-    ) {
+    if (!launchRequest || launchRequest.token === lastLaunchTokenRef.current) {
       return;
     }
 

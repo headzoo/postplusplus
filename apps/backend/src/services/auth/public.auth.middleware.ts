@@ -41,9 +41,7 @@ export class PublicAuthMiddleware implements NestMiddleware {
       } else {
         const org = await this._organizationService.getOrgByApiKey(auth);
         if (!org) {
-          res
-            .status(HttpStatus.UNAUTHORIZED)
-            .json({ msg: 'Invalid API key' });
+          res.status(HttpStatus.UNAUTHORIZED).json({ msg: 'Invalid API key' });
           return;
         }
 

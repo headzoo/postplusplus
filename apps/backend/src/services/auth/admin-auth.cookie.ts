@@ -55,5 +55,7 @@ export const readAdminAuthToken = (request: Request) => {
   }
 
   const headerToken = request.headers?.[ADMIN_AUTH_HEADER];
-  return typeof headerToken === 'string' && headerToken ? headerToken : undefined;
+  return typeof headerToken === 'string' && headerToken
+    ? headerToken
+    : undefined;
 };

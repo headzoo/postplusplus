@@ -97,15 +97,11 @@ const ShortlinkPreferenceComponent = () => {
             value={localValue}
             onChange={handleChange}
           >
-            <option value="ASK">
-              {t('shortlink_ask', 'Ask every time')}
-            </option>
+            <option value="ASK">{t('shortlink_ask', 'Ask every time')}</option>
             <option value="YES">
               {t('shortlink_yes', 'Always shortlink')}
             </option>
-            <option value="NO">
-              {t('shortlink_no', 'Never shortlink')}
-            </option>
+            <option value="NO">{t('shortlink_no', 'Never shortlink')}</option>
           </Select>
         </div>
       </div>
@@ -114,4 +110,3 @@ const ShortlinkPreferenceComponent = () => {
 };
 
 export default ShortlinkPreferenceComponent;
-

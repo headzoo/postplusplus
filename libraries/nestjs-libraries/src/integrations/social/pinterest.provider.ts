@@ -60,7 +60,8 @@ type PinterestPendingData = {
 )
 export class PinterestProvider
   extends SocialAbstract
-  implements SocialProvider {
+  implements SocialProvider
+{
   identifier = 'pinterest';
   analyticsSnapshot = {
     capture: (request: ChannelAnalyticsCaptureRequest) =>
@@ -132,9 +133,9 @@ export class PinterestProvider
 
   public override handleErrors(body: string):
     | {
-      type: 'refresh-token' | 'bad-body' | 'retry';
-      value: string;
-    }
+        type: 'refresh-token' | 'bad-body' | 'retry';
+        value: string;
+      }
     | undefined {
     if (body.indexOf('constraint: maxItems=5') > -1) {
       return {
@@ -243,7 +244,9 @@ export class PinterestProvider
             id: account.username,
             name: account.username,
             username: account.username,
-            ...(account.profile_image ? { picture: account.profile_image } : {}),
+            ...(account.profile_image
+              ? { picture: account.profile_image }
+              : {}),
             profileUrl: `https://www.pinterest.com/${encodeURIComponent(
               account.username
             )}`,
@@ -342,12 +345,13 @@ export class PinterestProvider
   async generateAuthUrl() {
     const state = makeId(6);
     return {
-      url: `https://www.pinterest.com/oauth/?client_id=${process.env.PINTEREST_CLIENT_ID
-        }&redirect_uri=${encodeURIComponent(
-          `${process.env.FRONTEND_URL}/integrations/social/pinterest`
-        )}&response_type=code&scope=${encodeURIComponent(
-          'boards:read,boards:write,pins:read,pins:write,user_accounts:read'
-        )}&state=${state}`,
+      url: `https://www.pinterest.com/oauth/?client_id=${
+        process.env.PINTEREST_CLIENT_ID
+      }&redirect_uri=${encodeURIComponent(
+        `${process.env.FRONTEND_URL}/integrations/social/pinterest`
+      )}&response_type=code&scope=${encodeURIComponent(
+        'boards:read,boards:write,pins:read,pins:write,user_accounts:read'
+      )}&state=${state}`,
       codeVerifier: makeId(10),
       state,
     };
@@ -507,9 +511,9 @@ export class PinterestProvider
     const witness = (): PendingCheckResponse =>
       pendingData.attempting && !pendingData.confirmed
         ? {
-          status: 'ready',
-          pendingData: { ...pendingData, confirmed: true },
-        }
+            status: 'ready',
+            pendingData: { ...pendingData, confirmed: true },
+          }
         : { status: 'ready', pendingData };
 
     // Image-only pins have no asynchronous processing step.
@@ -598,16 +602,16 @@ export class PinterestProvider
           board_id: pendingData.settings.board,
           media_source: pendingData.mediaId
             ? {
-              source_type: 'video_id',
-              media_id: pendingData.mediaId,
-              cover_image_url: pendingData.coverPath,
-            }
+                source_type: 'video_id',
+                media_id: pendingData.mediaId,
+                cover_image_url: pendingData.coverPath,
+              }
             : mapImages?.length === 1
-              ? {
+            ? {
                 source_type: 'image_url',
                 url: mapImages?.[0]?.path,
               }
-              : {
+            : {
                 source_type: 'multiple_image_urls',
                 items: mapImages.map((m) => ({
                   url: m.path,
@@ -824,10 +828,7 @@ export class PinterestProvider
         }
       );
       const account = await accountResponse.json();
-      if (
-        accountResponse.ok &&
-        typeof account?.follower_count === 'number'
-      ) {
+      if (accountResponse.ok && typeof account?.follower_count === 'number') {
         points.push({
           metricKey: 'followers',
           label: 'Followers',

@@ -24,8 +24,8 @@ export const getHourBlockTop = (
   const cell =
     dateKey != null
       ? container.querySelector(
-        `[data-calendar-cell="${dateKey}"][data-hour="${hour}"]`
-      )
+          `[data-calendar-cell="${dateKey}"][data-hour="${hour}"]`
+        )
       : null;
   const heightEl = cell instanceof HTMLElement ? cell : target;
   return target.offsetTop + minuteFraction * heightEl.clientHeight;
@@ -42,8 +42,8 @@ export const useScrollToHour = (
     hourOrTarget == null
       ? null
       : typeof hourOrTarget === 'number'
-        ? hourOrTarget
-        : hourOrTarget.hour;
+      ? hourOrTarget
+      : hourOrTarget.hour;
   const minuteFraction =
     hourOrTarget != null && typeof hourOrTarget === 'object'
       ? hourOrTarget.minuteFraction ?? 0
@@ -83,11 +83,10 @@ export const useScrollToHour = (
       const cell =
         dateKey != null
           ? container.querySelector(
-            `[data-calendar-cell="${dateKey}"][data-hour="${hour}"]`
-          )
+              `[data-calendar-cell="${dateKey}"][data-hour="${hour}"]`
+            )
           : container.querySelector(`[data-hour="${hour}"]`);
-      const blockHeight =
-        cell instanceof HTMLElement ? cell.clientHeight : 0;
+      const blockHeight = cell instanceof HTMLElement ? cell.clientHeight : 0;
 
       container.scrollTo({
         top: Math.max(0, top - STICKY_HEADER_PX - blockHeight * 0.5),

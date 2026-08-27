@@ -83,19 +83,19 @@ const strategyWithDefaults = (
   defaultSort: string,
   filterPriority: string[] = []
 ) =>
-  ({
-    id,
-    version: 1,
-    summary: { key: 'summary', defaultValue: 'Summary' },
-    ui: {
-      defaultFilter,
-      defaultSort,
-      filterPriority,
-      filterEmphasis: defaultFilter,
-      compactMetrics: [],
-      emptyState: { key: 'empty', defaultValue: 'Empty' },
-    },
-  } as FollowerChannel['strategy']);
+({
+  id,
+  version: 1,
+  summary: { key: 'summary', defaultValue: 'Summary' },
+  ui: {
+    defaultFilter,
+    defaultSort,
+    filterPriority,
+    filterEmphasis: defaultFilter,
+    compactMetrics: [],
+    emptyState: { key: 'empty', defaultValue: 'Empty' },
+  },
+} as FollowerChannel['strategy']);
 
 const publicStrategy = (
   id: Parameters<typeof getChannelStrategy>[0]
@@ -363,6 +363,7 @@ jest.mock('@gitroom/frontend/components/followers/use.followers', () => {
           cultivate: 40,
           quiet: 213,
           ignored: 27,
+          converted: 18,
         },
         lists: [],
         listsTruncated: false,
@@ -658,13 +659,13 @@ describe('FollowersComponent', () => {
     }));
     pushState = jest
       .spyOn(globalThis.history, 'pushState')
-      .mockImplementation(() => {});
+      .mockImplementation(() => { });
     historyBack = jest
       .spyOn(globalThis.history, 'back')
-      .mockImplementation(() => {});
+      .mockImplementation(() => { });
     replaceState = jest
       .spyOn(globalThis.history, 'replaceState')
-      .mockImplementation(() => {});
+      .mockImplementation(() => { });
   });
 
   afterEach(() => {
@@ -807,7 +808,7 @@ describe('FollowersComponent', () => {
     expect(filterBar.contains(vipChip)).toBe(true);
     expect(
       allFollowersChip.compareDocumentPosition(vipChip) &
-        Node.DOCUMENT_POSITION_FOLLOWING
+      Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Create list' })).toBeTruthy();
   });
@@ -827,6 +828,9 @@ describe('FollowersComponent', () => {
     );
     expect(segmentColumns[3].getAttribute('data-board-segment')).toBe(
       'followed'
+    );
+    expect(segmentColumns[4].getAttribute('data-board-segment')).toBe(
+      'conversions'
     );
     expect(
       screen

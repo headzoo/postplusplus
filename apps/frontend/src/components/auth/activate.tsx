@@ -26,7 +26,7 @@ export function Activate() {
 
   useEffect(() => {
     if (cooldown <= 0) return;
-    
+
     const timer = setInterval(() => {
       setCooldown((prev) => prev - 1);
     }, 1000);
@@ -54,7 +54,9 @@ export function Activate() {
         setStatus('already_activated');
       } else {
         form.setError('email', {
-          message: result.message || t('failed_to_resend', 'Failed to resend activation email'),
+          message:
+            result.message ||
+            t('failed_to_resend', 'Failed to resend activation email'),
         });
       }
     } catch (e) {
@@ -123,7 +125,10 @@ export function Activate() {
           </div>
         ) : (
           <FormProvider {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
+            <form
+              onSubmit={form.handleSubmit(onSubmit)}
+              className="flex flex-col gap-4"
+            >
               <Input
                 label={t('label_email', 'Email')}
                 translationKey="label_email"
@@ -138,7 +143,10 @@ export function Activate() {
                 disabled={cooldown > 0}
               >
                 {cooldown > 0
-                  ? `${t('resend_available_in', 'You can resend in')} ${cooldown}s`
+                  ? `${t(
+                      'resend_available_in',
+                      'You can resend in'
+                    )} ${cooldown}s`
                   : t('resend_activation_email', 'Resend Activation Email')}
               </Button>
             </form>

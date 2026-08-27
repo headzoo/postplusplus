@@ -86,24 +86,24 @@ type TumblrUploadMedia = {
 
 type TumblrContentBlock =
   | {
-    type: 'text';
-    text: string;
-    subtype?: 'heading1';
-  }
+      type: 'text';
+      text: string;
+      subtype?: 'heading1';
+    }
   | {
-    type: 'link';
-    url: string;
-  }
+      type: 'link';
+      url: string;
+    }
   | {
-    type: 'image';
-    media: TumblrUploadMedia[];
-    alt_text?: string;
-  }
+      type: 'image';
+      media: TumblrUploadMedia[];
+      alt_text?: string;
+    }
   | {
-    type: 'video';
-    provider: 'tumblr';
-    media: TumblrUploadMedia;
-  };
+      type: 'video';
+      provider: 'tumblr';
+      media: TumblrUploadMedia;
+    };
 
 export class TumblrProvider extends SocialAbstract implements SocialProvider {
   override maxConcurrentJob = 3;
@@ -267,9 +267,11 @@ export class TumblrProvider extends SocialAbstract implements SocialProvider {
         id: name,
         name: blog?.title || name,
         username: name,
-        ...(blog?.url ? { profileUrl: blog.url } : {
-          profileUrl: `https://${encodeURIComponent(name)}.tumblr.com/`,
-        }),
+        ...(blog?.url
+          ? { profileUrl: blog.url }
+          : {
+              profileUrl: `https://${encodeURIComponent(name)}.tumblr.com/`,
+            }),
         picture: this.getAvatarUrl(name),
       };
     } catch {
@@ -335,9 +337,9 @@ export class TumblrProvider extends SocialAbstract implements SocialProvider {
     status?: number
   ):
     | {
-      type: 'refresh-token' | 'bad-body' | 'retry';
-      value: string;
-    }
+        type: 'refresh-token' | 'bad-body' | 'retry';
+        value: string;
+      }
     | undefined {
     if (
       status === 401 ||
@@ -600,9 +602,9 @@ export class TumblrProvider extends SocialAbstract implements SocialProvider {
 
     const postId = String(
       response.response?.id_string ||
-      response.response?.post_id ||
-      response.response?.id ||
-      ''
+        response.response?.post_id ||
+        response.response?.id ||
+        ''
     );
     const blogUrl = this.normalizeBlogUrl(
       integration.profile || `https://www.tumblr.com/${id}`
@@ -718,7 +720,7 @@ export class TumblrProvider extends SocialAbstract implements SocialProvider {
   private async createJsonPost(
     blogName: string,
     accessToken: string,
-    payload: { content: TumblrContentBlock[];[key: string]: any }
+    payload: { content: TumblrContentBlock[]; [key: string]: any }
   ) {
     return (await (
       await this.fetch(
@@ -739,7 +741,7 @@ export class TumblrProvider extends SocialAbstract implements SocialProvider {
   private async createMultipartPost(
     blogName: string,
     accessToken: string,
-    payload: { content: TumblrContentBlock[];[key: string]: any },
+    payload: { content: TumblrContentBlock[]; [key: string]: any },
     media: NonNullable<PostDetails['media']>
   ) {
     // Each media part is streamed from its source into the multipart request

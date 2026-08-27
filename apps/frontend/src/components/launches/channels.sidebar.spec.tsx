@@ -2,9 +2,12 @@
  * @jest-environment ./jest.jsdom.environment.js
  */
 
-jest.mock('@gitroom/frontend/components/launches/add.provider.component', () => ({
-  AddProviderButton: () => null,
-}));
+jest.mock(
+  '@gitroom/frontend/components/launches/add.provider.component',
+  () => ({
+    AddProviderButton: () => null,
+  })
+);
 
 jest.mock('@gitroom/frontend/components/launches/generator/generator', () => ({
   GeneratorComponent: () => null,
@@ -29,10 +32,7 @@ jest.mock('react-use-cookie', () => ({
 
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-import {
-  ChannelMenu,
-  groupChannelsByCustomer,
-} from './channels.sidebar';
+import { ChannelMenu, groupChannelsByCustomer } from './channels.sidebar';
 import { IntegrationListItem } from '@gitroom/frontend/components/launches/helpers/use.integration.list';
 
 jest.mock('@gitroom/react/translation/get.transation.service.client', () => ({
@@ -97,7 +97,7 @@ const makeIntegration = (
     changeProfilePicture: false,
     changeNickName: false,
     ...overrides,
-  }) as IntegrationListItem;
+  } as IntegrationListItem);
 
 const acmeOne = makeIntegration('acme-1', 'Acme One', {
   customer: { id: 'acme', name: 'Acme' },
@@ -117,7 +117,12 @@ beforeEach(() => {
 
 describe('groupChannelsByCustomer', () => {
   it('groups channels by customer and sorts named groups first by name', () => {
-    const groups = groupChannelsByCustomer([betaOne, ungrouped, acmeTwo, acmeOne]);
+    const groups = groupChannelsByCustomer([
+      betaOne,
+      ungrouped,
+      acmeTwo,
+      acmeOne,
+    ]);
 
     expect(groups.map((group) => group.name)).toEqual(['', 'Acme', 'Beta']);
     expect(groups[1].values.map((integration) => integration.id)).toEqual([
@@ -159,12 +164,7 @@ describe('ChannelMenu', () => {
   });
 
   it('collapses a named group when its header is clicked', () => {
-    render(
-      <ChannelMenu
-        collapsed={false}
-        integrations={[acmeOne, betaOne]}
-      />
-    );
+    render(<ChannelMenu collapsed={false} integrations={[acmeOne, betaOne]} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Acme' }));
 
@@ -201,10 +201,7 @@ describe('ChannelMenu', () => {
 
   it('uses halved gaps between groups and between header and items', () => {
     const { container } = render(
-      <ChannelMenu
-        collapsed={false}
-        integrations={[acmeOne, betaOne]}
-      />
+      <ChannelMenu collapsed={false} integrations={[acmeOne, betaOne]} />
     );
 
     const groupsWrapper = container.firstElementChild as HTMLElement | null;
@@ -226,7 +223,9 @@ describe('ChannelMenu', () => {
 
     const menus = screen.getAllByLabelText('Group actions');
     expect(menus).toHaveLength(2);
-    expect(screen.getByText('Solo Channel').closest('div.flex.flex-col')).toBeTruthy();
+    expect(
+      screen.getByText('Solo Channel').closest('div.flex.flex-col')
+    ).toBeTruthy();
 
     fireEvent.click(menus[0]);
     expect(screen.getByRole('menuitem', { name: 'Rename' })).toBeTruthy();
@@ -252,12 +251,7 @@ describe('ChannelMenu', () => {
   });
 
   it('does not collapse a group when its actions menu is opened', () => {
-    render(
-      <ChannelMenu
-        collapsed={false}
-        integrations={[acmeOne, betaOne]}
-      />
-    );
+    render(<ChannelMenu collapsed={false} integrations={[acmeOne, betaOne]} />);
 
     fireEvent.click(screen.getAllByLabelText('Group actions')[0]);
 
@@ -268,12 +262,7 @@ describe('ChannelMenu', () => {
   });
 
   it('opens a rename modal from the group menu', () => {
-    render(
-      <ChannelMenu
-        collapsed={false}
-        integrations={[acmeOne, betaOne]}
-      />
-    );
+    render(<ChannelMenu collapsed={false} integrations={[acmeOne, betaOne]} />);
 
     fireEvent.click(screen.getAllByLabelText('Group actions')[0]);
     fireEvent.click(screen.getByRole('menuitem', { name: 'Rename' }));

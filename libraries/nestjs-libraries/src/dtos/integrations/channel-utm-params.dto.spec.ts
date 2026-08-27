@@ -6,9 +6,9 @@ describe('UpdateChannelUtmParamsDto', () => {
     validate(Object.assign(new UpdateChannelUtmParamsDto(), { utmParams }));
 
   it('accepts valid query strings and empty clears', async () => {
-    await expect(validateDto('utm_campaign=spring&utm_medium=social')).resolves.toEqual(
-      []
-    );
+    await expect(
+      validateDto('utm_campaign=spring&utm_medium=social')
+    ).resolves.toEqual([]);
     await expect(validateDto('?utm_campaign=spring')).resolves.toEqual([]);
     await expect(validateDto('')).resolves.toEqual([]);
   });

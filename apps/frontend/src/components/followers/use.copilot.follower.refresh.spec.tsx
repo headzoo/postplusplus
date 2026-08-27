@@ -11,8 +11,7 @@ const mutateCache = jest.fn().mockResolvedValue(undefined);
 const revalidateFollowerChannelCaches = jest.fn(
   (mutate: typeof mutateCache, integrationId: string) =>
     mutate(
-      (key: unknown) =>
-        typeof key === 'string' && key.includes(integrationId),
+      (key: unknown) => typeof key === 'string' && key.includes(integrationId),
       undefined,
       { revalidate: true }
     )

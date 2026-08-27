@@ -28,15 +28,14 @@ import { ContextDocument } from '@prisma/client';
 
 @Injectable()
 export class ContextDocumentService {
-  constructor(
-    private _contextDocumentRepository: ContextDocumentRepository
-  ) { }
+  constructor(private _contextDocumentRepository: ContextDocumentRepository) {}
 
   async listDocuments(
     organizationId: string
   ): Promise<ContextDocumentMetadataDto[]> {
-    const documents =
-      await this._contextDocumentRepository.listMetadata(organizationId);
+    const documents = await this._contextDocumentRepository.listMetadata(
+      organizationId
+    );
 
     return documents.map((document) => this.toMetadata(document));
   }
@@ -53,8 +52,9 @@ export class ContextDocumentService {
   }
 
   async listSkills(organizationId: string): Promise<SkillMetadataDto[]> {
-    const documents =
-      await this._contextDocumentRepository.listSkillMetadata(organizationId);
+    const documents = await this._contextDocumentRepository.listSkillMetadata(
+      organizationId
+    );
 
     return documents.flatMap((document) => {
       const slug = parseSkillFilename(document.name);
@@ -375,12 +375,7 @@ export class ContextDocumentService {
   private toMetadata(
     document: Pick<
       ContextDocument,
-      | 'id'
-      | 'organizationId'
-      | 'name'
-      | 'fileSize'
-      | 'createdAt'
-      | 'updatedAt'
+      'id' | 'organizationId' | 'name' | 'fileSize' | 'createdAt' | 'updatedAt'
     > & { description?: string | null }
   ): ContextDocumentMetadataDto {
     const warning = getContextDocumentLargeWarning(document.fileSize);
@@ -398,12 +393,12 @@ export class ContextDocumentService {
       ...(warning ? { warning } : {}),
       ...(slug
         ? {
-          skill: {
-            slug,
-            command: `/${slug}`,
-            conflict: isReservedAgentCommandSlug(slug),
-          },
-        }
+            skill: {
+              slug,
+              command: `/${slug}`,
+              conflict: isReservedAgentCommandSlug(slug),
+            },
+          }
         : {}),
     };
   }
@@ -426,10 +421,7 @@ export class ContextDocumentService {
   }
 
   private toSkillMetadata(
-    document: Pick<
-      ContextDocument,
-      'id' | 'name' | 'fileSize' | 'updatedAt'
-    >,
+    document: Pick<ContextDocument, 'id' | 'name' | 'fileSize' | 'updatedAt'>,
     slug: string
   ): SkillMetadataDto {
     const warning = getContextDocumentLargeWarning(document.fileSize);

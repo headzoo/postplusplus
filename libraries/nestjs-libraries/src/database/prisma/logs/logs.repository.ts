@@ -1,9 +1,6 @@
 import { PrismaRepository } from '@gitroom/nestjs-libraries/database/prisma/prisma.service';
 import { Injectable } from '@nestjs/common';
-import {
-  WebhookHttpLogDirection,
-  WebhookHttpLogSource,
-} from '@prisma/client';
+import { WebhookHttpLogDirection, WebhookHttpLogSource } from '@prisma/client';
 
 export type CreatePostHttpLogInput = {
   organizationId: string;
@@ -98,10 +95,30 @@ export class LogsRepository {
       ...(searchTerm
         ? {
             OR: [
-              { sourceDisplayName: { contains: searchTerm, mode: 'insensitive' as const } },
-              { sourceUsername: { contains: searchTerm, mode: 'insensitive' as const } },
-              { targetDisplayName: { contains: searchTerm, mode: 'insensitive' as const } },
-              { targetUsername: { contains: searchTerm, mode: 'insensitive' as const } },
+              {
+                sourceDisplayName: {
+                  contains: searchTerm,
+                  mode: 'insensitive' as const,
+                },
+              },
+              {
+                sourceUsername: {
+                  contains: searchTerm,
+                  mode: 'insensitive' as const,
+                },
+              },
+              {
+                targetDisplayName: {
+                  contains: searchTerm,
+                  mode: 'insensitive' as const,
+                },
+              },
+              {
+                targetUsername: {
+                  contains: searchTerm,
+                  mode: 'insensitive' as const,
+                },
+              },
             ],
           }
         : {}),

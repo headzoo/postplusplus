@@ -1,4 +1,10 @@
-import { IsIn, IsOptional, IsString, MinLength, ValidateIf } from 'class-validator';
+import {
+  IsIn,
+  IsOptional,
+  IsString,
+  MinLength,
+  ValidateIf,
+} from 'class-validator';
 import { JSONSchema } from 'class-validator-jsonschema';
 
 export class MeweDto {

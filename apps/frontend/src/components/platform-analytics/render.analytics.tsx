@@ -62,7 +62,9 @@ export type MetricDayBarClick = {
   date: string;
 };
 
-export const resolveValueMode = (item: AnalyticsDataItem): AnalyticsValueMode => {
+export const resolveValueMode = (
+  item: AnalyticsDataItem
+): AnalyticsValueMode => {
   if (item.valueMode) {
     return item.valueMode;
   }
@@ -129,8 +131,7 @@ export const analyticsTotal = (item: AnalyticsDataItem) => {
   if (mode === 'sum') {
     value = sorted.reduce((acc, curr) => acc + curr.total, 0);
   } else if (mode === 'average') {
-    value =
-      sorted.reduce((acc, curr) => acc + curr.total, 0) / sorted.length;
+    value = sorted.reduce((acc, curr) => acc + curr.total, 0) / sorted.length;
   } else {
     value = sorted[sorted.length - 1].total;
   }
@@ -151,13 +152,14 @@ const TrendIndicator: FC<{
     valueMode === 'average' && displayUnit === 'percentage'
       ? 'pp'
       : valueMode === 'average'
-        ? ''
-        : '%';
+      ? ''
+      : '%';
 
   return (
     <div
-      className={`flex items-center gap-[4px] text-[13px] font-medium ${isPositive ? 'text-[#32d583]' : 'text-[#f97066]'
-        }`}
+      className={`flex items-center gap-[4px] text-[13px] font-medium ${
+        isPositive ? 'text-[#32d583]' : 'text-[#f97066]'
+      }`}
     >
       <svg
         width="12"
@@ -166,10 +168,7 @@ const TrendIndicator: FC<{
         fill="none"
         className={isPositive ? '' : 'rotate-180'}
       >
-        <path
-          d="M6 2.5L10 7.5H2L6 2.5Z"
-          fill="currentColor"
-        />
+        <path d="M6 2.5L10 7.5H2L6 2.5Z" fill="currentColor" />
       </svg>
       <span>
         {displayValue}
@@ -198,35 +197,35 @@ export const AnalyticsCard: FC<{
   isDragging,
   dragHandleRef,
 }) => {
-    const t = useT();
-    const colorVariants = ['purple', 'green', 'blue'] as const;
-    const color = colorVariants[index % colorVariants.length];
-    const valueMode = resolveValueMode(item);
-    const displayUnit = resolveDisplayUnit(item);
-    const chartData = sortAnalyticsPoints(item.data);
-    const hasDataPoints = chartData.length >= 1;
-    const drilldownEligible = isMetricDrilldownEligible(item);
-    const handlePointClick = useCallback(
-      (point: { date: string }) => {
-        if (!drilldownEligible || !integrationId || !item.drilldownSlug) {
-          return;
-        }
-        if (!isExactIsoDate(point.date)) {
-          return;
-        }
-        onBarClick?.({
-          integrationId,
-          drilldownSlug: item.drilldownSlug,
-          date: point.date,
-        });
-      },
-      [drilldownEligible, integrationId, item.drilldownSlug, onBarClick]
-    );
+  const t = useT();
+  const colorVariants = ['purple', 'green', 'blue'] as const;
+  const color = colorVariants[index % colorVariants.length];
+  const valueMode = resolveValueMode(item);
+  const displayUnit = resolveDisplayUnit(item);
+  const chartData = sortAnalyticsPoints(item.data);
+  const hasDataPoints = chartData.length >= 1;
+  const drilldownEligible = isMetricDrilldownEligible(item);
+  const handlePointClick = useCallback(
+    (point: { date: string }) => {
+      if (!drilldownEligible || !integrationId || !item.drilldownSlug) {
+        return;
+      }
+      if (!isExactIsoDate(point.date)) {
+        return;
+      }
+      onBarClick?.({
+        integrationId,
+        drilldownSlug: item.drilldownSlug,
+        date: point.date,
+      });
+    },
+    [drilldownEligible, integrationId, item.drilldownSlug, onBarClick]
+  );
 
-    return (
-      <div className={clsx('group relative', isDragging && 'opacity-40')}>
-        <div
-          className={`
+  return (
+    <div className={clsx('group relative', isDragging && 'opacity-40')}>
+      <div
+        className={`
           flex flex-col h-full
           bg-newTableHeader
           border border-newTableBorder
@@ -235,88 +234,90 @@ export const AnalyticsCard: FC<{
           transition-all duration-200
           hover:border-[#eb3825]/50
         `}
-        >
-          <div className="flex items-center justify-between px-[16px] pt-[14px] pb-[8px] gap-[8px]">
+      >
+        <div className="flex items-center justify-between px-[16px] pt-[14px] pb-[8px] gap-[8px]">
+          <div
+            ref={dragHandleRef}
+            className={clsx(
+              'flex min-w-0 items-center gap-[10px]',
+              dragHandleRef && 'cursor-grab active:cursor-grabbing'
+            )}
+            aria-label={
+              dragHandleRef
+                ? t('drag_to_reorder_stat', 'Drag to reorder stat')
+                : undefined
+            }
+          >
             <div
-              ref={dragHandleRef}
-              className={clsx(
-                'flex min-w-0 items-center gap-[10px]',
-                dragHandleRef && 'cursor-grab active:cursor-grabbing'
-              )}
-              aria-label={
-                dragHandleRef
-                  ? t('drag_to_reorder_stat', 'Drag to reorder stat')
-                  : undefined
-              }
-            >
-              <div
-                className={`
+              className={`
                 w-[8px] h-[8px] rounded-full shrink-0
                 ${color === 'purple' ? 'bg-[#eb3825]' : ''}
                 ${color === 'green' ? 'bg-[#32d583]' : ''}
                 ${color === 'blue' ? 'bg-[#1d9bf0]' : ''}
               `}
-              />
-              <span className="text-[15px] font-medium text-newTableText truncate">
-                {item.label}
-              </span>
-            </div>
-            <div className="flex items-center gap-[8px] shrink-0">
-              {item.percentageChange !== undefined && (
-                <TrendIndicator
-                  value={item.percentageChange}
-                  valueMode={valueMode}
-                  displayUnit={displayUnit}
-                />
-              )}
-              {onRemove && (
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onRemove();
-                  }}
-                  className="inline-flex h-[24px] w-[24px] items-center justify-center rounded-[6px] text-newTableText hover:bg-newBgColorInner hover:text-newTextColor"
-                  aria-label={t('remove_stat', 'Remove stat')}
-                >
-                  <CloseIconSmall size={10} />
-                </button>
-              )}
-            </div>
+            />
+            <span className="text-[15px] font-medium text-newTableText truncate">
+              {item.label}
+            </span>
           </div>
+          <div className="flex items-center gap-[8px] shrink-0">
+            {item.percentageChange !== undefined && (
+              <TrendIndicator
+                value={item.percentageChange}
+                valueMode={valueMode}
+                displayUnit={displayUnit}
+              />
+            )}
+            {onRemove && (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onRemove();
+                }}
+                className="inline-flex h-[24px] w-[24px] items-center justify-center rounded-[6px] text-newTableText hover:bg-newBgColorInner hover:text-newTextColor"
+                aria-label={t('remove_stat', 'Remove stat')}
+              >
+                <CloseIconSmall size={10} />
+              </button>
+            )}
+          </div>
+        </div>
 
-          {hasDataPoints ? (
-            <>
-              <div className="flex-1 px-[12px] py-[8px]">
-                <div className="h-[120px] relative">
-                  <ChartSocial
-                    data={chartData}
-                    color={color}
-                    valueMode={valueMode}
-                    clickable={drilldownEligible && !!integrationId && !!onBarClick}
-                    onPointClick={handlePointClick}
-                    key={`chart-${index}`}
-                  />
-                </div>
+        {hasDataPoints ? (
+          <>
+            <div className="flex-1 px-[12px] py-[8px]">
+              <div className="h-[120px] relative">
+                <ChartSocial
+                  data={chartData}
+                  color={color}
+                  valueMode={valueMode}
+                  clickable={
+                    drilldownEligible && !!integrationId && !!onBarClick
+                  }
+                  onPointClick={handlePointClick}
+                  key={`chart-${index}`}
+                />
               </div>
+            </div>
 
-              <div className="px-[16px] pb-[14px]">
-                <div className="text-[36px] leading-[42px] font-semibold tracking-tight">
-                  {total}
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="flex-1 flex flex-col items-center justify-center py-[32px] px-[16px]">
-              <div className="text-[48px] leading-[56px] font-semibold tracking-tight">
+            <div className="px-[16px] pb-[14px]">
+              <div className="text-[36px] leading-[42px] font-semibold tracking-tight">
                 {total}
               </div>
             </div>
-          )}
-        </div>
+          </>
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center py-[32px] px-[16px]">
+            <div className="text-[48px] leading-[56px] font-semibold tracking-tight">
+              {total}
+            </div>
+          </div>
+        )}
       </div>
-    );
-  };
+    </div>
+  );
+};
 
 const ANALYTICS_POLL_INTERVAL_MS = 15_000;
 const ANALYTICS_POLL_DURATION_MS = 5 * 60 * 1000;
@@ -329,19 +330,18 @@ export const CollectAnalyticsButton: FC<{
 }> = ({ integrationId, providerIdentifier, disabled, onQueued }) => {
   const t = useT();
   const toaster = useToaster();
-  const { requestCapture, isRequesting } = useRequestAnalyticsCapture(
-    integrationId
-  );
+  const { requestCapture, isRequesting } =
+    useRequestAnalyticsCapture(integrationId);
 
   const collect = async () => {
     try {
       const result = await requestCapture();
       toaster.show(
         result.message ||
-        t(
-          'analytics_collection_started',
-          'Analytics collection started. This may take a few minutes.'
-        ),
+          t(
+            'analytics_collection_started',
+            'Analytics collection started. This may take a few minutes.'
+          ),
         'success'
       );
       onQueued?.();
@@ -350,9 +350,9 @@ export const CollectAnalyticsButton: FC<{
         error instanceof Error
           ? error.message
           : t(
-            'analytics_collection_failed',
-            'Unable to start analytics collection'
-          ),
+              'analytics_collection_failed',
+              'Unable to start analytics collection'
+            ),
         'warning'
       );
     }
@@ -406,13 +406,13 @@ const EmptyState: FC<{
       <p className="text-[15px] text-newTableText text-center">
         {collecting
           ? t(
-            'analytics_collection_in_progress',
-            'Analytics collection started. This may take a few minutes.'
-          )
+              'analytics_collection_in_progress',
+              'Analytics collection started. This may take a few minutes.'
+            )
           : t(
-            'analytics_collecting_history',
-            'Analytics history is still being collected. Metrics will appear after the first daily snapshots.'
-          )}
+              'analytics_collecting_history',
+              'Analytics history is still being collected. Metrics will appear after the first daily snapshots.'
+            )}
       </p>
       <CollectAnalyticsButton
         integrationId={integrationId}

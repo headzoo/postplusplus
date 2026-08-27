@@ -1,6 +1,9 @@
-jest.mock('@gitroom/nestjs-libraries/database/prisma/conversions/conversion.service', () => ({
-  ConversionService: class ConversionService {},
-}));
+jest.mock(
+  '@gitroom/nestjs-libraries/database/prisma/conversions/conversion.service',
+  () => ({
+    ConversionService: class ConversionService {},
+  })
+);
 
 import { HttpException, UnauthorizedException } from '@nestjs/common';
 import { ConversionSource } from '@prisma/client';
@@ -50,7 +53,9 @@ describe('ConversionWebhooksController', () => {
       id: 'integration-a',
       organizationId: 'org-a',
     });
-    conversionService.verifyConversionWebhookCredential.mockResolvedValue(false);
+    conversionService.verifyConversionWebhookCredential.mockResolvedValue(
+      false
+    );
 
     await expect(
       controller.ingestGoal('integration-a', 'Bearer wrong-token', {

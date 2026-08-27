@@ -57,7 +57,8 @@ export const SwitchUser = () => {
           .filter((org: any) => org?.user?.id === curr?.user?.id)
           .map(
             (org: any) =>
-              `${org?.organization?.name} (${org?.role} / ${org?.organization?.subscription?.subscriptionTier || 'FREE'
+              `${org?.organization?.name} (${org?.role} / ${
+                org?.organization?.subscription?.subscriptionTier || 'FREE'
               })`
           )
           .join(', '),
@@ -116,7 +117,10 @@ export const SwitchUser = () => {
       <div className="flex-1 min-w-[220px]">
         <Input
           autoComplete="off"
-          placeholder={t('select_user_to_switch_to', 'Select user to switch to')}
+          placeholder={t(
+            'select_user_to_switch_to',
+            'Select user to switch to'
+          )}
           name="switchUser"
           disableForm={true}
           label=""

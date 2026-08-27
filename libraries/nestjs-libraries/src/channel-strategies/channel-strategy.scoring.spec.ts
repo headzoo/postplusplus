@@ -5,7 +5,11 @@ import {
 } from './channel-strategy.scoring';
 import { getChannelStrategy } from './channel-strategy.registry';
 
-function score(strategyId: Parameters<typeof getChannelStrategy>[0], effortScore: number, reciprocationScore: number) {
+function score(
+  strategyId: Parameters<typeof getChannelStrategy>[0],
+  effortScore: number,
+  reciprocationScore: number
+) {
   const strategy = getChannelStrategy(strategyId);
   return calculateRelationshipGrade(
     { effortScore, reciprocationScore },
@@ -42,7 +46,9 @@ describe('channel strategy scoring', () => {
   it('applies the documented interaction biases', () => {
     const grow = getChannelStrategy('grow_audience').getScoringProfile();
     const lead = getChannelStrategy('lead_capture').getScoringProfile();
-    const community = getChannelStrategy('community_retention').getScoringProfile();
+    const community = getChannelStrategy(
+      'community_retention'
+    ).getScoringProfile();
     const awareness = getChannelStrategy('brand_awareness').getScoringProfile();
     const support = getChannelStrategy('customer_support').getScoringProfile();
 
@@ -60,13 +66,15 @@ describe('channel strategy scoring', () => {
       getInteractionScore(grow, 'reply', 'outbound')
     );
     expect(support.outboundExcessPenaltyWeight).toBe(0);
-    expect(getRelationshipTriage({ effortScore: 24, reciprocationScore: 0 }, support)).toBe(
-      'over_invested'
-    );
+    expect(
+      getRelationshipTriage({ effortScore: 24, reciprocationScore: 0 }, support)
+    ).toBe('over_invested');
   });
 
   it('is deterministic and rejects invalid numeric input', () => {
-    expect(score('lead_capture', 10, 12)).toEqual(score('lead_capture', 10, 12));
+    expect(score('lead_capture', 10, 12)).toEqual(
+      score('lead_capture', 10, 12)
+    );
     const strategy = getChannelStrategy('grow_audience');
     expect(() =>
       calculateRelationshipGrade(

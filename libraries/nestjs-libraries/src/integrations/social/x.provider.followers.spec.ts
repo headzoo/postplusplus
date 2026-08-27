@@ -67,9 +67,14 @@ describe('XProvider followers', () => {
       .mockResolvedValue({ v2: { followers } });
 
     await expect(
-      provider.memberFollowers({ internalId: '42' } as any, 'token:secret', 'warm-1', {
-        limit: 100,
-      })
+      provider.memberFollowers(
+        { internalId: '42' } as any,
+        'token:secret',
+        'warm-1',
+        {
+          limit: 100,
+        }
+      )
     ).resolves.toEqual({
       items: [
         {

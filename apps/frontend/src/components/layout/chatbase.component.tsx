@@ -92,7 +92,9 @@ const ChatBaseCode: FC<{ token: string }> = ({ token }) => {
     window.chatbase('registerTools', {
       stripe_refund: async () => {
         try {
-          const previewResponse = await fetch('/billing/chatbase-refund/preview');
+          const previewResponse = await fetch(
+            '/billing/chatbase-refund/preview'
+          );
 
           if (!previewResponse.ok) {
             return {

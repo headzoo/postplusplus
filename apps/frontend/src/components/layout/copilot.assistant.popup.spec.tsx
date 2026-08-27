@@ -47,13 +47,19 @@ describe('CopilotAssistantPopup', () => {
       <CopilotAssistantPopup
         instructions="help"
         suggestions={[
-          { title: 'Who should I engage with?', message: 'Who should I engage with?' },
+          {
+            title: 'Who should I engage with?',
+            message: 'Who should I engage with?',
+          },
         ]}
       />
     );
 
     expect(popupProps.suggestions).toEqual([
-      { title: 'Who should I engage with?', message: 'Who should I engage with?' },
+      {
+        title: 'Who should I engage with?',
+        message: 'Who should I engage with?',
+      },
     ]);
     expect(popupProps.Window).toBe(ResizableCopilotWindow);
   });
@@ -65,7 +71,10 @@ describe('CopilotAssistantPopup', () => {
       <CopilotAssistantPopup
         instructions="help"
         suggestions={[
-          { title: 'Who should I engage with?', message: 'Who should I engage with?' },
+          {
+            title: 'Who should I engage with?',
+            message: 'Who should I engage with?',
+          },
         ]}
       />
     );
@@ -76,9 +85,7 @@ describe('CopilotAssistantPopup', () => {
   it('forwards a custom Input component when provided', () => {
     const CustomInput = () => <div data-testid="custom-input" />;
 
-    render(
-      <CopilotAssistantPopup instructions="help" Input={CustomInput} />
-    );
+    render(<CopilotAssistantPopup instructions="help" Input={CustomInput} />);
 
     expect(popupProps.Input).toBe(CustomInput);
   });
@@ -127,7 +134,9 @@ describe('ResizableCopilotWindow', () => {
       </ResizableCopilotWindow>
     );
 
-    const windowEl = container.querySelector('.copilotKitWindow') as HTMLElement;
+    const windowEl = container.querySelector(
+      '.copilotKitWindow'
+    ) as HTMLElement;
     expect(windowEl.style.width).toBe('400px');
     expect(windowEl.style.height).toBe('500px');
 
@@ -157,7 +166,9 @@ describe('ResizableCopilotWindow', () => {
       </ResizableCopilotWindow>
     );
 
-    const windowEl = container.querySelector('.copilotKitWindow') as HTMLElement;
+    const windowEl = container.querySelector(
+      '.copilotKitWindow'
+    ) as HTMLElement;
     expect(windowEl.style.width).toBe(`${defaults.width}px`);
     expect(windowEl.style.height).toBe(`${defaults.height}px`);
   });

@@ -97,10 +97,11 @@ export const MissingReleaseModal: FC<{
           <div
             key={item.id}
             onClick={() => setSelected(item.id)}
-            className={`cursor-pointer rounded-[8px] overflow-hidden border-2 transition-all ${selected === item.id
+            className={`cursor-pointer rounded-[8px] overflow-hidden border-2 transition-all ${
+              selected === item.id
                 ? 'border-[#eb3825] scale-[1.02]'
                 : 'border-transparent hover:border-textColor/20'
-              }`}
+            }`}
           >
             <img
               src={item.url}

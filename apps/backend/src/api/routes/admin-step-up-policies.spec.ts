@@ -95,7 +95,8 @@ const MUST_STAY_UNGATED: Record<string, string[]> = {
 
 type Member = { policy?: Policy; checksSuperAdmin: boolean };
 
-const MEMBER = /^ {2}(?:private |public |protected )?(?:async )?([A-Za-z0-9_]+)\s*\(/;
+const MEMBER =
+  /^ {2}(?:private |public |protected )?(?:async )?([A-Za-z0-9_]+)\s*\(/;
 const HANDLER_POLICY = /^ {2}@RequireAdminStepUp\('(general|fresh)'\)/;
 const CLASS_POLICY = /^@RequireAdminStepUp\('(general|fresh)'\)/m;
 const SUPER_ADMIN_CHECK = /isSuperAdmin|assertSuperAdmin/;
@@ -138,46 +139,57 @@ const readController = (file: string) => {
 const files = Object.keys(EXPECTED_POLICIES);
 
 describe('admin step-up route policy inventory', () => {
-  it.each(files)('%s applies the expected policy to every listed handler', (file) => {
-    const members = readController(file);
+  it.each(files)(
+    '%s applies the expected policy to every listed handler',
+    (file) => {
+      const members = readController(file);
 
-    expect(
-      Object.fromEntries(
-        Object.keys(EXPECTED_POLICIES[file]).map((handler) => [
-          handler,
-          members.get(handler)?.policy,
-        ])
-      )
-    ).toEqual(EXPECTED_POLICIES[file]);
-  });
+      expect(
+        Object.fromEntries(
+          Object.keys(EXPECTED_POLICIES[file]).map((handler) => [
+            handler,
+            members.get(handler)?.policy,
+          ])
+        )
+      ).toEqual(EXPECTED_POLICIES[file]);
+    }
+  );
 
-  it.each(files)('%s has no super-admin capability without a policy', (file) => {
-    const exempt = NOT_A_PLATFORM_ADMIN_CAPABILITY[file] || [];
-    const declared = Object.keys(EXPECTED_POLICIES[file]);
+  it.each(files)(
+    '%s has no super-admin capability without a policy',
+    (file) => {
+      const exempt = NOT_A_PLATFORM_ADMIN_CAPABILITY[file] || [];
+      const declared = Object.keys(EXPECTED_POLICIES[file]);
 
-    const uncovered = [...readController(file)]
-      .filter(([name, member]) => member.checksSuperAdmin && !exempt.includes(name))
-      .filter(([name, member]) => !member.policy || !declared.includes(name))
-      .map(([name]) => name);
+      const uncovered = [...readController(file)]
+        .filter(
+          ([name, member]) => member.checksSuperAdmin && !exempt.includes(name)
+        )
+        .filter(([name, member]) => !member.policy || !declared.includes(name))
+        .map(([name]) => name);
 
-    expect(uncovered).toEqual([]);
-  });
+      expect(uncovered).toEqual([]);
+    }
+  );
 
-  it.each(files)('%s still finds the super-admin checks it inventories', (file) => {
-    const members = readController(file);
-    const checked = [...members]
-      .filter(([, member]) => member.checksSuperAdmin)
-      .map(([name]) => name);
+  it.each(files)(
+    '%s still finds the super-admin checks it inventories',
+    (file) => {
+      const members = readController(file);
+      const checked = [...members]
+        .filter(([, member]) => member.checksSuperAdmin)
+        .map(([name]) => name);
 
-    expect(checked.length).toBeGreaterThan(0);
-    expect(checked).toEqual(
-      expect.arrayContaining(
-        file === 'admin.controller.ts'
-          ? ['assertSuperAdmin']
-          : Object.keys(EXPECTED_POLICIES[file])
-      )
-    );
-  });
+      expect(checked.length).toBeGreaterThan(0);
+      expect(checked).toEqual(
+        expect.arrayContaining(
+          file === 'admin.controller.ts'
+            ? ['assertSuperAdmin']
+            : Object.keys(EXPECTED_POLICIES[file])
+        )
+      );
+    }
+  );
 
   it.each(Object.keys(MUST_STAY_UNGATED))(
     '%s keeps ordinary organization routes free of platform-admin gating',
@@ -229,7 +241,9 @@ describe('admin step-up route policy inventory', () => {
           SettingsController.prototype.inviteTeamMember
         )
       ).toBeUndefined();
-      expect(Reflect.getMetadata(ADMIN_STEP_UP_KEY, SettingsController)).toBeUndefined();
+      expect(
+        Reflect.getMetadata(ADMIN_STEP_UP_KEY, SettingsController)
+      ).toBeUndefined();
     });
   });
 });

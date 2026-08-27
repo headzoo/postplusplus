@@ -842,7 +842,6 @@ describe('ChannelAnalyticsRepository', () => {
     });
   });
 
-
   it('upserts account daily points without touching sync coverage', async () => {
     const { repository, tx } = createHarness();
     await repository.persistAccountDailyPoints('org', 'integration', [

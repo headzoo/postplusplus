@@ -8,29 +8,29 @@ jest.mock('@gitroom/nestjs-libraries/upload/upload.factory', () => ({
 }));
 jest.mock(
   '@gitroom/nestjs-libraries/database/prisma/subscriptions/subscription.service',
-  () => ({ SubscriptionService: class SubscriptionService { } })
+  () => ({ SubscriptionService: class SubscriptionService {} })
 );
 jest.mock('@gitroom/nestjs-libraries/openai/openai.service', () => ({
-  OpenaiService: class OpenaiService { },
+  OpenaiService: class OpenaiService {},
 }));
 jest.mock('@gitroom/nestjs-libraries/videos/video.manager', () => ({
-  VideoManager: class VideoManager { },
+  VideoManager: class VideoManager {},
 }));
 jest.mock('@gitroom/nestjs-libraries/giphy/giphy.service', () => ({
-  GiphyService: class GiphyService { },
+  GiphyService: class GiphyService {},
 }));
 jest.mock('./open.graph.repository', () => ({
-  OpenGraphRepository: class OpenGraphRepository { },
+  OpenGraphRepository: class OpenGraphRepository {},
 }));
 jest.mock('./media.repository', () => ({
-  MediaRepository: class MediaRepository { },
+  MediaRepository: class MediaRepository {},
 }));
 jest.mock(
   '@gitroom/backend/services/auth/permissions/permission.exception.class',
   () => ({
     AuthorizationActions: { Create: 'create' },
     Sections: { VIDEOS_PER_MONTH: 'videos_per_month', AI: 'ai' },
-    SubscriptionException: class SubscriptionException extends Error { },
+    SubscriptionException: class SubscriptionException extends Error {},
   }),
   { virtual: true }
 );

@@ -94,13 +94,13 @@ export function buildAgentTransportMetadata(
   const integrations = properties.length
     ? `\n[--integrations--]
 Use the following social media platforms: ${JSON.stringify(
-      properties.map((p) => ({
-        id: p.id,
-        platform: p.identifier,
-        profilePicture: p.picture,
-        additionalSettings: p.additionalSettings,
-      }))
-    )}
+        properties.map((p) => ({
+          id: p.id,
+          platform: p.identifier,
+          profilePicture: p.picture,
+          additionalSettings: p.additionalSettings,
+        }))
+      )}
 [--integrations--]`
     : '';
 
@@ -191,8 +191,8 @@ export const MediaPortal: FC<{
         dummy={false}
         name="image"
         onChange={setMedia}
-        onOpen={() => { }}
-        onClose={() => { }}
+        onOpen={() => {}}
+        onClose={() => {}}
         hideToolbar={hideToolbar}
         attachTriggerRef={attachTriggerRef}
       />
@@ -211,51 +211,54 @@ export const AgentList: FC<{
   onToggleIntegration,
   onSelectPipeline,
 }) => {
-    const { data: integrations = [] } = useIntegrationList();
+  const { data: integrations = [] } = useIntegrationList();
 
-    const {
-      data: pipelines,
-      error: pipelinesError,
-      isLoading: pipelinesLoading,
-    } = usePipelineList();
+  const {
+    data: pipelines,
+    error: pipelinesError,
+    isLoading: pipelinesLoading,
+  } = usePipelineList();
 
-    const handleSelect = useCallback(
-      (integration: IntegrationListItem) => {
-        onToggleIntegration(integration as Integrations);
-      },
-      [onToggleIntegration]
-    );
+  const handleSelect = useCallback(
+    (integration: IntegrationListItem) => {
+      onToggleIntegration(integration as Integrations);
+    },
+    [onToggleIntegration]
+  );
 
-    return (
-      <ChannelsSidebar
-        integrationCount={integrations.length}
-        showAddProvider={false}
-      >
-        {(collapsed) => (
-          <>
-            <ChannelMenu
-              collapsed={collapsed}
-              integrations={integrations}
-              selectedIds={selectedIntegrations.map((integration) => integration.id)}
-              onSelect={handleSelect}
-            />
-            <PipelineSidebarList
-              collapsed={collapsed}
-              pipelines={pipelines || []}
-              selectedPipelineId={selectedPipeline?.id}
-              isLoading={pipelinesLoading}
-              error={pipelinesError}
-              onSelectPipeline={onSelectPipeline}
-              activeOnly
-            />
-          </>
-        )}
-      </ChannelsSidebar>
-    );
-  };
+  return (
+    <ChannelsSidebar
+      integrationCount={integrations.length}
+      showAddProvider={false}
+    >
+      {(collapsed) => (
+        <>
+          <ChannelMenu
+            collapsed={collapsed}
+            integrations={integrations}
+            selectedIds={selectedIntegrations.map(
+              (integration) => integration.id
+            )}
+            onSelect={handleSelect}
+          />
+          <PipelineSidebarList
+            collapsed={collapsed}
+            pipelines={pipelines || []}
+            selectedPipelineId={selectedPipeline?.id}
+            isLoading={pipelinesLoading}
+            error={pipelinesError}
+            onSelectPipeline={onSelectPipeline}
+            activeOnly
+          />
+        </>
+      )}
+    </ChannelsSidebar>
+  );
+};
 
-export const PropertiesContext =
-  createContext<AgentSelectionState>(defaultAgentSelectionState);
+export const PropertiesContext = createContext<AgentSelectionState>(
+  defaultAgentSelectionState
+);
 
 export const Agent: FC<{ children: ReactNode }> = ({ children }) => {
   const [selection, setSelection] = useState<AgentSelectionState>(
@@ -324,12 +327,14 @@ const ThreadsPanelContent: FC<{
         'absolute top-0 start-0 w-full h-full flex flex-col gap-[15px]',
         collapsed ? 'px-[15px] py-[20px]' : 'p-[20px]'
       )}
-    >      <div
-      className={clsx(
-        'justify-center flex shrink-0',
-        collapsed && 'mx-auto w-[44px]'
-      )}
     >
+      {' '}
+      <div
+        className={clsx(
+          'justify-center flex shrink-0',
+          collapsed && 'mx-auto w-[44px]'
+        )}
+      >
         <Link
           href={`/agents`}
           onClick={onNavigate}
@@ -453,9 +458,7 @@ const Threads: FC<{ mobileOpen: boolean; onClose: () => void }> = ({
       >
         <ThreadsPanelContent
           collapsed={collapsed}
-          onToggleCollapse={() =>
-            setCollapseThreads(collapsed ? '0' : '1')
-          }
+          onToggleCollapse={() => setCollapseThreads(collapsed ? '0' : '1')}
         />
       </div>
       {mobileOpen && (

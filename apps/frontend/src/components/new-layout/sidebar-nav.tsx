@@ -36,7 +36,11 @@ export const SidebarNav: FC<{
         )}
       >
         <Logo sidebar collapsed={collapsed && !isDrawer} />
-        <TopMenu onNavigate={onNavigate} layout={layout} collapsed={collapsed} />
+        <TopMenu
+          onNavigate={onNavigate}
+          layout={layout}
+          collapsed={collapsed}
+        />
       </div>
       {showCollapseToggle && (
         <div

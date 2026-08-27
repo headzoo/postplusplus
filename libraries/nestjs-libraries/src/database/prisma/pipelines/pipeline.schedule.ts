@@ -205,10 +205,9 @@ export const getPipelineScheduleOccurrencesInRange = (
     .tz(timezoneName)
     .format('YYYY-MM-DD');
   const localDayCount =
-    dayjs.utc(`${localEndDate}T00:00:00.000`).diff(
-      dayjs.utc(`${localStartDate}T00:00:00.000`),
-      'day'
-    ) + 1;
+    dayjs
+      .utc(`${localEndDate}T00:00:00.000`)
+      .diff(dayjs.utc(`${localStartDate}T00:00:00.000`), 'day') + 1;
   const occurrences: Array<PipelineScheduleOccurrence & { order: number }> = [];
 
   for (let dayOffset = 0; dayOffset < localDayCount; dayOffset++) {

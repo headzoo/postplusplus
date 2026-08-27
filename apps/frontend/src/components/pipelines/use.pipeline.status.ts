@@ -20,10 +20,7 @@ export const usePipelineStatus = () => {
       if (!response.ok) {
         throw new Error(await parseApiError(response));
       }
-      await Promise.all([
-        mutate(PIPELINES_KEY),
-        mutate(pipelineDetailKey(id)),
-      ]);
+      await Promise.all([mutate(PIPELINES_KEY), mutate(pipelineDetailKey(id))]);
       return response.json() as Promise<{ active: boolean }>;
     },
     [fetch, mutate]

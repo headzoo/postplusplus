@@ -3,7 +3,7 @@ import { PostRulesService } from './post-rules.service';
 import { PostRulesRepository } from './post-rules.repository';
 
 jest.mock('@gitroom/nestjs-libraries/integrations/integration.manager', () => ({
-  IntegrationManager: class IntegrationManager { },
+  IntegrationManager: class IntegrationManager {},
 }));
 
 describe('PostRulesService', () => {
@@ -16,7 +16,9 @@ describe('PostRulesService', () => {
     evaluationIntervalHours: null,
     maxEvaluations: null,
     conditionMatch: 'ANY' as const,
-    conditions: [{ metric: 'LIKES' as const, operator: 'LT' as const, threshold: 5 }],
+    conditions: [
+      { metric: 'LIKES' as const, operator: 'LT' as const, threshold: 5 },
+    ],
     actionConfig: {},
     rescheduleConfig: null,
     maxRescheduleAttempts: null,
@@ -120,7 +122,10 @@ describe('PostRulesService', () => {
     repository.list.mockResolvedValue([
       {
         ...baseRule,
-        integrations: [{ integrationId: 'channel-1' }, { integrationId: 'channel-2' }],
+        integrations: [
+          { integrationId: 'channel-1' },
+          { integrationId: 'channel-2' },
+        ],
         _count: { integrations: 2, pipelines: 0 },
       },
     ]);

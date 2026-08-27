@@ -59,7 +59,9 @@ export function normalizeContextDocumentName(originalName: string): string {
   return normalizedName;
 }
 
-export function parseSkillFilename(name: string | undefined): string | undefined {
+export function parseSkillFilename(
+  name: string | undefined
+): string | undefined {
   if (typeof name !== 'string') {
     return undefined;
   }
@@ -93,11 +95,15 @@ export function decodeUtf8Fatal(buffer: Buffer): string {
   try {
     return new TextDecoder('utf-8', { fatal: true }).decode(buffer);
   } catch {
-    throw new BadRequestException('The uploaded file must be valid UTF-8 text.');
+    throw new BadRequestException(
+      'The uploaded file must be valid UTF-8 text.'
+    );
   }
 }
 
-export function validateContextDocumentNameForWrite(originalName: string): string {
+export function validateContextDocumentNameForWrite(
+  originalName: string
+): string {
   const name = normalizeContextDocumentName(originalName);
   const skillSlug = parseSkillFilename(name);
   if (isAttemptedSkillFilename(name) && !skillSlug) {
@@ -149,9 +155,7 @@ export function validateContextDocumentContent(
   }
 
   if (content.includes('\0')) {
-    throw new BadRequestException(
-      'The document contains invalid null bytes.'
-    );
+    throw new BadRequestException('The document contains invalid null bytes.');
   }
 
   const fileSize = Buffer.byteLength(content, 'utf8');

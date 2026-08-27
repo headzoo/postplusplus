@@ -252,7 +252,9 @@ await cp(featureScreenshotsSourceDir, featureScreenshotsTargetDir, {
 
 let syncedCount = 0;
 const syncedTargetDirs = new Set(
-  syncedPages.map((page) => page.targetDir).filter((targetDir) => targetDir && targetDir !== 'docs'),
+  syncedPages
+    .map((page) => page.targetDir)
+    .filter((targetDir) => targetDir && targetDir !== 'docs')
 );
 
 for (const targetDir of syncedTargetDirs) {

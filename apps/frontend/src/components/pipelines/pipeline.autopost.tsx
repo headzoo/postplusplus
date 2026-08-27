@@ -1,15 +1,17 @@
 'use client';
 
-import React, { FC, Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import React, {
+  FC,
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import clsx from 'clsx';
 import { array, boolean, object, string } from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
-import {
-  FormProvider,
-  useForm,
-  Controller,
-  Resolver,
-} from 'react-hook-form';
+import { FormProvider, useForm, Controller, Resolver } from 'react-hook-form';
 import { CopilotTextarea } from '@copilotkit/react-textarea';
 import { Button } from '@gitroom/react/form/button';
 import { Input } from '@gitroom/react/form/input';
@@ -50,9 +52,7 @@ const autopostSchema = object().shape({
   generateContent: boolean().required(),
 });
 
-const getYesNoOptions = (
-  t: (key: string, fallback: string) => string
-) => [
+const getYesNoOptions = (t: (key: string, fallback: string) => string) => [
   { label: t('yes', 'Yes'), value: true },
   { label: t('no', 'No'), value: false },
 ];
@@ -112,9 +112,7 @@ const PipelineAutopostForm: FC<{
   const syncLast = form.watch('syncLast');
 
   const canSave =
-    validUrl === url &&
-    (syncLast || !!lastUrl) &&
-    Boolean(titleValue?.trim());
+    validUrl === url && (syncLast || !!lastUrl) && Boolean(titleValue?.trim());
 
   const canValidateUrl = Boolean(url);
 
@@ -403,10 +401,7 @@ export const PipelineAutopostPanel: FC<{
             'success'
           );
         } catch (err: any) {
-          toaster.show(
-            err?.message || 'Failed to delete autopost.',
-            'warning'
-          );
+          toaster.show(err?.message || 'Failed to delete autopost.', 'warning');
         }
       }
     },

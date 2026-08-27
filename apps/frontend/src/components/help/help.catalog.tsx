@@ -65,7 +65,9 @@ export const HelpCatalog = ({
 }: HelpCatalogProps) => {
   const normalizedQuery = query.trim().toLowerCase();
   const faqs = normalizedQuery
-    ? HELP_FAQS.filter((faq) => faq.question.toLowerCase().includes(normalizedQuery))
+    ? HELP_FAQS.filter((faq) =>
+        faq.question.toLowerCase().includes(normalizedQuery)
+      )
     : HELP_FAQS;
 
   return (
@@ -183,7 +185,10 @@ export const HelpCatalog = ({
                 Everything you need to know
               </span>
             </span>
-            <ChevronRightIcon size={18} className="shrink-0 text-textItemBlur" />
+            <ChevronRightIcon
+              size={18}
+              className="shrink-0 text-textItemBlur"
+            />
           </a>
         </div>
       )}

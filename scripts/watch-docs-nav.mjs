@@ -41,10 +41,14 @@ const runBuild = () => {
       new Promise((resolve, reject) => {
         console.log('[docs:watch] rebuilding nav...');
 
-        const nav = spawn('node', [path.join(scriptDir, 'build-docs-nav.mjs')], {
-          cwd: repoDir,
-          stdio: 'inherit',
-        });
+        const nav = spawn(
+          'node',
+          [path.join(scriptDir, 'build-docs-nav.mjs')],
+          {
+            cwd: repoDir,
+            stdio: 'inherit',
+          }
+        );
 
         nav.on('error', reject);
         nav.on('close', (code) => {
@@ -53,15 +57,21 @@ const runBuild = () => {
             return;
           }
 
-          const slugs = spawn('node', [path.join(scriptDir, 'assert-docs-slugs.mjs')], {
-            cwd: repoDir,
-            stdio: 'inherit',
-          });
+          const slugs = spawn(
+            'node',
+            [path.join(scriptDir, 'assert-docs-slugs.mjs')],
+            {
+              cwd: repoDir,
+              stdio: 'inherit',
+            }
+          );
 
           slugs.on('error', reject);
           slugs.on('close', (slugCode) => {
             if (slugCode !== 0) {
-              reject(new Error(`assert-docs-slugs.mjs exited with code ${slugCode}`));
+              reject(
+                new Error(`assert-docs-slugs.mjs exited with code ${slugCode}`)
+              );
               return;
             }
 
@@ -69,7 +79,7 @@ const runBuild = () => {
             resolve();
           });
         });
-      }),
+      })
   );
 
   buildChain = buildChain.finally(() => {
@@ -134,7 +144,7 @@ const startWatching = () => {
     watchers.push(
       watch(filePath, () => {
         scheduleBuild();
-      }),
+      })
     );
   }
 
@@ -144,7 +154,7 @@ const startWatching = () => {
         if (shouldTriggerRebuild(filename, dirPath)) {
           scheduleBuild();
         }
-      }),
+      })
     );
   }
 };

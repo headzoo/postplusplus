@@ -1,9 +1,6 @@
 import { PrismaRepository } from '@gitroom/nestjs-libraries/database/prisma/prisma.service';
 import { Injectable } from '@nestjs/common';
-import {
-  AdminScheduleLogKey,
-  AdminScheduleLogLevel,
-} from '@prisma/client';
+import { AdminScheduleLogKey, AdminScheduleLogLevel } from '@prisma/client';
 
 export const ADMIN_SCHEDULE_LOG_KEEP = 500;
 
@@ -52,13 +49,12 @@ export class AdminScheduleLogRepository {
     if (!overflow.length) {
       return 0;
     }
-    const result = await this._adminScheduleLog.model.adminScheduleLog.deleteMany(
-      {
+    const result =
+      await this._adminScheduleLog.model.adminScheduleLog.deleteMany({
         where: {
           id: { in: overflow.map((row) => row.id) },
         },
-      }
-    );
+      });
     return result.count;
   }
 }

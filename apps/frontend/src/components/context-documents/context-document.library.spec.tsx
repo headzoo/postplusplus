@@ -28,9 +28,12 @@ jest.mock('react-markdown', () => ({
   ),
 }));
 jest.mock('@gitroom/react/form/button', () => ({
-  Button: ({ children, loading: _loading, secondary: _secondary, ...props }: any) => (
-    <button {...props}>{children}</button>
-  ),
+  Button: ({
+    children,
+    loading: _loading,
+    secondary: _secondary,
+    ...props
+  }: any) => <button {...props}>{children}</button>,
 }));
 jest.mock('@gitroom/react/form/input', () => ({
   Input: ({ label, value, onChange, name }: any) => (
@@ -259,10 +262,14 @@ describe('ContextDocumentLibrary', () => {
     fireEvent.click(screen.getByText('Save'));
 
     await waitFor(() =>
-      expect(updateDocument).toHaveBeenCalledWith('doc-1', '# Updated branding', {
-        documentName: 'BRANDING.md',
-        description: 'Updated brand description',
-      })
+      expect(updateDocument).toHaveBeenCalledWith(
+        'doc-1',
+        '# Updated branding',
+        {
+          documentName: 'BRANDING.md',
+          description: 'Updated brand description',
+        }
+      )
     );
   });
 
@@ -338,7 +345,9 @@ describe('ContextDocumentLibrary', () => {
     fireEvent.click(actions[1]);
     fireEvent.click(screen.getByText('Delete'));
 
-    await waitFor(() => expect(deleteDocument).toHaveBeenCalledWith('reserved-1'));
+    await waitFor(() =>
+      expect(deleteDocument).toHaveBeenCalledWith('reserved-1')
+    );
     expect(mutate).toHaveBeenCalled();
   });
 });

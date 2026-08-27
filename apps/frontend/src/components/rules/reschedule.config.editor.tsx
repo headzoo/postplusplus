@@ -50,8 +50,8 @@ export const RescheduleConfigEditor: FC<{
   const currentMode = !rescheduleConfig
     ? 'NONE'
     : rescheduleConfig.mode === 'MANUAL'
-      ? 'MANUAL'
-      : 'PIPELINE';
+    ? 'MANUAL'
+    : 'PIPELINE';
 
   return (
     <div className="flex flex-col gap-[12px] rounded-[8px] border border-newBorder bg-newBgColor p-[16px]">
@@ -62,8 +62,12 @@ export const RescheduleConfigEditor: FC<{
           onChange={(e) => handleModeChange(e.target.value)}
           className="h-[44px] bg-newBgColorInner border border-newBorder rounded-[8px] px-[12px] text-[14px] outline-none"
         >
-          <option value="NONE">{t('do_not_reschedule', 'Do not reschedule')}</option>
-          <option value="MANUAL">{t('manual_reschedule', 'Manual reschedule')}</option>
+          <option value="NONE">
+            {t('do_not_reschedule', 'Do not reschedule')}
+          </option>
+          <option value="MANUAL">
+            {t('manual_reschedule', 'Manual reschedule')}
+          </option>
           <option value="PIPELINE">
             {t('pipeline_reschedule', 'Pipeline reschedule')}
           </option>
@@ -115,7 +119,9 @@ export const RescheduleConfigEditor: FC<{
           </div>
 
           <div className="flex flex-col gap-[8px]">
-            <label className="text-[14px] font-[600]">{t('timezone', 'Timezone')}</label>
+            <label className="text-[14px] font-[600]">
+              {t('timezone', 'Timezone')}
+            </label>
             <input
               type="text"
               value={rescheduleConfig.timezone}
@@ -139,7 +145,9 @@ export const RescheduleConfigEditor: FC<{
 
       {rescheduleConfig?.mode === 'PIPELINE' && (
         <div className="flex flex-col gap-[8px]">
-          <label className="text-[14px] font-[600]">{t('pipeline', 'Pipeline')}</label>
+          <label className="text-[14px] font-[600]">
+            {t('pipeline', 'Pipeline')}
+          </label>
           <select
             value={rescheduleConfig.pipelineId}
             onChange={(e) =>
@@ -178,7 +186,9 @@ export const RescheduleConfigEditor: FC<{
             max={10}
             value={maxRescheduleAttempts ?? ''}
             onChange={(e) =>
-              onMaxRescheduleAttemptsChange(parseInt(e.target.value, 10) || undefined)
+              onMaxRescheduleAttemptsChange(
+                parseInt(e.target.value, 10) || undefined
+              )
             }
             className="h-[44px] w-full rounded-[8px] border border-newBorder bg-newBgColorInner px-[12px] text-[14px] outline-none"
           />

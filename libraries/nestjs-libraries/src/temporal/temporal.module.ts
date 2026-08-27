@@ -10,7 +10,9 @@ const getConnectionOptions = () => ({
   connection: {
     address: process.env.TEMPORAL_ADDRESS || 'localhost:7233',
     ...(process.env.TEMPORAL_TLS === 'true' ? { tls: true } : {}),
-    ...(process.env.TEMPORAL_API_KEY ? { apiKey: process.env.TEMPORAL_API_KEY } : {}),
+    ...(process.env.TEMPORAL_API_KEY
+      ? { apiKey: process.env.TEMPORAL_API_KEY }
+      : {}),
     namespace: process.env.TEMPORAL_NAMESPACE || 'default',
   },
   taskQueue: 'main',
@@ -101,7 +103,9 @@ export const getTemporalModule = (
     isGlobal: true,
     useFactory: async () => {
       if (!path) {
-        throw new Error('A workflows path is required when workers are enabled.');
+        throw new Error(
+          'A workflows path is required when workers are enabled.'
+        );
       }
 
       const mode = getWorkerMode();

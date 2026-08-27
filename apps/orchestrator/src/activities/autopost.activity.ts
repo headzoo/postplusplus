@@ -9,7 +9,7 @@ export class AutopostActivity {
   constructor(
     private _autoPostService: AutopostService,
     private _adminScheduleLogService: AdminScheduleLogService
-  ) { }
+  ) {}
 
   @ActivityMethod()
   async autoPost(id: string) {

@@ -53,30 +53,30 @@ export const NewPost = ({
     const set: any = !sets.length
       ? undefined
       : await new Promise((resolve) => {
-        modal.openModal({
-          title: t('select_set', 'Select a Set'),
-          closeOnClickOutside: true,
-          closeOnEscape: true,
-          withCloseButton: false,
-          onClose: () => resolve('exit'),
-          classNames: {
-            modal: 'text-textColor',
-          },
-          children: (
-            <SetSelectionModal
-              sets={sets}
-              onSelect={(selectedSet) => {
-                resolve(selectedSet);
-                modal.closeAll();
-              }}
-              onContinueWithoutSet={() => {
-                resolve(undefined);
-                modal.closeAll();
-              }}
-            />
-          ),
+          modal.openModal({
+            title: t('select_set', 'Select a Set'),
+            closeOnClickOutside: true,
+            closeOnEscape: true,
+            withCloseButton: false,
+            onClose: () => resolve('exit'),
+            classNames: {
+              modal: 'text-textColor',
+            },
+            children: (
+              <SetSelectionModal
+                sets={sets}
+                onSelect={(selectedSet) => {
+                  resolve(selectedSet);
+                  modal.closeAll();
+                }}
+                onContinueWithoutSet={() => {
+                  resolve(undefined);
+                  modal.closeAll();
+                }}
+              />
+            ),
+          });
         });
-      });
 
     if (set === 'exit') return;
 

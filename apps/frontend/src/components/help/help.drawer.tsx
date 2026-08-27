@@ -81,9 +81,7 @@ export const HelpDrawer: FC<{
 
   const handleResizePointerDown = useCallback(
     (
-      event:
-        | ReactPointerEvent<HTMLDivElement>
-        | ReactMouseEvent<HTMLDivElement>
+      event: ReactPointerEvent<HTMLDivElement> | ReactMouseEvent<HTMLDivElement>
     ) => {
       if (isMobileViewport || event.button !== 0 || resizingRef.current) {
         return;
@@ -161,7 +159,9 @@ export const HelpDrawer: FC<{
 
     const locationHelp = readHelpFromLocation(window.location);
     internalUrlRef.current = null;
-    hostHashRef.current = locationHelp.slug ? null : readLocationHash(window.location);
+    hostHashRef.current = locationHelp.slug
+      ? null
+      : readLocationHash(window.location);
     setDeepLink(locationHelp);
     setInitialized(true);
     closeButtonRef.current?.focus();
@@ -274,7 +274,9 @@ export const HelpDrawer: FC<{
         tabIndex={open ? 0 : -1}
         className={clsx(
           'absolute inset-0 bg-primary/80 transition-opacity duration-200',
-          open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+          open
+            ? 'opacity-100 pointer-events-auto'
+            : 'opacity-0 pointer-events-none'
         )}
       />
       <aside
@@ -305,7 +307,10 @@ export const HelpDrawer: FC<{
           )}
         />
         <div className="flex items-center justify-between border-b border-newTableBorder px-4 py-3">
-          <h2 id="help-drawer-title" className="text-base font-semibold text-textColor">
+          <h2
+            id="help-drawer-title"
+            className="text-base font-semibold text-textColor"
+          >
             Help
           </h2>
           <button

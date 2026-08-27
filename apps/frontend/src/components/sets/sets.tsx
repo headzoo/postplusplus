@@ -132,8 +132,8 @@ export const Sets: FC = () => {
                 ),
               });
             }}
-            reopenModal={() => { }}
-            mutate={() => { }}
+            reopenModal={() => {}}
+            mutate={() => {}}
             integrations={integrations}
             date={newDayjs()}
           />

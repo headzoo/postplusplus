@@ -47,7 +47,7 @@ export class AdminScheduleWorkflowService {
     private _temporalService: TemporalService,
     private _autopostRepository: AutopostRepository,
     private _adminScheduleLogService: AdminScheduleLogService
-  ) { }
+  ) {}
 
   async getMissingPostRecoveryStatus(): Promise<AdminWorkflowStatus> {
     return this.describeWorkflow(MISSING_POST_WORKFLOW_ID, {
@@ -58,12 +58,12 @@ export class AdminScheduleWorkflowService {
   }
 
   async triggerMissingPostRecovery() {
-    const workflowId = `${MISSING_POST_RECOVERY_WORKFLOW_ID_PREFIX}-${makeId(8)}`;
-    await this.startOneShot(
-      MISSING_POST_RECOVERY_WORKFLOW_TYPE,
-      workflowId,
-      [{}]
-    );
+    const workflowId = `${MISSING_POST_RECOVERY_WORKFLOW_ID_PREFIX}-${makeId(
+      8
+    )}`;
+    await this.startOneShot(MISSING_POST_RECOVERY_WORKFLOW_TYPE, workflowId, [
+      {},
+    ]);
     await this._adminScheduleLogService.append({
       scheduleKey: 'missing-post-recovery',
       message: 'Missing post recovery scan triggered',
@@ -81,12 +81,12 @@ export class AdminScheduleWorkflowService {
   }
 
   async triggerPostWorkflowTick() {
-    const workflowId = `${PIPELINE_SCHEDULER_TICK_WORKFLOW_ID_PREFIX}-${makeId(8)}`;
-    await this.startOneShot(
-      PIPELINE_SCHEDULER_TICK_WORKFLOW_TYPE,
-      workflowId,
-      [{}]
-    );
+    const workflowId = `${PIPELINE_SCHEDULER_TICK_WORKFLOW_ID_PREFIX}-${makeId(
+      8
+    )}`;
+    await this.startOneShot(PIPELINE_SCHEDULER_TICK_WORKFLOW_TYPE, workflowId, [
+      {},
+    ]);
     await this._adminScheduleLogService.append({
       scheduleKey: 'post-workflows',
       message: 'Pipeline scheduler tick triggered',
@@ -97,29 +97,32 @@ export class AdminScheduleWorkflowService {
 
   async getAutopostWorkflowStatus(): Promise<AutopostWorkflowStatus> {
     const activeCount = await this._autopostRepository.countActiveAutoposts();
-    const status = await this.describeWorkflow('autopost-workflows', {
-      unit: 'hour',
-      interval: 1,
-      label: 'Every hour per active autopost (fixed in workflow)',
-    }, true);
+    const status = await this.describeWorkflow(
+      'autopost-workflows',
+      {
+        unit: 'hour',
+        interval: 1,
+        label: 'Every hour per active autopost (fixed in workflow)',
+      },
+      true
+    );
     return {
       ...status,
       workflowId: 'autopost-workflows',
       exists: activeCount > 0,
       status: activeCount > 0 ? 'ACTIVE_CONFIGS' : 'NONE',
       activeCount,
-      note:
-        'Trigger now force-runs every active autopost and may generate content or posts.',
+      note: 'Trigger now force-runs every active autopost and may generate content or posts.',
     };
   }
 
   async triggerAutopostWorkflows() {
-    const workflowId = `${AUTOPOST_ADMIN_TRIGGER_WORKFLOW_ID_PREFIX}-${makeId(8)}`;
-    await this.startOneShot(
-      AUTOPOST_ADMIN_TRIGGER_WORKFLOW_TYPE,
-      workflowId,
-      [{}]
-    );
+    const workflowId = `${AUTOPOST_ADMIN_TRIGGER_WORKFLOW_ID_PREFIX}-${makeId(
+      8
+    )}`;
+    await this.startOneShot(AUTOPOST_ADMIN_TRIGGER_WORKFLOW_TYPE, workflowId, [
+      {},
+    ]);
     await this._adminScheduleLogService.append({
       scheduleKey: 'autopost-workflows',
       message: 'Force-run of all active autoposts triggered',
@@ -129,7 +132,10 @@ export class AdminScheduleWorkflowService {
   }
 
   async getLeadBridgeStatus(): Promise<AdminWorkflowStatus> {
-    const idleHours = Math.max(1, Math.round(LEAD_BRIDGE_IDLE_MS / (60 * 60 * 1000)));
+    const idleHours = Math.max(
+      1,
+      Math.round(LEAD_BRIDGE_IDLE_MS / (60 * 60 * 1000))
+    );
     return this.describeWorkflow(LEAD_BRIDGE_WORKFLOW_ID, {
       unit: 'hour',
       interval: idleHours,
@@ -142,7 +148,9 @@ export class AdminScheduleWorkflowService {
       LEAD_BRIDGE_WORKFLOW_ID,
       'Admin lead discovery burst trigger'
     );
-    const workflowId = `${LEAD_BRIDGE_ADMIN_TRIGGER_WORKFLOW_ID_PREFIX}-${makeId(8)}`;
+    const workflowId = `${LEAD_BRIDGE_ADMIN_TRIGGER_WORKFLOW_ID_PREFIX}-${makeId(
+      8
+    )}`;
     await this.startOneShot(
       LEAD_BRIDGE_ADMIN_TRIGGER_WORKFLOW_TYPE,
       workflowId,
@@ -160,10 +168,7 @@ export class AdminScheduleWorkflowService {
     return this.getLeadBridgeStatus();
   }
 
-  private async terminateWorkflowIfRunning(
-    workflowId: string,
-    reason: string
-  ) {
+  private async terminateWorkflowIfRunning(workflowId: string, reason: string) {
     try {
       const handle = this.workflowClient().getHandle(workflowId);
       const description = await handle.describe();
@@ -255,8 +260,7 @@ export class AdminScheduleWorkflowService {
     const value = error as { name?: string; message?: string };
     const message = value?.message?.toLowerCase() || '';
     return (
-      value?.name === 'WorkflowNotFoundError' ||
-      message.includes('not found')
+      value?.name === 'WorkflowNotFoundError' || message.includes('not found')
     );
   }
 

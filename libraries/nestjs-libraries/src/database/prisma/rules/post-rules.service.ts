@@ -51,11 +51,14 @@ export class PostRulesService {
   constructor(
     private _postRulesRepository: PostRulesRepository,
     private _integrationManager: IntegrationManager
-  ) { }
+  ) {}
 
   getCapabilities(): PostRuleCapabilitiesResponse {
     const providerMap = this._integrationManager.getPostRulesCapabilities();
-    const metricsByAction = new Map<PostRuleAction, Set<PostRuleConditionMetric>>();
+    const metricsByAction = new Map<
+      PostRuleAction,
+      Set<PostRuleConditionMetric>
+    >();
 
     for (const capabilities of Object.values(providerMap)) {
       for (const action of capabilities.actions as PostRuleAction[]) {
@@ -69,23 +72,25 @@ export class PostRulesService {
     }
 
     return {
-      actions: POST_RULE_ACTIONS.filter((action) => metricsByAction.has(action)).map(
-        (action) => ({
-          key: action,
-          label: ACTION_LABELS[action],
-          metrics: POST_RULE_CONDITION_METRICS.filter((metric) =>
-            metricsByAction.get(action)?.has(metric)
-          ).map((metric) => ({
-            key: metric,
-            label: METRIC_LABELS[metric],
-          })),
+      actions: POST_RULE_ACTIONS.filter((action) =>
+        metricsByAction.has(action)
+      ).map((action) => ({
+        key: action,
+        label: ACTION_LABELS[action],
+        metrics: POST_RULE_CONDITION_METRICS.filter((metric) =>
+          metricsByAction.get(action)?.has(metric)
+        ).map((metric) => ({
+          key: metric,
+          label: METRIC_LABELS[metric],
+        })),
+      })),
+      providers: Object.entries(providerMap).map(
+        ([providerIdentifier, capabilities]) => ({
+          providerIdentifier,
+          actions: capabilities.actions as PostRuleAction[],
+          metrics: capabilities.metrics as PostRuleConditionMetric[],
         })
       ),
-      providers: Object.entries(providerMap).map(([providerIdentifier, capabilities]) => ({
-        providerIdentifier,
-        actions: capabilities.actions as PostRuleAction[],
-        metrics: capabilities.metrics as PostRuleConditionMetric[],
-      })),
     };
   }
 
@@ -99,7 +104,10 @@ export class PostRulesService {
     return this.toResponse(rule);
   }
 
-  async create(orgId: string, body: CreatePostRuleDto): Promise<PostRuleResponse> {
+  async create(
+    orgId: string,
+    body: CreatePostRuleDto
+  ): Promise<PostRuleResponse> {
     await this.validateRescheduleTarget(orgId, body.rescheduleConfig ?? null);
     const rule = await this._postRulesRepository.create(orgId, body);
     return this.toResponse(rule);
@@ -201,10 +209,11 @@ export class PostRulesService {
       return;
     }
 
-    const pipeline = await this._postRulesRepository.getPipelineRescheduleTarget(
-      orgId,
-      rescheduleConfig.pipelineId
-    );
+    const pipeline =
+      await this._postRulesRepository.getPipelineRescheduleTarget(
+        orgId,
+        rescheduleConfig.pipelineId
+      );
     if (!pipeline) {
       throw new BadRequestException('Reschedule pipeline target is invalid');
     }
@@ -216,7 +225,9 @@ export class PostRulesService {
     action: PostRuleAction,
     conditions: PostRuleCondition[]
   ) {
-    const integrationIds = rule.integrations.map((entry) => entry.integrationId);
+    const integrationIds = rule.integrations.map(
+      (entry) => entry.integrationId
+    );
     const pipelineIds = rule.pipelines.map((entry) => entry.pipelineId);
     if (!integrationIds.length && !pipelineIds.length) {
       return;
@@ -241,13 +252,20 @@ export class PostRulesService {
     conditions: PostRuleCondition[],
     capabilities: ProviderCapabilities
   ) {
-    this._postRulesRepository.assertUniqueIds(integrationIds, 'channel assignments');
-    this._postRulesRepository.assertUniqueIds(pipelineIds, 'pipeline assignments');
-
-    const integrations = await this._postRulesRepository.getIntegrationsForAssignment(
-      orgId,
-      integrationIds
+    this._postRulesRepository.assertUniqueIds(
+      integrationIds,
+      'channel assignments'
     );
+    this._postRulesRepository.assertUniqueIds(
+      pipelineIds,
+      'pipeline assignments'
+    );
+
+    const integrations =
+      await this._postRulesRepository.getIntegrationsForAssignment(
+        orgId,
+        integrationIds
+      );
     this.assertOwnedIds(
       integrationIds,
       integrations.map((integration) => integration.id),
@@ -302,17 +320,25 @@ export class PostRulesService {
     }
   }
 
-  private assertOwnedIds(requestedIds: string[], ownedIds: string[], label: string) {
+  private assertOwnedIds(
+    requestedIds: string[],
+    ownedIds: string[],
+    label: string
+  ) {
     const owned = new Set(ownedIds);
     const missing = requestedIds.filter((id) => !owned.has(id));
     if (missing.length) {
-      throw new BadRequestException(`Unknown ${label} assignment: ${missing.join(', ')}`);
+      throw new BadRequestException(
+        `Unknown ${label} assignment: ${missing.join(', ')}`
+      );
     }
   }
 
   private assertActiveIntegration(integration: AssignmentIntegrationRow) {
     if (!this.isActiveIntegration(integration)) {
-      throw new BadRequestException('Assigned channel must be active and not deleted');
+      throw new BadRequestException(
+        'Assigned channel must be active and not deleted'
+      );
     }
   }
 
@@ -322,7 +348,9 @@ export class PostRulesService {
 
   private assertActivePipeline(pipeline: AssignmentPipelineRow) {
     if (pipeline.deletedAt || !pipeline.active) {
-      throw new BadRequestException('Assigned pipeline must be active and not deleted');
+      throw new BadRequestException(
+        'Assigned pipeline must be active and not deleted'
+      );
     }
   }
 
@@ -395,7 +423,8 @@ export class PostRulesService {
       conditionMatch: rule.conditionMatch,
       conditions: rule.conditions as PostRuleCondition[],
       actionConfig: (rule.actionConfig ?? {}) as PostRuleActionConfig,
-      rescheduleConfig: (rule.rescheduleConfig as PostRuleRescheduleConfig | null) ?? null,
+      rescheduleConfig:
+        (rule.rescheduleConfig as PostRuleRescheduleConfig | null) ?? null,
       maxRescheduleAttempts: rule.maxRescheduleAttempts,
       integrationIds: rule.integrations.map((entry) => entry.integrationId),
       pipelineIds: rule.pipelines.map((entry) => entry.pipelineId),

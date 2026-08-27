@@ -14,9 +14,7 @@ const metadataSelect = {
 
 @Injectable()
 export class ContextDocumentRepository {
-  constructor(
-    private _contextDocument: PrismaRepository<'contextDocument'>
-  ) { }
+  constructor(private _contextDocument: PrismaRepository<'contextDocument'>) {}
 
   listMetadata(organizationId: string) {
     return this._contextDocument.model.contextDocument.findMany({

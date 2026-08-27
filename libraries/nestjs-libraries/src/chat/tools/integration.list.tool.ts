@@ -1,6 +1,4 @@
-import {
-  AgentToolInterface,
-} from '@gitroom/nestjs-libraries/chat/agent.tool.interface';
+import { AgentToolInterface } from '@gitroom/nestjs-libraries/chat/agent.tool.interface';
 import { createTool } from '@mastra/core/tools';
 import { Injectable } from '@nestjs/common';
 import { IntegrationService } from '@gitroom/nestjs-libraries/database/prisma/integrations/integration.service';
@@ -53,7 +51,9 @@ export class IntegrationListTool implements AgentToolInterface {
           output: (
             await this._integrationService.getIntegrationsList(organizationId)
           )
-            .filter((p) => !inputData.group || p.customer?.id === inputData.group)
+            .filter(
+              (p) => !inputData.group || p.customer?.id === inputData.group
+            )
             .map((p) => ({
               name: p.name,
               id: p.id,

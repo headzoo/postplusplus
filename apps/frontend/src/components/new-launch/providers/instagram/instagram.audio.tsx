@@ -27,10 +27,7 @@ interface SelectedAudio {
 
 const formatDuration = (ms: number) => {
   const seconds = Math.floor(ms / 1000);
-  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(
-    2,
-    '0'
-  )}`;
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 };
 
 export const InstagramAudioSelector: FC<{
@@ -226,9 +223,7 @@ export const InstagramAudioSelector: FC<{
                 min={0}
                 max={100}
                 value={value.audio_volume ?? 100}
-                onChange={(e) =>
-                  changeVolume('audio_volume', +e.target.value)
-                }
+                onChange={(e) => changeVolume('audio_volume', +e.target.value)}
               />
             </div>
             <div className="flex-1 flex flex-col gap-[6px]">
@@ -241,9 +236,7 @@ export const InstagramAudioSelector: FC<{
                 min={0}
                 max={100}
                 value={value.video_volume ?? 100}
-                onChange={(e) =>
-                  changeVolume('video_volume', +e.target.value)
-                }
+                onChange={(e) => changeVolume('video_volume', +e.target.value)}
               />
             </div>
           </div>

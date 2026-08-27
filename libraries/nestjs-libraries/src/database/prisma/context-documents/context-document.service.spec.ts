@@ -196,9 +196,9 @@ describe('ContextDocumentService', () => {
 
     expect(validateContextDocumentDescription(null)).toBeNull();
     expect(validateContextDocumentDescription('  hello  ')).toBe('hello');
-    expect(() =>
-      validateContextDocumentDescription('x'.repeat(501))
-    ).toThrow(BadRequestException);
+    expect(() => validateContextDocumentDescription('x'.repeat(501))).toThrow(
+      BadRequestException
+    );
 
     await expect(
       service.updateDocument(organizationId, 'doc-1', {})
@@ -305,7 +305,9 @@ describe('ContextDocumentService', () => {
     expect(parseSkillFilename('campaign-review.skill.md')).toBe(
       'campaign-review'
     );
-    expect(parseSkillFilename('campaign-review.skill.markdown')).toBeUndefined();
+    expect(
+      parseSkillFilename('campaign-review.skill.markdown')
+    ).toBeUndefined();
     expect(buildSkillFilename('campaign-review')).toBe(
       'campaign-review.skill.md'
     );
@@ -517,7 +519,11 @@ describe('ContextDocumentService', () => {
     ).rejects.toThrow(BadRequestException);
 
     await expect(
-      service.renameDocument(organizationId, sampleDocument.id, 'followers.skill.md')
+      service.renameDocument(
+        organizationId,
+        sampleDocument.id,
+        'followers.skill.md'
+      )
     ).rejects.toThrow(BadRequestException);
   });
 });

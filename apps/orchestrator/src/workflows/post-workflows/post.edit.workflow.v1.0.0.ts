@@ -30,19 +30,15 @@ const proxyMutationTaskQueue = (taskQueue: string) => {
   });
 };
 
-const {
-  getPostsList,
-  getPost,
-  inAppNotification,
-  updatePost,
-} = proxyActivities<PostActivity>({
-  startToCloseTimeout: '10 minute',
-  retry: {
-    maximumAttempts: 3,
-    backoffCoefficient: 1,
-    initialInterval: '2 minutes',
-  },
-});
+const { getPostsList, getPost, inAppNotification, updatePost } =
+  proxyActivities<PostActivity>({
+    startToCloseTimeout: '10 minute',
+    retry: {
+      maximumAttempts: 3,
+      backoffCoefficient: 1,
+      initialInterval: '2 minutes',
+    },
+  });
 
 const iterate = Array.from({ length: 5 });
 
@@ -107,10 +103,7 @@ export async function postEditWorkflowV1({
     type: 'retry' | 'stop' | 'bad-body' | 'timeout' | 'unknown';
     message: string;
   }> => {
-    if (
-      err instanceof ActivityFailure &&
-      err.cause instanceof TimeoutFailure
-    ) {
+    if (err instanceof ActivityFailure && err.cause instanceof TimeoutFailure) {
       return { type: 'timeout', message: '' };
     }
 
@@ -150,11 +143,7 @@ export async function postEditWorkflowV1({
       if (!result?.postId) {
         throw new Error('The platform did not return an edited post id');
       }
-      await updatePost(
-        postsList[0].id,
-        result.postId,
-        result.releaseURL
-      );
+      await updatePost(postsList[0].id, result.postId, result.releaseURL);
       return;
     } catch (err) {
       if (edited) {
@@ -165,7 +154,8 @@ export async function postEditWorkflowV1({
           )}`,
           `Your edit was sent to ${capitalize(
             post.integration?.providerIdentifier
-          )}, but we couldn't confirm it. Please check your ${post?.integration?.name
+          )}, but we couldn't confirm it. Please check your ${
+            post?.integration?.name
           } account.`,
           true,
           false,
@@ -183,11 +173,12 @@ export async function postEditWorkflowV1({
         post.organizationId,
         `Error editing on ${post.integration?.providerIdentifier} for ${post?.integration?.name}`,
         handle.type === 'bad-body'
-          ? `An error occurred while editing on ${post.integration?.providerIdentifier
-          }${handle.message ? `: ${handle.message}` : ``}`
+          ? `An error occurred while editing on ${
+              post.integration?.providerIdentifier
+            }${handle.message ? `: ${handle.message}` : ``}`
           : `We couldn't edit your published post on ${capitalize(
-            post.integration?.providerIdentifier
-          )}. The original post is still live.`,
+              post.integration?.providerIdentifier
+            )}. The original post is still live.`,
         true,
         false,
         'fail'

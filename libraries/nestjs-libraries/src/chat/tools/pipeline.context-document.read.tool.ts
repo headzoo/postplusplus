@@ -19,16 +19,13 @@ const readPipelineContextDocumentInputSchema = z
       .optional()
       .describe('The exact attached context document name from listPipelines'),
   })
-  .refine(
-    (input) => Boolean(input.documentId) !== Boolean(input.name),
-    {
-      message: 'Provide exactly one of documentId or name.',
-    }
-  );
+  .refine((input) => Boolean(input.documentId) !== Boolean(input.name), {
+    message: 'Provide exactly one of documentId or name.',
+  });
 
 @Injectable()
 export class PipelineContextDocumentReadTool implements AgentToolInterface {
-  constructor(private _contextDocumentService: ContextDocumentService) { }
+  constructor(private _contextDocumentService: ContextDocumentService) {}
   name = 'readPipelineContextDocument';
 
   run() {

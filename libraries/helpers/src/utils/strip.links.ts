@@ -7,11 +7,13 @@ export function hasLinks(text?: string | null): boolean {
 }
 
 export function stripLinks(text?: string | null): string {
-  return (text || '')
-    .replace(urlRegex(), '')
-    // collapse the whitespace / empty anchor leftovers the removed link left behind
-    .replace(/<a\b[^>]*>\s*<\/a>/gi, '')
-    .replace(/[ \t]{2,}/g, ' ')
-    .replace(/ +\n/g, '\n')
-    .trim();
+  return (
+    (text || '')
+      .replace(urlRegex(), '')
+      // collapse the whitespace / empty anchor leftovers the removed link left behind
+      .replace(/<a\b[^>]*>\s*<\/a>/gi, '')
+      .replace(/[ \t]{2,}/g, ' ')
+      .replace(/ +\n/g, '\n')
+      .trim()
+  );
 }

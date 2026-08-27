@@ -8,11 +8,7 @@ export type IconProps = SVGProps<SVGSVGElement> & {
 };
 
 // Hamburger / Menu Icon
-export const MenuIcon: FC<IconProps> = ({
-  size = 24,
-  className,
-  ...props
-}) => (
+export const MenuIcon: FC<IconProps> = ({ size = 24, className, ...props }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={size}
@@ -33,11 +29,7 @@ export const MenuIcon: FC<IconProps> = ({
 );
 
 // Vertical more (kebab) Icon
-export const MoreIcon: FC<IconProps> = ({
-  size = 24,
-  className,
-  ...props
-}) => (
+export const MoreIcon: FC<IconProps> = ({ size = 24, className, ...props }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={size}
@@ -185,11 +177,7 @@ export const CloseIcon: FC<IconProps> = ({
 );
 
 // Help / question mark Icon
-export const HelpIcon: FC<IconProps> = ({
-  size = 24,
-  className,
-  ...props
-}) => (
+export const HelpIcon: FC<IconProps> = ({ size = 24, className, ...props }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={size}
@@ -466,7 +454,11 @@ export const PlusIcon: FC<IconProps> = ({ size = 16, className, ...props }) => (
   </svg>
 );
 
-export const MinusIcon: FC<IconProps> = ({ size = 16, className, ...props }) => (
+export const MinusIcon: FC<IconProps> = ({
+  size = 16,
+  className,
+  ...props
+}) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={size}
@@ -553,7 +545,11 @@ export const UserIcon: FC<IconProps> = ({ size = 20, className, ...props }) => (
 );
 
 // User minus icon (unfollowed)
-export const UserMinusIcon: FC<IconProps> = ({ size = 20, className, ...props }) => (
+export const UserMinusIcon: FC<IconProps> = ({
+  size = 20,
+  className,
+  ...props
+}) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={size}
@@ -739,11 +735,7 @@ export const EmojiIcon: FC<IconProps> = ({
 );
 
 // GIF Icon
-export const GifIcon: FC<IconProps> = ({
-  size = 16,
-  className,
-  ...props
-}) => (
+export const GifIcon: FC<IconProps> = ({ size = 16, className, ...props }) => (
   <svg
     width={size}
     height={size}
@@ -1417,20 +1409,8 @@ export const TargetIcon: FC<IconProps> = ({
     aria-hidden="true"
     {...props}
   >
-    <circle
-      cx="12"
-      cy="12"
-      r="9"
-      stroke="currentColor"
-      strokeWidth="1.5"
-    />
-    <circle
-      cx="12"
-      cy="12"
-      r="5"
-      stroke="currentColor"
-      strokeWidth="1.5"
-    />
+    <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" />
+    <circle cx="12" cy="12" r="5" stroke="currentColor" strokeWidth="1.5" />
     <circle cx="12" cy="12" r="1.5" fill="currentColor" />
   </svg>
 );

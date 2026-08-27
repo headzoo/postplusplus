@@ -10,7 +10,7 @@ import z from 'zod';
 
 @Injectable()
 export class ChannelFollowerTotalsTool implements AgentToolInterface {
-  constructor(private _integrationService: IntegrationService) { }
+  constructor(private _integrationService: IntegrationService) {}
   name = 'summarizeChannelFollowerTotals';
 
   run() {
@@ -48,10 +48,11 @@ export class ChannelFollowerTotalsTool implements AgentToolInterface {
       }),
       execute: async (inputData, context) => {
         const { organization } = getFollowerToolContext(inputData, context);
-        const channels = await this._integrationService.getChannelAudienceTotals(
-          organization,
-          inputData.channelIds
-        );
+        const channels =
+          await this._integrationService.getChannelAudienceTotals(
+            organization,
+            inputData.channelIds
+          );
         return { output: channels };
       },
     });

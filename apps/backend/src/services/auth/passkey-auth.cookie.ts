@@ -55,5 +55,7 @@ export const readPasskeyAuthToken = (request: Request) => {
   }
 
   const headerToken = request.headers?.[PASSKEY_AUTH_HEADER];
-  return typeof headerToken === 'string' && headerToken ? headerToken : undefined;
+  return typeof headerToken === 'string' && headerToken
+    ? headerToken
+    : undefined;
 };

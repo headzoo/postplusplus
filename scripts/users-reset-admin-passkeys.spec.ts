@@ -17,9 +17,7 @@ describe('parseResetAdminPasskeysArgs', () => {
       message: 'Missing required --confirm-email <email> argument.',
     });
 
-    expect(
-      parseResetAdminPasskeysArgs(['user-1', '--confirm-email'])
-    ).toEqual({
+    expect(parseResetAdminPasskeysArgs(['user-1', '--confirm-email'])).toEqual({
       kind: 'error',
       message: 'Missing value for --confirm-email.',
     });
@@ -148,11 +146,7 @@ describe('executeAdminPasskeyReset', () => {
     const prisma = buildPrisma(tx);
 
     await expect(
-      executeAdminPasskeyReset(
-        prisma as never,
-        'user-1',
-        'OPS@example.com'
-      )
+      executeAdminPasskeyReset(prisma as never, 'user-1', 'OPS@example.com')
     ).resolves.toEqual({
       userId: 'user-1',
       email: 'ops@example.com',

@@ -26,7 +26,6 @@ export default function GlobalError({
       labelSubmit: 'Send Report',
       lang: 'en',
     });
-
   }, [error]);
   return (
     <html>

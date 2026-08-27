@@ -1,4 +1,10 @@
-import { IsNumber, IsOptional, IsString, IsUrl, ValidateIf } from 'class-validator';
+import {
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUrl,
+  ValidateIf,
+} from 'class-validator';
 
 export class SaveMediaInformationDto {
   @IsString()

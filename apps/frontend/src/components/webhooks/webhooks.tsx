@@ -31,7 +31,9 @@ export const Webhooks: FC = () => {
   const addWebhook = useCallback(
     (data?: any) => () => {
       modal.openModal({
-        title: data ? t('update_webhook', 'Update webhook') : t('add_webhook', 'Add webhook'),
+        title: data
+          ? t('update_webhook', 'Update webhook')
+          : t('add_webhook', 'Add webhook'),
         withCloseButton: true,
         children: <AddOrEditWebhook data={data} reload={mutate} />,
       });
@@ -53,7 +55,10 @@ export const Webhooks: FC = () => {
           method: 'DELETE',
         });
         mutate();
-        toaster.show(t('webhook_deleted_successfully', 'Webhook deleted successfully'), 'success');
+        toaster.show(
+          t('webhook_deleted_successfully', 'Webhook deleted successfully'),
+          'success'
+        );
       }
     },
     []
@@ -79,7 +84,9 @@ export const Webhooks: FC = () => {
         <Button
           type="button"
           secondary={view !== 'logs'}
-          onClick={() => setView((current) => (current === 'logs' ? 'list' : 'logs'))}
+          onClick={() =>
+            setView((current) => (current === 'logs' ? 'list' : 'logs'))
+          }
         >
           {t('logs', 'Logs')}
         </Button>
@@ -192,8 +199,8 @@ export const AddOrEditWebhook: FC<{
         body: JSON.stringify({
           ...(data?.id
             ? {
-              id: data.id,
-            }
+                id: data.id,
+              }
             : {}),
           ...values,
         }),

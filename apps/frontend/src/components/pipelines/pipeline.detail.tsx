@@ -1,18 +1,14 @@
 'use client';
 
-import {
-  FC,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import clsx from 'clsx';
 import { Button } from '@gitroom/react/form/button';
 import { Slider } from '@gitroom/react/form/slider';
-import { useModals, useDecisionModal } from '@gitroom/frontend/components/layout/new-modal';
+import {
+  useModals,
+  useDecisionModal,
+} from '@gitroom/frontend/components/layout/new-modal';
 import { LoadingComponent } from '@gitroom/frontend/components/layout/loading';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
@@ -41,7 +37,9 @@ const getScheduleSignature = (slots: PipelineScheduleSlot[]) =>
     .map((slot) => `${slot.dayOfWeek}:${slot.minuteOfDay}`)
     .join('|');
 
-export const PipelineDetailView: FC<{ pipelineId: string }> = ({ pipelineId }) => {
+export const PipelineDetailView: FC<{ pipelineId: string }> = ({
+  pipelineId,
+}) => {
   const t = useT();
   const router = useRouter();
   const modal = useModals();
@@ -64,9 +62,8 @@ export const PipelineDetailView: FC<{ pipelineId: string }> = ({ pipelineId }) =
     () => getScheduleSignature(serverScheduleSlots),
     [serverScheduleSlots]
   );
-  const serverScheduleSlotsRef = useRef<PipelineScheduleSlot[]>(
-    EMPTY_SCHEDULE_SLOTS
-  );
+  const serverScheduleSlotsRef =
+    useRef<PipelineScheduleSlot[]>(EMPTY_SCHEDULE_SLOTS);
 
   useEffect(() => {
     serverScheduleSlotsRef.current = serverScheduleSlots;
@@ -124,7 +121,10 @@ export const PipelineDetailView: FC<{ pipelineId: string }> = ({ pipelineId }) =
         await setPipelineStatus(pipelineId, value === 'on');
         await Promise.all([mutate(), mutateList()]);
       } catch (err: any) {
-        toaster.show(err?.message || 'Failed to update Pipeline status.', 'warning');
+        toaster.show(
+          err?.message || 'Failed to update Pipeline status.',
+          'warning'
+        );
       }
     },
     [mutate, mutateList, pipelineId, setPipelineStatus, toaster]
@@ -136,7 +136,11 @@ export const PipelineDetailView: FC<{ pipelineId: string }> = ({ pipelineId }) =
     }
     const approved = await decision.open({
       title: t('delete_pipeline', 'Delete Pipeline?'),
-      description: `Deleting "${data.name}" will remove the Pipeline schedule. ${queueCount} queued item${queueCount === 1 ? '' : 's'} will be preserved as drafts in your calendar — no content will be deleted.`,
+      description: `Deleting "${
+        data.name
+      }" will remove the Pipeline schedule. ${queueCount} queued item${
+        queueCount === 1 ? '' : 's'
+      } will be preserved as drafts in your calendar — no content will be deleted.`,
       approveLabel: t('delete_pipeline_confirm', 'Delete Pipeline'),
       cancelLabel: t('cancel', 'Cancel'),
     });
@@ -146,14 +150,26 @@ export const PipelineDetailView: FC<{ pipelineId: string }> = ({ pipelineId }) =
     try {
       await deletePipeline(pipelineId);
       toaster.show(
-        t('pipeline_deleted_successfully', 'Pipeline deleted. Queued posts were kept as drafts.'),
+        t(
+          'pipeline_deleted_successfully',
+          'Pipeline deleted. Queued posts were kept as drafts.'
+        ),
         'success'
       );
       router.push('/pipelines');
     } catch (err: any) {
       toaster.show(err?.message || 'Failed to delete Pipeline.', 'warning');
     }
-  }, [data, decision, deletePipeline, pipelineId, queueCount, router, t, toaster]);
+  }, [
+    data,
+    decision,
+    deletePipeline,
+    pipelineId,
+    queueCount,
+    router,
+    t,
+    toaster,
+  ]);
 
   const saveSchedule = useCallback(async () => {
     setIsSavingSchedule(true);
@@ -240,15 +256,21 @@ export const PipelineDetailView: FC<{ pipelineId: string }> = ({ pipelineId }) =
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-[12px]">
         <div className="rounded-[12px] border border-newBorder bg-newBgColor p-[16px] flex flex-col gap-[8px]">
-          <div className="text-[12px] uppercase opacity-60">{t('channels', 'Channels')}</div>
+          <div className="text-[12px] uppercase opacity-60">
+            {t('channels', 'Channels')}
+          </div>
           <PipelineChannels channels={data.channels} />
         </div>
         <div className="rounded-[12px] border border-newBorder bg-newBgColor p-[16px] flex flex-col gap-[8px]">
-          <div className="text-[12px] uppercase opacity-60">{t('queued', 'Queued')}</div>
+          <div className="text-[12px] uppercase opacity-60">
+            {t('queued', 'Queued')}
+          </div>
           <div className="text-[24px] font-[600]">{queueCount}</div>
         </div>
         <div className="rounded-[12px] border border-newBorder bg-newBgColor p-[16px] flex flex-col gap-[8px]">
-          <div className="text-[12px] uppercase opacity-60">{t('next_slot', 'Next slot')}</div>
+          <div className="text-[12px] uppercase opacity-60">
+            {t('next_slot', 'Next slot')}
+          </div>
           <div className="text-[14px]">
             {data.active
               ? formatPipelineSlot(data.nextSlot, data.timezone)
@@ -303,7 +325,11 @@ export const PipelineDetailView: FC<{ pipelineId: string }> = ({ pipelineId }) =
         </div>
       </div>
 
-      <PipelineQueue pipeline={data} pipelines={pipelines || []} mutate={mutate} />
+      <PipelineQueue
+        pipeline={data}
+        pipelines={pipelines || []}
+        mutate={mutate}
+      />
 
       <PipelineContextDocumentsPanel
         documents={data.contextDocuments}

@@ -11,7 +11,10 @@ export const setSentryUserContext = (params: {
   try {
     Sentry.setUser(
       params.userId
-        ? { id: params.userId, ...(params.email ? { email: params.email } : {}) }
+        ? {
+            id: params.userId,
+            ...(params.email ? { email: params.email } : {}),
+          }
         : null
     );
     if (params.orgId) {
@@ -49,7 +52,9 @@ export const initializeSentry = (appName: string, allowLogs = false) => {
       integrations: [
         // Add our Profiling integration
         nodeProfilingIntegration(),
-        Sentry.consoleLoggingIntegration({ levels: ['log', 'info', 'warn', 'error', 'debug', 'assert', 'trace'] }),
+        Sentry.consoleLoggingIntegration({
+          levels: ['log', 'info', 'warn', 'error', 'debug', 'assert', 'trace'],
+        }),
         Sentry.openAIIntegration({
           recordInputs: true,
           recordOutputs: true,
@@ -59,7 +64,8 @@ export const initializeSentry = (appName: string, allowLogs = false) => {
       enableLogs: true,
 
       // Profiling
-      profileSessionSampleRate: process.env.NODE_ENV === 'development' ? 1.0 : 0.45,
+      profileSessionSampleRate:
+        process.env.NODE_ENV === 'development' ? 1.0 : 0.45,
       profileLifecycle: 'trace',
     });
   } catch (err) {

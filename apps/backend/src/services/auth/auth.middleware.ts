@@ -9,7 +9,10 @@ import { HttpForbiddenException } from '@gitroom/nestjs-libraries/services/excep
 import { setSentryUserContext } from '@gitroom/nestjs-libraries/sentry/initialize.sentry';
 import { ORIGINAL_OPERATOR_REQUEST_KEY } from '@gitroom/nestjs-libraries/user/original.operator.from.request';
 import { clearAdminAuthCookie } from '@gitroom/backend/services/auth/admin-auth.cookie';
-import { clearPasskeyAuthCookie, readPasskeyAuthToken } from '@gitroom/backend/services/auth/passkey-auth.cookie';
+import {
+  clearPasskeyAuthCookie,
+  readPasskeyAuthToken,
+} from '@gitroom/backend/services/auth/passkey-auth.cookie';
 import { AdminPasskeyService } from '@gitroom/nestjs-libraries/database/prisma/admin-passkeys/admin-passkey.service';
 
 export const removeAuth = (res: Response) => {
@@ -53,7 +56,9 @@ export class AuthMiddleware implements NestMiddleware {
         throw new HttpForbiddenException();
       }
 
-      let user = (await this._userService.getUserById(payload.id)) as User | null;
+      let user = (await this._userService.getUserById(
+        payload.id
+      )) as User | null;
 
       if (!user) {
         throw new HttpForbiddenException();
@@ -100,27 +105,29 @@ export class AuthMiddleware implements NestMiddleware {
             paymentId: loadImpersonate.organization.paymentId,
           });
 
-      // Account passkey gate: enrolled users must present passkey_auth.
-      // Uses the original operator so impersonation cannot bypass MFA.
-      const originalOperator = req[ORIGINAL_OPERATOR_REQUEST_KEY] as User;
-      if (
-        originalOperator?.id &&
-        !this.isAccountPasskeyAllowlisted(req) &&
-        (await this._adminPasskeyService.hasEnrolledPasskey(originalOperator.id)) &&
-        !(await this._adminPasskeyService.hasValidAccountSession(
-          originalOperator.id,
-          readPasskeyAuthToken(req)
-        ))
-      ) {
-        throw new HttpException(
-          {
-            statusCode: 428,
-            code: 'ACCOUNT_PASSKEY_REQUIRED',
-            message: 'Account passkey verification is required',
-          },
-          428
-        );
-      }
+          // Account passkey gate: enrolled users must present passkey_auth.
+          // Uses the original operator so impersonation cannot bypass MFA.
+          const originalOperator = req[ORIGINAL_OPERATOR_REQUEST_KEY] as User;
+          if (
+            originalOperator?.id &&
+            !this.isAccountPasskeyAllowlisted(req) &&
+            (await this._adminPasskeyService.hasEnrolledPasskey(
+              originalOperator.id
+            )) &&
+            !(await this._adminPasskeyService.hasValidAccountSession(
+              originalOperator.id,
+              readPasskeyAuthToken(req)
+            ))
+          ) {
+            throw new HttpException(
+              {
+                statusCode: 428,
+                code: 'ACCOUNT_PASSKEY_REQUIRED',
+                message: 'Account passkey verification is required',
+              },
+              428
+            );
+          }
 
           next();
           return;
@@ -163,7 +170,9 @@ export class AuthMiddleware implements NestMiddleware {
       if (
         originalOperator?.id &&
         !this.isAccountPasskeyAllowlisted(req) &&
-        (await this._adminPasskeyService.hasEnrolledPasskey(originalOperator.id)) &&
+        (await this._adminPasskeyService.hasEnrolledPasskey(
+          originalOperator.id
+        )) &&
         !(await this._adminPasskeyService.hasValidAccountSession(
           originalOperator.id,
           readPasskeyAuthToken(req)
@@ -178,7 +187,6 @@ export class AuthMiddleware implements NestMiddleware {
           428
         );
       }
-
     } catch (err) {
       if (err instanceof HttpException) {
         throw err;

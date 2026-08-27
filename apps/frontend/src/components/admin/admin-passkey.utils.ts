@@ -1,8 +1,8 @@
 export const base64UrlToUint8Array = (value: string): Uint8Array => {
-  const padded = value.replace(/-/g, '+').replace(/_/g, '/').padEnd(
-    Math.ceil(value.length / 4) * 4,
-    '='
-  );
+  const padded = value
+    .replace(/-/g, '+')
+    .replace(/_/g, '/')
+    .padEnd(Math.ceil(value.length / 4) * 4, '=');
   const binary = atob(padded);
 
   return Uint8Array.from(binary, (character) => character.charCodeAt(0));
@@ -18,7 +18,11 @@ export const bufferToBase64Url = (value: ArrayBuffer): string => {
 };
 
 export const getSafeAdminReturnTo = (returnTo?: string | null): string => {
-  if (!returnTo || !returnTo.startsWith('/admin') || returnTo.startsWith('//')) {
+  if (
+    !returnTo ||
+    !returnTo.startsWith('/admin') ||
+    returnTo.startsWith('//')
+  ) {
     return '/admin';
   }
 
@@ -29,10 +33,8 @@ export const getSafeAdminReturnTo = (returnTo?: string | null): string => {
   } catch {
     return '/admin';
   }
-  const normalizedPathname = new URL(
-    decodedPathname,
-    'https://postiz.local'
-  ).pathname;
+  const normalizedPathname = new URL(decodedPathname, 'https://postiz.local')
+    .pathname;
 
   if (
     url.origin !== 'https://postiz.local' ||
@@ -130,7 +132,9 @@ export const serializeRegistrationCredential = (
   };
 };
 
-export const serializeAssertionCredential = (credential: PublicKeyCredential) => {
+export const serializeAssertionCredential = (
+  credential: PublicKeyCredential
+) => {
   const response = credential.response as AuthenticatorAssertionResponse;
 
   return {

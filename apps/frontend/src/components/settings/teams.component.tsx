@@ -98,7 +98,9 @@ export const AddMember = () => {
             </div>
           </div>
           <Button type="submit" className="mt-[18px]">
-            {sendEmail ? t('send_invitation_link', 'Send Invitation Link') : t('copy_link', 'Copy Link')}
+            {sendEmail
+              ? t('send_invitation_link', 'Send Invitation Link')
+              : t('copy_link', 'Copy Link')}
           </Button>
         </div>
       </form>
@@ -150,7 +152,10 @@ export const TeamsComponent = () => {
       async () => {
         if (
           !(await deleteDialog(
-            t('are_you_sure_remove_team_member', 'Are you sure you want to remove this team member?')
+            t(
+              'are_you_sure_remove_team_member',
+              'Are you sure you want to remove this team member?'
+            )
           ))
         ) {
           return;

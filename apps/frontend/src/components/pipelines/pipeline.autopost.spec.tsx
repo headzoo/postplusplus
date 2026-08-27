@@ -157,7 +157,9 @@ describe('PipelineAutopostPanel', () => {
   });
 
   it('lists pipeline feeds with title and url', () => {
-    render(<PipelineAutopostPanel pipelineId="pipeline-1" channels={channels} />);
+    render(
+      <PipelineAutopostPanel pipelineId="pipeline-1" channels={channels} />
+    );
 
     expect(screen.getByText('Tech Blog')).toBeTruthy();
     expect(screen.getByText('https://example.com/rss.xml')).toBeTruthy();
@@ -171,7 +173,9 @@ describe('PipelineAutopostPanel', () => {
       mutate: mutateFeeds,
     });
 
-    render(<PipelineAutopostPanel pipelineId="pipeline-1" channels={channels} />);
+    render(
+      <PipelineAutopostPanel pipelineId="pipeline-1" channels={channels} />
+    );
 
     expect(
       screen.getByText(
@@ -327,7 +331,9 @@ describe('PipelineAutopostPanel', () => {
   });
 
   it('deletes feed after confirmation', async () => {
-    render(<PipelineAutopostPanel pipelineId="pipeline-1" channels={channels} />);
+    render(
+      <PipelineAutopostPanel pipelineId="pipeline-1" channels={channels} />
+    );
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
 
@@ -345,11 +351,11 @@ describe('PipelineAutopostPanel', () => {
       mutate: mutateFeeds,
     });
 
-    render(<PipelineAutopostPanel pipelineId="pipeline-1" channels={channels} />);
+    render(
+      <PipelineAutopostPanel pipelineId="pipeline-1" channels={channels} />
+    );
 
-    expect(
-      screen.getByText('Failed to load Pipeline RSS feeds.')
-    ).toBeTruthy();
+    expect(screen.getByText('Failed to load Pipeline RSS feeds.')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(mutateFeeds).toHaveBeenCalled();
   });

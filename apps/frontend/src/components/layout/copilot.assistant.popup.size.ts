@@ -68,10 +68,7 @@ export const getStoredCopilotPopupSize = (): CopilotPopupSize => {
 
   try {
     const parsed = JSON.parse(stored) as Partial<CopilotPopupSize>;
-    if (
-      !Number.isFinite(parsed.width) ||
-      !Number.isFinite(parsed.height)
-    ) {
+    if (!Number.isFinite(parsed.width) || !Number.isFinite(parsed.height)) {
       return getDefaultCopilotPopupSize();
     }
 

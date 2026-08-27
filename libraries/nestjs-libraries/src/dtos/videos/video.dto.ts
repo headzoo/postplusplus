@@ -1,5 +1,9 @@
 import {
-  IsIn, Validate, ValidationArguments, ValidatorConstraint, ValidatorConstraintInterface
+  IsIn,
+  Validate,
+  ValidationArguments,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
 } from 'class-validator';
 import { VideoAbstract } from '@gitroom/nestjs-libraries/videos/video.interface';
 

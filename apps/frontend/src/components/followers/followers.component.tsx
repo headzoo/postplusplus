@@ -88,12 +88,13 @@ const FOLLOWER_VIEW_BY_SLUG: Record<
   {
     triage?: FollowerTriageFilter;
     audience?:
-      | 'lead'
-      | 'followed'
-      | 'unfollowed'
-      | 'ignored'
-      | 'cultivate'
-      | 'hot';
+    | 'lead'
+    | 'followed'
+    | 'unfollowed'
+    | 'ignored'
+    | 'cultivate'
+    | 'hot'
+    | 'converted';
     isBot?: true;
   }
 > = {
@@ -108,6 +109,7 @@ const FOLLOWER_VIEW_BY_SLUG: Record<
   leads: { audience: 'lead' },
   // Legacy bookmark slug; canonicalize to /followers/leads.
   lead: { audience: 'lead' },
+  conversions: { audience: 'converted' },
   followed: { audience: 'followed' },
   unfollowed: { audience: 'unfollowed' },
   ignored: { audience: 'ignored' },
@@ -118,12 +120,13 @@ type FollowerFilterOption = {
   slug?: string;
   value?: FollowerTriageFilter;
   audience?:
-    | 'lead'
-    | 'followed'
-    | 'unfollowed'
-    | 'cultivate'
-    | 'ignored'
-    | 'hot';
+  | 'lead'
+  | 'followed'
+  | 'unfollowed'
+  | 'cultivate'
+  | 'ignored'
+  | 'hot'
+  | 'converted';
   isBot?: true;
   key: string;
   defaultLabel: string;
@@ -167,12 +170,13 @@ export type FollowerListPath = {
   slug?: string;
   triage?: FollowerTriageFilter;
   audience?:
-    | 'lead'
-    | 'followed'
-    | 'unfollowed'
-    | 'ignored'
-    | 'cultivate'
-    | 'hot';
+  | 'lead'
+  | 'followed'
+  | 'unfollowed'
+  | 'ignored'
+  | 'cultivate'
+  | 'hot'
+  | 'converted';
   isBot?: true;
 };
 
@@ -302,7 +306,7 @@ export const resolveFollowerStrategyDefaults = ({
 
   const slug =
     strategy.ui.defaultFilter !== 'all' &&
-    FOLLOWER_VIEW_BY_SLUG[strategy.ui.defaultFilter]
+      FOLLOWER_VIEW_BY_SLUG[strategy.ui.defaultFilter]
       ? strategy.ui.defaultFilter
       : undefined;
   // Fit is the lead endpoint's established ordering, rather than a generic sort.
@@ -319,9 +323,9 @@ export const resolveFollowerStrategyDefaults = ({
     slug,
     ...(sortOption
       ? {
-          sort: sortOption.key,
-          direction: sortOption.defaultDirection,
-        }
+        sort: sortOption.key,
+        direction: sortOption.defaultDirection,
+      }
       : {}),
   };
 };
@@ -533,14 +537,14 @@ const TrackingNotice: FC<{
         <p className="text-[13px] text-textItemBlur">
           {trackingStartedAt
             ? t(
-                'followers_tracking_no_backfill_since',
-                'Rankings include events received after tracking began on {{date}}. Earlier provider activity is not backfilled.',
-                { date: trackingStartedAt }
-              )
+              'followers_tracking_no_backfill_since',
+              'Rankings include events received after tracking began on {{date}}. Earlier provider activity is not backfilled.',
+              { date: trackingStartedAt }
+            )
             : t(
-                'followers_tracking_no_backfill',
-                'Rankings include only events received after tracking begins. Earlier provider activity is not backfilled.'
-              )}
+              'followers_tracking_no_backfill',
+              'Rankings include only events received after tracking begins. Earlier provider activity is not backfilled.'
+            )}
         </p>
       )}
     </div>
@@ -565,13 +569,13 @@ export const FollowersComponent: FC = () => {
     audience,
     isBot: pathIsBot,
   } = followerPath.type === 'follower'
-    ? {
+      ? {
         slug: undefined,
         triage: undefined,
         audience: undefined,
         isBot: undefined,
       }
-    : followerPath;
+      : followerPath;
   const urlSearch = searchParams.get('search') ?? '';
   const urlListId = searchParams.get('listId') || undefined;
   const urlSort = searchParams.get('sort') || undefined;
@@ -645,7 +649,7 @@ export const FollowersComponent: FC = () => {
     const eligibleIds = channels.map((channel) => channel.id);
     const preferredId =
       followerPath.type === 'follower' &&
-      eligibleIds.includes(followerPath.integrationId)
+        eligibleIds.includes(followerPath.integrationId)
         ? followerPath.integrationId
         : selectedIntegrationId;
     const nextId = resolveChannelId({
@@ -703,16 +707,16 @@ export const FollowersComponent: FC = () => {
 
   const strategyDefaults =
     selectedIntegrationId &&
-    !appliedStrategyDefaultChannelRef.current.has(selectedIntegrationId)
+      !appliedStrategyDefaultChannelRef.current.has(selectedIntegrationId)
       ? resolveFollowerStrategyDefaults({
-          pathname: historyPath || '/followers',
-          search: urlSearch,
-          listId: urlListId,
-          sort: urlSort,
-          direction: urlDirectionParam || undefined,
-          strategy: selectedChannel?.strategy,
-          sorts: selectedChannel?.sorts,
-        })
+        pathname: historyPath || '/followers',
+        search: urlSearch,
+        listId: urlListId,
+        sort: urlSort,
+        direction: urlDirectionParam || undefined,
+        strategy: selectedChannel?.strategy,
+        sorts: selectedChannel?.sorts,
+      })
       : undefined;
   const strategyDefaultView = strategyDefaults?.slug
     ? FOLLOWER_VIEW_BY_SLUG[strategyDefaults.slug]
@@ -959,14 +963,20 @@ export const FollowersComponent: FC = () => {
     integrationId: showBoard ? undefined : selectedIntegrationId,
     cursor: currentCursor,
     limit,
-    sort: resolvedAudience === 'hot' ? undefined : effectiveSort,
-    direction: resolvedAudience === 'hot' ? undefined : effectiveDirection,
+    sort:
+      resolvedAudience === 'hot' || resolvedAudience === 'converted'
+        ? undefined
+        : effectiveSort,
+    direction:
+      resolvedAudience === 'hot' || resolvedAudience === 'converted'
+        ? undefined
+        : effectiveDirection,
     window:
-      resolvedAudience === 'hot'
+      resolvedAudience === 'hot' || resolvedAudience === 'converted'
         ? undefined
         : requiresWindow
-        ? window
-        : undefined,
+          ? window
+          : undefined,
     search: trimmedSearch || undefined,
     triage: urlListId ? undefined : resolvedTriage,
     audience: urlListId ? undefined : resolvedAudience,
@@ -1005,6 +1015,11 @@ export const FollowersComponent: FC = () => {
     limit: FOLLOWER_BOARD_PREVIEW_LIMIT,
     audience: 'followed',
   });
+  const conversionsPreview = useFollowers({
+    integrationId: boardIntegrationId,
+    limit: FOLLOWER_BOARD_PREVIEW_LIMIT,
+    audience: 'converted',
+  });
   const costlyPreview = useFollowers({
     integrationId: boardIntegrationId,
     limit: FOLLOWER_BOARD_PREVIEW_LIMIT,
@@ -1036,6 +1051,7 @@ export const FollowersComponent: FC = () => {
     mutual: mutualPreview,
     cultivate: cultivatePreview,
     followed: followedPreview,
+    conversions: conversionsPreview,
     quiet: quietPreview,
     costly: costlyPreview,
     ignored: ignoredPreview,
@@ -1101,9 +1117,9 @@ export const FollowersComponent: FC = () => {
             error instanceof Error
               ? error.message
               : t(
-                  'followers_lead_follow_error',
-                  'Could not follow this profile'
-                ),
+                'followers_lead_follow_error',
+                'Could not follow this profile'
+              ),
             'warning'
           );
         }
@@ -1207,33 +1223,33 @@ export const FollowersComponent: FC = () => {
       },
       strategy: selectedChannel?.strategy
         ? {
-            id: selectedChannel.strategy.id,
-            version: selectedChannel.strategy.version,
-            summary: selectedChannel.strategy.summary.defaultValue,
-          }
+          id: selectedChannel.strategy.id,
+          version: selectedChannel.strategy.version,
+          summary: selectedChannel.strategy.summary.defaultValue,
+        }
         : undefined,
       follower:
         followerPath.type === 'follower'
           ? {
-              id: selectedFollower?.id,
-              username: selectedFollower?.username || followerPath.username,
-              name: selectedFollower?.name,
-            }
+            id: selectedFollower?.id,
+            username: selectedFollower?.username || followerPath.username,
+            name: selectedFollower?.name,
+          }
           : undefined,
       category: activeCategory
         ? {
-            key: activeCategory,
-            label: categoryLabel,
-            meaning: FOLLOWER_CATEGORY_DESCRIPTIONS[activeCategory],
-          }
+          key: activeCategory,
+          label: categoryLabel,
+          meaning: FOLLOWER_CATEGORY_DESCRIPTIONS[activeCategory],
+        }
         : undefined,
       search: normalizeFollowerSearch(trimmedSearch),
       list: urlListId
         ? {
-            id: urlListId,
-            name: activeList?.name,
-            status: activeList ? 'current' : 'unknown_or_deleted',
-          }
+          id: urlListId,
+          name: activeList?.name,
+          status: activeList ? 'current' : 'unknown_or_deleted',
+        }
         : undefined,
       availableLists: followerLists.map((list) => ({
         id: list.id,
@@ -1242,25 +1258,25 @@ export const FollowersComponent: FC = () => {
       sort:
         activeSort && effectiveDirection
           ? {
-              key: activeSort.key,
-              label: activeSort.label,
-              scope: activeSort.scope || 'native',
-              direction: effectiveDirection,
-              caveat:
-                activeSort.scope === 'page'
-                  ? 'Sorting applies only to the currently loaded page.'
-                  : undefined,
-            }
+            key: activeSort.key,
+            label: activeSort.label,
+            scope: activeSort.scope || 'native',
+            direction: effectiveDirection,
+            caveat:
+              activeSort.scope === 'page'
+                ? 'Sorting applies only to the currently loaded page.'
+                : undefined,
+          }
           : undefined,
       interactionWindow: requiresWindow ? window : undefined,
       pagination: { size: limit, number: pageNumber },
       tracking: tracking
         ? {
-            availability: tracking.availability,
-            state: tracking.state,
-            computedAt: tracking.computedAt,
-            followerSnapshotAt: tracking.followerSnapshotAt,
-          }
+          availability: tracking.availability,
+          state: tracking.state,
+          computedAt: tracking.computedAt,
+          followerSnapshotAt: tracking.followerSnapshotAt,
+        }
         : undefined,
     });
   }, [
@@ -1299,9 +1315,8 @@ export const FollowersComponent: FC = () => {
       externalId?: string;
       username?: string;
     }) => {
-      const modalId = `follower-detail-${integrationId}-${
-        username || externalId
-      }`;
+      const modalId = `follower-detail-${integrationId}-${username || externalId
+        }`;
       openedFollowerKeyRef.current = modalId;
       modal.openModal({
         id: modalId,
@@ -1445,14 +1460,14 @@ export const FollowersComponent: FC = () => {
       title: t('followers_list_remove_title', 'Remove this list?'),
       description: listName
         ? t(
-            'followers_list_remove_description_named',
-            '"{{name}}" will be deleted. People in it stay as followers.',
-            { name: listName }
-          )
+          'followers_list_remove_description_named',
+          '"{{name}}" will be deleted. People in it stay as followers.',
+          { name: listName }
+        )
         : t(
-            'followers_list_remove_description',
-            'This list will be deleted. People in it stay as followers.'
-          ),
+          'followers_list_remove_description',
+          'This list will be deleted. People in it stay as followers.'
+        ),
       approveLabel: t('yes', 'Yes'),
       cancelLabel: t('cancel', 'Cancel'),
     });
@@ -1700,6 +1715,22 @@ export const FollowersComponent: FC = () => {
             {t(
               'followers_followed_empty_description',
               'Follow leads from their badge to track people you followed who have not followed back yet.'
+            )}
+          </p>
+        </div>
+      );
+    }
+
+    if (resolvedAudience === 'converted') {
+      return (
+        <div className="flex flex-col items-center justify-center gap-[8px] rounded-[12px] border border-newTableBorder bg-newTableHeader p-[32px] text-center">
+          <p className="text-[18px] text-newTextColor">
+            {t('followers_converted_empty_title', 'No conversions yet')}
+          </p>
+          <p className="text-[14px] text-textItemBlur max-w-[520px]">
+            {t(
+              'followers_converted_empty_description',
+              'Converted people appear here after Post++ records a conversion tied to their profile, such as a new follower, website goal, amplification threshold, or support resolution.'
             )}
           </p>
         </div>
@@ -2151,10 +2182,10 @@ export const FollowersComponent: FC = () => {
                     timelineHref={
                       follower.username && selectedIntegrationId
                         ? buildFollowerTimelineHref(
-                            selectedIntegrationId,
-                            follower.username,
-                            follower.id
-                          )
+                          selectedIntegrationId,
+                          follower.username,
+                          follower.id
+                        )
                         : undefined
                     }
                     lists={followerLists}

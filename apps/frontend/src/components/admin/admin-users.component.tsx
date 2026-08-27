@@ -133,9 +133,7 @@ export const AdminUsersComponent: FC = () => {
 
       <div className="flex flex-wrap gap-[12px] items-end bg-newBgColorInner border border-newTableBorder rounded-[8px] p-[12px]">
         <div className="flex flex-col gap-[6px] flex-1 min-w-[240px]">
-          <div className="text-[12px] opacity-70">
-            {t('search', 'Search')}
-          </div>
+          <div className="text-[12px] opacity-70">{t('search', 'Search')}</div>
           <input
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
@@ -164,7 +162,9 @@ export const AdminUsersComponent: FC = () => {
           {t('failed_to_load_users', 'Failed to load users.')}
         </div>
       ) : !data || data.items.length === 0 ? (
-        <div className="opacity-70">{t('no_users_found', 'No users found.')}</div>
+        <div className="opacity-70">
+          {t('no_users_found', 'No users found.')}
+        </div>
       ) : (
         <div className="border border-newTableBorder rounded-[8px] overflow-x-auto">
           <div className="min-w-[980px]">
@@ -196,7 +196,11 @@ export const AdminUsersComponent: FC = () => {
                   <Button
                     onClick={() => impersonate(row)}
                     loading={impersonatingId === row.id}
-                    disabled={user.impersonate && user.orgId === row.organization.id && user.id === row.user.id}
+                    disabled={
+                      user.impersonate &&
+                      user.orgId === row.organization.id &&
+                      user.id === row.user.id
+                    }
                     className="rounded-[4px]"
                   >
                     {t('impersonate', 'Impersonate')}

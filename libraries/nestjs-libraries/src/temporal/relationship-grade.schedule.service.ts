@@ -29,7 +29,7 @@ export class RelationshipGradeScheduleService {
   constructor(
     private _temporalService: TemporalService,
     private _adminScheduleLogService: AdminScheduleLogService
-  ) { }
+  ) {}
 
   async install() {
     await this.terminateLegacyWorkflow();
@@ -150,7 +150,10 @@ export class RelationshipGradeScheduleService {
       });
     } catch (error) {
       if (!this.isAlreadyRunning(error)) {
-        this._logger.error('Failed to create relationship grade schedule', error);
+        this._logger.error(
+          'Failed to create relationship grade schedule',
+          error
+        );
         await this._adminScheduleLogService.append({
           scheduleKey: 'relationship-grades',
           level: 'ERROR',
@@ -189,7 +192,10 @@ export class RelationshipGradeScheduleService {
         !message.includes('already completed') &&
         !message.includes('already closed')
       ) {
-        this._logger.error('Failed to stop Channel relationship grade V1', error);
+        this._logger.error(
+          'Failed to stop Channel relationship grade V1',
+          error
+        );
         throw error;
       }
     }
@@ -201,7 +207,9 @@ export class RelationshipGradeScheduleService {
 
   private mapStatus(
     description: Awaited<
-      ReturnType<ReturnType<RelationshipGradeScheduleService['getHandle']>['describe']>
+      ReturnType<
+        ReturnType<RelationshipGradeScheduleService['getHandle']>['describe']
+      >
     >,
     exists: boolean
   ): RelationshipGradeScheduleStatus {
@@ -224,7 +232,7 @@ export class RelationshipGradeScheduleService {
     try {
       return normalizeRelationshipGradeSchedule(
         this.cadenceFromUnknown(description.action?.args?.[0]) ??
-        this.cadenceFromUnknown(description.memo?.cadence)
+          this.cadenceFromUnknown(description.memo?.cadence)
       );
     } catch {
       return DEFAULT_RELATIONSHIP_GRADE_SCHEDULE;
@@ -238,9 +246,7 @@ export class RelationshipGradeScheduleService {
       return undefined;
     }
     if ('cadence' in value) {
-      return this.cadenceFromUnknown(
-        (value as { cadence?: unknown }).cadence
-      );
+      return this.cadenceFromUnknown((value as { cadence?: unknown }).cadence);
     }
     return value as Partial<RelationshipGradeScheduleConfig>;
   }

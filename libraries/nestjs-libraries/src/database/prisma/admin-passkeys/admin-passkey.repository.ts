@@ -69,7 +69,7 @@ export class AdminPasskeyRepository {
       | 'adminVerificationSession'
     >,
     private _transaction: PrismaTransaction
-  ) { }
+  ) {}
 
   countCredentials(userId: string) {
     return this._adminPasskey.model.adminPasskeyCredential.count({
@@ -77,7 +77,9 @@ export class AdminPasskeyRepository {
     });
   }
 
-  async listCredentials(userId: string): Promise<AdminPasskeyCredentialRecord[]> {
+  async listCredentials(
+    userId: string
+  ): Promise<AdminPasskeyCredentialRecord[]> {
     const credentials =
       await this._adminPasskey.model.adminPasskeyCredential.findMany({
         where: { userId, revokedAt: null },
@@ -146,7 +148,13 @@ export class AdminPasskeyRepository {
   ) {
     const pending =
       await this._adminPasskey.model.adminWebAuthnChallenge.findFirst({
-        where: { userId, kind, challenge, usedAt: null, expiresAt: { gt: now } },
+        where: {
+          userId,
+          kind,
+          challenge,
+          usedAt: null,
+          expiresAt: { gt: now },
+        },
         select: { id: true },
       });
 
@@ -258,15 +266,14 @@ export class AdminPasskeyRepository {
           },
         });
         if (updated.count !== 1) {
-          const credential =
-            await tx.adminPasskeyCredential.findFirst({
-              where: {
-                id: input.credential.id,
-                userId: input.userId,
-                revokedAt: null,
-              },
-              select: { id: true },
-            });
+          const credential = await tx.adminPasskeyCredential.findFirst({
+            where: {
+              id: input.credential.id,
+              userId: input.userId,
+              revokedAt: null,
+            },
+            select: { id: true },
+          });
 
           return credential
             ? { outcome: 'credential-state-changed' }
@@ -336,7 +343,6 @@ export class AdminPasskeyRepository {
     return revoked.count;
   }
 
-
   async revokeCredentials(userId: string) {
     const revoked =
       await this._adminPasskey.model.adminPasskeyCredential.updateMany({
@@ -387,8 +393,8 @@ export class AdminPasskeyRepository {
       counter: credential.counter,
       transports: Array.isArray(credential.transports)
         ? credential.transports.filter(
-          (transport): transport is string => typeof transport === 'string'
-        )
+            (transport): transport is string => typeof transport === 'string'
+          )
         : null,
       deviceType: credential.deviceType,
       backedUp: credential.backedUp,

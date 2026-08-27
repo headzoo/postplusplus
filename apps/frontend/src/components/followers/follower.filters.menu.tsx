@@ -113,9 +113,7 @@ export const FollowerFiltersMenu: FC<{
                 hideErrors={true}
                 value={direction ?? 'desc'}
                 onChange={(event) =>
-                  onDirectionChange(
-                    event.target.value as FollowerSortDirection
-                  )
+                  onDirectionChange(event.target.value as FollowerSortDirection)
                 }
               >
                 {activeSort.directions.map((sortDirection) => (

@@ -1,8 +1,4 @@
-import {
-  continueAsNew,
-  proxyActivities,
-  sleep,
-} from '@temporalio/workflow';
+import { continueAsNew, proxyActivities, sleep } from '@temporalio/workflow';
 import {
   ChannelRelationshipGradeActivity,
   ChannelRelationshipGradeCandidate,

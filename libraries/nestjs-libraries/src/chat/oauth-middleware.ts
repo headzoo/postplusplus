@@ -10,7 +10,10 @@
 
 import type * as http from 'node:http';
 
-import type { MCPServerOAuthConfig, TokenValidationResult } from './oauth-types';
+import type {
+  MCPServerOAuthConfig,
+  TokenValidationResult,
+} from './oauth-types';
 import {
   generateProtectedResourceMetadata,
   generateWWWAuthenticateHeader,
@@ -43,13 +46,13 @@ export function createOAuthMiddleware(options: OAuthMiddlewareOptions) {
   const resourcePath = new URL(oauth.resource).pathname;
   const resourceMetadataUrl = new URL(
     wellKnownPath + (resourcePath === '/' ? '' : resourcePath),
-    oauth.resource,
+    oauth.resource
   ).toString();
 
   return async function oauthMiddleware(
     req: http.IncomingMessage,
     res: http.ServerResponse,
-    url: URL,
+    url: URL
   ): Promise<OAuthMiddlewareResult> {
     logger?.debug?.(`OAuth middleware: ${req.method} ${url.pathname}`);
 
@@ -90,13 +93,15 @@ export function createOAuthMiddleware(options: OAuthMiddlewareOptions) {
       logger?.debug?.('OAuth middleware: No bearer token provided');
       res.writeHead(401, {
         'Content-Type': 'application/json',
-        'WWW-Authenticate': generateWWWAuthenticateHeader({ resourceMetadataUrl }),
+        'WWW-Authenticate': generateWWWAuthenticateHeader({
+          resourceMetadataUrl,
+        }),
       });
       res.end(
         JSON.stringify({
           error: 'unauthorized',
           error_description: 'Bearer token required',
-        }),
+        })
       );
       return { proceed: false, handled: true };
     }
@@ -107,7 +112,9 @@ export function createOAuthMiddleware(options: OAuthMiddlewareOptions) {
       const validationResult = await oauth.validateToken(token, oauth.resource);
 
       if (!validationResult.valid) {
-        logger?.debug?.(`OAuth middleware: Token validation failed: ${validationResult.error}`);
+        logger?.debug?.(
+          `OAuth middleware: Token validation failed: ${validationResult.error}`
+        );
         res.writeHead(401, {
           'Content-Type': 'application/json',
           'WWW-Authenticate': generateWWWAuthenticateHeader({
@@ -123,18 +130,29 @@ export function createOAuthMiddleware(options: OAuthMiddlewareOptions) {
         res.end(
           JSON.stringify({
             error: validationResult.error || 'invalid_token',
-            error_description: validationResult.errorDescription || 'Token validation failed',
-          }),
+            error_description:
+              validationResult.errorDescription || 'Token validation failed',
+          })
         );
-        return { proceed: false, handled: true, tokenValidation: validationResult };
+        return {
+          proceed: false,
+          handled: true,
+          tokenValidation: validationResult,
+        };
       }
 
       logger?.debug?.('OAuth middleware: Token validated successfully');
-      return { proceed: true, handled: false, tokenValidation: validationResult };
+      return {
+        proceed: true,
+        handled: false,
+        tokenValidation: validationResult,
+      };
     }
 
     // If no validateToken function provided, accept the token
-    logger?.debug?.('OAuth middleware: No token validation configured, accepting token');
+    logger?.debug?.(
+      'OAuth middleware: No token validation configured, accepting token'
+    );
     return {
       proceed: true,
       handled: false,
@@ -143,7 +161,9 @@ export function createOAuthMiddleware(options: OAuthMiddlewareOptions) {
   };
 }
 
-export function createStaticTokenValidator(validTokens: string[]): MCPServerOAuthConfig['validateToken'] {
+export function createStaticTokenValidator(
+  validTokens: string[]
+): MCPServerOAuthConfig['validateToken'] {
   const tokenSet = new Set(validTokens);
   return async (token: string): Promise<TokenValidationResult> => {
     if (tokenSet.has(token)) {
@@ -175,9 +195,12 @@ interface IntrospectionResponse {
 
 export function createIntrospectionValidator(
   introspectionEndpoint: string,
-  clientCredentials?: { clientId: string; clientSecret: string },
+  clientCredentials?: { clientId: string; clientSecret: string }
 ): MCPServerOAuthConfig['validateToken'] {
-  return async (token: string, resource: string): Promise<TokenValidationResult> => {
+  return async (
+    token: string,
+    resource: string
+  ): Promise<TokenValidationResult> => {
     try {
       const headers: Record<string, string> = {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -188,12 +211,13 @@ export function createIntrospectionValidator(
           return {
             valid: false,
             error: 'invalid_request',
-            errorDescription: 'clientId cannot contain a colon character per RFC 7617',
+            errorDescription:
+              'clientId cannot contain a colon character per RFC 7617',
           };
         }
-        const credentials = Buffer.from(`${clientCredentials.clientId}:${clientCredentials.clientSecret}`).toString(
-          'base64',
-        );
+        const credentials = Buffer.from(
+          `${clientCredentials.clientId}:${clientCredentials.clientSecret}`
+        ).toString('base64');
         headers['Authorization'] = `Basic ${credentials}`;
       }
 
@@ -241,7 +265,7 @@ export function createIntrospectionValidator(
           data.scope
             ?.trim()
             .split(' ')
-            .filter(s => s !== '') || [],
+            .filter((s) => s !== '') || [],
         subject: data.sub,
         expiresAt: data.exp,
         claims: data as Record<string, unknown>,
@@ -250,7 +274,8 @@ export function createIntrospectionValidator(
       return {
         valid: false,
         error: 'server_error',
-        errorDescription: error instanceof Error ? error.message : 'Introspection failed',
+        errorDescription:
+          error instanceof Error ? error.message : 'Introspection failed',
       };
     }
   };

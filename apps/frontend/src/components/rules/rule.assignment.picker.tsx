@@ -49,13 +49,17 @@ export const RuleAssignmentPicker: FC<{
   );
 
   if (isLoading) {
-    return <div className="text-[14px] opacity-70">{t('loading', 'Loading...')}</div>;
+    return (
+      <div className="text-[14px] opacity-70">{t('loading', 'Loading...')}</div>
+    );
   }
 
   return (
     <div className="flex flex-col gap-[12px] rounded-[8px] border border-newBorder bg-newBgColor p-[16px]">
       <div className="flex flex-col gap-[12px]">
-        <div className="text-[14px] font-[600]">{t('channels', 'Channels')}</div>
+        <div className="text-[14px] font-[600]">
+          {t('channels', 'Channels')}
+        </div>
         {integrationOptions.length === 0 ? (
           <div className="text-[14px] opacity-70">
             {t('no_channels_available', 'No channels available.')}
@@ -101,7 +105,9 @@ export const RuleAssignmentPicker: FC<{
       </div>
 
       <div className="flex flex-col gap-[12px]">
-        <div className="text-[14px] font-[600]">{t('pipelines', 'Pipelines')}</div>
+        <div className="text-[14px] font-[600]">
+          {t('pipelines', 'Pipelines')}
+        </div>
         {pipelineOptions.length === 0 ? (
           <div className="text-[14px] opacity-70">
             {t('no_active_pipelines', 'No active Pipelines available.')}

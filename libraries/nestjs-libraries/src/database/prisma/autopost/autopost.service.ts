@@ -19,9 +19,7 @@ import { IntegrationService } from '@gitroom/nestjs-libraries/database/prisma/in
 import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
 import { TemporalService } from 'nestjs-temporal-core';
 import { TypedSearchAttributes } from '@temporalio/common';
-import {
-  organizationId,
-} from '@gitroom/nestjs-libraries/temporal/temporal.search.attribute';
+import { organizationId } from '@gitroom/nestjs-libraries/temporal/temporal.search.attribute';
 import { PipelineManager } from '@gitroom/nestjs-libraries/database/prisma/pipelines/pipeline.manager';
 const parser = new Parser();
 
@@ -70,7 +68,7 @@ export class AutopostService {
     private _integrationService: IntegrationService,
     private _postsService: PostsService,
     private _pipelineManager: PipelineManager
-  ) { }
+  ) {}
 
   async stopAll(org: string) {
     const getAll = (await this.getAutoposts(org)).filter((f) => f.active);
@@ -255,9 +253,9 @@ export class AutopostService {
         url: findLast.link,
         description: striptags(
           findLast?.['content:encoded'] ||
-          findLast?.content ||
-          findLast?.description ||
-          ''
+            findLast?.content ||
+            findLast?.description ||
+            ''
         )
           .replace(/\n/g, ' ')
           .trim(),
@@ -385,13 +383,13 @@ export class AutopostService {
           image: !state.image
             ? []
             : [
-              {
-                id: makeId(10),
-                name: makeId(10),
-                path: state.image,
-                organizationId: state.integrations[0].organizationId,
-              },
-            ],
+                {
+                  id: makeId(10),
+                  name: makeId(10),
+                  path: state.image,
+                  organizationId: state.integrations[0].organizationId,
+                },
+              ],
         },
       ],
     }));
@@ -419,14 +417,18 @@ export class AutopostService {
       state.integrations[0].organizationId
     );
 
-    await this._postsService.createPost(state.integrations[0].organizationId, {
-      date: nextTime + 'Z',
-      order: makeId(10),
-      shortLink: false,
-      type: 'draft',
-      tags: [],
-      posts,
-    }, 'AUTOPOST');
+    await this._postsService.createPost(
+      state.integrations[0].organizationId,
+      {
+        date: nextTime + 'Z',
+        order: makeId(10),
+        shortLink: false,
+        type: 'draft',
+        tags: [],
+        posts,
+      },
+      'AUTOPOST'
+    );
   }
 
   async updateUrl(state: WorkflowChannelsState) {
@@ -453,8 +455,14 @@ export class AutopostService {
     }
 
     const integrationsToSend = getPost.pipelineId
-      ? await this.getPipelineIntegrations(getPost.organizationId, getPost.pipelineId)
-      : await this.getGlobalIntegrations(getPost.organizationId, getPost.integrations);
+      ? await this.getPipelineIntegrations(
+          getPost.organizationId,
+          getPost.pipelineId
+        )
+      : await this.getGlobalIntegrations(
+          getPost.organizationId,
+          getPost.integrations
+        );
     if (integrationsToSend.length === 0) {
       return;
     }
@@ -493,7 +501,9 @@ export class AutopostService {
   }
 
   private async getGlobalIntegrations(orgId: string, selected: string) {
-    const integrations = await this._integrationService.getIntegrationsList(orgId);
+    const integrations = await this._integrationService.getIntegrationsList(
+      orgId
+    );
     const parseIntegrations = JSON.parse(selected || '[]') || [];
     const neededIntegrations = integrations.filter((i) =>
       parseIntegrations.some((ii: any) => ii.id === i.id)

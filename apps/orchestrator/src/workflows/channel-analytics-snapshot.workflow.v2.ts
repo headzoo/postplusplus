@@ -58,9 +58,7 @@ export async function channelAnalyticsSnapshotWorkflowV2(
   const nextRequest = (
     next: ChannelAnalyticsSnapshotWorkflowV2Request
   ): Promise<never> =>
-    continueAsNew<typeof channelAnalyticsSnapshotWorkflowV2>(
-      poked ? {} : next
-    );
+    continueAsNew<typeof channelAnalyticsSnapshotWorkflowV2>(poked ? {} : next);
 
   const batch = request.batch;
   const candidate = request.active?.candidate ?? batch?.candidates[batch.index];
@@ -79,7 +77,9 @@ export async function channelAnalyticsSnapshotWorkflowV2(
       }
       if (page.hasMore) {
         if (!page.nextCursor) {
-          throw new Error('Analytics page indicated more results without a cursor');
+          throw new Error(
+            'Analytics page indicated more results without a cursor'
+          );
         }
         return nextRequest({
           after: request.after,
@@ -129,7 +129,10 @@ function advanceCandidate(
   if (poked) {
     return continueAsNew<typeof channelAnalyticsSnapshotWorkflowV2>({});
   }
-  if (request.batch && request.batch.index + 1 < request.batch.candidates.length) {
+  if (
+    request.batch &&
+    request.batch.index + 1 < request.batch.candidates.length
+  ) {
     return continueAsNew<typeof channelAnalyticsSnapshotWorkflowV2>({
       after: request.after,
       batch: { ...request.batch, index: request.batch.index + 1 },

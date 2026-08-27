@@ -11,9 +11,7 @@ import { ApiTags } from '@nestjs/swagger';
 @ApiTags('Stripe')
 @Controller('/stripe')
 export class StripeController {
-  constructor(
-    private readonly _stripeService: StripeService,
-  ) {}
+  constructor(private readonly _stripeService: StripeService) {}
 
   @Post('/')
   stripe(@Req() req: RawBodyRequest<Request>) {

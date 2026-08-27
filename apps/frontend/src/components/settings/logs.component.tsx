@@ -80,9 +80,7 @@ const LogIdentity: FC<{
   const profileUrl = webhookIdentityUrl(username);
   return (
     <div className="min-w-0">
-      {displayName ? (
-        <div className="truncate">{displayName}</div>
-      ) : null}
+      {displayName ? <div className="truncate">{displayName}</div> : null}
       {username ? (
         profileUrl ? (
           <a
@@ -376,7 +374,9 @@ const WebhookLogsTable: FC<{
           className="grid grid-cols-[170px_90px_110px_140px_140px_1fr_90px] gap-[12px] px-[12px] py-[10px] text-[13px] border-b border-newTableBorder last:border-b-0 items-center"
         >
           <div>{new Date(row.createdAt).toLocaleString()}</div>
-          <div className="text-center">{row.statusCode ?? row.error ?? '—'}</div>
+          <div className="text-center">
+            {row.statusCode ?? row.error ?? '—'}
+          </div>
           <div>{formatWebhookDirection(row.direction)}</div>
           <LogIdentity
             displayName={row.sourceDisplayName}
@@ -386,7 +386,9 @@ const WebhookLogsTable: FC<{
             displayName={row.targetDisplayName}
             username={row.targetUsername}
           />
-          <div className="truncate opacity-80">{webhookEventLabel(row.eventType)}</div>
+          <div className="truncate opacity-80">
+            {webhookEventLabel(row.eventType)}
+          </div>
           <div className="flex justify-end">
             <Button secondary type="button" onClick={() => openWebhook(row)}>
               {t('view', 'View')}
@@ -481,7 +483,10 @@ export const WebhookLogsPanel: FC = () => {
               type="search"
               value={searchDraft}
               onChange={(event) => setSearchDraft(event.target.value)}
-              placeholder={t('search_source_or_target', 'Search source or target')}
+              placeholder={t(
+                'search_source_or_target',
+                'Search source or target'
+              )}
               className="bg-newBgColorInner h-[40px] w-[220px] border border-newTableBorder rounded-[8px] px-[10px] text-[14px] text-textColor"
             />
             <Button type="submit" secondary>
@@ -506,7 +511,9 @@ export const WebhookLogsPanel: FC = () => {
             secondary
             type="button"
             disabled={page === 0}
-            onClick={() => setPage((currentPage) => Math.max(0, currentPage - 1))}
+            onClick={() =>
+              setPage((currentPage) => Math.max(0, currentPage - 1))
+            }
           >
             {t('previous', 'Previous')}
           </Button>
@@ -536,10 +543,7 @@ export const LogsSettings: FC = () => {
 
   const subtitle = useMemo(
     () =>
-      t(
-        'inspect_outgoing_http_for_posts',
-        'Inspect outgoing HTTP for posts.'
-      ),
+      t('inspect_outgoing_http_for_posts', 'Inspect outgoing HTTP for posts.'),
     [t]
   );
 
@@ -574,7 +578,9 @@ export const LogsSettings: FC = () => {
               secondary
               type="button"
               disabled={page === 0}
-              onClick={() => setPage((currentPage) => Math.max(0, currentPage - 1))}
+              onClick={() =>
+                setPage((currentPage) => Math.max(0, currentPage - 1))
+              }
             >
               {t('previous', 'Previous')}
             </Button>

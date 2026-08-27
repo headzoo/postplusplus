@@ -13,17 +13,14 @@ jest.mock('@temporalio/worker', () => ({
   bundleWorkflowCode,
 }));
 
-jest.mock(
-  '@gitroom/nestjs-libraries/integrations/integration.manager',
-  () => ({
-    socialIntegrationList: [
-      { identifier: 'x', maxConcurrentJob: 10 },
-      { identifier: 'linkedin', maxConcurrentJob: 3 },
-      { identifier: 'facebook-page', maxConcurrentJob: 5 },
-      { identifier: 'unlimited' },
-    ],
-  })
-);
+jest.mock('@gitroom/nestjs-libraries/integrations/integration.manager', () => ({
+  socialIntegrationList: [
+    { identifier: 'x', maxConcurrentJob: 10 },
+    { identifier: 'linkedin', maxConcurrentJob: 3 },
+    { identifier: 'facebook-page', maxConcurrentJob: 5 },
+    { identifier: 'unlimited' },
+  ],
+}));
 
 import { getTemporalModule } from './temporal.module';
 
@@ -72,12 +69,14 @@ describe('getTemporalModule', () => {
       workflowsPath: '/workflows',
     });
     expect(options.workers).toHaveLength(4);
-    expect(options.workers.every((worker) => !('workflowsPath' in worker))).toBe(
-      true
-    );
-    expect(options.workers.every((worker) => worker.workflowBundle === options.workers[0].workflowBundle)).toBe(
-      true
-    );
+    expect(
+      options.workers.every((worker) => !('workflowsPath' in worker))
+    ).toBe(true);
+    expect(
+      options.workers.every(
+        (worker) => worker.workflowBundle === options.workers[0].workflowBundle
+      )
+    ).toBe(true);
   });
 
   it('creates only the main worker in main mode', async () => {
@@ -100,7 +99,9 @@ describe('getTemporalModule', () => {
       'x',
       'unlimited',
     ]);
-    expect(options.workers.find((worker) => worker.taskQueue === 'x')).toMatchObject({
+    expect(
+      options.workers.find((worker) => worker.taskQueue === 'x')
+    ).toMatchObject({
       workerOptions: { maxConcurrentActivityTaskExecutions: 5 },
     });
     expect(

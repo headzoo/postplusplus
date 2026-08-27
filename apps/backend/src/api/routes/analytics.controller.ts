@@ -18,7 +18,7 @@ export class AnalyticsController {
     private _integrationService: IntegrationService,
     private _postsService: PostsService,
     private _channelAnalyticsService: ChannelAnalyticsService
-  ) { }
+  ) {}
 
   @Get('/dashboard')
   async getDashboard(

@@ -211,10 +211,7 @@ export async function postWorkflowV107({
     type: 'retry' | 'stop' | 'bad-body' | 'timeout' | 'unknown';
     message: string;
   }> => {
-    if (
-      err instanceof ActivityFailure &&
-      err.cause instanceof TimeoutFailure
-    ) {
+    if (err instanceof ActivityFailure && err.cause instanceof TimeoutFailure) {
       return { type: 'timeout', message: '' };
     }
 
@@ -530,20 +527,17 @@ export async function postWorkflowV107({
   // load global plugs, like repost a post if it gets to a certain number of likes
   const globalPlugsList = (
     await globalPlugsV107(post.id, post.integration)
-  ).reduce(
-    (all, current) => {
-      for (let i = 1; i <= current.totalRuns; i++) {
-        all.push({
-          ...current,
-          delay: current.delay * i,
-          currentRun: i,
-        });
-      }
+  ).reduce((all, current) => {
+    for (let i = 1; i <= current.totalRuns; i++) {
+      all.push({
+        ...current,
+        delay: current.delay * i,
+        currentRun: i,
+      });
+    }
 
-      return all;
-    },
-    []
-  );
+    return all;
+  }, []);
 
   // Check if the post is repeatable
   const repeatPost = !post.intervalInDays

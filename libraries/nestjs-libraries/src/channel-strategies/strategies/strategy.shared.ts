@@ -53,13 +53,14 @@ export const DEFAULT_MATERIALIZATION_PROFILE: StrategyMaterializationProfile = {
   },
 };
 
-export const FOLLOWER_TRANSITION_CONVERSION_PROFILE: ChannelConversionProfile = {
-  kind: 'follower_transition',
-  profileVersion: 1,
-  conversionType: 'follower_gained',
-  fromState: 'NOT_FOLLOWER',
-  toState: 'FOLLOWER',
-};
+export const FOLLOWER_TRANSITION_CONVERSION_PROFILE: ChannelConversionProfile =
+  {
+    kind: 'follower_transition',
+    profileVersion: 1,
+    conversionType: 'follower_gained',
+    fromState: 'NOT_FOLLOWER',
+    toState: 'FOLLOWER',
+  };
 
 export const WEBSITE_GOAL_CONVERSION_PROFILE: ChannelConversionProfile = {
   kind: 'website_goal',
@@ -120,9 +121,7 @@ function freezeConversionProfile(
     case 'amplification':
       return Object.freeze({
         ...profile,
-        acceptedInboundKinds: Object.freeze([
-          ...profile.acceptedInboundKinds,
-        ]),
+        acceptedInboundKinds: Object.freeze([...profile.acceptedInboundKinds]),
         inboundKindWeights: Object.freeze({ ...profile.inboundKindWeights }),
       });
     case 'customer_support':

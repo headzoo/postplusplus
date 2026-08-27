@@ -8,16 +8,17 @@ import { FollowerCard } from './follower.card';
 import { Follower } from './use.followers';
 
 jest.mock('@gitroom/react/translation/get.transation.service.client', () => ({
-  useT: () => (key: string, fallback: string, params?: Record<string, unknown>) => {
-    if (!params) {
-      return fallback;
-    }
-    return Object.entries(params).reduce(
-      (result, [name, value]) =>
-        result.replace(new RegExp(`{{${name}}}`, 'g'), String(value)),
-      fallback
-    );
-  },
+  useT:
+    () => (key: string, fallback: string, params?: Record<string, unknown>) => {
+      if (!params) {
+        return fallback;
+      }
+      return Object.entries(params).reduce(
+        (result, [name, value]) =>
+          result.replace(new RegExp(`{{${name}}}`, 'g'), String(value)),
+        fallback
+      );
+    },
 }));
 
 jest.mock('@gitroom/react/helpers/image.with.fallback', () => ({
@@ -37,9 +38,12 @@ jest.mock('@gitroom/frontend/components/layout/new-modal', () => ({
   useDecisionModal: () => ({ open: decisionOpen }),
 }));
 
-jest.mock('@gitroom/frontend/components/followers/triage.dismiss.modal', () => ({
-  useTriageDismissModal: () => ({ open: triageDismissOpen }),
-}));
+jest.mock(
+  '@gitroom/frontend/components/followers/triage.dismiss.modal',
+  () => ({
+    useTriageDismissModal: () => ({ open: triageDismissOpen }),
+  })
+);
 
 jest.mock('@gitroom/frontend/components/followers/lead.dismiss.modal', () => ({
   useLeadDismissModal: () => ({ open: leadDismissOpen }),
@@ -327,8 +331,9 @@ describe('FollowerCard', () => {
     );
 
     const joined = screen.getByText('Joined');
-    const counts = container.querySelector('[data-follower-metrics-row]')
-      ?.lastElementChild;
+    const counts = container.querySelector(
+      '[data-follower-metrics-row]'
+    )?.lastElementChild;
     expect(joined.parentElement?.textContent).toMatch(/Joined\s.+/);
     expect(counts?.textContent).not.toContain('Joined');
     expect(counts?.textContent).toContain('Following');
@@ -357,7 +362,9 @@ describe('FollowerCard', () => {
 
     const name = screen.getByRole('heading', { name: 'Alex Example' });
     const handle = screen.getByRole('link', { name: '@alex' });
-    expect(name.compareDocumentPosition(handle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(
+      name.compareDocumentPosition(handle) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
     expect(screen.getByText('Hot')).toBeTruthy();
   });
 
@@ -409,9 +416,7 @@ describe('FollowerCard', () => {
       />
     );
 
-    expect(
-      screen.queryByRole('img', { name: /Likely bot/i })
-    ).toBeNull();
+    expect(screen.queryByRole('img', { name: /Likely bot/i })).toBeNull();
   });
 
   it('does not open the detail modal when adding a follower to a custom list', async () => {
@@ -450,7 +455,9 @@ describe('FollowerCard', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Add to list' }));
     await act(async () => {
-      fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Ignored' }));
+      fireEvent.click(
+        screen.getByRole('menuitemcheckbox', { name: 'Ignored' })
+      );
     });
 
     expect(onOpen).not.toHaveBeenCalled();
@@ -470,7 +477,9 @@ describe('FollowerCard', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Add to list' }));
     await act(async () => {
-      fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Ignored' }));
+      fireEvent.click(
+        screen.getByRole('menuitemcheckbox', { name: 'Ignored' })
+      );
     });
 
     expect(decisionOpen).not.toHaveBeenCalled();
@@ -497,7 +506,11 @@ describe('FollowerCard', () => {
     expect(onOpen).not.toHaveBeenCalled();
     expect(triageDismissOpen).toHaveBeenCalledWith('Hot');
     await Promise.resolve();
-    expect(onDismissTriage).toHaveBeenCalledWith('hot_lead', undefined, undefined);
+    expect(onDismissTriage).toHaveBeenCalledWith(
+      'hot_lead',
+      undefined,
+      undefined
+    );
   });
 
   it('snoozes a triage badge when snooze is chosen', async () => {
@@ -542,7 +555,10 @@ describe('FollowerCard', () => {
 
   it('renders a dismissible Lead badge when the follower is a lead', async () => {
     const onDismissTriage = jest.fn();
-    leadDismissOpen.mockResolvedValue({ action: 'remove', reasons: ['bio_wording'] });
+    leadDismissOpen.mockResolvedValue({
+      action: 'remove',
+      reasons: ['bio_wording'],
+    });
     render(
       <FollowerCard
         follower={{
@@ -595,9 +611,7 @@ describe('FollowerCard', () => {
     );
 
     expect(screen.getByText('Fit 82')).toBeTruthy();
-    expect(
-      screen.getByTitle('Matches channel tech audience')
-    ).toBeTruthy();
+    expect(screen.getByTitle('Matches channel tech audience')).toBeTruthy();
   });
 
   it('renders hot reason and suggested action for materialized hot picks', () => {
@@ -613,7 +627,9 @@ describe('FollowerCard', () => {
       />
     );
 
-    expect(screen.getByText('Inbound effort exceeds reciprocation')).toBeTruthy();
+    expect(
+      screen.getByText('Inbound effort exceeds reciprocation')
+    ).toBeTruthy();
     expect(screen.getByText('Reply to their latest mention')).toBeTruthy();
   });
 
@@ -625,7 +641,8 @@ describe('FollowerCard', () => {
         follower={{
           ...baseFollower,
           isCultivate: true,
-          cultivateReason: 'No outbound attention in 20 days · mutual relationship',
+          cultivateReason:
+            'No outbound attention in 20 days · mutual relationship',
           suggestedAction: 'Like their latest post',
           relationshipTriage: 'mutual',
         }}
@@ -649,7 +666,11 @@ describe('FollowerCard', () => {
       screen.getByRole('button', { name: 'Remove Cultivate badge' })
     );
     await Promise.resolve();
-    expect(onDismissTriage).toHaveBeenCalledWith('cultivate', undefined, undefined);
+    expect(onDismissTriage).toHaveBeenCalledWith(
+      'cultivate',
+      undefined,
+      undefined
+    );
   });
 
   it('renders Via badge under the username', () => {
@@ -680,7 +701,9 @@ describe('FollowerCard', () => {
       <FollowerCard
         follower={{
           ...baseFollower,
-          weFollowedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+          weFollowedAt: new Date(
+            Date.now() - 3 * 24 * 60 * 60 * 1000
+          ).toISOString(),
           isFollowed: true,
         }}
         onOpen={jest.fn()}

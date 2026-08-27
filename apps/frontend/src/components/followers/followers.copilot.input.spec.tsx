@@ -45,7 +45,9 @@ describe('FollowersCopilotInput', () => {
 
     expect(setMessages).toHaveBeenCalledWith([]);
     expect(setOpen).toHaveBeenCalledWith(true);
-    const textarea = screen.getByPlaceholderText('Message') as HTMLTextAreaElement;
+    const textarea = screen.getByPlaceholderText(
+      'Message'
+    ) as HTMLTextAreaElement;
     expect(textarea.value).toBe('@alex ');
   });
 });

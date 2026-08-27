@@ -22,7 +22,9 @@ import {
 } from '@gitroom/nestjs-libraries/integrations/social/follower.sorts';
 
 @ValidatorConstraint({ name: 'exclusiveAudienceTriage', async: false })
-class ExclusiveAudienceTriageConstraint implements ValidatorConstraintInterface {
+class ExclusiveAudienceTriageConstraint
+  implements ValidatorConstraintInterface
+{
   validate(_: unknown, args: ValidationArguments) {
     const object = args.object as FollowersQueryDto;
     const selected = [object.audience, object.triage, object.listId].filter(

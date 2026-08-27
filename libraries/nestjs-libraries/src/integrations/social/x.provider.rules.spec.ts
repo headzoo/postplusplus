@@ -283,7 +283,9 @@ describe('XProvider PostRules Capability', () => {
         v2: {
           tweet: jest
             .fn()
-            .mockResolvedValue({ data: { id: 'reply123', text: 'Test reply' } }),
+            .mockResolvedValue({
+              data: { id: 'reply123', text: 'Test reply' },
+            }),
         },
       };
       (TwitterApi as jest.MockedClass<typeof TwitterApi>).mockImplementation(
@@ -377,11 +379,10 @@ describe('XProvider PostRules Capability', () => {
         () => mockClient as any
       );
 
-      const result = await provider.autoPlugPost(
-        mockIntegration,
-        'tweet123',
-        { likesAmount: '50', post: '<p>Check this out!</p>' }
-      );
+      const result = await provider.autoPlugPost(mockIntegration, 'tweet123', {
+        likesAmount: '50',
+        post: '<p>Check this out!</p>',
+      });
 
       expect(result).toBe(true);
       expect(mockClient.v2.tweet).toHaveBeenCalled();

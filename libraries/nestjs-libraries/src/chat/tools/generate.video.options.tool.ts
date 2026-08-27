@@ -1,6 +1,4 @@
-import {
-  AgentToolInterface,
-} from '@gitroom/nestjs-libraries/chat/agent.tool.interface';
+import { AgentToolInterface } from '@gitroom/nestjs-libraries/chat/agent.tool.interface';
 import { createTool } from '@mastra/core/tools';
 import { Injectable } from '@nestjs/common';
 import { getValidationSchemas } from '@gitroom/nestjs-libraries/chat/validation.schemas.helper';

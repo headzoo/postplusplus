@@ -77,17 +77,24 @@ export const ChannelTrackingAlert: FC<{
   tracking?: FollowerPageTracking;
   subscriptions?: ChannelSubscriptionDetail[];
   settingsHref?: string;
-}> = ({ channelName, tracking, subscriptions, settingsHref = '/settings/channels' }) => {
+}> = ({
+  channelName,
+  tracking,
+  subscriptions,
+  settingsHref = '/settings/channels',
+}) => {
   const t = useT();
 
-  if (!tracking || (tracking.state !== 'error' && tracking.state !== 'partial')) {
+  if (
+    !tracking ||
+    (tracking.state !== 'error' && tracking.state !== 'partial')
+  ) {
     return null;
   }
 
-  const failedSubscriptions =
-    tracking.failedSubscriptions?.length
-      ? tracking.failedSubscriptions
-      : subscriptions
+  const failedSubscriptions = tracking.failedSubscriptions?.length
+    ? tracking.failedSubscriptions
+    : subscriptions
         ?.filter((subscription) => subscription.state === 'error')
         .map((subscription) => ({
           eventKey: subscription.eventKey,
@@ -105,7 +112,10 @@ export const ChannelTrackingAlert: FC<{
   const title =
     tracking.state === 'partial'
       ? t('channel_tracking_partial_title', 'Interaction tracking is partial')
-      : t('channel_tracking_error_title', 'Interaction tracking needs attention');
+      : t(
+          'channel_tracking_error_title',
+          'Interaction tracking needs attention'
+        );
 
   return (
     <div className="rounded-[10px] border border-amber-500/30 bg-amber-500/10 px-[14px] py-[12px] text-[13px] text-amber-100 flex flex-col gap-[8px]">

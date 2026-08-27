@@ -4,7 +4,7 @@ import { UsersService } from '@gitroom/nestjs-libraries/database/prisma/users/us
 
 @Injectable()
 export class UsersAdminTask {
-  constructor(private _usersService: UsersService) { }
+  constructor(private _usersService: UsersService) {}
 
   @Command({
     command: 'users:list',
@@ -51,9 +51,7 @@ export class UsersAdminTask {
       columns.map((column) => row[column].padEnd(widths[column])).join('  ');
 
     console.log(formatRow(headers));
-    console.log(
-      columns.map((column) => '-'.repeat(widths[column])).join('  ')
-    );
+    console.log(columns.map((column) => '-'.repeat(widths[column])).join('  '));
     for (const row of rows) {
       console.log(formatRow(row));
     }

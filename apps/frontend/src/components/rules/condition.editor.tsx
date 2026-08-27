@@ -30,9 +30,8 @@ export const ConditionEditor: FC<{
 }) => {
   const t = useT();
 
-  const availableMetrics = capabilities.actions.find(
-    (a) => a.key === action
-  )?.metrics || [];
+  const availableMetrics =
+    capabilities.actions.find((a) => a.key === action)?.metrics || [];
 
   const addCondition = useCallback(() => {
     const defaultMetric = availableMetrics[0]?.key || 'LIKES';
@@ -66,7 +65,10 @@ export const ConditionEditor: FC<{
     <div className="flex flex-col gap-[12px] rounded-[8px] border border-newBorder bg-newBgColor p-[16px]">
       {conditions.length === 0 ? (
         <div className="text-[14px] opacity-70 text-center py-[12px]">
-          {t('no_conditions', 'No conditions defined. The action will always execute.')}
+          {t(
+            'no_conditions',
+            'No conditions defined. The action will always execute.'
+          )}
         </div>
       ) : (
         <>
@@ -91,7 +93,10 @@ export const ConditionEditor: FC<{
 
           <div className="flex flex-col gap-[8px]">
             {conditions.map((condition, index) => (
-              <div key={index} className="flex items-center gap-[8px] flex-wrap">
+              <div
+                key={index}
+                className="flex items-center gap-[8px] flex-wrap"
+              >
                 <select
                   value={condition.metric}
                   onChange={(e) =>
@@ -147,7 +152,11 @@ export const ConditionEditor: FC<{
       )}
 
       <div>
-        <Button secondary onClick={addCondition} disabled={availableMetrics.length === 0}>
+        <Button
+          secondary
+          onClick={addCondition}
+          disabled={availableMetrics.length === 0}
+        >
           {t('add_condition', 'Add Condition')}
         </Button>
       </div>

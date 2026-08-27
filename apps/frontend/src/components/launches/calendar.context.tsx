@@ -22,7 +22,10 @@ import weekOfYear from 'dayjs/plugin/weekOfYear';
 import { extend } from 'dayjs';
 import useCookie from 'react-use-cookie';
 import { newDayjs } from '@gitroom/frontend/components/layout/set.timezone';
-import { expandPostsList, expandPosts } from '@gitroom/helpers/utils/posts.list.minify';
+import {
+  expandPostsList,
+  expandPosts,
+} from '@gitroom/helpers/utils/posts.list.minify';
 import { usePipelineCalendar } from '@gitroom/frontend/components/pipelines/use.pipeline.calendar';
 extend(isoWeek);
 extend(weekOfYear);
@@ -70,10 +73,7 @@ function buildCalendarUrl(
 }
 
 /** Cell key matching CalendarColumn filter semantics for the given display. */
-export function getCalendarCellKey(
-  date: dayjs.Dayjs,
-  display: string
-): string {
+export function getCalendarCellKey(date: dayjs.Dayjs, display: string): string {
   if (display === 'day' || display === 'list') {
     return date.format('YYYY-MM-DD HH:mm');
   }
@@ -97,9 +97,7 @@ function getPostCellKey(publishDate: string, display: string): string {
  */
 function getMonthWindow(anchorDate: string) {
   const date = newDayjs(anchorDate);
-  const startOfMonth = newDayjs(
-    new Date(date.year(), date.month(), 1)
-  );
+  const startOfMonth = newDayjs(new Date(date.year(), date.month(), 1));
   const daysBeforeMonth = startOfMonth.isoWeekday() - 1;
   const calendarStart = startOfMonth.subtract(daysBeforeMonth, 'day');
   const calendarEnd = calendarStart.add(41, 'day');
@@ -220,7 +218,9 @@ export const CalendarWeekProvider: FC<{
   integrations: Integrations[];
 }> = ({ children, integrations }) => {
   const fetch = useFetch();
-  const [dateOverrides, setDateOverrides] = useState<Record<string, string>>({});
+  const [dateOverrides, setDateOverrides] = useState<Record<string, string>>(
+    {}
+  );
   const [trendings] = useState<string[]>([]);
   const searchParams = useSearchParams();
   const [displaySaved, setDisplaySaved] = useCookie('calendar-display', 'week');
@@ -288,8 +288,11 @@ export const CalendarWeekProvider: FC<{
     }
 
     isSearchMode.current = false;
-    const restoreDisplay = (displayBeforeSearch.current ||
-      'week') as 'week' | 'month' | 'day' | 'list';
+    const restoreDisplay = (displayBeforeSearch.current || 'week') as
+      | 'week'
+      | 'month'
+      | 'day'
+      | 'list';
     const restoreListState = listStateBeforeSearch.current || 'all';
     displayBeforeSearch.current = null;
     listStateBeforeSearch.current = null;
@@ -354,11 +357,7 @@ export const CalendarWeekProvider: FC<{
     };
     setDisplaySaved('list');
     setFilters(nextFilters);
-    window.history.replaceState(
-      null,
-      '',
-      buildCalendarUrl(nextFilters, term)
-    );
+    window.history.replaceState(null, '', buildCalendarUrl(nextFilters, term));
   }, [search, appliedSearch, exitSearchMode, setDisplaySaved]);
 
   // Shared 42-day month grid — day/week/month all reuse this fetch window.
@@ -402,7 +401,9 @@ export const CalendarWeekProvider: FC<{
       modifiedParams.set('search', trimmedSearch);
     }
 
-    const data = await (await fetch(`/posts?${modifiedParams.toString()}`)).json();
+    const data = await (
+      await fetch(`/posts?${modifiedParams.toString()}`)
+    ).json();
     return expandPosts(data);
   }, [fetch, filters.customer, monthWindow, trimmedSearch]);
 
@@ -552,7 +553,10 @@ export const CalendarWeekProvider: FC<{
     );
   }, [mergedPosts, dateOverrides]);
 
-  const comments = useMemo(() => calendarData?.comments || [], [calendarData?.comments]);
+  const comments = useMemo(
+    () => calendarData?.comments || [],
+    [calendarData?.comments]
+  );
 
   // List view data — merge projected pipeline items onto page 0 so queued
   // pipeline posts appear with the same upcoming dates as the calendar.
@@ -569,7 +573,9 @@ export const CalendarWeekProvider: FC<{
     const seen = new Set(base.map((post: { id: string }) => post.id));
     const merged = [
       ...base,
-      ...filteredPipelinePosts.filter((post: { id: string }) => !seen.has(post.id)),
+      ...filteredPipelinePosts.filter(
+        (post: { id: string }) => !seen.has(post.id)
+      ),
     ];
 
     return merged.sort(
@@ -590,20 +596,17 @@ export const CalendarWeekProvider: FC<{
   const listTotal = listData?.total || 0;
   const listTotalPages = Math.ceil(listTotal / 100);
 
-  const changeDate = useCallback(
-    (id: string | string[], date: dayjs.Dayjs) => {
-      const formatted = date.utc().format('YYYY-MM-DDTHH:mm:ss');
-      const ids = Array.isArray(id) ? id : [id];
-      setDateOverrides((prev) => {
-        const next = { ...prev };
-        for (const postId of ids) {
-          next[postId] = formatted;
-        }
-        return next;
-      });
-    },
-    []
-  );
+  const changeDate = useCallback((id: string | string[], date: dayjs.Dayjs) => {
+    const formatted = date.utc().format('YYYY-MM-DDTHH:mm:ss');
+    const ids = Array.isArray(id) ? id : [id];
+    setDateOverrides((prev) => {
+      const next = { ...prev };
+      for (const postId of ids) {
+        next[postId] = formatted;
+      }
+      return next;
+    });
+  }, []);
 
   // Precompute cell → posts index so CalendarColumn is O(1) per cell.
   const postsByCell = useMemo(() => {
@@ -633,7 +636,8 @@ export const CalendarWeekProvider: FC<{
   }, [mutateCalendar, mutateList, mutatePipelineCalendar]);
 
   // Determine loading state based on current view
-  const loading = filters.display === 'list' ? listIsLoading : calendarIsLoading;
+  const loading =
+    filters.display === 'list' ? listIsLoading : calendarIsLoading;
 
   return (
     <CalendarContext.Provider

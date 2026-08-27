@@ -222,7 +222,9 @@ export class GmbProvider extends SocialAbstract implements SocialProvider {
       if (accountsPageToken) {
         params.set('pageToken', accountsPageToken);
       }
-      const url = `https://mybusinessaccountmanagement.googleapis.com/v1/accounts${params.toString() ? `?${params}` : ''}`;
+      const url = `https://mybusinessaccountmanagement.googleapis.com/v1/accounts${
+        params.toString() ? `?${params}` : ''
+      }`;
 
       const accountsResponse = await fetch(url, {
         headers: {
@@ -648,12 +650,20 @@ export class GmbProvider extends SocialAbstract implements SocialProvider {
     request: ChannelAnalyticsCaptureRequest
   ): Promise<ChannelAnalyticsCapturePage> {
     const startDate = dayjs
-      .utc(request.fromDay || dayjs.utc(request.snapshotAt).subtract(180, 'day'))
+      .utc(
+        request.fromDay || dayjs.utc(request.snapshotAt).subtract(180, 'day')
+      )
       .startOf('day');
-    const endDate = dayjs.utc(request.toDay || request.snapshotAt).startOf('day');
+    const endDate = dayjs
+      .utc(request.toDay || request.snapshotAt)
+      .startOf('day');
     const locationId = request.integration.internalId.split('/locations/')[1];
     const response = await fetch(
-      `https://businessprofileperformance.googleapis.com/v1/locations/${locationId}:fetchMultiDailyMetricsTimeSeries?dailyMetrics=WEBSITE_CLICKS&dailyMetrics=CALL_CLICKS&dailyMetrics=BUSINESS_DIRECTION_REQUESTS&dailyMetrics=BUSINESS_IMPRESSIONS_DESKTOP_MAPS&dailyMetrics=BUSINESS_IMPRESSIONS_MOBILE_MAPS&dailyRange.startDate.year=${startDate.year()}&dailyRange.startDate.month=${startDate.month() + 1}&dailyRange.startDate.day=${startDate.date()}&dailyRange.endDate.year=${endDate.year()}&dailyRange.endDate.month=${endDate.month() + 1}&dailyRange.endDate.day=${endDate.date()}`,
+      `https://businessprofileperformance.googleapis.com/v1/locations/${locationId}:fetchMultiDailyMetricsTimeSeries?dailyMetrics=WEBSITE_CLICKS&dailyMetrics=CALL_CLICKS&dailyMetrics=BUSINESS_DIRECTION_REQUESTS&dailyMetrics=BUSINESS_IMPRESSIONS_DESKTOP_MAPS&dailyMetrics=BUSINESS_IMPRESSIONS_MOBILE_MAPS&dailyRange.startDate.year=${startDate.year()}&dailyRange.startDate.month=${
+        startDate.month() + 1
+      }&dailyRange.startDate.day=${startDate.date()}&dailyRange.endDate.year=${endDate.year()}&dailyRange.endDate.month=${
+        endDate.month() + 1
+      }&dailyRange.endDate.day=${endDate.date()}`,
       { headers: { Authorization: `Bearer ${request.accessToken}` } }
     );
     const data = await response.json();
@@ -681,7 +691,9 @@ export class GmbProvider extends SocialAbstract implements SocialProvider {
           label: labels[series.dailyMetric] || series.dailyMetric,
           valueMode: 'sum' as const,
           value: Number(datedValue.value),
-          day: `${datedValue.date.year}-${String(datedValue.date.month).padStart(2, '0')}-${String(datedValue.date.day).padStart(2, '0')}`,
+          day: `${datedValue.date.year}-${String(
+            datedValue.date.month
+          ).padStart(2, '0')}-${String(datedValue.date.day).padStart(2, '0')}`,
         }))
       )
     );

@@ -83,7 +83,9 @@ describe('webhook.file.sink', () => {
       query: { crc_token: 'challenge' },
     });
 
-    const written = JSON.parse(await readFile(join(directory, filename!), 'utf8'));
+    const written = JSON.parse(
+      await readFile(join(directory, filename!), 'utf8')
+    );
     expect(written.body).toBeNull();
     expect(written.bodyEncoding).toBeNull();
     expect(written.query).toEqual({ crc_token: 'challenge' });

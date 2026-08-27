@@ -89,7 +89,10 @@ const InstagramCollaborators: FC<{
             {...register('is_trial_reel', {
               value: false,
             })}
-            label={t('trial_reel', 'Trial Reel (share only to non-followers first)')}
+            label={t(
+              'trial_reel',
+              'Trial Reel (share only to non-followers first)'
+            )}
           />
 
           {isTrialReel && (
@@ -118,5 +121,5 @@ export default withProvider<InstagramDto>({
   CustomPreviewComponent: InstagramPreview,
   dto: InstagramDto,
   maximumCharacters: 2200,
-  comments: 'no-media'
+  comments: 'no-media',
 });

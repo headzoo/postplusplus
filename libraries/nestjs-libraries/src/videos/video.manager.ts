@@ -15,7 +15,7 @@ export class VideoManager {
     title: string;
     dto: any;
     description: string;
-    target: VideoAbstract<any>,
+    target: VideoAbstract<any>;
     tools: { functionName: string; output: string }[];
     placement: string;
     trial: boolean;

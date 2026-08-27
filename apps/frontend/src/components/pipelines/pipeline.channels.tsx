@@ -40,7 +40,9 @@ export const PipelineChannels: FC<{
           </div>
         ))}
         {overflow > 0 && (
-          <span className="ms-[6px] text-[12px] text-textItemBlur">+{overflow}</span>
+          <span className="ms-[6px] text-[12px] text-textItemBlur">
+            +{overflow}
+          </span>
         )}
       </div>
     );

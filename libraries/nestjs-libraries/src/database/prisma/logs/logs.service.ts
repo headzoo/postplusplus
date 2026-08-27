@@ -17,10 +17,7 @@ import {
   serializeHttpLogHeaders,
 } from './http-log.serialize';
 import { getSsrfSafeAxiosInstances } from '@gitroom/nestjs-libraries/dtos/webhooks/ssrf.safe.dispatcher';
-import {
-  WebhookHttpLogDirection,
-  WebhookHttpLogSource,
-} from '@prisma/client';
+import { WebhookHttpLogDirection, WebhookHttpLogSource } from '@prisma/client';
 
 @Injectable()
 export class LogsService implements OnModuleInit {

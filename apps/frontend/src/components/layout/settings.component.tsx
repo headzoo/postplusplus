@@ -93,8 +93,8 @@ export const SettingsPopup: FC<{
     isLogsPath
       ? 'logs'
       : isChannelsPath
-        ? 'channels'
-        : url.get('tab') || 'global_settings'
+      ? 'channels'
+      : url.get('tab') || 'global_settings'
   );
 
   const t = useT();
@@ -122,7 +122,10 @@ export const SettingsPopup: FC<{
       arr.push({ tab: 'api', label: t('developers', 'Developers') });
     }
     arr.push({ tab: 'integrations', label: t('integrations', 'Integrations') });
-    arr.push({ tab: 'approved_apps', label: t('approved_apps', 'Approved Apps') });
+    arr.push({
+      tab: 'approved_apps',
+      label: t('approved_apps', 'Approved Apps'),
+    });
     arr.push({ tab: 'logs', label: t('logs', 'Logs') });
 
     return arr;

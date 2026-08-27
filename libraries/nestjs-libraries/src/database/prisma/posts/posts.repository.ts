@@ -29,7 +29,7 @@ export class PostsRepository {
     private _tags: PrismaRepository<'tags'>,
     private _tagsPosts: PrismaRepository<'tagsPosts'>,
     private _errors: PrismaRepository<'errors'>
-  ) { }
+  ) {}
 
   searchForMissingThreeHoursPosts() {
     return this._post.model.post.findMany({
@@ -188,8 +188,8 @@ export class PostsRepository {
           organizationId: orgId,
           ...(query.customer
             ? {
-              customerId: query.customer,
-            }
+                customerId: query.customer,
+              }
             : {}),
         },
         deletedAt: null,
@@ -274,17 +274,17 @@ export class PostsRepository {
     const stateAndDate =
       stateFilter === 'scheduled'
         ? {
-          state: State.QUEUE,
-        }
+            state: State.QUEUE,
+          }
         : stateFilter === 'draft'
-          ? { state: State.DRAFT }
-          : stateFilter === 'published'
-            ? { state: State.PUBLISHED }
-            : {
-              state: {
-                in: [State.QUEUE, State.DRAFT, State.PUBLISHED, State.ERROR],
-              },
-            };
+        ? { state: State.DRAFT }
+        : stateFilter === 'published'
+        ? { state: State.PUBLISHED }
+        : {
+            state: {
+              in: [State.QUEUE, State.DRAFT, State.PUBLISHED, State.ERROR],
+            },
+          };
 
     const searchFilter = this.titleContentSearchFilter(query.search);
 
@@ -322,8 +322,8 @@ export class PostsRepository {
         organizationId: orgId,
         ...(query.customer
           ? {
-            customerId: query.customer,
-          }
+              customerId: query.customer,
+            }
           : {}),
       },
     };
@@ -448,13 +448,13 @@ export class PostsRepository {
       include: {
         ...(includeIntegration
           ? {
-            integration: true,
-            tags: {
-              select: {
-                tag: true,
+              integration: true,
+              tags: {
+                select: {
+                  tag: true,
+                },
               },
-            },
-          }
+            }
           : {}),
         childrenPost: true,
       },
@@ -631,7 +631,7 @@ export class PostsRepository {
             body: typeof body === 'string' ? body : JSON.stringify(body),
           },
         });
-      } catch (err) { }
+      } catch (err) {}
     }
 
     return update;
@@ -664,10 +664,10 @@ export class PostsRepository {
         // update: don't change the state
         ...(action === 'schedule'
           ? {
-            state: isDraft ? 'DRAFT' : 'QUEUE',
-            releaseId: null,
-            releaseURL: null,
-          }
+              state: isDraft ? 'DRAFT' : 'QUEUE',
+              releaseId: null,
+              releaseURL: null,
+            }
           : {}),
       },
     });
@@ -724,19 +724,19 @@ export class PostsRepository {
         },
         ...(posts?.[posts.length - 1]?.id
           ? {
-            parentPost: {
-              connect: {
-                id: posts[posts.length - 1]?.id,
+              parentPost: {
+                connect: {
+                  id: posts[posts.length - 1]?.id,
+                },
               },
-            },
-          }
+            }
           : type === 'update'
-            ? {
+          ? {
               parentPost: {
                 disconnect: true,
               },
             }
-            : {}),
+          : {}),
         content: value.content,
         delay: value.delay || 0,
         group,
@@ -746,9 +746,9 @@ export class PostsRepository {
         ...(state === 'update'
           ? {}
           : {
-            state:
-              state === 'draft' ? ('DRAFT' as const) : ('QUEUE' as const),
-          }),
+              state:
+                state === 'draft' ? ('DRAFT' as const) : ('QUEUE' as const),
+            }),
         image: JSON.stringify(value.image),
         settings: JSON.stringify(body.settings),
         organization: {
@@ -758,10 +758,10 @@ export class PostsRepository {
         },
         ...(pipelineQueueItemId
           ? {
-            pipelineQueueItem: {
-              connect: { id: pipelineQueueItemId },
-            },
-          }
+              pipelineQueueItem: {
+                connect: { id: pipelineQueueItemId },
+              },
+            }
           : {}),
       });
 
@@ -824,17 +824,17 @@ export class PostsRepository {
 
     const previousPost = body.group
       ? (
-        await this._post.model.post.findFirst({
-          where: {
-            group: body.group,
-            deletedAt: null,
-            parentPostId: null,
-          },
-          select: {
-            id: true,
-          },
-        })
-      )?.id!
+          await this._post.model.post.findFirst({
+            where: {
+              group: body.group,
+              deletedAt: null,
+              parentPostId: null,
+            },
+            select: {
+              id: true,
+            },
+          })
+        )?.id!
       : undefined;
 
     if (body.group && !keepGroup) {

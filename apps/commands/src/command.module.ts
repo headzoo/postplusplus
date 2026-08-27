@@ -21,4 +21,4 @@ import { getTemporalModule } from '@gitroom/nestjs-libraries/temporal/temporal.m
     return [...this.imports, ...this.providers];
   },
 })
-export class CommandModule { }
+export class CommandModule {}

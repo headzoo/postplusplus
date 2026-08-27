@@ -171,8 +171,7 @@ const ScheduleDropZone: FC<{
     !!draggedItem?.source &&
     pipelineScheduleSlotsEqual(draggedItem.source, target);
   const isOccupied = value.some(
-    (slot) =>
-      slot.dayOfWeek === dayOfWeek && slot.minuteOfDay === minuteOfDay
+    (slot) => slot.dayOfWeek === dayOfWeek && slot.minuteOfDay === minuteOfDay
   );
   const isValidVisualTarget = !isIdenticalTarget && !isOccupied;
 
@@ -183,12 +182,12 @@ const ScheduleDropZone: FC<{
       className={clsx(
         'flex min-h-[28px] flex-1 flex-col justify-center rounded-[6px] border border-transparent transition-colors',
         isOver &&
-        isValidVisualTarget &&
-        'border-btnPrimary bg-btnPrimary/10 cursor-copy',
+          isValidVisualTarget &&
+          'border-btnPrimary bg-btnPrimary/10 cursor-copy',
         isOver &&
-        !isValidVisualTarget &&
-        !isIdenticalTarget &&
-        'border-red-500/40 bg-red-500/5 cursor-not-allowed opacity-80'
+          !isValidVisualTarget &&
+          !isIdenticalTarget &&
+          'border-red-500/40 bg-red-500/5 cursor-not-allowed opacity-80'
       )}
     >
       {children}
@@ -209,9 +208,7 @@ const PipelineScheduleEditorContent: FC<{
     if (!value.length) {
       return null;
     }
-    return Math.min(
-      ...value.map((slot) => Math.floor(slot.minuteOfDay / 60))
-    );
+    return Math.min(...value.map((slot) => Math.floor(slot.minuteOfDay / 60)));
   }, [value]);
   useScrollToHour(scrollRef, earliestHour, 'schedule');
 
@@ -319,9 +316,7 @@ const PipelineScheduleEditorContent: FC<{
             slot={slot}
             dayLabel={dayLabel}
             occupiedMinuteOfDays={occupiedMinuteOfDays}
-            onApply={(newMinuteOfDay) =>
-              updateSlotTime(slot, newMinuteOfDay)
-            }
+            onApply={(newMinuteOfDay) => updateSlotTime(slot, newMinuteOfDay)}
           />
         ),
       });

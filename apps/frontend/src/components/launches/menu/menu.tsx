@@ -109,7 +109,10 @@ export const Menu: FC<{
   const disableChannel = useCallback(async () => {
     if (
       !(await deleteDialog(
-        t('are_you_sure_disable_channel', 'Are you sure you want to disable this channel?'),
+        t(
+          'are_you_sure_disable_channel',
+          'Are you sure you want to disable this channel?'
+        ),
         t('disable_channel_title', 'Disable Channel')
       ))
     ) {
@@ -136,7 +139,10 @@ export const Menu: FC<{
   const deleteChannel = useCallback(async () => {
     if (
       !(await deleteDialog(
-        t('are_you_sure_delete_channel', 'Are you sure you want to delete this channel?'),
+        t(
+          'are_you_sure_delete_channel',
+          'Are you sure you want to delete this channel?'
+        ),
         t('delete_channel_title', 'Delete Channel')
       ))
     ) {
@@ -150,7 +156,10 @@ export const Menu: FC<{
     });
     if (deleteIntegration.status === 406) {
       toast.show(
-        t('delete_posts_before_channel', 'You have to delete all the posts associated with this channel before deleting it'),
+        t(
+          'delete_posts_before_channel',
+          'You have to delete all the posts associated with this channel before deleting it'
+        ),
         'warning'
       );
       return;
@@ -165,7 +174,7 @@ export const Menu: FC<{
         chrome.runtime.sendMessage(
           extensionId,
           { type: 'REMOVE_REFRESH_TOKEN', integrationId: id },
-          () => { }
+          () => {}
         );
       } catch {
         // Silently ignore
@@ -208,7 +217,10 @@ export const Menu: FC<{
       setShow(false);
       const channelId = integration.id;
       copy(channelId);
-      toast.show(t('channel_id_copied', 'Channel ID copied to clipboard'), 'success');
+      toast.show(
+        t('channel_id_copied', 'Channel ID copied to clipboard'),
+        'success'
+      );
     },
     [t]
   );
@@ -287,7 +299,10 @@ export const Menu: FC<{
           integration={findIntegration}
           onClose={() => {
             mutate();
-            toast.show(t('customer_updated', 'Channel Group Updated'), 'success');
+            toast.show(
+              t('customer_updated', 'Channel Group Updated'),
+              'success'
+            );
           }}
         />
       ),
@@ -481,9 +496,7 @@ export const Menu: FC<{
                 />
               </svg>
             </div>
-            <div className="text-[14px]">
-              {t('settings', 'Settings')}
-            </div>
+            <div className="text-[14px]">{t('settings', 'Settings')}</div>
           </div>
           {(canChangeProfilePicture || canChangeNickName) && (
             <div

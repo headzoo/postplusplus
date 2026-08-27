@@ -27,7 +27,7 @@ import {
 @ApiTags('Admin Auth')
 @Controller('/admin-auth')
 export class AdminAuthController {
-  constructor(private _adminPasskeyService: AdminPasskeyService) { }
+  constructor(private _adminPasskeyService: AdminPasskeyService) {}
 
   @Get('/status')
   status(
@@ -60,9 +60,10 @@ export class AdminAuthController {
       body as unknown as RegistrationResponseJSON,
       'account'
     );
-    const admin = await this._adminPasskeyService.issueCompanionAdminSessionForUser(
-      operator.id
-    );
+    const admin =
+      await this._adminPasskeyService.issueCompanionAdminSessionForUser(
+        operator.id
+      );
 
     return this.issueSessions(response, account, admin);
   }
@@ -85,9 +86,10 @@ export class AdminAuthController {
       body as unknown as AuthenticationResponseJSON,
       'account'
     );
-    const admin = await this._adminPasskeyService.issueCompanionAdminSessionForUser(
-      operator.id
-    );
+    const admin =
+      await this._adminPasskeyService.issueCompanionAdminSessionForUser(
+        operator.id
+      );
 
     return this.issueSessions(response, account, admin);
   }

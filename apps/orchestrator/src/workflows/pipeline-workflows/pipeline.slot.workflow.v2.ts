@@ -2,7 +2,10 @@ import { PipelineActivity } from '@gitroom/orchestrator/activities/pipeline.acti
 import { postWorkflowV109 } from '@gitroom/orchestrator/workflows/post-workflows/post.workflow.v1.0.9';
 import { PipelineSlotWorkflowV1Request } from '@gitroom/nestjs-libraries/database/prisma/pipelines/pipeline.execution';
 import { proxyActivities, startChild } from '@temporalio/workflow';
-import { TypedSearchAttributes, WorkflowIdReusePolicy } from '@temporalio/common';
+import {
+  TypedSearchAttributes,
+  WorkflowIdReusePolicy,
+} from '@temporalio/common';
 import {
   organizationId,
   postId,

@@ -40,7 +40,9 @@ describe('AdminScheduleLogRepository', () => {
   });
 
   it('prunes older rows beyond the keep limit', async () => {
-    const findMany = jest.fn().mockResolvedValue([{ id: 'old-1' }, { id: 'old-2' }]);
+    const findMany = jest
+      .fn()
+      .mockResolvedValue([{ id: 'old-1' }, { id: 'old-2' }]);
     const deleteMany = jest.fn().mockResolvedValue({ count: 2 });
     const logs = repository({ findMany, deleteMany });
 

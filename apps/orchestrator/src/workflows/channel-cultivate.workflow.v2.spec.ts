@@ -34,7 +34,10 @@ describe('channelCultivateWorkflowV2', () => {
     await expect(channelCultivateWorkflowV2({})).resolves.toBeUndefined();
 
     expect(resolveSweepHourV2).toHaveBeenCalled();
-    expect(listDueCandidatesV2).toHaveBeenCalledWith({ hour, after: undefined });
+    expect(listDueCandidatesV2).toHaveBeenCalledWith({
+      hour,
+      after: undefined,
+    });
     expect(materializeCultivatePicksV2).not.toHaveBeenCalled();
     expect(continueAsNew).not.toHaveBeenCalled();
   });
@@ -50,7 +53,10 @@ describe('channelCultivateWorkflowV2', () => {
 
     await channelCultivateWorkflowV2({});
 
-    expect(materializeCultivatePicksV2).toHaveBeenCalledWith({ hour, candidate });
+    expect(materializeCultivatePicksV2).toHaveBeenCalledWith({
+      hour,
+      candidate,
+    });
     expect(continueAsNew).toHaveBeenCalledWith({
       hour,
       after: candidate.id,

@@ -121,7 +121,8 @@ describe('channelStrategyRegistry', () => {
 
   it('covers every triage pipeline kind in materialization profiles', () => {
     for (const triage of TRIAGE_PIPELINE_KINDS) {
-      const profile = getChannelStrategy('grow_audience').getMaterializationProfile();
+      const profile =
+        getChannelStrategy('grow_audience').getMaterializationProfile();
       expect(profile[triage]).toBeDefined();
     }
   });
@@ -162,7 +163,9 @@ describe('channelStrategyRegistry', () => {
   });
 
   it('maps lead capture to a 30-day website goal profile', () => {
-    expect(getChannelStrategy('lead_capture').getConversionProfile()).toMatchObject({
+    expect(
+      getChannelStrategy('lead_capture').getConversionProfile()
+    ).toMatchObject({
       kind: 'website_goal',
       conversionType: 'website_goal',
       attributionWindowDays: 30,
@@ -171,7 +174,8 @@ describe('channelStrategyRegistry', () => {
   });
 
   it('maps brand awareness to amplification defaults with complete inbound weights', () => {
-    const profile = getChannelStrategy('brand_awareness').getConversionProfile();
+    const profile =
+      getChannelStrategy('brand_awareness').getConversionProfile();
     expect(profile).toMatchObject({
       kind: 'amplification',
       conversionType: 'amplification_threshold',
@@ -198,7 +202,9 @@ describe('channelStrategyRegistry', () => {
   });
 
   it('maps customer support to SLA and explicit resolution defaults', () => {
-    expect(getChannelStrategy('customer_support').getConversionProfile()).toMatchObject({
+    expect(
+      getChannelStrategy('customer_support').getConversionProfile()
+    ).toMatchObject({
       kind: 'customer_support',
       slaConversionType: 'support_sla_hit',
       resolutionConversionType: 'support_issue_resolved',
@@ -233,7 +239,9 @@ describe('channelStrategyRegistry', () => {
         minimumActiveUtcDays: 2,
         cooldownDays: 7,
       })
-    ).toThrow('Invalid amplification inbound kind weights: missing accepted kind');
+    ).toThrow(
+      'Invalid amplification inbound kind weights: missing accepted kind'
+    );
 
     expect(() =>
       assertConversionProfile({

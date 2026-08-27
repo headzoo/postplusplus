@@ -1,7 +1,9 @@
 const clearDiscoveredLeadsV1 = jest.fn();
 const crawlNextWarmFollowerBurstV1 = jest.fn();
 const resumeIdleLeadBridgeV1 = jest.fn();
-const continueAsNew = jest.fn((args) => Promise.resolve({ continued: true, args }));
+const continueAsNew = jest.fn((args) =>
+  Promise.resolve({ continued: true, args })
+);
 
 jest.mock('@temporalio/workflow', () => ({
   continueAsNew,

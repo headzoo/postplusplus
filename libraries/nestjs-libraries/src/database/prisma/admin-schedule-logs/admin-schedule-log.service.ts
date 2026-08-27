@@ -1,11 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import {
-  AdminScheduleLogKey,
-  AdminScheduleLogLevel,
-} from '@prisma/client';
-import {
-  AdminScheduleLogRepository,
-} from './admin-schedule-log.repository';
+import { AdminScheduleLogKey, AdminScheduleLogLevel } from '@prisma/client';
+import { AdminScheduleLogRepository } from './admin-schedule-log.repository';
 import {
   AdminScheduleLogSlug,
   adminScheduleLogKeyFromSlug,
@@ -23,7 +18,7 @@ export type AppendAdminScheduleLogInput = {
 
 @Injectable()
 export class AdminScheduleLogService {
-  constructor(private _repository: AdminScheduleLogRepository) { }
+  constructor(private _repository: AdminScheduleLogRepository) {}
 
   async append(input: AppendAdminScheduleLogInput) {
     try {
@@ -93,8 +88,7 @@ export class AdminScheduleLogService {
       return '{}';
     }
     try {
-      const serialized =
-        typeof meta === 'string' ? meta : JSON.stringify(meta);
+      const serialized = typeof meta === 'string' ? meta : JSON.stringify(meta);
       return serialized.length <= MAX_ADMIN_SCHEDULE_LOG_META
         ? serialized
         : serialized.slice(0, MAX_ADMIN_SCHEDULE_LOG_META);

@@ -42,7 +42,10 @@ export function ForgotReturn({ token }: { token: string }) {
     if (!reset) {
       form.setError('password', {
         type: 'manual',
-        message: t('password_reset_link_expired', 'Your password reset link has expired. Please try again.'),
+        message: t(
+          'password_reset_link_expired',
+          'Your password reset link has expired. Please try again.'
+        ),
       });
       return false;
     }

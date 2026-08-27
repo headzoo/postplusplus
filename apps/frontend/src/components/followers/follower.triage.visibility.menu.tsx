@@ -37,16 +37,17 @@ export const FollowerTriageVisibilityMenu: FC<{
         <CategoriesIcon size={15} />
         {t('followers_triage_visibility', 'Categories')}
         {hiddenCount > 0 && (
-          <span className="text-[12px] text-textItemBlur">
-            ({hiddenCount})
-          </span>
+          <span className="text-[12px] text-textItemBlur">({hiddenCount})</span>
         )}
       </button>
       {open && (
         <div
           className="absolute end-0 z-20 mt-[8px] w-[min(320px,calc(100vw-40px))] rounded-[12px] border border-newTableBorder bg-newBgColorInner p-[14px] shadow-lg"
           role="dialog"
-          aria-label={t('followers_triage_visibility_menu', 'Show or hide categories')}
+          aria-label={t(
+            'followers_triage_visibility_menu',
+            'Show or hide categories'
+          )}
           data-testid="followers-triage-visibility-menu"
         >
           <div className="flex flex-col gap-[10px]">

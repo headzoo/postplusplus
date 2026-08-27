@@ -4,7 +4,9 @@ import { FollowersComponent } from '@gitroom/frontend/components/followers/follo
 import { isGeneralServerSide } from '@gitroom/helpers/utils/is.general.server.side';
 
 export const metadata: Metadata = {
-  title: `${isGeneralServerSide() ? 'Followers : Post++' : 'Gitroom Followers'}`,
+  title: `${
+    isGeneralServerSide() ? 'Followers : Post++' : 'Gitroom Followers'
+  }`,
   description: '',
 };
 

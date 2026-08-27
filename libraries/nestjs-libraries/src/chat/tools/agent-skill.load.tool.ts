@@ -13,7 +13,9 @@ const loadSkillInputSchema = z.object({
       SKILL_SLUG_PATTERN,
       'Provide the canonical skill slug using [a-z0-9-]+ without a slash or filename.'
     )
-    .describe('Canonical skill slug such as campaign-review, not /campaign-review'),
+    .describe(
+      'Canonical skill slug such as campaign-review, not /campaign-review'
+    ),
 });
 
 @Injectable()

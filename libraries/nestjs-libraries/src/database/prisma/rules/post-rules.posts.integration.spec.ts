@@ -1,17 +1,17 @@
 jest.mock('@gitroom/nestjs-libraries/integrations/integration.manager', () => ({
-  IntegrationManager: class IntegrationManager { },
+  IntegrationManager: class IntegrationManager {},
 }));
 jest.mock(
   '@gitroom/nestjs-libraries/integrations/refresh.integration.service',
-  () => ({ RefreshIntegrationService: class RefreshIntegrationService { } })
+  () => ({ RefreshIntegrationService: class RefreshIntegrationService {} })
 );
 jest.mock(
   '@gitroom/nestjs-libraries/database/prisma/posts/posts.service',
-  () => ({ PostsService: class PostsService { } })
+  () => ({ PostsService: class PostsService {} })
 );
 jest.mock(
   '@gitroom/nestjs-libraries/database/prisma/pipelines/pipeline.service',
-  () => ({ PipelineService: class PipelineService { } })
+  () => ({ PipelineService: class PipelineService {} })
 );
 
 import { PostRulesExecutionService } from './post-rules.execution.service';
@@ -60,20 +60,25 @@ const createService = () => {
     finalizeEvaluation: jest.fn().mockResolvedValue({ finalized: true }),
     findSuccessorRun: jest.fn().mockResolvedValue(null),
     createSuccessorRun: jest.fn().mockResolvedValue({ id: 'run-2' }),
-    getRemovableGroupMembers: jest.fn().mockResolvedValue([
-      { id: 'post-1', parentPostId: null, releaseId: 'tweet-1', platformDeletedAt: null },
-    ]),
+    getRemovableGroupMembers: jest
+      .fn()
+      .mockResolvedValue([
+        {
+          id: 'post-1',
+          parentPostId: null,
+          releaseId: 'tweet-1',
+          platformDeletedAt: null,
+        },
+      ]),
     markPostsPlatformDeleted: jest.fn().mockResolvedValue({ updated: 1 }),
     getRootPostByGroup: jest.fn().mockResolvedValue(null),
     getReschedulePipeline: jest.fn(),
   };
   const capability = {
-    metadata: jest
-      .fn()
-      .mockReturnValue({
-        actions: { remove: true },
-        metrics: { likes: true, replies: true },
-      }),
+    metadata: jest.fn().mockReturnValue({
+      actions: { remove: true },
+      metrics: { likes: true, replies: true },
+    }),
     loadMetrics: jest.fn(),
     removePost: jest.fn().mockResolvedValue({ status: 'removed' }),
     repost: jest.fn(),
@@ -94,9 +99,11 @@ const createService = () => {
     ]),
     mapTypeToPost: jest.fn(async (body: any) => body),
     createPost: jest.fn().mockResolvedValue([{ postId: 'post-2' }]),
-    validatePosts: jest.fn().mockResolvedValue([
-      { valid: true, errors: true, emptyContent: false, tooLong: false },
-    ]),
+    validatePosts: jest
+      .fn()
+      .mockResolvedValue([
+        { valid: true, errors: true, emptyContent: false, tooLong: false },
+      ]),
   };
 
   const service = Object.create(
@@ -233,7 +240,12 @@ describe('manual reschedule through the Posts boundary', () => {
   it('resolves the saved relative target instead of a stale absolute date', () => {
     expect(
       resolveManualRescheduleDate(
-        { mode: 'MANUAL', daysAfterEvaluation: 2, timeOfDay: '09:30', timezone: 'UTC' },
+        {
+          mode: 'MANUAL',
+          daysAfterEvaluation: 2,
+          timeOfDay: '09:30',
+          timezone: 'UTC',
+        },
         new Date('2026-08-21T18:00:00.000Z')
       ).toISOString()
     ).toBe('2026-08-23T09:30:00.000Z');

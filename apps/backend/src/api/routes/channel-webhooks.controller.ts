@@ -24,7 +24,7 @@ const MAX_ARRAY_VALUES = 8;
 export class ChannelWebhooksController {
   constructor(
     private readonly _channelInteractionService: ChannelInteractionService
-  ) { }
+  ) {}
 
   @Get('/:providerIdentifier')
   async challenge(
@@ -147,10 +147,7 @@ export class ChannelWebhooksController {
   }
 
   private boundedProviderIdentifier(value: string) {
-    if (
-      typeof value !== 'string' ||
-      !/^[a-z0-9_-]{1,128}$/i.test(value)
-    ) {
+    if (typeof value !== 'string' || !/^[a-z0-9_-]{1,128}$/i.test(value)) {
       throw new BadRequestException('Invalid channel webhook provider');
     }
     return value;
@@ -183,10 +180,7 @@ export class ChannelWebhooksController {
       }
     }
     const bounded: Record<string, string | string[]> = {};
-    for (const [key, entry] of [
-      ...Object.entries(priority),
-      ...extras,
-    ]) {
+    for (const [key, entry] of [...Object.entries(priority), ...extras]) {
       if (Object.keys(bounded).length >= maximumEntries) {
         break;
       }

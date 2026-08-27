@@ -1,6 +1,7 @@
 import { ShortLinking } from '@gitroom/nestjs-libraries/short-linking/short-linking.interface';
 
-const KUTT_API_ENDPOINT = process.env.KUTT_API_ENDPOINT || 'https://kutt.it/api/v2';
+const KUTT_API_ENDPOINT =
+  process.env.KUTT_API_ENDPOINT || 'https://kutt.it/api/v2';
 const KUTT_SHORT_LINK_DOMAIN = process.env.KUTT_SHORT_LINK_DOMAIN || 'kutt.it';
 
 const getOptions = () => ({
@@ -17,23 +18,26 @@ export class Kutt implements ShortLinking {
     return Promise.all(
       links.map(async (link) => {
         const linkId = link.split('/').pop();
-        
+
         try {
           const response = await fetch(
             `${KUTT_API_ENDPOINT}/links/${linkId}/stats`,
             getOptions()
           );
-          
+
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
           }
-          
+
           const data = await response.json();
-          
+
           return {
             short: link,
             original: data.address || '',
-            clicks: data.lastDay?.stats?.reduce((total: number, stat: any) => total + stat, 0)?.toString() || '0',
+            clicks:
+              data.lastDay?.stats
+                ?.reduce((total: number, stat: any) => total + stat, 0)
+                ?.toString() || '0',
           };
         } catch (error) {
           return {
@@ -71,7 +75,7 @@ export class Kutt implements ShortLinking {
 
   async convertShortLinkToLink(shortLink: string) {
     const linkId = shortLink.split('/').pop();
-    
+
     try {
       const response = await fetch(
         `${KUTT_API_ENDPOINT}/links/${linkId}/stats`,
@@ -104,12 +108,13 @@ export class Kutt implements ShortLinking {
       }
 
       const data = await response.json();
-      
-      const mapLinks = data.data?.map((link: any) => ({
-        short: link.link,
-        original: link.address,
-        clicks: link.visit_count?.toString() || '0',
-      })) || [];
+
+      const mapLinks =
+        data.data?.map((link: any) => ({
+          short: link.link,
+          original: link.address,
+          clicks: link.visit_count?.toString() || '0',
+        })) || [];
 
       if (mapLinks.length < 100) {
         return mapLinks;

@@ -42,6 +42,6 @@ export const Onboarding: FC = () => {
       children: <OnboardingModal onClose={handleClose} />,
     });
   }, [onboarding, handleClose, modal, t]);
-  
+
   return null;
 };

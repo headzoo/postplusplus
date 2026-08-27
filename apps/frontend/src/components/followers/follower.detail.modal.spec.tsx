@@ -31,16 +31,17 @@ jest.mock('@gitroom/helpers/utils/custom.fetch', () => ({
 }));
 
 jest.mock('@gitroom/react/translation/get.transation.service.client', () => ({
-  useT: () => (key: string, fallback: string, params?: Record<string, unknown>) => {
-    if (!params) {
-      return fallback;
-    }
-    return Object.entries(params).reduce(
-      (result, [name, value]) =>
-        result.replace(new RegExp(`{{${name}}}`, 'g'), String(value)),
-      fallback
-    );
-  },
+  useT:
+    () => (key: string, fallback: string, params?: Record<string, unknown>) => {
+      if (!params) {
+        return fallback;
+      }
+      return Object.entries(params).reduce(
+        (result, [name, value]) =>
+          result.replace(new RegExp(`{{${name}}}`, 'g'), String(value)),
+        fallback
+      );
+    },
 }));
 
 jest.mock('@gitroom/frontend/components/layout/loading', () => ({
@@ -88,9 +89,12 @@ jest.mock('@gitroom/react/toaster/toaster', () => ({
 const triageDismissOpen = jest.fn();
 const leadDismissOpen = jest.fn();
 
-jest.mock('@gitroom/frontend/components/followers/triage.dismiss.modal', () => ({
-  useTriageDismissModal: () => ({ open: triageDismissOpen }),
-}));
+jest.mock(
+  '@gitroom/frontend/components/followers/triage.dismiss.modal',
+  () => ({
+    useTriageDismissModal: () => ({ open: triageDismissOpen }),
+  })
+);
 
 jest.mock('@gitroom/frontend/components/followers/lead.dismiss.modal', () => ({
   useLeadDismissModal: () => ({ open: leadDismissOpen }),
@@ -98,10 +102,13 @@ jest.mock('@gitroom/frontend/components/followers/lead.dismiss.modal', () => ({
 
 const launchFollowerCopilotChat = jest.fn();
 
-jest.mock('@gitroom/frontend/components/followers/use.copilot.follower.assistant', () => ({
-  launchFollowerCopilotChat: (...args: unknown[]) =>
-    launchFollowerCopilotChat(...args),
-}));
+jest.mock(
+  '@gitroom/frontend/components/followers/use.copilot.follower.assistant',
+  () => ({
+    launchFollowerCopilotChat: (...args: unknown[]) =>
+      launchFollowerCopilotChat(...args),
+  })
+);
 
 const useSWR = jest.requireMock('swr').default as jest.Mock;
 const useSWRConfig = jest.requireMock('swr').useSWRConfig as jest.Mock;
@@ -267,7 +274,10 @@ describe('FollowerDetailModal', () => {
     leadDismissOpen.mockResolvedValue(null);
     useSWR.mockImplementation((key: string | null) => mockSwrByKey(key));
     fetchMock.mockImplementation(async (url: string, options?: RequestInit) => {
-      if (typeof url === 'string' && url.includes('/member/relationship-score')) {
+      if (
+        typeof url === 'string' &&
+        url.includes('/member/relationship-score')
+      ) {
         return {
           ok: true,
           json: async () => ({
@@ -347,9 +357,7 @@ describe('FollowerDetailModal', () => {
       <FollowerDetailModal integrationId="channel-1" externalId="follower-1" />
     );
 
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Ask AI about @alex' })
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'Ask AI about @alex' }));
 
     expect(launchFollowerCopilotChat).toHaveBeenCalledWith('alex');
     expect(screen.getByRole('link', { name: 'Timeline' })).toBeTruthy();
@@ -448,11 +456,11 @@ describe('FollowerDetailModal', () => {
 
     expect(
       notesHeading.compareDocumentPosition(interactionsHeading) &
-      Node.DOCUMENT_POSITION_FOLLOWING
+        Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
-    expect(screen.getByTestId('custom-scroll-area').getAttribute('data-max-height')).toBe(
-      '300px'
-    );
+    expect(
+      screen.getByTestId('custom-scroll-area').getAttribute('data-max-height')
+    ).toBe('300px');
     expect(screen.getByText('You liked them')).toBeTruthy();
   });
 
@@ -539,7 +547,9 @@ describe('FollowerDetailModal', () => {
       <FollowerDetailModal integrationId="channel-1" externalId="follower-1" />
     );
 
-    expect(screen.getAllByRole('img', { name: 'No grade yet' })).toHaveLength(2);
+    expect(screen.getAllByRole('img', { name: 'No grade yet' })).toHaveLength(
+      2
+    );
     expect(screen.getByRole('radio', { name: '4.5 out of 5' })).toBeTruthy();
     expect(screen.queryByText('Not enough tracked activity')).toBeNull();
     expect(
@@ -607,7 +617,9 @@ describe('FollowerDetailModal', () => {
       <FollowerDetailModal integrationId="channel-1" externalId="follower-1" />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh their effort' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Refresh their effort' })
+    );
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
@@ -631,7 +643,10 @@ describe('FollowerDetailModal', () => {
 
   it('refreshes your effort and disables both refresh controls while pending', async () => {
     let resolveFetch:
-      | ((value: { ok: boolean; json: () => Promise<Record<string, unknown>> }) => void)
+      | ((value: {
+          ok: boolean;
+          json: () => Promise<Record<string, unknown>>;
+        }) => void)
       | undefined;
     fetchMock.mockImplementationOnce(
       () =>
@@ -644,7 +659,9 @@ describe('FollowerDetailModal', () => {
       <FollowerDetailModal integrationId="channel-1" externalId="follower-1" />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh your effort' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Refresh your effort' })
+    );
 
     expect(
       screen.getByRole('button', { name: 'Refresh their effort' })
@@ -837,7 +854,10 @@ describe('FollowerDetailModal', () => {
         relationshipTriage: null,
       },
     };
-    leadDismissOpen.mockResolvedValue({ action: 'remove', reasons: ['bio_wording'] });
+    leadDismissOpen.mockResolvedValue({
+      action: 'remove',
+      reasons: ['bio_wording'],
+    });
 
     render(
       <FollowerDetailModal

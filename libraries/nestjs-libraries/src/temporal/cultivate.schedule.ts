@@ -53,16 +53,16 @@ export type CultivateMaterializationScheduleConfig = {
 };
 
 export const DEFAULT_CULTIVATE_MATERIALIZATION_SCHEDULE: CultivateMaterializationScheduleConfig =
-{
-  intervalHours: CULTIVATE_MATERIALIZATION_SCHEDULE_INTERVAL_HOURS,
-};
+  {
+    intervalHours: CULTIVATE_MATERIALIZATION_SCHEDULE_INTERVAL_HOURS,
+  };
 
 export function normalizeCultivateMaterializationSchedule(
   value: Partial<CultivateMaterializationScheduleConfig> | null | undefined
 ): CultivateMaterializationScheduleConfig {
   const intervalHours = Number(
     value?.intervalHours ??
-    DEFAULT_CULTIVATE_MATERIALIZATION_SCHEDULE.intervalHours
+      DEFAULT_CULTIVATE_MATERIALIZATION_SCHEDULE.intervalHours
   );
   if (
     !Number.isInteger(intervalHours) ||
@@ -91,5 +91,4 @@ export function toCultivateMaterializationScheduleSpec(
   };
 }
 
-export const utcDayKey = (now = new Date()) =>
-  now.toISOString().slice(0, 10);
+export const utcDayKey = (now = new Date()) => now.toISOString().slice(0, 10);

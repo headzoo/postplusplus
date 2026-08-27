@@ -4,9 +4,7 @@ import { useCallback } from 'react';
 import { useSWRConfig } from 'swr';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { parseApiError } from '@gitroom/frontend/components/pipelines/pipeline.utils';
-import {
-  ContextDocumentUploadResponse,
-} from '@gitroom/frontend/components/context-documents/context-document.types';
+import { ContextDocumentUploadResponse } from '@gitroom/frontend/components/context-documents/context-document.types';
 import { CONTEXT_DOCUMENTS_KEY } from '@gitroom/frontend/components/context-documents/use.context-document.list';
 import { contextDocumentContentKey } from '@gitroom/frontend/components/context-documents/use.context-document.content';
 import { PIPELINES_KEY } from '@gitroom/frontend/components/pipelines/use.pipeline.list';

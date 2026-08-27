@@ -63,8 +63,6 @@ export class PipelineActivity {
   finalizePipelineSlot(
     request: FinalizePipelineSlotRequest
   ): Promise<FinalizePipelineSlotResponse> {
-    return this._pipelineExecutionRepository.finalizeSlot(
-      request.executionId
-    );
+    return this._pipelineExecutionRepository.finalizeSlot(request.executionId);
   }
 }

@@ -8,6 +8,7 @@ import {
   RobotIcon,
   SadFaceIcon,
   SeedlingIcon,
+  TargetIcon,
   UserIcon,
   UserMinusIcon,
   UsersGroupIcon,
@@ -65,7 +66,8 @@ export type FollowerSegmentSlug =
   | 'ignored'
   | 'costly'
   | 'bots'
-  | 'unfollowed';
+  | 'unfollowed'
+  | 'conversions';
 
 export type FollowerSegmentDefinition = {
   slug: FollowerSegmentSlug;
@@ -76,7 +78,14 @@ export type FollowerSegmentDefinition = {
   color: FollowerSegmentColor;
   icon: FC<IconProps>;
   categoryKey?: keyof typeof FOLLOWER_CATEGORY_DESCRIPTIONS;
-  audience?: 'lead' | 'followed' | 'unfollowed' | 'ignored' | 'cultivate' | 'hot';
+  audience?:
+  | 'lead'
+  | 'followed'
+  | 'unfollowed'
+  | 'ignored'
+  | 'cultivate'
+  | 'hot'
+  | 'converted';
   triage?: FollowerTriageFilter;
   isBot?: true;
 };
@@ -105,7 +114,8 @@ export const FOLLOWER_SEGMENT_COLOR_CLASSES: Record<
     iconBg: 'bg-emerald-500/15',
     border: 'border-emerald-500/40',
     borderSelected: 'border-emerald-400 bg-emerald-500/10 text-emerald-300',
-    outlineButton: 'border-emerald-500/60 text-emerald-400 hover:bg-emerald-500/10',
+    outlineButton:
+      'border-emerald-500/60 text-emerald-400 hover:bg-emerald-500/10',
     statusDot: 'bg-emerald-400',
   },
   red: {
@@ -121,7 +131,8 @@ export const FOLLOWER_SEGMENT_COLOR_CLASSES: Record<
     iconBg: 'bg-violet-500/15',
     border: 'border-violet-500/40',
     borderSelected: 'border-violet-400 bg-violet-500/10 text-violet-300',
-    outlineButton: 'border-violet-500/60 text-violet-400 hover:bg-violet-500/10',
+    outlineButton:
+      'border-violet-500/60 text-violet-400 hover:bg-violet-500/10',
     statusDot: 'bg-violet-400',
   },
   yellow: {
@@ -137,7 +148,8 @@ export const FOLLOWER_SEGMENT_COLOR_CLASSES: Record<
     iconBg: 'bg-orange-500/15',
     border: 'border-orange-500/50',
     borderSelected: 'border-orange-500 bg-orange-500/10 text-orange-300',
-    outlineButton: 'border-orange-500/60 text-orange-400 hover:bg-orange-500/10',
+    outlineButton:
+      'border-orange-500/60 text-orange-400 hover:bg-orange-500/10',
     statusDot: 'bg-orange-400',
   },
   neutral: {
@@ -203,6 +215,17 @@ export const FOLLOWER_SUMMARY_SEGMENTS: FollowerSegmentDefinition[] = [
     icon: UserIcon,
     categoryKey: 'followed',
     audience: 'followed',
+  },
+  {
+    slug: 'conversions',
+    key: 'followers_audience_conversions',
+    defaultLabel: 'Conversions',
+    descriptionKey: 'followers_board_conversions_description',
+    defaultDescription: FOLLOWER_CATEGORY_DESCRIPTIONS.converted,
+    color: 'purple',
+    icon: TargetIcon,
+    categoryKey: 'converted',
+    audience: 'converted',
   },
   {
     slug: 'mutual',
@@ -293,6 +316,7 @@ export const FOLLOWER_BOARD_SEGMENTS: FollowerSegmentDefinition[] = [
   FOLLOWER_SUMMARY_SEGMENTS.find((s) => s.slug === 'hot')!,
   FOLLOWER_SUMMARY_SEGMENTS.find((s) => s.slug === 'cultivate')!,
   FOLLOWER_SUMMARY_SEGMENTS.find((s) => s.slug === 'followed')!,
+  FOLLOWER_SUMMARY_SEGMENTS.find((s) => s.slug === 'conversions')!,
   FOLLOWER_SUMMARY_SEGMENTS.find((s) => s.slug === 'mutual')!,
   FOLLOWER_SUMMARY_SEGMENTS.find((s) => s.slug === 'quiet')!,
   FOLLOWER_SUMMARY_SEGMENTS.find((s) => s.slug === 'costly')!,
@@ -333,7 +357,14 @@ export const FOLLOWER_TAB_SEGMENTS: Array<{
   key: string;
   defaultLabel: string;
   color: FollowerSegmentColor;
-  audience?: 'lead' | 'followed' | 'unfollowed' | 'ignored' | 'cultivate' | 'hot';
+  audience?:
+  | 'lead'
+  | 'followed'
+  | 'unfollowed'
+  | 'ignored'
+  | 'cultivate'
+  | 'hot'
+  | 'converted';
   triage?: FollowerTriageFilter;
   isBot?: true;
 }> = [
@@ -369,6 +400,13 @@ export const FOLLOWER_TAB_SEGMENTS: Array<{
       defaultLabel: 'Followed',
       color: 'green',
       audience: 'followed',
+    },
+    {
+      slug: 'conversions',
+      key: 'followers_audience_conversions',
+      defaultLabel: 'Conversions',
+      color: 'purple',
+      audience: 'converted',
     },
     {
       slug: 'mutual',

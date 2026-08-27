@@ -19,16 +19,17 @@ const dismissTriage = jest.fn();
 const unfollowConfirmOpen = jest.fn();
 
 jest.mock('@gitroom/react/translation/get.transation.service.client', () => ({
-  useT: () => (key: string, fallback: string, params?: Record<string, unknown>) => {
-    if (!params) {
-      return fallback;
-    }
-    return Object.entries(params).reduce(
-      (result, [name, value]) =>
-        result.replace(new RegExp(`{{${name}}}`, 'g'), String(value)),
-      fallback
-    );
-  },
+  useT:
+    () => (key: string, fallback: string, params?: Record<string, unknown>) => {
+      if (!params) {
+        return fallback;
+      }
+      return Object.entries(params).reduce(
+        (result, [name, value]) =>
+          result.replace(new RegExp(`{{${name}}}`, 'g'), String(value)),
+        fallback
+      );
+    },
 }));
 
 jest.mock('@gitroom/frontend/components/followers/follower.card', () => ({
@@ -38,11 +39,14 @@ jest.mock('@gitroom/frontend/components/followers/follower.card', () => ({
   }),
 }));
 
-jest.mock('@gitroom/frontend/components/followers/unfollow.confirm.modal', () => ({
-  useUnfollowConfirmModal: () => ({
-    open: unfollowConfirmOpen,
-  }),
-}));
+jest.mock(
+  '@gitroom/frontend/components/followers/unfollow.confirm.modal',
+  () => ({
+    useUnfollowConfirmModal: () => ({
+      open: unfollowConfirmOpen,
+    }),
+  })
+);
 
 jest.mock('next/link', () => ({
   __esModule: true,
@@ -105,19 +109,28 @@ jest.mock('@gitroom/frontend/components/followers/use.followers', () => {
 });
 
 const follower = (overrides: Partial<Follower> = {}): Follower =>
-  ({
-    id: 'follower-1',
-    name: 'Alex Rivera',
-    username: 'alex',
-    picture: '/alex.png',
-    interactionCount: 12,
-    profileUrl: 'https://example.com/alex',
-    ...overrides,
-  }) as Follower;
+({
+  id: 'follower-1',
+  name: 'Alex Rivera',
+  username: 'alex',
+  picture: '/alex.png',
+  interactionCount: 12,
+  profileUrl: 'https://example.com/alex',
+  ...overrides,
+} as Follower);
 
-const leadsSegment = FOLLOWER_BOARD_SEGMENTS.find((segment) => segment.slug === 'leads')!;
-const followedSegment = FOLLOWER_BOARD_SEGMENTS.find((segment) => segment.slug === 'followed')!;
-const unfollowedSegment = FOLLOWER_BOARD_SEGMENTS.find((segment) => segment.slug === 'unfollowed')!;
+const leadsSegment = FOLLOWER_BOARD_SEGMENTS.find(
+  (segment) => segment.slug === 'leads'
+)!;
+const conversionsSegment = FOLLOWER_BOARD_SEGMENTS.find(
+  (segment) => segment.slug === 'conversions'
+)!;
+const followedSegment = FOLLOWER_BOARD_SEGMENTS.find(
+  (segment) => segment.slug === 'followed'
+)!;
+const unfollowedSegment = FOLLOWER_BOARD_SEGMENTS.find(
+  (segment) => segment.slug === 'unfollowed'
+)!;
 
 describe('FollowerBoard', () => {
   beforeEach(() => {
@@ -131,7 +144,12 @@ describe('FollowerBoard', () => {
       <FollowerBoard
         columns={FOLLOWER_BOARD_SEGMENTS.map((segment, index) => ({
           segment,
-          items: [follower({ id: `f-${index}`, name: `${segment.defaultLabel} User` })],
+          items: [
+            follower({
+              id: `f-${index}`,
+              name: `${segment.defaultLabel} User`,
+            }),
+          ],
           total: 10 + index,
           viewAllHref: `/followers/${segment.slug}`,
         }))}
@@ -150,12 +168,13 @@ describe('FollowerBoard', () => {
     expect(columns[1].getAttribute('data-board-segment')).toBe('hot');
     expect(columns[2].getAttribute('data-board-segment')).toBe('cultivate');
     expect(columns[3].getAttribute('data-board-segment')).toBe('followed');
-    expect(columns[4].getAttribute('data-board-segment')).toBe('mutual');
-    expect(columns[5].getAttribute('data-board-segment')).toBe('quiet');
-    expect(columns[6].getAttribute('data-board-segment')).toBe('costly');
-    expect(columns[7].getAttribute('data-board-segment')).toBe('ignored');
-    expect(columns[8].getAttribute('data-board-segment')).toBe('unfollowed');
-    expect(columns[9].getAttribute('data-board-segment')).toBe('bots');
+    expect(columns[4].getAttribute('data-board-segment')).toBe('conversions');
+    expect(columns[5].getAttribute('data-board-segment')).toBe('mutual');
+    expect(columns[6].getAttribute('data-board-segment')).toBe('quiet');
+    expect(columns[7].getAttribute('data-board-segment')).toBe('costly');
+    expect(columns[8].getAttribute('data-board-segment')).toBe('ignored');
+    expect(columns[9].getAttribute('data-board-segment')).toBe('unfollowed');
+    expect(columns[10].getAttribute('data-board-segment')).toBe('bots');
     expect(
       screen.getByRole('link', { name: 'View all (10)' }).getAttribute('href')
     ).toBe('/followers/leads');
@@ -215,7 +234,12 @@ describe('FollowerBoard', () => {
           segment,
           items:
             index % 2 === 0
-              ? [follower({ id: `f-${index}`, name: `${segment.defaultLabel} User` })]
+              ? [
+                follower({
+                  id: `f-${index}`,
+                  name: `${segment.defaultLabel} User`,
+                }),
+              ]
               : [],
           total: 10 + index,
           viewAllHref: `/followers/${segment.slug}`,
@@ -227,7 +251,9 @@ describe('FollowerBoard', () => {
 
     const viewAllLinks = screen.getAllByTestId('followers-board-view-all');
     expect(viewAllLinks).toHaveLength(FOLLOWER_BOARD_SEGMENTS.length);
-    expect(screen.getAllByTestId('followers-board-column-scroll')).toHaveLength(5);
+    expect(screen.getAllByTestId('followers-board-column-scroll')).toHaveLength(
+      6
+    );
   });
 
   it('renders custom list columns in the board grid', () => {
@@ -270,10 +296,12 @@ describe('FollowerBoard', () => {
     );
 
     const listArea = screen.getByTestId('followers-board-column-list');
-    expect(listArea.style.height).toBe(`${FOLLOWER_BOARD_LIST_MIN_HEIGHT_PX}px`);
-    expect(screen.getByTestId('custom-scroll-area').getAttribute('data-max-height')).toBe(
-      String(FOLLOWER_BOARD_LIST_MIN_HEIGHT_PX)
+    expect(listArea.style.height).toBe(
+      `${FOLLOWER_BOARD_LIST_MIN_HEIGHT_PX}px`
     );
+    expect(
+      screen.getByTestId('custom-scroll-area').getAttribute('data-max-height')
+    ).toBe(String(FOLLOWER_BOARD_LIST_MIN_HEIGHT_PX));
   });
 
   it('omits the scroll wrapper when a column is empty', () => {
@@ -313,6 +341,21 @@ describe('FollowerBoardRow', () => {
     expect(screen.getByText('@alex')).toBeTruthy();
     expect(screen.queryByText('12i')).toBeNull();
     expect(screen.getByTestId('followers-board-row-menu')).toBeTruthy();
+  });
+
+  it('shows conversion subtitle in the conversions column', () => {
+    render(
+      <FollowerBoardRow
+        follower={follower({
+          latestConversionType: 'follower_gained',
+          lastConvertedAt: new Date(Date.now() - 60_000).toISOString(),
+        })}
+        segment={conversionsSegment}
+        onOpen={jest.fn()}
+      />
+    );
+
+    expect(screen.getByText(/Follower gained · /)).toBeTruthy();
   });
 
   it('does not open the modal when avatar or username profile links are clicked', () => {

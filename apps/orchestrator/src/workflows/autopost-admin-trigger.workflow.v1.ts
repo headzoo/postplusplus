@@ -1,7 +1,4 @@
-import {
-  continueAsNew,
-  proxyActivities,
-} from '@temporalio/workflow';
+import { continueAsNew, proxyActivities } from '@temporalio/workflow';
 import { AutopostActivity } from '@gitroom/orchestrator/activities/autopost.activity';
 import { AUTOPOST_ADMIN_TRIGGER_BATCH_SIZE } from '@gitroom/nestjs-libraries/temporal/admin-schedule.workflow';
 

@@ -1,7 +1,10 @@
 import { FC, ReactNode } from 'react';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import clsx from 'clsx';
-import { ExpandIcon, CollapseIcon } from '@gitroom/frontend/components/ui/icons';
+import {
+  ExpandIcon,
+  CollapseIcon,
+} from '@gitroom/frontend/components/ui/icons';
 
 export const TopTitle: FC<{
   title: string;

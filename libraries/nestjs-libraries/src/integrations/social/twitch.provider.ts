@@ -150,10 +150,10 @@ export class TwitchProvider extends SocialAbstract implements SocialProvider {
           ...(avatars.get(id) ? { picture: avatars.get(id) } : {}),
           ...(username
             ? {
-              profileUrl: `https://www.twitch.tv/${encodeURIComponent(
-                username
-              )}`,
-            }
+                profileUrl: `https://www.twitch.tv/${encodeURIComponent(
+                  username
+                )}`,
+              }
             : {}),
           ...(follower.followed_at ? { followedAt: follower.followed_at } : {}),
         };
@@ -210,10 +210,10 @@ export class TwitchProvider extends SocialAbstract implements SocialProvider {
         ...(user.profile_image_url ? { picture: user.profile_image_url } : {}),
         ...(username
           ? {
-            profileUrl: `https://www.twitch.tv/${encodeURIComponent(
-              username
-            )}`,
-          }
+              profileUrl: `https://www.twitch.tv/${encodeURIComponent(
+                username
+              )}`,
+            }
           : {}),
         ...(user.description ? { bio: user.description } : {}),
       };
@@ -228,7 +228,9 @@ export class TwitchProvider extends SocialAbstract implements SocialProvider {
       return null;
     }
     if (!/^https?:\/\//i.test(trimmed) && !trimmed.includes('/')) {
-      return /^[A-Za-z0-9_]{1,64}$/.test(trimmed) ? trimmed.toLowerCase() : null;
+      return /^[A-Za-z0-9_]{1,64}$/.test(trimmed)
+        ? trimmed.toLowerCase()
+        : null;
     }
     let parsed: URL;
     try {
@@ -318,9 +320,11 @@ export class TwitchProvider extends SocialAbstract implements SocialProvider {
     codeVerifier: string;
     refresh?: string;
   }) {
-    const redirectUri = `${process.env.FRONTEND_URL
-      }/integrations/social/twitch${params.refresh ? `?refresh=${params.refresh}` : ''
-      }`;
+    const redirectUri = `${
+      process.env.FRONTEND_URL
+    }/integrations/social/twitch${
+      params.refresh ? `?refresh=${params.refresh}` : ''
+    }`;
 
     const tokenResponse = await this.fetch(
       'https://id.twitch.tv/oauth2/token',
@@ -502,8 +506,9 @@ export class TwitchProvider extends SocialAbstract implements SocialProvider {
         {
           id: firstPost.id,
           postId: makeId(10), // Announcements don't return a message ID
-          releaseURL: `https://twitch.tv/${integration.profile || integration.providerIdentifier
-            }`,
+          releaseURL: `https://twitch.tv/${
+            integration.profile || integration.providerIdentifier
+          }`,
           status: result.success ? 'posted' : 'error',
         },
       ];
@@ -520,8 +525,9 @@ export class TwitchProvider extends SocialAbstract implements SocialProvider {
       {
         id: firstPost.id,
         postId: result.messageId,
-        releaseURL: `https://twitch.tv/${integration.profile || integration.providerIdentifier
-          }`,
+        releaseURL: `https://twitch.tv/${
+          integration.profile || integration.providerIdentifier
+        }`,
         status: result.isSent ? 'posted' : 'error',
       },
     ];
@@ -553,8 +559,9 @@ export class TwitchProvider extends SocialAbstract implements SocialProvider {
         {
           id: commentPost.id,
           postId: makeId(10),
-          releaseURL: `https://twitch.tv/${integration.profile || integration.providerIdentifier
-            }`,
+          releaseURL: `https://twitch.tv/${
+            integration.profile || integration.providerIdentifier
+          }`,
           status: result.success ? 'posted' : 'error',
         },
       ];
@@ -572,8 +579,9 @@ export class TwitchProvider extends SocialAbstract implements SocialProvider {
       {
         id: commentPost.id,
         postId: result.messageId,
-        releaseURL: `https://twitch.tv/${integration.profile || integration.providerIdentifier
-          }`,
+        releaseURL: `https://twitch.tv/${
+          integration.profile || integration.providerIdentifier
+        }`,
         status: result.isSent ? 'posted' : 'error',
       },
     ];

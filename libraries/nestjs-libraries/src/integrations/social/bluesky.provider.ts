@@ -429,7 +429,9 @@ export class BlueskyProvider extends SocialAbstract implements SocialProvider {
       await agent.deleteFollow(followUri);
     } catch (error) {
       throw new BadBody(
-        error instanceof Error ? error.message : 'Could not unfollow on Bluesky',
+        error instanceof Error
+          ? error.message
+          : 'Could not unfollow on Bluesky',
         undefined,
         {} as BodyInit
       );
@@ -534,14 +536,16 @@ export class BlueskyProvider extends SocialAbstract implements SocialProvider {
       const handle = post.author?.handle;
       const url =
         handle && rkey
-          ? `https://bsky.app/profile/${encodeURIComponent(handle)}/post/${encodeURIComponent(rkey)}`
+          ? `https://bsky.app/profile/${encodeURIComponent(
+              handle
+            )}/post/${encodeURIComponent(rkey)}`
           : `https://bsky.app/profile/${encodeURIComponent(externalId)}`;
 
       const embed = post.embed as
         | {
-          images?: Array<{ fullsize?: string; thumb?: string }>;
-          video?: { playlist?: string };
-        }
+            images?: Array<{ fullsize?: string; thumb?: string }>;
+            video?: { playlist?: string };
+          }
         | undefined;
       const media = [
         ...(embed?.images?.flatMap((image) => {
@@ -859,9 +863,9 @@ export class BlueskyProvider extends SocialAbstract implements SocialProvider {
     const witness = (): PendingCheckResponse =>
       pendingData.attempting && !pendingData.confirmed
         ? {
-          status: 'ready',
-          pendingData: { ...pendingData, confirmed: true },
-        }
+            status: 'ready',
+            pendingData: { ...pendingData, confirmed: true },
+          }
         : { status: 'ready', pendingData };
 
     // Image-only posts have no asynchronous processing step.
@@ -1146,12 +1150,18 @@ export class BlueskyProvider extends SocialAbstract implements SocialProvider {
       depth: 0,
     });
 
-    // @ts-ignore
-    const parentCid = parentThread.data.thread.post?.cid;
-    // @ts-ignore
-    const rootUri = parentThread.data.thread.post?.record?.reply?.root?.uri || postId;
-    // @ts-ignore
-    const rootCid = parentThread.data.thread.post?.record?.reply?.root?.cid || parentCid;
+    const parentPost =
+      'post' in parentThread.data.thread
+        ? parentThread.data.thread.post
+        : undefined;
+    const parentCid = parentPost?.cid;
+    const replyRoot = (
+      parentPost?.record as
+        | { reply?: { root?: { uri?: string; cid?: string } } }
+        | undefined
+    )?.reply?.root;
+    const rootUri = replyRoot?.uri || postId;
+    const rootCid = replyRoot?.cid || parentCid;
 
     // @ts-ignore
     const { cid, uri, commit } = await agent.post({
@@ -1381,12 +1391,10 @@ export class BlueskyProvider extends SocialAbstract implements SocialProvider {
       metricsResult.status === 'success' &&
       metricsResult.metrics.likes! >= +fields.likesAmount
     ) {
-      const result = await this.repostViaRules(
-        integration,
-        '',
-        id
+      const result = await this.repostViaRules(integration, '', id);
+      return (
+        result.status === 'reposted' || result.status === 'already_reposted'
       );
-      return result.status === 'reposted' || result.status === 'already_reposted';
     }
 
     return false;
@@ -1421,11 +1429,7 @@ export class BlueskyProvider extends SocialAbstract implements SocialProvider {
     id: string,
     fields: { likesAmount: string; post: string }
   ) {
-    const metricsResult = await this.loadPostRulesMetrics(
-      integration,
-      '',
-      id
-    );
+    const metricsResult = await this.loadPostRulesMetrics(integration, '', id);
 
     if (
       metricsResult.status === 'success' &&

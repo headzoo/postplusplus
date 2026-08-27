@@ -170,8 +170,8 @@ export class OAuthRepository {
         organization: {
           select: {
             paymentId: true,
-          }
-        }
+          },
+        },
       },
       data: {
         accessToken: encryptedToken,

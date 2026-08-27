@@ -41,7 +41,7 @@ export class GenerateVideoTool implements AgentToolInterface {
                     Here are the type of video that can be generated:
                     ${this._videoManager
                       .getAllVideos()
-                      .map((p) => "-" + p.title)
+                      .map((p) => '-' + p.title)
                       .join('\n')}
       `,
       inputSchema: z.object({
@@ -60,13 +60,18 @@ export class GenerateVideoTool implements AgentToolInterface {
       }),
       execute: async (inputData, context) => {
         checkAuth(inputData, context);
-        const org = JSON.parse((context?.requestContext as any)?.get('organization') as string);
+        const org = JSON.parse(
+          (context?.requestContext as any)?.get('organization') as string
+        );
         try {
           const value = await this._mediaService.generateVideo(org, {
             type: inputData.identifier,
             output: inputData.output,
             customParams: inputData.customParams.reduce(
-              (all: Record<string, any>, current: { key: string; value: any }) => ({
+              (
+                all: Record<string, any>,
+                current: { key: string; value: any }
+              ) => ({
                 ...all,
                 [current.key]: current.value,
               }),

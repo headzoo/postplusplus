@@ -8,7 +8,9 @@ import { DashboardAnalyticsPreference } from './dashboard.analytics.layout';
 export const useDashboardAnalyticsPreferences = (integrationId?: string) => {
   const fetch = useFetch();
 
-  const load = useCallback(async (): Promise<DashboardAnalyticsPreference[]> => {
+  const load = useCallback(async (): Promise<
+    DashboardAnalyticsPreference[]
+  > => {
     if (!integrationId) {
       return [];
     }

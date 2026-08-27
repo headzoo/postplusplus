@@ -188,6 +188,9 @@ export type Follower = {
   triageReason?: string;
   triageSource?: string;
   suggestedAction?: string;
+  lastConvertedAt?: string;
+  latestConversionType?: string;
+  conversionCount?: number;
 };
 
 export type FollowerList = {
@@ -330,7 +333,14 @@ export type UseFollowersParams = {
   window?: ChannelInteractionWindow;
   search?: string;
   triage?: FollowerTriageFilter;
-  audience?: 'lead' | 'followed' | 'unfollowed' | 'ignored' | 'cultivate' | 'hot';
+  audience?:
+  | 'lead'
+  | 'followed'
+  | 'unfollowed'
+  | 'ignored'
+  | 'cultivate'
+  | 'hot'
+  | 'converted';
   listId?: string;
   isBot?: boolean;
 };
@@ -401,9 +411,9 @@ export const buildFollowerTimelineHref = (
   if (!normalized) {
     return '/followers';
   }
-  const path = `/followers/${encodeURIComponent(integrationId)}/@${encodeURIComponent(
-    normalized
-  )}/timeline`;
+  const path = `/followers/${encodeURIComponent(
+    integrationId
+  )}/@${encodeURIComponent(normalized)}/timeline`;
   if (!externalId) {
     return path;
   }
@@ -614,13 +624,10 @@ export const useFollowerNoteMutations = (
       if (!trimmed) {
         throw new Error('Note content is required');
       }
-      const response = await fetch(
-        `/followers/${integrationId}/member/notes`,
-        {
-          method: 'POST',
-          body: JSON.stringify({ externalId, content: trimmed }),
-        }
-      );
+      const response = await fetch(`/followers/${integrationId}/member/notes`, {
+        method: 'POST',
+        body: JSON.stringify({ externalId, content: trimmed }),
+      });
       if (!response.ok) {
         throw new Error('Failed to create note');
       }
@@ -773,10 +780,7 @@ export const useFollowerGradeMutation = (
 
 export type RelationshipScoreDirection = 'their' | 'your';
 
-export const isFollowerListCacheKey = (
-  integrationId: string,
-  key: unknown
-) =>
+export const isFollowerListCacheKey = (integrationId: string, key: unknown) =>
   typeof key === 'string' && key.startsWith(`/followers/${integrationId}?`);
 
 const isRelationshipSnapshot = (
@@ -1070,10 +1074,7 @@ export const applyImportedMemberToFollowerPage = (
 };
 
 export function getProfileLinkAutoSnoozeTriages(
-  follower: Pick<
-    Follower,
-    'relationshipTriage' | 'isCultivate' | 'isHot'
-  >
+  follower: Pick<Follower, 'relationshipTriage' | 'isCultivate' | 'isHot'>
 ): ProfileLinkAutoSnoozeTriage[] {
   const triages: ProfileLinkAutoSnoozeTriage[] = [];
   if (follower.isHot || follower.relationshipTriage === 'hot_lead') {
@@ -1272,10 +1273,7 @@ export const useFollowerListMutations = (integrationId?: string) => {
   );
 
   const updateList = useCallback(
-    async (
-      listId: string,
-      body: { name: string; color?: string | null }
-    ) => {
+    async (listId: string, body: { name: string; color?: string | null }) => {
       if (!integrationId) {
         throw new Error('Channel is required');
       }
@@ -1453,7 +1451,9 @@ export const useFollowerListMutations = (integrationId?: string) => {
       if (!response.ok) {
         let message = 'Failed to follow this profile';
         try {
-          const body = (await response.json()) as { message?: string | string[] };
+          const body = (await response.json()) as {
+            message?: string | string[];
+          };
           if (typeof body.message === 'string') {
             message = body.message;
           } else if (Array.isArray(body.message)) {
@@ -1492,7 +1492,9 @@ export const useFollowerListMutations = (integrationId?: string) => {
       if (!response.ok) {
         let message = 'Failed to unfollow this profile';
         try {
-          const body = (await response.json()) as { message?: string | string[] };
+          const body = (await response.json()) as {
+            message?: string | string[];
+          };
           if (typeof body.message === 'string') {
             message = body.message;
           } else if (Array.isArray(body.message)) {
@@ -1604,4 +1606,3 @@ export const useFollowerListMutations = (integrationId?: string) => {
     revalidateLists,
   };
 };
-

@@ -16,7 +16,8 @@ import { normalizeFollowerSearch } from '@gitroom/nestjs-libraries/integrations/
 
 @ValidatorConstraint({ name: 'exclusiveFollowerMemberIdentity', async: false })
 class ExclusiveFollowerMemberIdentityConstraint
-  implements ValidatorConstraintInterface {
+  implements ValidatorConstraintInterface
+{
   validate(_: unknown, args: ValidationArguments) {
     const object = args.object as FollowerMemberTimelineQueryDto;
     return [object.externalId, object.username].filter(Boolean).length === 1;

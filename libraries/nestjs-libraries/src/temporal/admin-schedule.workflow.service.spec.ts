@@ -153,7 +153,9 @@ describe('AdminScheduleWorkflowService', () => {
     );
 
     await service.triggerLeadBridge();
-    expect(terminate).toHaveBeenCalledWith('Admin lead discovery burst trigger');
+    expect(terminate).toHaveBeenCalledWith(
+      'Admin lead discovery burst trigger'
+    );
     expect(start).toHaveBeenCalledWith(
       'channelLeadBridgeAdminTriggerWorkflowV1',
       expect.objectContaining({

@@ -46,16 +46,18 @@ import {
 class PostRuleDefinitionConstraint implements ValidatorConstraintInterface {
   validate(_value: unknown, args: ValidationArguments) {
     const object = args.object as CreatePostRuleDto | UpdatePostRuleDto;
-    return validatePostRuleDefinition({
-      action: object.action,
-      initialDelayHours: object.initialDelayHours,
-      evaluationIntervalHours: object.evaluationIntervalHours,
-      maxEvaluations: object.maxEvaluations,
-      conditions: object.conditions ?? [],
-      actionConfig: object.actionConfig,
-      rescheduleConfig: object.rescheduleConfig,
-      maxRescheduleAttempts: object.maxRescheduleAttempts,
-    }).length === 0;
+    return (
+      validatePostRuleDefinition({
+        action: object.action,
+        initialDelayHours: object.initialDelayHours,
+        evaluationIntervalHours: object.evaluationIntervalHours,
+        maxEvaluations: object.maxEvaluations,
+        conditions: object.conditions ?? [],
+        actionConfig: object.actionConfig,
+        rescheduleConfig: object.rescheduleConfig,
+        maxRescheduleAttempts: object.maxRescheduleAttempts,
+      }).length === 0
+    );
   }
 
   defaultMessage(args: ValidationArguments) {
@@ -70,7 +72,9 @@ class PostRuleDefinitionConstraint implements ValidatorConstraintInterface {
       rescheduleConfig: object.rescheduleConfig,
       maxRescheduleAttempts: object.maxRescheduleAttempts,
     });
-    return issues.map((issue) => `${issue.property}: ${issue.message}`).join('; ');
+    return issues
+      .map((issue) => `${issue.property}: ${issue.message}`)
+      .join('; ');
   }
 }
 
@@ -213,7 +217,7 @@ export class CreatePostRuleDto {
   private readonly _postRuleDefinition!: true;
 }
 
-export class UpdatePostRuleDto extends CreatePostRuleDto { }
+export class UpdatePostRuleDto extends CreatePostRuleDto {}
 
 export class ReplacePostRuleAssignmentsDto {
   @IsArray()

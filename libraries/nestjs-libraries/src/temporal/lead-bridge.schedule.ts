@@ -22,7 +22,8 @@ export const LEAD_BRIDGE_PAGE_SIZE = 100;
 /** Max newly-applied leads persisted from a single warm follower crawl. */
 export const LEAD_BRIDGE_PER_SOURCE_CAP = 15;
 /** Max unscored leads AI-scored per integration on each crawl pass. */
-export const LEAD_FIT_BACKFILL_LIMIT = fallbackLeadMaterialization.fitBackfillLimit;
+export const LEAD_FIT_BACKFILL_LIMIT =
+  fallbackLeadMaterialization.fitBackfillLimit;
 /**
  * Minimum AI fit score (0-100) for a scored lead to stay visible. Leads scored
  * below this are hidden as poor matches; unscored leads (null) remain visible
@@ -44,7 +45,6 @@ export const leadBridgeDailyCountKey = (integrationId: string, day: string) =>
 export const leadBridgeCursorKey = (integrationId: string) =>
   `lead-bridge-cursor:${integrationId}`;
 
-export const utcDayKey = (now = new Date()) =>
-  now.toISOString().slice(0, 10);
+export const utcDayKey = (now = new Date()) => now.toISOString().slice(0, 10);
 
 export const leadBridgeDailyTtlSeconds = () => Math.ceil(DAY_MS / 1000);

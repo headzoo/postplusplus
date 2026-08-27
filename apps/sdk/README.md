@@ -9,12 +9,17 @@ npm install @postiz/node
 ```
 
 ## Usage
+
 ```typescript
 import Postiz from '@postiz/node';
-const postiz = new Postiz('your api key', 'your self-hosted instance (optional)');
+const postiz = new Postiz(
+  'your api key',
+  'your self-hosted instance (optional)'
+);
 ```
 
 The available methods are:
+
 - `post(posts: CreatePostDto)` - Schedule a post to Postiz
 - `postList(filters: GetPostsDto)` - Get a list of posts
 - `upload(file: Buffer, extension: string)` - Upload a file to Postiz

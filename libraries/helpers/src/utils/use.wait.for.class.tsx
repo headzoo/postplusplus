@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 
 /**
  * useWaitForClass
@@ -9,7 +9,10 @@ import { useEffect, useState } from "react";
  * @param root - The root node to observe (defaults to document.body)
  * @returns A boolean indicating if the class is currently present
  */
-export function useWaitForClass(className: string, root: HTMLElement | null = null): boolean {
+export function useWaitForClass(
+  className: string,
+  root: HTMLElement | null = null
+): boolean {
   const [found, setFound] = useState(false);
 
   useEffect(() => {

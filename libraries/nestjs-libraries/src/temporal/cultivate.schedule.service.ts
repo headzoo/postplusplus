@@ -31,7 +31,7 @@ export class CultivateMaterializationScheduleService {
   constructor(
     private _temporalService: TemporalService,
     private _adminScheduleLogService: AdminScheduleLogService
-  ) { }
+  ) {}
 
   async install() {
     await this.terminateLegacyWorkflow();
@@ -208,7 +208,9 @@ export class CultivateMaterializationScheduleService {
   private mapStatus(
     description: Awaited<
       ReturnType<
-        ReturnType<CultivateMaterializationScheduleService['getHandle']>['describe']
+        ReturnType<
+          CultivateMaterializationScheduleService['getHandle']
+        >['describe']
       >
     >,
     exists: boolean
@@ -244,15 +246,15 @@ export class CultivateMaterializationScheduleService {
       return undefined;
     }
     if ('cadence' in value) {
-      return this.cadenceFromUnknown(
-        (value as { cadence?: unknown }).cadence
-      );
+      return this.cadenceFromUnknown((value as { cadence?: unknown }).cadence);
     }
     return value as Partial<CultivateMaterializationScheduleConfig>;
   }
 
   private getHandle() {
-    return this.scheduleClient().getHandle(CULTIVATE_MATERIALIZATION_SCHEDULE_ID);
+    return this.scheduleClient().getHandle(
+      CULTIVATE_MATERIALIZATION_SCHEDULE_ID
+    );
   }
 
   private scheduleClient() {

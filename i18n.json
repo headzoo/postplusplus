@@ -27,7 +27,9 @@
   },
   "buckets": {
     "json": {
-      "include": ["libraries/react-shared-libraries/src/translation/locales/[locale]/translation.json"]
+      "include": [
+        "libraries/react-shared-libraries/src/translation/locales/[locale]/translation.json"
+      ]
     }
   },
   "$schema": "https://lingo.dev/schema/i18n.json"

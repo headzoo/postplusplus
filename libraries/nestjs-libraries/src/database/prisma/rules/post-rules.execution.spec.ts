@@ -1,21 +1,21 @@
 jest.mock('@gitroom/nestjs-libraries/integrations/integration.manager', () => ({
-  IntegrationManager: class IntegrationManager { },
+  IntegrationManager: class IntegrationManager {},
 }));
 jest.mock(
   '@gitroom/nestjs-libraries/integrations/refresh.integration.service',
-  () => ({ RefreshIntegrationService: class RefreshIntegrationService { } })
+  () => ({ RefreshIntegrationService: class RefreshIntegrationService {} })
 );
 jest.mock(
   '@gitroom/nestjs-libraries/database/prisma/posts/posts.service',
-  () => ({ PostsService: class PostsService { } })
+  () => ({ PostsService: class PostsService {} })
 );
 jest.mock(
   '@gitroom/nestjs-libraries/database/prisma/pipelines/pipeline.service',
-  () => ({ PipelineService: class PipelineService { } })
+  () => ({ PipelineService: class PipelineService {} })
 );
 jest.mock(
   '@gitroom/nestjs-libraries/database/prisma/notifications/notification.service',
-  () => ({ NotificationService: class NotificationService { } })
+  () => ({ NotificationService: class NotificationService {} })
 );
 
 import { PostRulesExecutionRepository } from './post-rules.execution.repository';
@@ -48,46 +48,46 @@ const integration = {
 } as any;
 
 const rootPost = (overrides: Record<string, unknown> = {}) =>
-({
-  id: 'post-1',
-  organizationId: 'org-1',
-  integrationId: 'channel-1',
-  group: 'group-1',
-  state: 'PUBLISHED',
-  publishDate: PUBLISHED_AT,
-  releaseId: 'tweet-1',
-  releaseURL: 'https://x.com/user/status/tweet-1',
-  settings: JSON.stringify({ __type: 'x' }),
-  image: '[]',
-  content: 'hello',
-  delay: 0,
-  deletedAt: null,
-  platformDeletedAt: null,
-  parentPostId: null,
-  integration,
-  pipelineQueueItem: null,
-  ...overrides,
-} as any);
+  ({
+    id: 'post-1',
+    organizationId: 'org-1',
+    integrationId: 'channel-1',
+    group: 'group-1',
+    state: 'PUBLISHED',
+    publishDate: PUBLISHED_AT,
+    releaseId: 'tweet-1',
+    releaseURL: 'https://x.com/user/status/tweet-1',
+    settings: JSON.stringify({ __type: 'x' }),
+    image: '[]',
+    content: 'hello',
+    delay: 0,
+    deletedAt: null,
+    platformDeletedAt: null,
+    parentPostId: null,
+    integration,
+    pipelineQueueItem: null,
+    ...overrides,
+  } as any);
 
 const rule = (overrides: Record<string, unknown> = {}) =>
-({
-  id: 'rule-1',
-  organizationId: 'org-1',
-  name: 'Remove flops',
-  enabled: true,
-  action: 'REMOVE',
-  initialDelayHours: 24,
-  evaluationIntervalHours: null,
-  maxEvaluations: null,
-  conditionMatch: 'ANY',
-  conditions: [],
-  actionConfig: {},
-  rescheduleConfig: null,
-  maxRescheduleAttempts: null,
-  integrations: [{ integrationId: 'channel-1' }],
-  pipelines: [],
-  ...overrides,
-} as any);
+  ({
+    id: 'rule-1',
+    organizationId: 'org-1',
+    name: 'Remove flops',
+    enabled: true,
+    action: 'REMOVE',
+    initialDelayHours: 24,
+    evaluationIntervalHours: null,
+    maxEvaluations: null,
+    conditionMatch: 'ANY',
+    conditions: [],
+    actionConfig: {},
+    rescheduleConfig: null,
+    maxRescheduleAttempts: null,
+    integrations: [{ integrationId: 'channel-1' }],
+    pipelines: [],
+    ...overrides,
+  } as any);
 
 const createService = () => {
   const executionRepository = {
@@ -228,9 +228,24 @@ describe('post rule condition evaluation', () => {
 
   it('orders a thread from the deepest reply upwards', () => {
     const members = [
-      { id: 'root', parentPostId: null, releaseId: 'a', platformDeletedAt: null },
-      { id: 'child', parentPostId: 'root', releaseId: 'b', platformDeletedAt: null },
-      { id: 'grand', parentPostId: 'child', releaseId: 'c', platformDeletedAt: null },
+      {
+        id: 'root',
+        parentPostId: null,
+        releaseId: 'a',
+        platformDeletedAt: null,
+      },
+      {
+        id: 'child',
+        parentPostId: 'root',
+        releaseId: 'b',
+        platformDeletedAt: null,
+      },
+      {
+        id: 'grand',
+        parentPostId: 'child',
+        releaseId: 'c',
+        platformDeletedAt: null,
+      },
     ];
     expect(orderPostGroupForRemoval(members).map((m) => m.id)).toEqual([
       'grand',
@@ -253,7 +268,9 @@ describe('PostRulesExecutionService.resolveForPost', () => {
       rootPost({ releaseId: 'missing' })
     );
 
-    await expect(service.resolveForPost(request)).resolves.toEqual({ items: [] });
+    await expect(service.resolveForPost(request)).resolves.toEqual({
+      items: [],
+    });
     expect(executionRepository.getEnabledRulesForTarget).not.toHaveBeenCalled();
   });
 
@@ -393,15 +410,14 @@ describe('PostRulesExecutionService.resolveForPost', () => {
       'channel-1',
       null
     );
-    expect(executionRepository.getEnabledRulesForTarget).not.toHaveBeenCalledWith(
-      'org-1',
-      expect.anything(),
-      expect.anything()
-    );
+    expect(
+      executionRepository.getEnabledRulesForTarget
+    ).not.toHaveBeenCalledWith('org-1', expect.anything(), expect.anything());
   });
 
   it('drops rules whose provider no longer supports the action or metric', async () => {
-    const { service, executionRepository, integrationManager } = createService();
+    const { service, executionRepository, integrationManager } =
+      createService();
     executionRepository.getPublishedRoot.mockResolvedValue(rootPost());
     integrationManager.getPostRulesCapabilities.mockReturnValue({
       x: { actions: ['AUTO_PLUG'], metrics: [] },
@@ -415,7 +431,9 @@ describe('PostRulesExecutionService.resolveForPost', () => {
       }),
     ]);
 
-    await expect(service.resolveForPost(request)).resolves.toEqual({ items: [] });
+    await expect(service.resolveForPost(request)).resolves.toEqual({
+      items: [],
+    });
     expect(executionRepository.ensureRun).not.toHaveBeenCalled();
   });
 
@@ -448,7 +466,8 @@ describe('PostRulesExecutionService.resolveForPost', () => {
     const now = Date.now();
     const { items } = await service.resolveForPost(request);
 
-    const providedSchedule = executionRepository.ensureRun.mock.calls[0][3] as any[];
+    const providedSchedule = executionRepository.ensureRun.mock
+      .calls[0][3] as any[];
     const firstScheduledAt = providedSchedule[0].scheduledAt.getTime();
     const secondScheduledAt = providedSchedule[1].scheduledAt.getTime();
 
@@ -478,7 +497,9 @@ describe('PostRulesExecutionService.resolveForPost', () => {
       ],
     });
 
-    await expect(service.resolveForPost(request)).resolves.toEqual({ items: [] });
+    await expect(service.resolveForPost(request)).resolves.toEqual({
+      items: [],
+    });
   });
 
   it('anchors new evaluation schedules on resolution instant for late-published posts', async () => {
@@ -507,7 +528,8 @@ describe('PostRulesExecutionService.resolveForPost', () => {
 
     const { items } = await service.resolveForPost(request);
 
-    const providedSchedule = executionRepository.ensureRun.mock.calls[0][3] as any[];
+    const providedSchedule = executionRepository.ensureRun.mock
+      .calls[0][3] as any[];
     const providedScheduledAt = providedSchedule[0].scheduledAt.getTime();
     const now = Date.now();
     const expectedMinDelay = 24 * 3600_000 - 5000;
@@ -542,7 +564,8 @@ describe('PostRulesExecutionService.resolveForPost', () => {
 
     await service.resolveForPost(request);
 
-    const providedSchedule = executionRepository.ensureRun.mock.calls[0][3] as any[];
+    const providedSchedule = executionRepository.ensureRun.mock
+      .calls[0][3] as any[];
     expect(providedSchedule[0].scheduledAt.toISOString()).toBe(
       new Date(futurePublishDate.getTime() + 24 * 3600_000).toISOString()
     );
@@ -660,7 +683,8 @@ describe('PostRulesExecutionService.processEvaluation', () => {
   });
 
   it('skips terminally when the provider lost the capability', async () => {
-    const { service, executionRepository, integrationManager } = createService();
+    const { service, executionRepository, integrationManager } =
+      createService();
     executionRepository.claimEvaluation.mockResolvedValue(claimed());
     integrationManager.getSocialIntegration.mockReturnValue({});
 
@@ -954,14 +978,15 @@ describe('PostRulesExecutionRepository claim state machine', () => {
     const findFirstEvaluation = jest.fn().mockResolvedValue(evaluation);
     const updateManyEvaluation = jest.fn().mockResolvedValue({ count: 1 });
     const updateEvaluation = jest.fn().mockResolvedValue({});
-    const transaction = jest.fn(async (callback: (tx: any) => Promise<unknown>) =>
-      callback({
-        postRuleEvaluation: {
-          findFirst: findFirstEvaluation,
-          updateMany: updateManyEvaluation,
-          update: updateEvaluation,
-        },
-      })
+    const transaction = jest.fn(
+      async (callback: (tx: any) => Promise<unknown>) =>
+        callback({
+          postRuleEvaluation: {
+            findFirst: findFirstEvaluation,
+            updateMany: updateManyEvaluation,
+            update: updateEvaluation,
+          },
+        })
     );
 
     const repository = Object.create(
@@ -1023,7 +1048,13 @@ describe('PostRulesExecutionRepository claim state machine', () => {
     );
 
     await expect(
-      repository.claimEvaluation('org-1', 'run-1', 0, now, POST_RULE_STALE_CLAIM_MS)
+      repository.claimEvaluation(
+        'org-1',
+        'run-1',
+        0,
+        now,
+        POST_RULE_STALE_CLAIM_MS
+      )
     ).resolves.toEqual({ outcome: 'BUSY' });
   });
 
@@ -1053,7 +1084,13 @@ describe('PostRulesExecutionRepository claim state machine', () => {
     updateManyEvaluation.mockResolvedValue({ count: 0 });
 
     await expect(
-      repository.claimEvaluation('org-1', 'run-1', 0, now, POST_RULE_STALE_CLAIM_MS)
+      repository.claimEvaluation(
+        'org-1',
+        'run-1',
+        0,
+        now,
+        POST_RULE_STALE_CLAIM_MS
+      )
     ).resolves.toEqual({ outcome: 'BUSY' });
   });
 
@@ -1070,7 +1107,13 @@ describe('PostRulesExecutionRepository claim state machine', () => {
     );
 
     await expect(
-      repository.claimEvaluation('org-1', 'run-1', 0, now, POST_RULE_STALE_CLAIM_MS)
+      repository.claimEvaluation(
+        'org-1',
+        'run-1',
+        0,
+        now,
+        POST_RULE_STALE_CLAIM_MS
+      )
     ).resolves.toEqual({
       outcome: 'REPLAYED',
       status: 'COMPLETED',
@@ -1108,7 +1151,13 @@ describe('PostRulesExecutionRepository claim state machine', () => {
     const { repository } = createRepository(null);
 
     await expect(
-      repository.claimEvaluation('org-1', 'run-1', 0, now, POST_RULE_STALE_CLAIM_MS)
+      repository.claimEvaluation(
+        'org-1',
+        'run-1',
+        0,
+        now,
+        POST_RULE_STALE_CLAIM_MS
+      )
     ).resolves.toEqual({ outcome: 'NOT_FOUND' });
   });
 });

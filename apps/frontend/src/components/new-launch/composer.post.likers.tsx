@@ -11,9 +11,7 @@ import SafeImage from '@gitroom/react/helpers/safe.image';
 
 const resolvePublishedPost = (
   posts: Post[] | undefined,
-  channels:
-    | { integration: string; posts: Post[] }[]
-    | undefined,
+  channels: { integration: string; posts: Post[] }[] | undefined,
   integrationId: string | undefined
 ): Post | undefined => {
   if (integrationId && channels?.length) {
@@ -42,12 +40,7 @@ export const ComposerPostLikers: FC = () => {
       existingData.channels,
       integration?.id
     );
-  }, [
-    current,
-    existingData.channels,
-    existingData.posts,
-    integration?.id,
-  ]);
+  }, [current, existingData.channels, existingData.posts, integration?.id]);
 
   const canLoad =
     publishedPost?.state === 'PUBLISHED' &&
@@ -78,7 +71,7 @@ export const ComposerPostLikers: FC = () => {
         </div>
       )}
 
-      {!isLoading && (error || data?.supported === true && data.error) && (
+      {!isLoading && (error || (data?.supported === true && data.error)) && (
         <div className="text-[13px] text-red-400 break-words">
           {data?.supported === true && data.error
             ? data.error

@@ -19,7 +19,7 @@ export class IntegrationRepository {
     private _mentions: PrismaRepository<'mentions'>,
     private _integrationNoticeRead: PrismaRepository<'integrationNoticeRead'>,
     private _contextDocument: PrismaRepository<'contextDocument'>
-  ) { }
+  ) {}
 
   getMentions(platform: string, q: string) {
     return this._mentions.model.mentions.findMany({
@@ -283,12 +283,12 @@ export class IntegrationRepository {
   async createOrUpdateIntegration(
     additionalSettings:
       | {
-        title: string;
-        description: string;
-        type: 'checkbox' | 'text' | 'textarea';
-        value: any;
-        regex?: string;
-      }[]
+          title: string;
+          description: string;
+          type: 'checkbox' | 'text' | 'textarea';
+          value: any;
+          regex?: string;
+        }[]
       | undefined,
     oneTimeToken: boolean,
     org: string,
@@ -308,12 +308,12 @@ export class IntegrationRepository {
   ) {
     const postTimes = timezone
       ? {
-        postingTimes: JSON.stringify([
-          { time: 560 - timezone },
-          { time: 850 - timezone },
-          { time: 1140 - timezone },
-        ]),
-      }
+          postingTimes: JSON.stringify([
+            { time: 560 - timezone },
+            { time: 850 - timezone },
+            { time: 1140 - timezone },
+          ]),
+        }
       : {};
     const upsert = await this._integration.model.integration.upsert({
       where: {
@@ -352,8 +352,8 @@ export class IntegrationRepository {
         type: type as any,
         ...(!refresh
           ? {
-            inBetweenSteps: isBetweenSteps,
-          }
+              inBetweenSteps: isBetweenSteps,
+            }
           : {}),
         ...(picture ? { picture } : {}),
         profile: username,
@@ -481,7 +481,11 @@ export class IntegrationRepository {
     return result.count > 0;
   }
 
-  async updateUtmParams(orgId: string, integrationId: string, utmParams: string | null) {
+  async updateUtmParams(
+    orgId: string,
+    integrationId: string,
+    utmParams: string | null
+  ) {
     const result = await this._integration.model.integration.updateMany({
       where: {
         id: integrationId,
@@ -551,18 +555,18 @@ export class IntegrationRepository {
     const customer = !name
       ? undefined
       : (await this._customers.model.customer.findFirst({
-        where: {
-          orgId: org,
-          name,
-        },
-      })) ||
-      (await this._customers.model.customer.create({
-        data: {
-          name,
-          orgId: org,
-          position: await this.nextCustomerPosition(org),
-        },
-      }));
+          where: {
+            orgId: org,
+            name,
+          },
+        })) ||
+        (await this._customers.model.customer.create({
+          data: {
+            name,
+            orgId: org,
+            position: await this.nextCustomerPosition(org),
+          },
+        }));
 
     return this._integration.model.integration.update({
       where: {
@@ -573,10 +577,10 @@ export class IntegrationRepository {
         customer: !customer
           ? { disconnect: true }
           : {
-            connect: {
-              id: customer.id,
+              connect: {
+                id: customer.id,
+              },
             },
-          },
       },
     });
   }
@@ -589,17 +593,17 @@ export class IntegrationRepository {
       },
       data: !group
         ? {
-          customer: {
-            disconnect: true,
-          },
-        }
+            customer: {
+              disconnect: true,
+            },
+          }
         : {
-          customer: {
-            connect: {
-              id: group,
+            customer: {
+              connect: {
+                id: group,
+              },
             },
           },
-        },
     });
   }
 

@@ -87,8 +87,11 @@ export const Input = ({
   const attachMenuRef = useClickAway<HTMLDivElement>(() =>
     setAttachMenuOpen(false)
   );
-  const { data: skills = [], error: skillsError, isLoading: skillsLoading } =
-    useAgentSkills();
+  const {
+    data: skills = [],
+    error: skillsError,
+    isLoading: skillsLoading,
+  } = useAgentSkills();
 
   useEffect(() => {
     if (!attachMenuOpen) {
@@ -321,7 +324,9 @@ export const Input = ({
           value={text}
           role="combobox"
           aria-autocomplete="list"
-          aria-controls={showSuggestions ? 'agent-skill-suggestions' : undefined}
+          aria-controls={
+            showSuggestions ? 'agent-skill-suggestions' : undefined
+          }
           aria-expanded={showSuggestions}
           aria-activedescendant={
             showSuggestions && suggestions[activeSuggestion]

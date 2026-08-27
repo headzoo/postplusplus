@@ -77,7 +77,9 @@ export const useRuleAssignmentOptions = (
             identifier: integration.identifier,
             type: 'integration' as const,
             disabled: true,
-            disabledReason: `Provider does not support metrics: ${unsupportedMetrics.join(', ')}`,
+            disabledReason: `Provider does not support metrics: ${unsupportedMetrics.join(
+              ', '
+            )}`,
           };
         }
       }

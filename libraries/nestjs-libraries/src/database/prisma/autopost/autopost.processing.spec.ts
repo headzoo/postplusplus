@@ -100,7 +100,9 @@ describe('AutopostService feed processing', () => {
     const { service, repository, pipelineManager } = createService();
     pipelineManager.enqueue.mockRejectedValue(new Error('queue unavailable'));
 
-    await expect(service.startAutopost('feed')).rejects.toThrow('queue unavailable');
+    await expect(service.startAutopost('feed')).rejects.toThrow(
+      'queue unavailable'
+    );
 
     expect(repository.updateUrl).not.toHaveBeenCalled();
   });
@@ -148,7 +150,11 @@ describe('AutopostService feed processing', () => {
     ['inactive feed', { ...pipelineFeed, active: false }, pipeline],
     ['deleted feed', null, pipeline],
     ['missing Pipeline', pipelineFeed, null],
-    ['Pipeline without enabled integrations', pipelineFeed, { ...pipeline, integrations: [] }],
+    [
+      'Pipeline without enabled integrations',
+      pipelineFeed,
+      { ...pipeline, integrations: [] },
+    ],
   ])('does nothing for a %s', async (_reason, feed, feedPipeline) => {
     const { service, repository, pipelineManager } = createService(feed);
     repository.getPipeline.mockResolvedValue(feedPipeline);
@@ -165,7 +171,8 @@ describe('AutopostService feed processing', () => {
       pipelineId: null,
       integrations: JSON.stringify([{ id: 'linkedin' }]),
     };
-    const { service, repository, posts, pipelineManager } = createService(globalFeed);
+    const { service, repository, posts, pipelineManager } =
+      createService(globalFeed);
     (service as any)._integrationService.getIntegrationsList.mockResolvedValue([
       pipeline.integrations[0].integration,
     ]);

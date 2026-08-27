@@ -1,6 +1,10 @@
 import * as Sentry from '@sentry/nextjs';
 
-export const initializeSentryBasic = (environment: string, dsn: string, extension: any) => {
+export const initializeSentryBasic = (
+  environment: string,
+  dsn: string,
+  extension: any
+) => {
   if (!dsn) {
     return;
   }
@@ -30,7 +34,9 @@ export const initializeSentryBasic = (environment: string, dsn: string, extensio
         },
       },
       integrations: [
-        Sentry.consoleLoggingIntegration({ levels: ['log', 'info', 'warn', 'error', 'debug', 'assert', 'trace'] }),
+        Sentry.consoleLoggingIntegration({
+          levels: ['log', 'info', 'warn', 'error', 'debug', 'assert', 'trace'],
+        }),
       ],
       environment: environment || 'development',
       spotlight: process.env.SENTRY_SPOTLIGHT === '1',
@@ -69,7 +75,10 @@ export const initializeSentryBasic = (environment: string, dsn: string, extensio
                 })
                 .catch((importErr) => {
                   // eslint-disable-next-line no-console
-                  console.error('Failed to import @sentry/react for report dialog:', importErr);
+                  console.error(
+                    'Failed to import @sentry/react for report dialog:',
+                    importErr
+                  );
                 });
             }
           }

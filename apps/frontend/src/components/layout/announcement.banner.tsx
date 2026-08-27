@@ -27,13 +27,17 @@ const colorStyles: Record<AnnouncementColor, { bg: string; hover: string }> = {
 
 const useAnnouncements = () => {
   const fetch = useFetch();
-  return useSWR<Announcement[]>('/announcements', async () => {
-    return (await fetch('/announcements')).json();
-  }, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    revalidateIfStale: false,
-  });
+  return useSWR<Announcement[]>(
+    '/announcements',
+    async () => {
+      return (await fetch('/announcements')).json();
+    },
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      revalidateIfStale: false,
+    }
+  );
 };
 
 const AnnouncementDetailModal: FC<{

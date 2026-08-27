@@ -208,29 +208,32 @@ describe('Posts repository scheduling regressions', () => {
   it.each([
     ['draft', true, 'DRAFT'],
     ['manual schedule', false, 'QUEUE'],
-  ])('preserves %s state transitions when changing dates', async (_, isDraft, state) => {
-    const update = jest.fn().mockResolvedValue({});
-    const posts = repository({ update });
+  ])(
+    'preserves %s state transitions when changing dates',
+    async (_, isDraft, state) => {
+      const update = jest.fn().mockResolvedValue({});
+      const posts = repository({ update });
 
-    await posts.changeDate(
-      'org',
-      'post',
-      '2026-08-10T12:00:00.000Z',
-      isDraft,
-      'schedule'
-    );
+      await posts.changeDate(
+        'org',
+        'post',
+        '2026-08-10T12:00:00.000Z',
+        isDraft,
+        'schedule'
+      );
 
-    expect(update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { organizationId: 'org', id: 'post' },
-        data: expect.objectContaining({
-          state,
-          releaseId: null,
-          releaseURL: null,
-        }),
-      })
-    );
-  });
+      expect(update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { organizationId: 'org', id: 'post' },
+          data: expect.objectContaining({
+            state,
+            releaseId: null,
+            releaseURL: null,
+          }),
+        })
+      );
+    }
+  );
 
   it('retains group/thread relationships when listing a post group', async () => {
     const findMany = jest.fn().mockResolvedValue([]);
@@ -251,7 +254,8 @@ describe('Posts repository scheduling regressions', () => {
   });
 
   it('imports platform posts once per release id and marks platform deletes', async () => {
-    const findFirst = jest.fn()
+    const findFirst = jest
+      .fn()
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce({ id: 'existing' });
     const create = jest.fn().mockResolvedValue({ id: 'imported' });
@@ -320,7 +324,11 @@ describe('Posts repository scheduling regressions', () => {
     const updateMany = jest.fn().mockResolvedValue({ count: 1 });
     const posts = repository({ update, updateMany });
 
-    await posts.updatePost('local', 'tweet-1', 'https://x.com/i/status/tweet-1');
+    await posts.updatePost(
+      'local',
+      'tweet-1',
+      'https://x.com/i/status/tweet-1'
+    );
 
     expect(update).toHaveBeenCalledWith({
       where: { id: 'local' },

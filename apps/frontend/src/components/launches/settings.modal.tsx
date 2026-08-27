@@ -16,7 +16,10 @@ const CONTEXT_DOCUMENTS_ACCENT = {
   well: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
 };
 
-export const CONNECTION_ADDITIONAL_SETTING_TITLES = new Set(['Premium', 'Verified']);
+export const CONNECTION_ADDITIONAL_SETTING_TITLES = new Set([
+  'Premium',
+  'Verified',
+]);
 
 export const isConnectionAdditionalSetting = (setting: { title?: string }) =>
   CONNECTION_ADDITIONAL_SETTING_TITLES.has(setting?.title ?? '');

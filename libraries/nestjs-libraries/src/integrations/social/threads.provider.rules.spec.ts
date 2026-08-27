@@ -224,11 +224,10 @@ describe('ThreadsProvider PostRules Capability', () => {
       (global.fetch as jest.Mock) = mockFetch;
       provider['fetch'] = mockFetch;
 
-      const result = await provider.autoPlugPost(
-        mockIntegration,
-        'thread123',
-        { likesAmount: '50', post: 'Check this out!' }
-      );
+      const result = await provider.autoPlugPost(mockIntegration, 'thread123', {
+        likesAmount: '50',
+        post: 'Check this out!',
+      });
 
       expect(result).toBe(true);
     });

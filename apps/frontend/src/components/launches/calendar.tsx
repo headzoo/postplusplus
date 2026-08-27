@@ -211,8 +211,7 @@ const usePostActions = (onMutate?: () => void) => {
       };
 
       const data = await (await fetch(`/posts/group/${post.group}`)).json();
-      const clickedIntegrationId =
-        post.integration?.id || data.integration;
+      const clickedIntegrationId = post.integration?.id || data.integration;
       const postIntegrationId = (item: any) =>
         item.integrationId || item.integration?.id;
       const parseSettings = (settings: unknown) => {
@@ -257,8 +256,8 @@ const usePostActions = (onMutate?: () => void) => {
       const publishDate = dayjs
         .utc(
           date ||
-          focusedChannel?.posts?.[0]?.publishDate ||
-          data.posts[0].publishDate
+            focusedChannel?.posts?.[0]?.publishDate ||
+            data.posts[0].publishDate
         )
         .local();
       const ExistingData = !isDuplicate
@@ -286,14 +285,14 @@ const usePostActions = (onMutate?: () => void) => {
             <AddEditModal
               {...(isDuplicate
                 ? {
-                  onlyValues: (focusedChannel?.posts || []).map(
-                    ({ image, settings, content }: any) => ({
-                      image,
-                      settings,
-                      content,
-                    })
-                  ),
-                }
+                    onlyValues: (focusedChannel?.posts || []).map(
+                      ({ image, settings, content }: any) => ({
+                        image,
+                        settings,
+                        content,
+                      })
+                    ),
+                  }
                 : {})}
               allIntegrations={integrations.map((p) => ({ ...p }))}
               reopenModal={editPost(post)}
@@ -303,8 +302,8 @@ const usePostActions = (onMutate?: () => void) => {
                 isDuplicate
                   ? integrations
                   : channelIntegrations.length
-                    ? channelIntegrations
-                    : integrations
+                  ? channelIntegrations
+                  : integrations
                       .slice(0)
                       .filter((f) => f.id === clickedIntegrationId)
               }
@@ -388,16 +387,20 @@ const usePostActions = (onMutate?: () => void) => {
         classNames: {
           modal: 'w-[100%] max-w-[800px]',
         },
-        children: (
-          <MissingReleaseModal postId={id} onSuccess={mutate} />
-        ),
+        children: <MissingReleaseModal postId={id} onSuccess={mutate} />,
         size: '60%',
       });
     },
     [modal, t, mutate]
   );
 
-  return { editPost, deletePost, copyDebugJson, openStatistics, openMissingRelease };
+  return {
+    editPost,
+    deletePost,
+    copyDebugJson,
+    openStatistics,
+    openMissingRelease,
+  };
 };
 
 export const DayView = () => {
@@ -496,9 +499,7 @@ const WeekCurrentTimeLine: FC<{
     }
 
     const updateTop = () => {
-      setTopPx(
-        getHourBlockTop(container, now.hour(), minuteFraction, dateKey)
-      );
+      setTopPx(getHourBlockTop(container, now.hour(), minuteFraction, dateKey));
     };
 
     updateTop();
@@ -653,7 +654,7 @@ export const WeekView = () => {
                 className={clsx(
                   'text-[14px] font-[600] flex items-center justify-center gap-[6px]',
                   day.day === newDayjs().format('L') &&
-                  'text-newTableTextFocused'
+                    'text-newTableTextFocused'
                 )}
               >
                 {day.day === newDayjs().format('L') && (
@@ -781,15 +782,21 @@ export const ListView = () => {
   const emptyMessage = trimmedSearch
     ? t('no_posts_match_search', 'No posts match your search')
     : listState === 'scheduled'
-      ? t('no_upcoming_posts', 'No upcoming posts scheduled')
-      : listState === 'draft'
-        ? t('no_draft_posts', 'No draft posts')
-        : listState === 'published'
-          ? t('no_published_posts', 'No published posts')
-          : t('no_posts', 'No posts');
+    ? t('no_upcoming_posts', 'No upcoming posts scheduled')
+    : listState === 'draft'
+    ? t('no_draft_posts', 'No draft posts')
+    : listState === 'published'
+    ? t('no_published_posts', 'No published posts')
+    : t('no_posts', 'No posts');
 
   // Use shared post actions hook
-  const { editPost, deletePost, copyDebugJson, openStatistics, openMissingRelease } = usePostActions();
+  const {
+    editPost,
+    deletePost,
+    copyDebugJson,
+    openStatistics,
+    openMissingRelease,
+  } = usePostActions();
 
   // Group posts by date, then stack same-group posts that share a minute.
   const groupedPosts = useMemo(() => {
@@ -836,7 +843,9 @@ export const ListView = () => {
         {groupedPosts.map(([dateKey, datePosts]) => (
           <Fragment key={dateKey}>
             <div className="text-center text-[14px] min-h-[21px] text-textColor font-[500] mt-[10px] px-[10px] max-w-full">
-              {newDayjs(dateKey).format(isUSCitizen() ? 'dddd, MMMM D, YYYY' : 'dddd, D MMMM YYYY')}
+              {newDayjs(dateKey).format(
+                isUSCitizen() ? 'dddd, MMMM D, YYYY' : 'dddd, D MMMM YYYY'
+              )}
             </div>
             <div className="flex flex-col gap-[10px] mb-[20px] px-[10px] mx-auto w-full max-w-[600px] min-w-0 box-border">
               {datePosts.map((entry) => {
@@ -912,8 +921,17 @@ export const CalendarColumn: FC<{
   const fetch = useFetch();
 
   // Use shared post actions hook
-  const { editPost, deletePost, copyDebugJson, openStatistics, openMissingRelease } = usePostActions();
-  const postList = useMemo(() => getCellPosts(getDate), [getCellPosts, getDate]);
+  const {
+    editPost,
+    deletePost,
+    copyDebugJson,
+    openStatistics,
+    openMissingRelease,
+  } = usePostActions();
+  const postList = useMemo(
+    () => getCellPosts(getDate),
+    [getCellPosts, getDate]
+  );
   const cellEntries = useMemo(
     () => groupPostsInCell(postList as CalendarItemPost[]),
     [postList]
@@ -956,171 +974,178 @@ export const CalendarColumn: FC<{
     };
   }, []);
 
-  const [{ canDrop }, drop] = useDrop(() => ({
-    accept: 'post',
-    drop: async (item: any) => {
-      if (isBeforeNow) return;
+  const [{ canDrop }, drop] = useDrop(
+    () => ({
+      accept: 'post',
+      drop: async (item: any) => {
+        if (isBeforeNow) return;
 
-      const postIds: string[] =
-        item.postIds?.length > 0 ? item.postIds : [item.id];
+        const postIds: string[] =
+          item.postIds?.length > 0 ? item.postIds : [item.id];
 
-      // Projected Pipeline items have a dynamic (unsaved) date. Dropping one on
-      // an exact slot pins it to that time via the existing manual-schedule
-      // action, which detaches the whole group from the Pipeline queue.
-      if (item.pipelineItemId) {
-        changeDate(postIds, getDate);
-        const { status } = await fetch(
-          `/pipelines/items/${item.pipelineItemId}/schedule`,
-          {
-            method: 'POST',
-            body: JSON.stringify({
-              date: getDate.utc().format(),
-            }),
+        // Projected Pipeline items have a dynamic (unsaved) date. Dropping one on
+        // an exact slot pins it to that time via the existing manual-schedule
+        // action, which detaches the whole group from the Pipeline queue.
+        if (item.pipelineItemId) {
+          changeDate(postIds, getDate);
+          const { status } = await fetch(
+            `/pipelines/items/${item.pipelineItemId}/schedule`,
+            {
+              method: 'POST',
+              body: JSON.stringify({
+                date: getDate.utc().format(),
+              }),
+            }
+          );
+          if (status !== 500) {
+            reloadCalendarView();
           }
-        );
-        if (status !== 500) {
-          reloadCalendarView();
-        }
-        return;
-      }
-
-      // Find the post to check its state
-      const post = posts.find((p) => p.id === item.id);
-      let action: 'schedule' | 'update' = 'schedule';
-
-      // Check if post is already published or queued in the past
-      if (
-        post &&
-        (post.state === 'PUBLISHED' ||
-          (post.state === 'QUEUE' && dayjs().isAfter(dayjs.utc(post.publishDate))))
-      ) {
-        const whatToDo = await new Promise<'schedule' | 'update' | 'cancel'>(
-          (resolve) => {
-            modal.openModal({
-              title: t('what_do_you_want_to_do', 'What do you want to do?'),
-              children: (
-                <div className="flex flex-col">
-                  <div className="text-[20px] mb-[20px]">
-                    {t(
-                      'post_already_published_republish_warning',
-                      'This post was already published. Republishing will publish it again to'
-                    )}{' '}
-                    {post.integration?.name}{' '}
-                    {t('republish_at', 'at')} {getDate.format('DD/MM/YYYY HH:mm')}.
-                    {(!!item.interval || !!post.intervalInDays) && (
-                      <div className="mt-[10px]">
-                        {t(
-                          'republish_recurring_note',
-                          'This is a recurring post: your changes apply to all future recurrences starting now.'
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex w-full gap-[10px]">
-                    <div className="flex-1 flex">
-                      <Button
-                        type="button"
-                        className="flex-1"
-                        onClick={() => {
-                          modal.closeAll();
-                          resolve('update');
-                        }}
-                      >
-                        {t('just_update_post_details', 'Just update the post details')}
-                      </Button>
-                    </div>
-                    <div className="flex-1 flex">
-                      <Button
-                        type="button"
-                        className="flex-1"
-                        onClick={() => {
-                          modal.closeAll();
-                          resolve('schedule');
-                        }}
-                      >
-                        {t('reschedule_post', 'Reschedule the post')}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ),
-              onClose: () => resolve('cancel'),
-            });
-          }
-        );
-
-        if (whatToDo === 'cancel') {
           return;
         }
-        action = whatToDo;
-      }
 
-      const primaryDate = post
-        ? newDayjs(post.publishDate)
-        : getDate;
-      const delta = getDate.diff(primaryDate);
-      const nextDates = postIds.map((postId) => {
-        const source = posts.find((p) => p.id === postId);
-        return source
-          ? newDayjs(source.publishDate).add(delta, 'millisecond')
-          : getDate;
-      });
+        // Find the post to check its state
+        const post = posts.find((p) => p.id === item.id);
+        let action: 'schedule' | 'update' = 'schedule';
 
-      if (!item.interval) {
-        changeDate(postIds, getDate);
-      }
+        // Check if post is already published or queued in the past
+        if (
+          post &&
+          (post.state === 'PUBLISHED' ||
+            (post.state === 'QUEUE' &&
+              dayjs().isAfter(dayjs.utc(post.publishDate))))
+        ) {
+          const whatToDo = await new Promise<'schedule' | 'update' | 'cancel'>(
+            (resolve) => {
+              modal.openModal({
+                title: t('what_do_you_want_to_do', 'What do you want to do?'),
+                children: (
+                  <div className="flex flex-col">
+                    <div className="text-[20px] mb-[20px]">
+                      {t(
+                        'post_already_published_republish_warning',
+                        'This post was already published. Republishing will publish it again to'
+                      )}{' '}
+                      {post.integration?.name} {t('republish_at', 'at')}{' '}
+                      {getDate.format('DD/MM/YYYY HH:mm')}.
+                      {(!!item.interval || !!post.intervalInDays) && (
+                        <div className="mt-[10px]">
+                          {t(
+                            'republish_recurring_note',
+                            'This is a recurring post: your changes apply to all future recurrences starting now.'
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex w-full gap-[10px]">
+                      <div className="flex-1 flex">
+                        <Button
+                          type="button"
+                          className="flex-1"
+                          onClick={() => {
+                            modal.closeAll();
+                            resolve('update');
+                          }}
+                        >
+                          {t(
+                            'just_update_post_details',
+                            'Just update the post details'
+                          )}
+                        </Button>
+                      </div>
+                      <div className="flex-1 flex">
+                        <Button
+                          type="button"
+                          className="flex-1"
+                          onClick={() => {
+                            modal.closeAll();
+                            resolve('schedule');
+                          }}
+                        >
+                          {t('reschedule_post', 'Reschedule the post')}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ),
+                onClose: () => resolve('cancel'),
+              });
+            }
+          );
 
-      const results = await Promise.all(
-        postIds.map((postId, index) =>
-          fetch(`/posts/${postId}/date`, {
-            method: 'PUT',
-            body: JSON.stringify({
-              date: nextDates[index].utc().format('YYYY-MM-DDTHH:mm:ss'),
-              action,
-              // published posts always confirm via the modal before reaching here;
-              // for QUEUE posts the flag is a no-op on the server
-              ...(action === 'schedule' ? { republish: true } : {}),
-            }),
-          })
-        )
-      );
-      if (results.every((response) => response.status !== 500)) {
-        if (item.interval || action === 'schedule') {
-          reloadCalendarView();
+          if (whatToDo === 'cancel') {
+            return;
+          }
+          action = whatToDo;
         }
-      }
-    },
-    collect: (monitor) => ({
-      canDrop: isBeforeNow ? false : !!monitor.canDrop() && !!monitor.isOver(),
+
+        const primaryDate = post ? newDayjs(post.publishDate) : getDate;
+        const delta = getDate.diff(primaryDate);
+        const nextDates = postIds.map((postId) => {
+          const source = posts.find((p) => p.id === postId);
+          return source
+            ? newDayjs(source.publishDate).add(delta, 'millisecond')
+            : getDate;
+        });
+
+        if (!item.interval) {
+          changeDate(postIds, getDate);
+        }
+
+        const results = await Promise.all(
+          postIds.map((postId, index) =>
+            fetch(`/posts/${postId}/date`, {
+              method: 'PUT',
+              body: JSON.stringify({
+                date: nextDates[index].utc().format('YYYY-MM-DDTHH:mm:ss'),
+                action,
+                // published posts always confirm via the modal before reaching here;
+                // for QUEUE posts the flag is a no-op on the server
+                ...(action === 'schedule' ? { republish: true } : {}),
+              }),
+            })
+          )
+        );
+        if (results.every((response) => response.status !== 500)) {
+          if (item.interval || action === 'schedule') {
+            reloadCalendarView();
+          }
+        }
+      },
+      collect: (monitor) => ({
+        canDrop: isBeforeNow
+          ? false
+          : !!monitor.canDrop() && !!monitor.isOver(),
+      }),
     }),
-  }), [posts]);
+    [posts]
+  );
 
   const addModal = useCallback(async () => {
     const set: any = !sets.length
       ? undefined
       : await new Promise((resolve) => {
-        modal.openModal({
-          title: t('select_set', 'Select a Set'),
-          closeOnClickOutside: true,
-          askClose: false,
-          closeOnEscape: true,
-          withCloseButton: true,
-          onClose: () => resolve('exit'),
-          children: (
-            <SetSelectionModal
-              sets={sets}
-              onSelect={(selectedSet) => {
-                resolve(selectedSet);
-                modal.closeAll();
-              }}
-              onContinueWithoutSet={() => {
-                resolve(undefined);
-                modal.closeAll();
-              }}
-            />
-          ),
+          modal.openModal({
+            title: t('select_set', 'Select a Set'),
+            closeOnClickOutside: true,
+            askClose: false,
+            closeOnEscape: true,
+            withCloseButton: true,
+            onClose: () => resolve('exit'),
+            children: (
+              <SetSelectionModal
+                sets={sets}
+                onSelect={(selectedSet) => {
+                  resolve(selectedSet);
+                  modal.closeAll();
+                }}
+                onContinueWithoutSet={() => {
+                  resolve(undefined);
+                  modal.closeAll();
+                }}
+              />
+            ),
+          });
         });
-      });
 
     if (set === 'exit') return;
 
@@ -1137,20 +1162,20 @@ export const CalendarColumn: FC<{
           mutate={reloadCalendarView}
           {...(signature?.id && !set
             ? {
-              onlyValues: [
-                {
-                  content: '\n' + signature.content,
-                },
-              ],
-            }
+                onlyValues: [
+                  {
+                    content: '\n' + signature.content,
+                  },
+                ],
+              }
             : {})}
           date={
             randomHour
               ? getDate.hour(Math.floor(Math.random() * 24))
               : getDate.format('YYYY-MM-DDTHH:mm:ss') ===
                 newDayjs().startOf('hour').format('YYYY-MM-DDTHH:mm:ss')
-                ? newDayjs().add(10, 'minute')
-                : getDate
+              ? newDayjs().add(10, 'minute')
+              : getDate
           }
           {...(set?.content ? { set: JSON.parse(set.content) } : {})}
           reopenModal={() => ({})}
@@ -1252,8 +1277,8 @@ export const CalendarColumn: FC<{
                 display === ('month' as any)
                   ? 'flex-1 min-h-[40px] w-full'
                   : !postList.length
-                    ? 'min-h-full w-full p-[5px]'
-                    : 'min-h-[40px] w-full',
+                  ? 'min-h-full w-full p-[5px]'
+                  : 'min-h-[40px] w-full',
                 'flex items-center justify-center cursor-pointer pb-[2.5px]'
               )}
             >
@@ -1273,10 +1298,7 @@ export const CalendarColumn: FC<{
                   className={`w-full h-full rounded-[10px] py-[10px] flex-wrap hover:border hover:border-seventh flex justify-center items-center gap-[20px] opacity-30 grayscale hover:grayscale-0 hover:opacity-100`}
                 >
                   {integrations.map((integration) => (
-                    <div
-                      className="relative"
-                      key={integration.id}
-                    >
+                    <div className="relative" key={integration.id}>
                       <div
                         className={clsx(
                           'relative w-[34px] h-[34px] rounded-[8px] flex justify-center items-center filter transition-all duration-500'
@@ -1411,10 +1433,7 @@ const StackedCalendarItem: FC<{
   }, [expanded]);
   const primary = pickPrimaryPost(posts);
   // Wallet order: peeks on top (behind), full card at the bottom (front).
-  const ordered = [
-    ...posts.filter((post) => post.id !== primary.id),
-    primary,
-  ];
+  const ordered = [...posts.filter((post) => post.id !== primary.id), primary];
   const hasError = posts.some((item) => item.state === 'ERROR');
   const errorMessage = posts
     .filter((item) => item.state === 'ERROR' && item.error)
@@ -1498,11 +1517,7 @@ const StackedCalendarItem: FC<{
               style={{
                 zIndex: index + 1,
                 maxHeight: isPeek ? STACK_PEEK_PX : STACK_EXPAND_MAX_PX,
-                marginBottom: isPeek
-                  ? -10
-                  : isFront
-                    ? 0
-                    : 5,
+                marginBottom: isPeek ? -10 : isFront ? 0 : 5,
               }}
             >
               <CalendarItem
@@ -1512,17 +1527,11 @@ const StackedCalendarItem: FC<{
                 integrations={integrations}
                 showTime={showTime}
                 editPost={expanded ? openEdit(post, false) : expandStack}
-                duplicatePost={
-                  expanded ? openEdit(post, true) : duplicatePost
-                }
+                duplicatePost={expanded ? openEdit(post, true) : duplicatePost}
                 deletePost={expanded ? deletePost(post) : _deletePost}
-                statistics={
-                  expanded ? openStatistics(post.id) : statistics
-                }
+                statistics={expanded ? openStatistics(post.id) : statistics}
                 missingRelease={
-                  expanded
-                    ? openMissingRelease(post.id)
-                    : missingRelease
+                  expanded ? openMissingRelease(post.id) : missingRelease
                 }
                 copyDebugJson={
                   expanded
@@ -1748,16 +1757,22 @@ const CalendarItem: FC<{
           className={clsx(
             'flex items-center gap-[8px] h-[15px] min-w-0 max-w-full invisible opacity-0 pointer-events-none',
             !hideActions &&
-            'group-hover:visible group-hover:opacity-100 group-hover:pointer-events-auto'
+              'group-hover:visible group-hover:opacity-100 group-hover:pointer-events-auto'
           )}
           onClick={(event) => event.stopPropagation()}
         >
           {copyDebugJson && (
-            <div className="hover:underline cursor-pointer" onClick={copyDebugJson}>
+            <div
+              className="hover:underline cursor-pointer"
+              onClick={copyDebugJson}
+            >
               <CopyDebug />
             </div>
           )}
-          <div className="hover:underline cursor-pointer" onClick={duplicatePost}>
+          <div
+            className="hover:underline cursor-pointer"
+            onClick={duplicatePost}
+          >
             <Duplicate />
           </div>
           {canOpenPublished ? (
@@ -1781,7 +1796,10 @@ const CalendarItem: FC<{
                 <Statistics />
               </div>
             ) : post.releaseId !== 'missing' ? (
-              <div className="hover:underline cursor-pointer" onClick={statistics}>
+              <div
+                className="hover:underline cursor-pointer"
+                onClick={statistics}
+              >
                 <Statistics />
               </div>
             ) : null)}
@@ -1801,10 +1819,7 @@ const DebugJsonModal: FC<{ post: any }> = ({ post }) => {
 
   const copyPostId = useCallback(() => {
     copy(post.id);
-    toaster.show(
-      t('post_id_copied', 'Post ID copied to clipboard'),
-      'success'
-    );
+    toaster.show(t('post_id_copied', 'Post ID copied to clipboard'), 'success');
     closeCurrent();
   }, [post, toaster, t, closeCurrent]);
 

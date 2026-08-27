@@ -51,12 +51,13 @@ export const MetricDayAnalyticsComponent: FC = () => {
     [integrationId, integrations]
   );
 
-  const {
-    data,
-    error,
-    isLoading,
-    isValidating,
-  } = useMetricDayAnalytics(integrationId, metric, date, page, METRIC_DAY_PAGE_SIZE);
+  const { data, error, isLoading, isValidating } = useMetricDayAnalytics(
+    integrationId,
+    metric,
+    date,
+    page,
+    METRIC_DAY_PAGE_SIZE
+  );
 
   useEffect(() => {
     setPage(0);
@@ -86,8 +87,7 @@ export const MetricDayAnalyticsComponent: FC = () => {
     data == null
       ? null
       : formatAnalyticsValue(data.matchedPostDeltaTotal, displayUnit);
-  const hasMore =
-    !!data && (page + 1) * METRIC_DAY_PAGE_SIZE < data.total;
+  const hasMore = !!data && (page + 1) * METRIC_DAY_PAGE_SIZE < data.total;
   const loading = integrationsLoading || (isLoading && page === 0);
 
   if (loading) {
@@ -143,7 +143,8 @@ export const MetricDayAnalyticsComponent: FC = () => {
               </div>
               {matchedTotal != null && data && data.total > 0 && (
                 <div className="mt-[4px] text-[12px] text-newTableText/70">
-                  {t('matched_posts_total', 'Matched posts total')}: {matchedTotal}
+                  {t('matched_posts_total', 'Matched posts total')}:{' '}
+                  {matchedTotal}
                 </div>
               )}
             </div>

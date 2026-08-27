@@ -212,7 +212,8 @@ const HeygenProviderComponent = () => {
                   form.setValue('avatar', id);
                   form.setValue(
                     'type',
-                    data?.find((p: any) => p.id === id || p.avatar_id === id)?.id
+                    data?.find((p: any) => p.id === id || p.avatar_id === id)
+                      ?.id
                       ? 'talking_photo'
                       : 'avatar'
                   );

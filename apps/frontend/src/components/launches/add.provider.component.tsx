@@ -156,8 +156,8 @@ export const CustomVariables: FC<{
         ...acc,
         ...(item.defaultValue
           ? {
-            [item.key]: item.defaultValue,
-          }
+              [item.key]: item.defaultValue,
+            }
           : {}),
       }),
       {}
@@ -167,7 +167,8 @@ export const CustomVariables: FC<{
     async (data: FieldValues) => {
       const { url } = await (
         await fetch(
-          `/integrations/social/${identifier}${onboarding ? '?onboarding=true' : ''
+          `/integrations/social/${identifier}${
+            onboarding ? '?onboarding=true' : ''
           }`
         )
       ).json();
@@ -301,8 +302,8 @@ const ChromeExtensionWarning: FC<{
           We will store your cookies securely to facilitate the connection.
         </li>
         <li>
-          Post Plus Plus does not take responsibility for any issues arising or account
-          termination due to the use of this method.
+          Post Plus Plus does not take responsibility for any issues arising or
+          account termination due to the use of this method.
         </li>
       </ul>
       <div className="flex gap-[10px] mt-[8px]">
@@ -368,20 +369,20 @@ export const AddProviderComponent: FC<{
   const modal = useModals();
   const getSocialLink = useCallback(
     (
-      invite: boolean,
-      identifier: string,
-      isExternal: boolean,
-      isWeb3: boolean,
-      isChromeExtension?: boolean,
-      customFields?: Array<{
-        key: string;
-        label: string;
-        validation: string;
-        defaultValue?: string;
-        type: 'text' | 'password';
-        hint?: string;
-      }>
-    ) =>
+        invite: boolean,
+        identifier: string,
+        isExternal: boolean,
+        isWeb3: boolean,
+        isChromeExtension?: boolean,
+        customFields?: Array<{
+          key: string;
+          label: string;
+          validation: string;
+          defaultValue?: string;
+          type: 'text' | 'password';
+          hint?: string;
+        }>
+      ) =>
       async () => {
         const onboardingParam = onboarding ? 'onboarding=true' : '';
         const openWeb3 = async () => {
@@ -390,7 +391,8 @@ export const AddProviderComponent: FC<{
           )!;
           const { url } = await (
             await fetch(
-              `/integrations/social/${identifier}${onboarding ? '?onboarding=true' : ''
+              `/integrations/social/${identifier}${
+                onboarding ? '?onboarding=true' : ''
               }`
             )
           ).json();
@@ -407,8 +409,9 @@ export const AddProviderComponent: FC<{
               >
                 <Web3Providers
                   onComplete={(code, newState) => {
-                    window.location.href = `/integrations/social/${identifier}?code=${code}&state=${newState}${onboarding ? '&onboarding=true' : ''
-                      }`;
+                    window.location.href = `/integrations/social/${identifier}?code=${code}&state=${newState}${
+                      onboarding ? '&onboarding=true' : ''
+                    }`;
                   }}
                   nonce={url}
                 />
@@ -550,17 +553,18 @@ export const AddProviderComponent: FC<{
             if (!cookieResponse.success) {
               toaster.show(
                 cookieResponse.error ||
-                t(
-                  'extension_cookies_missing',
-                  'Could not get cookies. Please log in to the platform first.'
-                ),
+                  t(
+                    'extension_cookies_missing',
+                    'Could not get cookies. Please log in to the platform first.'
+                  ),
                 'warning'
               );
               return;
             }
             const { url } = await (
               await fetch(
-                `/integrations/social/${identifier}${onboarding ? '?onboarding=true' : ''
+                `/integrations/social/${identifier}${
+                  onboarding ? '?onboarding=true' : ''
                 }`
               )
             ).json();
@@ -628,7 +632,7 @@ export const AddProviderComponent: FC<{
           className={clsx(
             isMobile && 'gap-[20px] flex flex-col',
             !isMobile &&
-            'grid grid-cols-5 gap-[10px] justify-items-center justify-center',
+              'grid grid-cols-5 gap-[10px] justify-items-center justify-center',
             isMobile ? {} : onboarding ? 'grid-cols-9' : 'grid-cols-5'
           )}
         >
@@ -658,9 +662,9 @@ export const AddProviderComponent: FC<{
                 )}
                 {...(!!item.toolTip
                   ? {
-                    'data-tooltip-id': 'tooltip',
-                    'data-tooltip-content': item.toolTip,
-                  }
+                      'data-tooltip-id': 'tooltip',
+                      'data-tooltip-content': item.toolTip,
+                    }
                   : {})}
                 className={clsx(
                   isMobile
@@ -677,7 +681,7 @@ export const AddProviderComponent: FC<{
                       className={clsx(
                         'w-[32px] h-[32px]',
                         item.identifier !== 'google_my_business' &&
-                        'rounded-full'
+                          'rounded-full'
                       )}
                       src={`/icons/platforms/${item.identifier}.png`}
                     />

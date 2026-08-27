@@ -38,7 +38,11 @@ export function getChannelInteractionScore(
   kind: ChannelInteractionScoreKind,
   direction: ChannelInteractionScoreDirection
 ): number {
-  return getInteractionScore(growAudienceStrategy.getScoringProfile(), kind, direction);
+  return getInteractionScore(
+    growAudienceStrategy.getScoringProfile(),
+    kind,
+    direction
+  );
 }
 
 function assertRelationshipScores(
@@ -63,9 +67,7 @@ export function scoreToStars(rawScore: number) {
   if (!Number.isSafeInteger(rawScore) || rawScore < 0) {
     throw new RangeError('Relationship score must be a non-negative integer');
   }
-  return roundToHalf(
-    1 + 4 * Math.min(rawScore / RELATIONSHIP_SCORE_CAP, 1)
-  );
+  return roundToHalf(1 + 4 * Math.min(rawScore / RELATIONSHIP_SCORE_CAP, 1));
 }
 
 export function getRelationshipTriage(
@@ -139,7 +141,9 @@ export function applyPersonalRelationshipGrade(
     return grade;
   }
   if (!isPersonalRelationshipGrade(myGrade)) {
-    throw new RangeError('Personal grade must be a half-star value between 1 and 5');
+    throw new RangeError(
+      'Personal grade must be a half-star value between 1 and 5'
+    );
   }
   const base = grade == null ? 3 : grade;
   return Math.min(5, Math.max(1, Math.round((base + (myGrade - 3)) * 2) / 2));
@@ -230,8 +234,7 @@ function sparseProfileSignal(input: BotScoreInput) {
   const hasBio = hasText(input.bio, 10);
   const name = input.name?.trim().toLowerCase() ?? '';
   const username = input.username?.trim().toLowerCase().replace(/^@/, '') ?? '';
-  const nameLooksGeneric =
-    !name || (username.length > 0 && name === username);
+  const nameLooksGeneric = !name || (username.length > 0 && name === username);
   return !hasPicture && !hasBio && nameLooksGeneric ? 1 : 0;
 }
 
@@ -257,7 +260,10 @@ function followRatioContribution(input: BotScoreInput): {
 }
 
 function youngAccountMassFollowingSignal(input: BotScoreInput) {
-  if (!Number.isSafeInteger(input.followingCount) || input.followingCount! < 0) {
+  if (
+    !Number.isSafeInteger(input.followingCount) ||
+    input.followingCount! < 0
+  ) {
     return null;
   }
   const createdAt = parseAccountCreatedAt(input.accountCreatedAt);
@@ -292,10 +298,10 @@ function engagementSignal(input: BotScoreInput) {
   const hasRelationship =
     (Number.isSafeInteger(input.relationshipEffortScore) &&
       input.relationshipEffortScore! >=
-      RELATIONSHIP_MEANINGFUL_ACTIVITY_THRESHOLD) ||
+        RELATIONSHIP_MEANINGFUL_ACTIVITY_THRESHOLD) ||
     (Number.isSafeInteger(input.relationshipReciprocationScore) &&
       input.relationshipReciprocationScore! >=
-      RELATIONSHIP_MEANINGFUL_ACTIVITY_THRESHOLD);
+        RELATIONSHIP_MEANINGFUL_ACTIVITY_THRESHOLD);
   return hasInbound || hasNotes || hasLikes || hasRelationship ? 1 : 0;
 }
 
@@ -378,10 +384,10 @@ export function calculateBotGrade(input: BotScoreInput): BotScoreResult {
     confidence < BOT_CONFIDENCE_THRESHOLD
       ? null
       : botGrade >= 4
-        ? true
-        : botGrade <= 2
-          ? false
-          : null;
+      ? true
+      : botGrade <= 2
+      ? false
+      : null;
 
   return {
     botGrade,

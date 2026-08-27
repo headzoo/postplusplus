@@ -10,7 +10,7 @@ interface ListUserOrganizationsParams {
 
 @Injectable()
 export class AdminUsersRepository {
-  constructor(private _userOrg: PrismaRepository<'userOrganization'>) { }
+  constructor(private _userOrg: PrismaRepository<'userOrganization'>) {}
 
   private buildWhere(search?: string): Prisma.UserOrganizationWhereInput {
     const term = search?.trim();

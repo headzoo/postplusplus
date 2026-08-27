@@ -81,7 +81,15 @@ export const HelpContent = ({
     awaitingDeepLinkRef.current = false;
     setHistory([]);
     setStaleSlugNotice(true);
-  }, [open, initialized, manifest, isLoading, initialSlug, initialHash, history.length]);
+  }, [
+    open,
+    initialized,
+    manifest,
+    isLoading,
+    initialSlug,
+    initialHash,
+    history.length,
+  ]);
 
   useEffect(() => {
     if (!open || !initialized) {
@@ -90,7 +98,8 @@ export const HelpContent = ({
 
     if (awaitingDeepLinkRef.current) {
       const deepLinkApplied = initialSlug
-        ? current?.slug === initialSlug && current.hash === (initialHash || undefined)
+        ? current?.slug === initialSlug &&
+          current.hash === (initialHash || undefined)
         : !current;
       if (!deepLinkApplied) {
         return;
@@ -99,7 +108,10 @@ export const HelpContent = ({
       awaitingDeepLinkRef.current = false;
     }
 
-    if (initialSlug && appliedDeepLinkRef.current !== `${initialSlug}#${initialHash ?? ''}`) {
+    if (
+      initialSlug &&
+      appliedDeepLinkRef.current !== `${initialSlug}#${initialHash ?? ''}`
+    ) {
       return;
     }
 
@@ -157,7 +169,10 @@ export const HelpContent = ({
               {article?.title ?? 'Help topic'}
             </span>
           </div>
-          <div ref={scrollContainerRef} className="min-h-0 flex-1 overflow-y-auto p-4">
+          <div
+            ref={scrollContainerRef}
+            className="min-h-0 flex-1 overflow-y-auto p-4"
+          >
             {invalidFragment && (
               <p role="alert" className="mb-3 text-base text-textColor">
                 That section could not be found in this article.

@@ -16,7 +16,7 @@ const countFromPage = (page: { total?: number }) => page.total ?? null;
 
 @Injectable()
 export class FollowerStatisticsTool implements AgentToolInterface {
-  constructor(private _integrationService: IntegrationService) { }
+  constructor(private _integrationService: IntegrationService) {}
   name = 'summarizeFollowerAudience';
 
   run() {
@@ -27,7 +27,12 @@ export class FollowerStatisticsTool implements AgentToolInterface {
       inputSchema: z.object({
         channelId: z.string().min(1).max(64),
       }),
-      mcp: { annotations: { ...followerToolAnnotations, title: 'Summarize follower audience' } },
+      mcp: {
+        annotations: {
+          ...followerToolAnnotations,
+          title: 'Summarize follower audience',
+        },
+      },
       outputSchema: z.object({
         output: z.object({
           total: z.number().nullable(),
@@ -35,12 +40,21 @@ export class FollowerStatisticsTool implements AgentToolInterface {
           totalSource: z.enum(['snapshot', 'list']).nullable(),
           categories: z.record(z.string(), z.number().nullable()),
           tracking: z.any().nullable(),
-          lists: z.array(z.object({ id: z.string(), name: z.string(), total: z.number().nullable() })),
+          lists: z.array(
+            z.object({
+              id: z.string(),
+              name: z.string(),
+              total: z.number().nullable(),
+            })
+          ),
           listsTruncated: z.boolean(),
         }),
       }),
       execute: async (inputData, context) => {
-        const { organization, actor } = getFollowerToolContext(inputData, context);
+        const { organization, actor } = getFollowerToolContext(
+          inputData,
+          context
+        );
         const [all, stored, snapshot] = await Promise.all([
           this._integrationService.getFollowers(
             organization,
@@ -58,14 +72,13 @@ export class FollowerStatisticsTool implements AgentToolInterface {
         ]);
 
         const listTotal = countFromPage(all);
-        const total =
-          snapshot?.value ?? listTotal;
+        const total = snapshot?.value ?? listTotal;
         const totalSource =
           snapshot != null
             ? ('snapshot' as const)
             : listTotal != null
-              ? ('list' as const)
-              : null;
+            ? ('list' as const)
+            : null;
 
         return {
           output: {

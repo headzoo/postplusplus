@@ -540,7 +540,7 @@ export class ChannelInteractionRepository {
       'channelInteractionSubscription' | 'channelInteractionAuthorization'
     >,
     private _transaction: PrismaTransaction
-  ) {}
+  ) { }
 
   getInteractionAuthorization(organizationId: string, integrationId: string) {
     return this._subscription.model.channelInteractionAuthorization.findFirst({
@@ -622,11 +622,11 @@ export class ChannelInteractionRepository {
       });
       const priorMembership = event.membershipUpdate
         ? await this.findMembership(
-            tx,
-            organizationId,
-            integrationId,
-            event.counterparty.externalId
-          )
+          tx,
+          organizationId,
+          integrationId,
+          event.counterparty.externalId
+        )
         : null;
       await this.upsertAudienceMember(
         tx,
@@ -815,11 +815,11 @@ export class ChannelInteractionRepository {
       });
       const priorMembership = event.membershipUpdate
         ? await this.findMembership(
-            tx,
-            organizationId,
-            integrationId,
-            event.counterparty.externalId
-          )
+          tx,
+          organizationId,
+          integrationId,
+          event.counterparty.externalId
+        )
         : null;
       await this.upsertAudienceMember(
         tx,
@@ -1037,8 +1037,8 @@ export class ChannelInteractionRepository {
         const failureReason = subscription.reason
           ? subscription.reason.slice(0, 240)
           : subscription.failureCategory
-          ? this.failureReason(subscription.failureCategory)
-          : null;
+            ? this.failureReason(subscription.failureCategory)
+            : null;
         const remoteIdentifier =
           subscription.state === 'error'
             ? null
@@ -2284,7 +2284,7 @@ export class ChannelInteractionRepository {
   ): Prisma.ChannelAudienceMemberWhereInput {
     const staleBefore = new Date(
       now.getTime() -
-        (config ? config.staleDays * 24 * 60 * 60 * 1000 : CULTIVATE_STALE_MS)
+      (config ? config.staleDays * 24 * 60 * 60 * 1000 : CULTIVATE_STALE_MS)
     );
     return {
       membershipState: ChannelAudienceMembership.FOLLOWER,
@@ -2386,9 +2386,9 @@ export class ChannelInteractionRepository {
             now,
             params.warmGradeThreshold != null && params.staleDays != null
               ? {
-                  warmGradeThreshold: params.warmGradeThreshold,
-                  staleDays: params.staleDays,
-                }
+                warmGradeThreshold: params.warmGradeThreshold,
+                staleDays: params.staleDays,
+              }
               : undefined
           ),
         },
@@ -2993,18 +2993,18 @@ export class ChannelInteractionRepository {
           externalId: pick.counterpartyExternalId,
           member: pick.audienceMember
             ? {
-                externalId: pick.audienceMember.externalId,
-                username: pick.audienceMember.username,
-                membershipState: pick.audienceMember.membershipState,
-                ignoredAt: pick.audienceMember.ignoredAt,
-                isBot: pick.audienceMember.isBot,
-                relationshipTriage: pick.audienceMember.relationshipTriage,
-                relationshipReciprocationScore:
-                  pick.audienceMember.relationshipReciprocationScore,
-                relationshipEffortScore:
-                  pick.audienceMember.relationshipEffortScore,
-                triageIgnores: pick.audienceMember.triageIgnores,
-              }
+              externalId: pick.audienceMember.externalId,
+              username: pick.audienceMember.username,
+              membershipState: pick.audienceMember.membershipState,
+              ignoredAt: pick.audienceMember.ignoredAt,
+              isBot: pick.audienceMember.isBot,
+              relationshipTriage: pick.audienceMember.relationshipTriage,
+              relationshipReciprocationScore:
+                pick.audienceMember.relationshipReciprocationScore,
+              relationshipEffortScore:
+                pick.audienceMember.relationshipEffortScore,
+              triageIgnores: pick.audienceMember.triageIgnores,
+            }
             : null,
         })),
       });
@@ -3059,16 +3059,16 @@ export class ChannelInteractionRepository {
           externalId: pick.counterpartyExternalId,
           member: pick.audienceMember
             ? {
-                externalId: pick.audienceMember.externalId,
-                username: pick.audienceMember.username,
-                membershipState: pick.audienceMember.membershipState,
-                ignoredAt: pick.audienceMember.ignoredAt,
-                isBot: pick.audienceMember.isBot,
-                relationshipTriage: pick.audienceMember.relationshipTriage,
-                relationshipGrade: pick.audienceMember.relationshipGrade,
-                lastOutboundAt: pick.audienceMember.lastOutboundAt,
-                triageIgnores: pick.audienceMember.triageIgnores,
-              }
+              externalId: pick.audienceMember.externalId,
+              username: pick.audienceMember.username,
+              membershipState: pick.audienceMember.membershipState,
+              ignoredAt: pick.audienceMember.ignoredAt,
+              isBot: pick.audienceMember.isBot,
+              relationshipTriage: pick.audienceMember.relationshipTriage,
+              relationshipGrade: pick.audienceMember.relationshipGrade,
+              lastOutboundAt: pick.audienceMember.lastOutboundAt,
+              triageIgnores: pick.audienceMember.triageIgnores,
+            }
             : null,
         })),
       });
@@ -3099,37 +3099,37 @@ export class ChannelInteractionRepository {
       }
       const batch = query.hour
         ? await tx.channelAudienceHotPickBatch.findUnique({
+          where: {
+            organizationId_integrationId_hour: {
+              organizationId: query.organizationId,
+              integrationId: query.integrationId,
+              hour: query.hour,
+            },
+          },
+        })
+        : await (async () => {
+          const current = await tx.channelAudienceHotPickBatch.findUnique({
             where: {
               organizationId_integrationId_hour: {
                 organizationId: query.organizationId,
                 integrationId: query.integrationId,
-                hour: query.hour,
+                hour: currentHour,
               },
             },
-          })
-        : await (async () => {
-            const current = await tx.channelAudienceHotPickBatch.findUnique({
+          });
+          return (
+            current ??
+            (await tx.channelAudienceHotPickBatch.findUnique({
               where: {
                 organizationId_integrationId_hour: {
                   organizationId: query.organizationId,
                   integrationId: query.integrationId,
-                  hour: currentHour,
+                  hour: previousHour,
                 },
               },
-            });
-            return (
-              current ??
-              (await tx.channelAudienceHotPickBatch.findUnique({
-                where: {
-                  organizationId_integrationId_hour: {
-                    organizationId: query.organizationId,
-                    integrationId: query.integrationId,
-                    hour: previousHour,
-                  },
-                },
-              }))
-            );
-          })();
+            }))
+          );
+        })();
       if (
         !batch ||
         batch.strategyId !== query.strategyId ||
@@ -3155,16 +3155,16 @@ export class ChannelInteractionRepository {
           },
           ...(query.cursor
             ? {
-                OR: [
-                  { finalRank: { [comparison]: query.cursor.finalRank } },
-                  {
-                    finalRank: query.cursor.finalRank,
-                    counterpartyExternalId: {
-                      [comparison]: query.cursor.externalId,
-                    },
+              OR: [
+                { finalRank: { [comparison]: query.cursor.finalRank } },
+                {
+                  finalRank: query.cursor.finalRank,
+                  counterpartyExternalId: {
+                    [comparison]: query.cursor.externalId,
                   },
-                ],
-              }
+                },
+              ],
+            }
             : {}),
         },
         orderBy: [
@@ -3236,28 +3236,25 @@ export class ChannelInteractionRepository {
             externalId: pick.counterpartyExternalId,
             member: pick.audienceMember
               ? {
-                  externalId: pick.audienceMember.externalId,
-                  username: pick.audienceMember.username,
-                  membershipState: pick.audienceMember.membershipState,
-                  ignoredAt: pick.audienceMember.ignoredAt,
-                  isBot: pick.audienceMember.isBot,
-                  relationshipTriage: pick.audienceMember.relationshipTriage,
-                  relationshipReciprocationScore:
-                    pick.audienceMember.relationshipReciprocationScore,
-                  relationshipEffortScore:
-                    pick.audienceMember.relationshipEffortScore,
-                  triageIgnores: pick.audienceMember.triageIgnores,
-                }
+                externalId: pick.audienceMember.externalId,
+                username: pick.audienceMember.username,
+                membershipState: pick.audienceMember.membershipState,
+                ignoredAt: pick.audienceMember.ignoredAt,
+                isBot: pick.audienceMember.isBot,
+                relationshipTriage: pick.audienceMember.relationshipTriage,
+                relationshipReciprocationScore:
+                  pick.audienceMember.relationshipReciprocationScore,
+                relationshipEffortScore:
+                  pick.audienceMember.relationshipEffortScore,
+                triageIgnores: pick.audienceMember.triageIgnores,
+              }
               : null,
           })),
         });
         this._logger.log(
-          `[hot-triage] Hot read visibility gap integration=${
-            query.integrationId
-          } hour=${batch.hour} stored=${audit.storedCount} pageVisible=${
-            items.length
-          } eligibleVisible=${audit.visibleCount} excluded=${
-            audit.excludedCount
+          `[hot-triage] Hot read visibility gap integration=${query.integrationId
+          } hour=${batch.hour} stored=${audit.storedCount} pageVisible=${items.length
+          } eligibleVisible=${audit.visibleCount} excluded=${audit.excludedCount
           } ${JSON.stringify(trimHotPickAuditForLog(audit))}`
         );
       }
@@ -3289,38 +3286,38 @@ export class ChannelInteractionRepository {
       }
       const batch = query.hour
         ? await tx.channelAudienceCultivatePickBatch.findUnique({
-            where: {
-              organizationId_integrationId_hour: {
-                organizationId: query.organizationId,
-                integrationId: query.integrationId,
-                hour: query.hour,
-              },
+          where: {
+            organizationId_integrationId_hour: {
+              organizationId: query.organizationId,
+              integrationId: query.integrationId,
+              hour: query.hour,
             },
-          })
+          },
+        })
         : await (async () => {
-            const current =
-              await tx.channelAudienceCultivatePickBatch.findUnique({
-                where: {
-                  organizationId_integrationId_hour: {
-                    organizationId: query.organizationId,
-                    integrationId: query.integrationId,
-                    hour: currentHour,
-                  },
+          const current =
+            await tx.channelAudienceCultivatePickBatch.findUnique({
+              where: {
+                organizationId_integrationId_hour: {
+                  organizationId: query.organizationId,
+                  integrationId: query.integrationId,
+                  hour: currentHour,
                 },
-              });
-            return (
-              current ??
-              (await tx.channelAudienceCultivatePickBatch.findUnique({
-                where: {
-                  organizationId_integrationId_hour: {
-                    organizationId: query.organizationId,
-                    integrationId: query.integrationId,
-                    hour: previousHour,
-                  },
+              },
+            });
+          return (
+            current ??
+            (await tx.channelAudienceCultivatePickBatch.findUnique({
+              where: {
+                organizationId_integrationId_hour: {
+                  organizationId: query.organizationId,
+                  integrationId: query.integrationId,
+                  hour: previousHour,
                 },
-              }))
-            );
-          })();
+              },
+            }))
+          );
+        })();
       if (
         !batch ||
         batch.strategyId !== query.strategyId ||
@@ -3346,16 +3343,16 @@ export class ChannelInteractionRepository {
           },
           ...(query.cursor
             ? {
-                OR: [
-                  { finalRank: { [comparison]: query.cursor.finalRank } },
-                  {
-                    finalRank: query.cursor.finalRank,
-                    counterpartyExternalId: {
-                      [comparison]: query.cursor.externalId,
-                    },
+              OR: [
+                { finalRank: { [comparison]: query.cursor.finalRank } },
+                {
+                  finalRank: query.cursor.finalRank,
+                  counterpartyExternalId: {
+                    [comparison]: query.cursor.externalId,
                   },
-                ],
-              }
+                },
+              ],
+            }
             : {}),
         },
         orderBy: [
@@ -3428,26 +3425,23 @@ export class ChannelInteractionRepository {
             externalId: pick.counterpartyExternalId,
             member: pick.audienceMember
               ? {
-                  externalId: pick.audienceMember.externalId,
-                  username: pick.audienceMember.username,
-                  membershipState: pick.audienceMember.membershipState,
-                  ignoredAt: pick.audienceMember.ignoredAt,
-                  isBot: pick.audienceMember.isBot,
-                  relationshipTriage: pick.audienceMember.relationshipTriage,
-                  relationshipGrade: pick.audienceMember.relationshipGrade,
-                  lastOutboundAt: pick.audienceMember.lastOutboundAt,
-                  triageIgnores: pick.audienceMember.triageIgnores,
-                }
+                externalId: pick.audienceMember.externalId,
+                username: pick.audienceMember.username,
+                membershipState: pick.audienceMember.membershipState,
+                ignoredAt: pick.audienceMember.ignoredAt,
+                isBot: pick.audienceMember.isBot,
+                relationshipTriage: pick.audienceMember.relationshipTriage,
+                relationshipGrade: pick.audienceMember.relationshipGrade,
+                lastOutboundAt: pick.audienceMember.lastOutboundAt,
+                triageIgnores: pick.audienceMember.triageIgnores,
+              }
               : null,
           })),
         });
         this._logger.log(
-          `[follower-cultivate] Cultivate read visibility gap integration=${
-            query.integrationId
-          } hour=${batch.hour} stored=${audit.storedCount} pageVisible=${
-            items.length
-          } eligibleVisible=${audit.visibleCount} excluded=${
-            audit.excludedCount
+          `[follower-cultivate] Cultivate read visibility gap integration=${query.integrationId
+          } hour=${batch.hour} stored=${audit.storedCount} pageVisible=${items.length
+          } eligibleVisible=${audit.visibleCount} excluded=${audit.excludedCount
           } ${JSON.stringify(trimCultivatePickAuditForLog(audit))}`
         );
       }
@@ -3510,19 +3504,19 @@ export class ChannelInteractionRepository {
   ) {
     const daysStale = candidate.lastOutboundAt
       ? Math.max(
-          1,
-          Math.floor(
-            (now.getTime() - candidate.lastOutboundAt.getTime()) /
-              (24 * 60 * 60 * 1000)
-          )
+        1,
+        Math.floor(
+          (now.getTime() - candidate.lastOutboundAt.getTime()) /
+          (24 * 60 * 60 * 1000)
         )
+      )
       : null;
     const relationship =
       candidate.relationshipTriage === 'mutual'
         ? 'mutual relationship'
         : candidate.relationshipGrade != null
-        ? `grade ${candidate.relationshipGrade.toFixed(1)}`
-        : 'warm relationship';
+          ? `grade ${candidate.relationshipGrade.toFixed(1)}`
+          : 'warm relationship';
     if (daysStale == null) {
       return `No outbound attention yet · ${relationship}`;
     }
@@ -3728,16 +3722,16 @@ export class ChannelInteractionRepository {
         ),
         userId
           ? tx.channelAudienceMemberGrade.findUnique({
-              where: {
-                organizationId_integrationId_counterpartyExternalId_userId: {
-                  organizationId,
-                  integrationId,
-                  counterpartyExternalId: externalId,
-                  userId,
-                },
+            where: {
+              organizationId_integrationId_counterpartyExternalId_userId: {
+                organizationId,
+                integrationId,
+                counterpartyExternalId: externalId,
+                userId,
               },
-              select: { grade: true },
-            })
+            },
+            select: { grade: true },
+          })
           : Promise.resolve(null),
       ]);
       return {
@@ -3890,7 +3884,10 @@ export class ChannelInteractionRepository {
         select: { id: true, name: true },
       });
       const boundedLists = lists.slice(0, listLimit);
-      const categories = [...FOLLOWER_TRIAGE_FILTERS, ...FOLLOWER_AUDIENCES];
+      const categories = [
+        ...FOLLOWER_TRIAGE_FILTERS,
+        ...FOLLOWER_AUDIENCES.filter((audience) => audience !== 'converted'),
+      ];
       const [categoryTotals, listTotals] = await Promise.all([
         Promise.all(
           categories.map((category) =>
@@ -4325,15 +4322,15 @@ export class ChannelInteractionRepository {
 
     const remaining = options.onlyFollowing
       ? await this._dailyAggregate.model.channelAudienceListMember.count({
-          where: {
-            organizationId,
-            integrationId,
-            listId,
-            audienceMember: {
-              membershipState: ChannelAudienceMembership.FOLLOWER,
-            },
+        where: {
+          organizationId,
+          integrationId,
+          listId,
+          audienceMember: {
+            membershipState: ChannelAudienceMembership.FOLLOWER,
           },
-        })
+        },
+      })
       : 0;
 
     return {
@@ -5228,6 +5225,53 @@ export class ChannelInteractionRepository {
     });
   }
 
+  async listAudienceMemberExternalIdsMatchingSearch(
+    organizationId: string,
+    integrationId: string,
+    search: string
+  ): Promise<string[]> {
+    return this.withSerializableRetry(async (tx) => {
+      await this.assertOwnedIntegration(tx, organizationId, integrationId);
+      const rows = await tx.channelAudienceMember.findMany({
+        where: {
+          organizationId,
+          integrationId,
+          ...this.audienceSearchFilter(search),
+        },
+        select: { externalId: true },
+        take: 1000,
+      });
+      return rows.map((row) => row.externalId);
+    });
+  }
+
+  async getAudienceMembersByExternalIds(
+    organizationId: string,
+    integrationId: string,
+    externalIds: string[],
+    userId?: string
+  ) {
+    const uniqueIds = [...new Set(externalIds.filter(Boolean))];
+    if (!uniqueIds.length) {
+      return [];
+    }
+    return this.withSerializableRetry(async (tx) => {
+      await this.assertOwnedIntegration(tx, organizationId, integrationId);
+      const rows = await tx.channelAudienceMember.findMany({
+        where: {
+          organizationId,
+          integrationId,
+          externalId: { in: uniqueIds },
+        },
+        select: this.audienceMemberListSelect(userId),
+      });
+      const byId = new Map(rows.map((row) => [row.externalId, row]));
+      return uniqueIds
+        .map((externalId) => byId.get(externalId))
+        .filter((row): row is NonNullable<typeof row> => !!row);
+    });
+  }
+
   async getFollowerNoteCounts(
     organizationId: string,
     integrationId: string,
@@ -5304,16 +5348,16 @@ export class ChannelInteractionRepository {
         ? direction === 'desc'
           ? { lastInteractionAt: { lt: new Date(cursor.lastInteractionAt) } }
           : {
-              OR: [
-                {
-                  lastInteractionAt: { gt: new Date(cursor.lastInteractionAt) },
-                },
-                { lastInteractionAt: null },
-              ],
-            }
+            OR: [
+              {
+                lastInteractionAt: { gt: new Date(cursor.lastInteractionAt) },
+              },
+              { lastInteractionAt: null },
+            ],
+          }
         : direction === 'desc'
-        ? { lastInteractionAt: { not: null } }
-        : { OR: [] };
+          ? { lastInteractionAt: { not: null } }
+          : { OR: [] };
     const externalIdComparison = { [comparison]: cursor.externalId };
 
     return {
@@ -5400,7 +5444,9 @@ export class ChannelInteractionRepository {
   }
 
   private storedAudienceCategoryFilter(
-    category: FollowerTriageFilter | (typeof FOLLOWER_AUDIENCES)[number]
+    category:
+      | FollowerTriageFilter
+      | Exclude<(typeof FOLLOWER_AUDIENCES)[number], 'converted'>
   ): Prisma.ChannelAudienceMemberWhereInput {
     if (category === 'lead') {
       return {
@@ -5577,14 +5623,14 @@ export class ChannelInteractionRepository {
         ? direction === 'desc'
           ? { [field]: { [comparison]: typedValue } }
           : {
-              OR: [
-                { [field]: { [comparison]: typedValue } },
-                { [field]: null },
-              ],
-            }
+            OR: [
+              { [field]: { [comparison]: typedValue } },
+              { [field]: null },
+            ],
+          }
         : direction === 'desc'
-        ? { [field]: { not: null } }
-        : {};
+          ? { [field]: { not: null } }
+          : {};
     const equalBranch: Prisma.ChannelAudienceMemberWhereInput = {
       [field]: typedValue,
       externalId: { [comparison]: cursor.externalId },
@@ -5664,12 +5710,12 @@ export class ChannelInteractionRepository {
       ignoredAt: true,
       ...(userId
         ? {
-            personalGrades: {
-              where: { userId },
-              select: { grade: true },
-              take: 1,
-            },
-          }
+          personalGrades: {
+            where: { userId },
+            select: { grade: true },
+            take: 1,
+          },
+        }
         : {}),
       listMemberships: {
         where: { list: { deletedAt: null } },
@@ -5745,34 +5791,34 @@ export class ChannelInteractionRepository {
     const inboundTieBreak: Prisma.ChannelAudienceMemberWhereInput =
       lastInboundAt == null
         ? {
-            lastInboundAt: null,
-            externalId: { [comparison]: cursor.externalId },
-          }
+          lastInboundAt: null,
+          externalId: { [comparison]: cursor.externalId },
+        }
         : {
-            OR: [
-              { lastInboundAt: { [comparison]: lastInboundAt } },
-              {
-                lastInboundAt,
-                externalId: { [comparison]: cursor.externalId },
-              },
-              ...(direction === 'desc' ? [{ lastInboundAt: null }] : []),
-            ],
-          };
+          OR: [
+            { lastInboundAt: { [comparison]: lastInboundAt } },
+            {
+              lastInboundAt,
+              externalId: { [comparison]: cursor.externalId },
+            },
+            ...(direction === 'desc' ? [{ lastInboundAt: null }] : []),
+          ],
+        };
 
     const bridgeTieBreak: Prisma.ChannelAudienceMemberWhereInput =
       score == null
         ? {
-            AND: [{ leadBridgeScore: null }, inboundTieBreak],
-          }
+          AND: [{ leadBridgeScore: null }, inboundTieBreak],
+        }
         : {
-            OR: [
-              { leadBridgeScore: { [comparison]: score } },
-              {
-                AND: [{ leadBridgeScore: score }, inboundTieBreak],
-              },
-              ...(direction === 'desc' ? [{ leadBridgeScore: null }] : []),
-            ],
-          };
+          OR: [
+            { leadBridgeScore: { [comparison]: score } },
+            {
+              AND: [{ leadBridgeScore: score }, inboundTieBreak],
+            },
+            ...(direction === 'desc' ? [{ leadBridgeScore: null }] : []),
+          ],
+        };
 
     if (fitScore == null) {
       return {
@@ -6263,10 +6309,10 @@ export class ChannelInteractionRepository {
   private storedStrategyIdSelection(strategyId: ChannelStrategyId) {
     return strategyId === FALLBACK_CHANNEL_STRATEGY_ID
       ? {
-          notIn: CHANNEL_STRATEGY_IDS.filter(
-            (id) => id !== FALLBACK_CHANNEL_STRATEGY_ID
-          ) as string[],
-        }
+        notIn: CHANNEL_STRATEGY_IDS.filter(
+          (id) => id !== FALLBACK_CHANNEL_STRATEGY_ID
+        ) as string[],
+      }
       : { equals: strategyId as string };
   }
 
@@ -6355,11 +6401,11 @@ export class ChannelInteractionRepository {
             ...(options?.force
               ? {}
               : {
-                  OR: [
-                    { relationshipSnapshotAt: null },
-                    { relationshipSnapshotAt: { lte: snapshotAt } },
-                  ],
-                }),
+                OR: [
+                  { relationshipSnapshotAt: null },
+                  { relationshipSnapshotAt: { lte: snapshotAt } },
+                ],
+              }),
           },
           data: {
             relationshipGrade: snapshot.grade,
@@ -6561,16 +6607,16 @@ export class ChannelInteractionRepository {
     const membershipEvidenceGeneration =
       membership && !followerSyncGeneration
         ? (
-            await tx.channelFollowerSyncState.findFirst({
-              where: {
-                organizationId,
-                integrationId,
-                pendingGeneration: { not: null },
-                status: ChannelFollowerSyncStatus.IN_PROGRESS,
-              },
-              select: { pendingGeneration: true },
-            })
-          )?.pendingGeneration || null
+          await tx.channelFollowerSyncState.findFirst({
+            where: {
+              organizationId,
+              integrationId,
+              pendingGeneration: { not: null },
+              status: ChannelFollowerSyncStatus.IN_PROGRESS,
+            },
+            select: { pendingGeneration: true },
+          })
+        )?.pendingGeneration || null
         : undefined;
     const profileData = {
       ...(profile.name !== undefined ? { name: profile.name } : {}),
@@ -6609,9 +6655,9 @@ export class ChannelInteractionRepository {
     // on create so hourly refreshes do not overwrite webhook-precise times.
     const syncCreateFollowedAt = followerSyncGeneration
       ? {
-          followedAt:
-            profile.followedAt !== undefined ? profile.followedAt : new Date(),
-        }
+        followedAt:
+          profile.followedAt !== undefined ? profile.followedAt : new Date(),
+      }
       : {};
     return tx.channelAudienceMember.upsert({
       where: {
@@ -6628,9 +6674,9 @@ export class ChannelInteractionRepository {
         ...syncCreateFollowedAt,
         ...(membership && !followerSyncGeneration
           ? {
-              membershipState: membership,
-              membershipEvidenceGeneration,
-            }
+            membershipState: membership,
+            membershipEvidenceGeneration,
+          }
           : {}),
         ...(followerSyncGeneration ? { followerSyncGeneration } : {}),
       },
@@ -6638,9 +6684,9 @@ export class ChannelInteractionRepository {
         ...profileData,
         ...(membership && !followerSyncGeneration
           ? {
-              membershipState: membership,
-              membershipEvidenceGeneration,
-            }
+            membershipState: membership,
+            membershipEvidenceGeneration,
+          }
           : {}),
         ...(followerSyncGeneration ? { followerSyncGeneration } : {}),
       },

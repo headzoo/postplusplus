@@ -24,7 +24,7 @@ export class ChannelHotMaterializationActivity {
     private _channelInteractionService: ChannelInteractionService,
     private _integrationService: IntegrationService,
     private _adminScheduleLogService: AdminScheduleLogService
-  ) { }
+  ) {}
 
   @ActivityMethod()
   async resolveSweepHourV1() {
@@ -126,9 +126,11 @@ export class ChannelHotMaterializationActivity {
       }
       await this._adminScheduleLogService.append({
         scheduleKey: 'hot-triage',
-        message: `Hot picks for channel ${request.candidate.id}: stored=${result.pickCount
-          } candidates=${result.candidateCount} visible=${result.visibleCount ?? result.pickCount
-          }`,
+        message: `Hot picks for channel ${request.candidate.id}: stored=${
+          result.pickCount
+        } candidates=${result.candidateCount} visible=${
+          result.visibleCount ?? result.pickCount
+        }`,
         meta: {
           hour: result.hour,
           organizationId: request.candidate.organizationId,

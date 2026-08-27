@@ -1,5 +1,5 @@
 jest.mock('@gitroom/nestjs-libraries/integrations/integration.manager', () => ({
-  IntegrationManager: class IntegrationManager { },
+  IntegrationManager: class IntegrationManager {},
   socialIntegrationList: [],
 }));
 
@@ -36,17 +36,20 @@ describe('IntegrationService dashboard analytics', () => {
       isChannelUnavailable?: jest.Mock;
     }
   ) => {
-    const service = Object.create(IntegrationService.prototype) as IntegrationService;
+    const service = Object.create(
+      IntegrationService.prototype
+    ) as IntegrationService;
     (service as any)._integrationRepository = {
       getIntegrationsList: jest.fn().mockResolvedValue(integrations),
     };
     (service as any)._integrationManager = {
-      getSocialIntegration: jest.fn((identifier: string) => providers[identifier]),
+      getSocialIntegration: jest.fn(
+        (identifier: string) => providers[identifier]
+      ),
     };
     (service as any)._channelAnalyticsService = {
       getStoredAnalytics:
-        analyticsMocks?.getStoredAnalytics ||
-        jest.fn().mockResolvedValue([]),
+        analyticsMocks?.getStoredAnalytics || jest.fn().mockResolvedValue([]),
       isChannelUnavailable:
         analyticsMocks?.isChannelUnavailable ||
         jest.fn().mockReturnValue(false),
@@ -82,7 +85,10 @@ describe('IntegrationService dashboard analytics', () => {
         { ...social, id: 'article', type: 'article' },
       ],
       {
-        supported: { analyticsSnapshot: { capture: jest.fn() }, analytics: supportedAnalytics },
+        supported: {
+          analyticsSnapshot: { capture: jest.fn() },
+          analytics: supportedAnalytics,
+        },
         legacy: { analytics: supportedAnalytics },
         unsupported: {},
       },
@@ -101,18 +107,30 @@ describe('IntegrationService dashboard analytics', () => {
           },
         ],
       }),
-      expect.objectContaining({ id: 'disabled', state: 'disabled', analytics: [] }),
+      expect.objectContaining({
+        id: 'disabled',
+        state: 'disabled',
+        analytics: [],
+      }),
       expect.objectContaining({
         id: 'unsupported',
         state: 'unsupported',
         analytics: [],
       }),
-      expect.objectContaining({ id: 'legacy-only', state: 'unsupported', analytics: [] }),
-      expect.objectContaining({ id: 'article', state: 'unsupported', analytics: [] }),
+      expect.objectContaining({
+        id: 'legacy-only',
+        state: 'unsupported',
+        analytics: [],
+      }),
+      expect.objectContaining({
+        id: 'article',
+        state: 'unsupported',
+        analytics: [],
+      }),
     ]);
-    expect((service as any)._integrationRepository.getIntegrationsList).toHaveBeenCalledWith(
-      'org-a'
-    );
+    expect(
+      (service as any)._integrationRepository.getIntegrationsList
+    ).toHaveBeenCalledWith('org-a');
     expect(getStoredAnalytics).toHaveBeenCalledWith('org-a', 'social', 7);
     expect(supportedAnalytics).not.toHaveBeenCalled();
     expect(ioRedis.get).not.toHaveBeenCalled();
@@ -135,7 +153,11 @@ describe('IntegrationService dashboard analytics', () => {
     );
 
     await expect(service.getDashboardAnalytics(org, 7)).resolves.toEqual([
-      expect.objectContaining({ id: 'social', state: 'unavailable', analytics: [] }),
+      expect.objectContaining({
+        id: 'social',
+        state: 'unavailable',
+        analytics: [],
+      }),
     ]);
     expect(getStoredAnalytics).not.toHaveBeenCalled();
     expect(getSyncState).toHaveBeenCalledWith('org-a', 'social');
@@ -152,7 +174,9 @@ describe('IntegrationService dashboard analytics', () => {
       { getStoredAnalytics }
     );
 
-    await expect(service.getDashboardAnalytics(org, 7, 'social')).resolves.toEqual([
+    await expect(
+      service.getDashboardAnalytics(org, 7, 'social')
+    ).resolves.toEqual([
       expect.objectContaining({ id: 'social', state: 'ok' }),
     ]);
     expect(getStoredAnalytics).toHaveBeenCalledTimes(1);
@@ -161,13 +185,17 @@ describe('IntegrationService dashboard analytics', () => {
 
   it('returns no dashboard analytics when the requested integration is missing', async () => {
     const getStoredAnalytics = jest.fn();
-    const service = createService([social], {
-      supported: { analyticsSnapshot: { capture: jest.fn() } },
-    }, { getStoredAnalytics });
-
-    await expect(service.getDashboardAnalytics(org, 7, 'missing')).resolves.toEqual(
-      []
+    const service = createService(
+      [social],
+      {
+        supported: { analyticsSnapshot: { capture: jest.fn() } },
+      },
+      { getStoredAnalytics }
     );
+
+    await expect(
+      service.getDashboardAnalytics(org, 7, 'missing')
+    ).resolves.toEqual([]);
     expect(getStoredAnalytics).not.toHaveBeenCalled();
   });
 });
@@ -196,12 +224,16 @@ describe('IntegrationService channel audience totals', () => {
       isChannelUnavailable?: jest.Mock;
     }
   ) => {
-    const service = Object.create(IntegrationService.prototype) as IntegrationService;
+    const service = Object.create(
+      IntegrationService.prototype
+    ) as IntegrationService;
     (service as any)._integrationRepository = {
       getIntegrationsList: jest.fn().mockResolvedValue(integrations),
     };
     (service as any)._integrationManager = {
-      getSocialIntegration: jest.fn((identifier: string) => providers[identifier]),
+      getSocialIntegration: jest.fn(
+        (identifier: string) => providers[identifier]
+      ),
     };
     (service as any)._channelAnalyticsService = {
       getLatestAccountAudienceTotal:
@@ -256,10 +288,7 @@ describe('IntegrationService channel audience totals', () => {
   it('marks unsupported and not_captured channels without inventing totals', async () => {
     const getLatestAccountAudienceTotal = jest.fn().mockResolvedValue(null);
     const service = createService(
-      [
-        social,
-        { ...social, id: 'plain', providerIdentifier: 'reddit' },
-      ],
+      [social, { ...social, id: 'plain', providerIdentifier: 'reddit' }],
       {
         supported: { analyticsSnapshot: { capture: jest.fn() } },
         reddit: {},

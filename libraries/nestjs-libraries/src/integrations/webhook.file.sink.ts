@@ -50,7 +50,9 @@ export async function sinkIncomingWebhook(input: IncomingWebhookSinkInput) {
 }
 
 function sanitizeSegment(value: string) {
-  const sanitized = value.replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
+  const sanitized = value
+    .replace(/[^a-zA-Z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
   return sanitized || 'unknown';
 }
 

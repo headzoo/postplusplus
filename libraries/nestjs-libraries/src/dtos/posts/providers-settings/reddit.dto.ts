@@ -40,7 +40,8 @@ export class RedditSettingsDtoInner {
   @MinLength(2)
   @IsDefined()
   @JSONSchema({
-    description: 'Must be any of link, self (normal post), image, video, videogif',
+    description:
+      'Must be any of link, self (normal post), image, video, videogif',
   })
   type: string;
 

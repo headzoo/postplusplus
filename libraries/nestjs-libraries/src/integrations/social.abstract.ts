@@ -514,8 +514,8 @@ export abstract class SocialAbstract {
             error instanceof Error
               ? error.message
               : error
-                ? String(error)
-                : 'Request failed',
+              ? String(error)
+              : 'Request failed',
         });
         return;
       }

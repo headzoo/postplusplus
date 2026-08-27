@@ -44,9 +44,7 @@ export const FollowerListCreateModal: FC<{
         value={name}
         onChange={(event) => setName(event.target.value)}
       />
-      {error && (
-        <p className="mt-[8px] text-[13px] text-red-400">{error}</p>
-      )}
+      {error && <p className="mt-[8px] text-[13px] text-red-400">{error}</p>}
       <div className="mt-[16px] flex justify-end gap-[8px]">
         <Button onClick={close} disabled={saving}>
           {t('cancel', 'Cancel')}

@@ -1,4 +1,9 @@
-import { IsBoolean, IsDefined, IsString, ValidateNested } from 'class-validator';
+import {
+  IsBoolean,
+  IsDefined,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class FieldsDto {

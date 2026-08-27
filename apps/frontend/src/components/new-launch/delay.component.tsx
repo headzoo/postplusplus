@@ -1,7 +1,10 @@
 'use client';
 
 import React, { FC, useCallback, useEffect, useState } from 'react';
-import { DelayIcon, DropdownArrowIcon } from '@gitroom/frontend/components/ui/icons';
+import {
+  DelayIcon,
+  DropdownArrowIcon,
+} from '@gitroom/frontend/components/ui/icons';
 import clsx from 'clsx';
 import { useLaunchStore } from '@gitroom/frontend/components/new-launch/store';
 import { useShallow } from 'zustand/react/shallow';
@@ -26,8 +29,9 @@ export const DelayComponent: FC<{
   const t = useT();
   const [isOpen, setIsOpen] = useState(false);
   const [customValue, setCustomValue] = useState('');
-  
-  const isCustomDelay = currentDelay > 0 && !delayOptions.some((opt) => opt.value === currentDelay);
+
+  const isCustomDelay =
+    currentDelay > 0 && !delayOptions.some((opt) => opt.value === currentDelay);
 
   useEffect(() => {
     if (isOpen && isCustomDelay) {
@@ -85,7 +89,10 @@ export const DelayComponent: FC<{
         data-tooltip-content={
           !currentDelay
             ? t('delay_comment', 'Delay comment')
-            : `${t('delay_comment_by', 'Comment delayed by')} ${getCurrentDelayLabel()}`
+            : `${t(
+                'delay_comment_by',
+                'Comment delayed by'
+              )} ${getCurrentDelayLabel()}`
         }
         className={clsx(
           'cursor-pointer flex items-center gap-[4px]',
@@ -103,7 +110,8 @@ export const DelayComponent: FC<{
                 key={option.value}
                 className={clsx(
                   'h-[32px] flex items-center justify-center rounded-[4px] cursor-pointer hover:bg-newBgColor text-[13px]',
-                  currentDelay === option.value && 'bg-[#eb3825] text-white hover:bg-[#eb3825]'
+                  currentDelay === option.value &&
+                    'bg-[#eb3825] text-white hover:bg-[#eb3825]'
                 )}
               >
                 {option.label}

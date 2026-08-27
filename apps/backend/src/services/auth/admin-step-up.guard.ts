@@ -64,7 +64,10 @@ export class AdminStepUpGuard implements CanActivate {
 
     // `strictNullChecks` is off repository-wide, so the discriminated union
     // does not narrow on `valid` by itself.
-    const { reason } = check as Extract<AdminVerificationCheck, { valid: false }>;
+    const { reason } = check as Extract<
+      AdminVerificationCheck,
+      { valid: false }
+    >;
 
     throw new HttpException(
       {

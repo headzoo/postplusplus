@@ -29,7 +29,9 @@ export const Autopost: FC = () => {
   const addWebhook = useCallback(
     (data?: any) => () => {
       modal.openModal({
-        title: data ? t('edit_autopost', 'Edit Autopost') : t('add_autopost_title', 'Add Autopost'),
+        title: data
+          ? t('edit_autopost', 'Edit Autopost')
+          : t('add_autopost_title', 'Add Autopost'),
         withCloseButton: true,
         children: <AddOrEditWebhook data={data} reload={mutate} />,
       });
@@ -51,7 +53,10 @@ export const Autopost: FC = () => {
           method: 'DELETE',
         });
         mutate();
-        toaster.show(t('webhook_deleted_successfully', 'Webhook deleted successfully'), 'success');
+        toaster.show(
+          t('webhook_deleted_successfully', 'Webhook deleted successfully'),
+          'success'
+        );
       }
     },
     []
@@ -282,7 +287,10 @@ export const AddOrEditWebhook: FC<{
       ).json();
       if (!success) {
         setValid('');
-        toast.show(t('could_not_use_rss_feed', 'Could not use this RSS feed'), 'warning');
+        toast.show(
+          t('could_not_use_rss_feed', 'Could not use this RSS feed'),
+          'warning'
+        );
         return;
       }
       toast.show(t('rss_valid', 'RSS valid!'), 'success');
@@ -363,7 +371,10 @@ export const AddOrEditWebhook: FC<{
                   onChange={(e) => {
                     form.setValue('content', e.target.value);
                   }}
-                  placeholder={t('write_your_post_placeholder', 'Write your post...')}
+                  placeholder={t(
+                    'write_your_post_placeholder',
+                    'Write your post...'
+                  )}
                   autosuggestionsConfig={{
                     textareaPurpose: `Assist me in writing social media post`,
                     chatApiConfigs: {},

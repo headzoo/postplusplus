@@ -82,14 +82,20 @@ export class PostRulesRepository {
     });
   }
 
-  getById(orgId: string, ruleId: string): Promise<PostRuleWithAssignments | null> {
+  getById(
+    orgId: string,
+    ruleId: string
+  ): Promise<PostRuleWithAssignments | null> {
     return this._postRule.model.postRule.findFirst({
       where: { id: ruleId, organizationId: orgId },
       include: ruleWithAssignmentsInclude,
     });
   }
 
-  create(orgId: string, body: CreatePostRuleDto): Promise<PostRuleWithAssignments> {
+  create(
+    orgId: string,
+    body: CreatePostRuleDto
+  ): Promise<PostRuleWithAssignments> {
     return this._postRule.model.postRule.create({
       data: this.toCreateData(orgId, body),
       include: ruleWithAssignmentsInclude,
@@ -276,8 +282,10 @@ export class PostRulesRepository {
       maxEvaluations: body.maxEvaluations ?? null,
       conditionMatch: body.conditionMatch,
       conditions: body.conditions as unknown as Prisma.InputJsonValue,
-      actionConfig: (body.actionConfig ?? {}) as unknown as Prisma.InputJsonValue,
-      rescheduleConfig: (body.rescheduleConfig ?? null) as unknown as Prisma.InputJsonValue,
+      actionConfig: (body.actionConfig ??
+        {}) as unknown as Prisma.InputJsonValue,
+      rescheduleConfig: (body.rescheduleConfig ??
+        null) as unknown as Prisma.InputJsonValue,
       maxRescheduleAttempts: body.maxRescheduleAttempts ?? null,
     };
   }
@@ -292,8 +300,10 @@ export class PostRulesRepository {
       maxEvaluations: body.maxEvaluations ?? null,
       conditionMatch: body.conditionMatch,
       conditions: body.conditions as unknown as Prisma.InputJsonValue,
-      actionConfig: (body.actionConfig ?? {}) as unknown as Prisma.InputJsonValue,
-      rescheduleConfig: (body.rescheduleConfig ?? null) as unknown as Prisma.InputJsonValue,
+      actionConfig: (body.actionConfig ??
+        {}) as unknown as Prisma.InputJsonValue,
+      rescheduleConfig: (body.rescheduleConfig ??
+        null) as unknown as Prisma.InputJsonValue,
       maxRescheduleAttempts: body.maxRescheduleAttempts ?? null,
     };
   }
@@ -309,7 +319,10 @@ export class PostRulesRepository {
         });
       } catch (error) {
         lastError = error;
-        if (!this.isSerializationFailure(error) || attempt === TRANSACTION_ATTEMPTS - 1) {
+        if (
+          !this.isSerializationFailure(error) ||
+          attempt === TRANSACTION_ATTEMPTS - 1
+        ) {
           throw error;
         }
       }

@@ -60,7 +60,10 @@ describe('TemporalRegister', () => {
   });
 
   it.each([
-    ['list', () => listSearchAttributes.mockRejectedValue(new Error('unavailable'))],
+    [
+      'list',
+      () => listSearchAttributes.mockRejectedValue(new Error('unavailable')),
+    ],
     [
       'add',
       () => {

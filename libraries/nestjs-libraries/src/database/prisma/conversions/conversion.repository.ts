@@ -58,6 +58,18 @@ type StrategySnapshot = {
   strategyVersion: number;
 };
 
+export type ConvertedActorCursor = {
+  lastConvertedAt: string;
+  externalId: string;
+};
+
+export type ConvertedActorRow = {
+  externalId: string;
+  lastConvertedAt: Date;
+  conversionCount: number;
+  latestConversionType: string;
+};
+
 @Injectable()
 export class ConversionRepository {
   constructor(
@@ -72,7 +84,7 @@ export class ConversionRepository {
     >,
     private _integration: PrismaRepository<'integration'>,
     private _transaction: PrismaTransaction
-  ) {}
+  ) { }
 
   findOwnedIntegration(organizationId: string, integrationId: string) {
     return this._integration.model.integration.findFirst({
@@ -143,14 +155,14 @@ export class ConversionRepository {
         ...(options.strategyId ? { strategyId: options.strategyId } : {}),
         ...(options.cursor
           ? {
-              OR: [
-                { occurredAt: { lt: options.cursor.occurredAt } },
-                {
-                  occurredAt: options.cursor.occurredAt,
-                  id: { lt: options.cursor.id },
-                },
-              ],
-            }
+            OR: [
+              { occurredAt: { lt: options.cursor.occurredAt } },
+              {
+                occurredAt: options.cursor.occurredAt,
+                id: { lt: options.cursor.id },
+              },
+            ],
+          }
           : {}),
       },
       orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }],
@@ -161,11 +173,179 @@ export class ConversionRepository {
       next:
         events.length > take
           ? {
-              occurredAt: events[take - 1].occurredAt,
-              id: events[take - 1].id,
-            }
+            occurredAt: events[take - 1].occurredAt,
+            id: events[take - 1].id,
+          }
           : undefined,
     };
+  }
+
+  async countDistinctConvertedActorsWithProfiles(
+    organizationId: string,
+    integrationId: string,
+    actorExternalIds?: string[]
+  ) {
+    return this.inTransaction(async (tx) => {
+      await this.assertOwnedIntegration(tx, organizationId, integrationId);
+      const groups = await tx.conversionEvent.groupBy({
+        by: ['actorExternalId'],
+        where: {
+          organizationId,
+          integrationId,
+          actorExternalId: {
+            not: null,
+            ...(actorExternalIds?.length ? { in: actorExternalIds } : {}),
+          },
+        },
+      });
+      const ids = groups
+        .map((group) => group.actorExternalId)
+        .filter((value): value is string => !!value);
+      if (!ids.length) {
+        return 0;
+      }
+      return tx.channelAudienceMember.count({
+        where: {
+          organizationId,
+          integrationId,
+          externalId: { in: ids },
+        },
+      });
+    });
+  }
+
+  async getConvertedActorsPage(
+    organizationId: string,
+    integrationId: string,
+    options: {
+      limit: number;
+      cursor?: ConvertedActorCursor;
+      actorExternalIds?: string[];
+    }
+  ) {
+    return this.inTransaction(async (tx) => {
+      await this.assertOwnedIntegration(tx, organizationId, integrationId);
+      const limit = Math.min(Math.max(options.limit, 1), 100);
+      const overfetch = Math.min(limit * 5, 500);
+      const cursorDate = options.cursor
+        ? new Date(options.cursor.lastConvertedAt)
+        : undefined;
+      const groups = await tx.conversionEvent.groupBy({
+        by: ['actorExternalId'],
+        where: {
+          organizationId,
+          integrationId,
+          actorExternalId: {
+            not: null,
+            ...(options.actorExternalIds?.length
+              ? { in: options.actorExternalIds }
+              : {}),
+          },
+        },
+        _max: { occurredAt: true },
+        _count: { _all: true },
+        orderBy: [{ _max: { occurredAt: 'desc' } }, { actorExternalId: 'asc' }],
+        ...(options.cursor && cursorDate && !Number.isNaN(cursorDate.getTime())
+          ? {
+            having: {
+              OR: [
+                {
+                  occurredAt: {
+                    _max: {
+                      lt: cursorDate,
+                    },
+                  },
+                },
+                {
+                  AND: [
+                    {
+                      occurredAt: {
+                        _max: {
+                          equals: cursorDate,
+                        },
+                      },
+                    },
+                    {
+                      actorExternalId: {
+                        gt: options.cursor!.externalId,
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+          }
+          : {}),
+        take: overfetch,
+      });
+
+      if (!groups.length) {
+        return { items: [] as ConvertedActorRow[], hasMore: false };
+      }
+
+      const candidateIds = groups
+        .map((group) => group.actorExternalId)
+        .filter((value): value is string => !!value);
+      const members = await tx.channelAudienceMember.findMany({
+        where: {
+          organizationId,
+          integrationId,
+          externalId: { in: candidateIds },
+        },
+        select: { externalId: true },
+      });
+      const memberIds = new Set(members.map((member) => member.externalId));
+      const filteredGroups = groups.filter(
+        (group) => group.actorExternalId && memberIds.has(group.actorExternalId)
+      );
+      const pageGroups = filteredGroups.slice(0, limit + 1);
+      const hasMore = pageGroups.length > limit;
+      const selectedGroups = pageGroups.slice(0, limit);
+
+      const latestEvents = selectedGroups.length
+        ? await tx.conversionEvent.findMany({
+          where: {
+            organizationId,
+            integrationId,
+            OR: selectedGroups.map((group) => ({
+              actorExternalId: group.actorExternalId!,
+              occurredAt: group._max.occurredAt!,
+            })),
+          },
+          orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }],
+          select: {
+            actorExternalId: true,
+            occurredAt: true,
+            conversionType: true,
+            id: true,
+          },
+        })
+        : [];
+
+      const latestTypeByActor = new Map<string, string>();
+      for (const event of latestEvents) {
+        if (
+          !event.actorExternalId ||
+          latestTypeByActor.has(event.actorExternalId)
+        ) {
+          continue;
+        }
+        latestTypeByActor.set(event.actorExternalId, event.conversionType);
+      }
+
+      const items: ConvertedActorRow[] = selectedGroups.map((group) => ({
+        externalId: group.actorExternalId!,
+        lastConvertedAt: group._max.occurredAt!,
+        conversionCount: group._count._all,
+        latestConversionType:
+          latestTypeByActor.get(group.actorExternalId!) ?? 'unknown',
+      }));
+
+      return {
+        items,
+        hasMore: hasMore || filteredGroups.length > limit,
+      };
+    });
   }
 
   async summarizeEvents(
@@ -508,7 +688,7 @@ export class ConversionRepository {
       const terminal = attempts >= maximumAttempts;
       const availableAt = new Date(
         now.getTime() +
-          BASE_RETRY_DELAY_MS * Math.pow(2, Math.min(attempts - 1, 10))
+        BASE_RETRY_DELAY_MS * Math.pow(2, Math.min(attempts - 1, 10))
       );
       await tx.conversionEvaluationJob.update({
         where: { id: job.id },
@@ -735,7 +915,7 @@ export class ConversionRepository {
       const insideCooldown =
         !!current?.lastEmittedAt &&
         input.eventAt.getTime() <
-          current.lastEmittedAt.getTime() + input.cooldownMs;
+        current.lastEmittedAt.getTime() + input.cooldownMs;
       if (insideCooldown) {
         await tx.conversionDerivationState.upsert({
           where,
@@ -989,7 +1169,7 @@ export class ConversionRepository {
       if (
         input.resolutionSource === 'inferred' &&
         (supportCase.lastInboundAt?.getTime() ?? null) !==
-          (input.expectedLastInboundAt?.getTime() ?? null)
+        (input.expectedLastInboundAt?.getTime() ?? null)
       ) {
         return { event: null, created: false };
       }

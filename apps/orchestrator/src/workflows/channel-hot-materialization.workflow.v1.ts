@@ -23,8 +23,7 @@ const { resolveSweepHourV1, listDueCandidatesV1, materializeHotPicksV1 } =
 export async function channelHotMaterializationWorkflowV1(
   request: ChannelHotMaterializationWorkflowV1Request = {}
 ): Promise<void> {
-  const hour =
-    request.hour ?? (await resolveSweepHourV1()).hour;
+  const hour = request.hour ?? (await resolveSweepHourV1()).hour;
 
   const discovered = await listDueCandidatesV1({
     hour,

@@ -54,8 +54,8 @@ export const HelpCenterPage = ({ slug }: HelpCenterPageProps) => {
     const container = scrollContainerRef.current;
     const heading = container
       ? Array.from(container.querySelectorAll<HTMLElement>('[id]')).find(
-        (element) => element.id === hash
-      )
+          (element) => element.id === hash
+        )
       : document.getElementById(hash);
     if (!heading) {
       return;
@@ -83,7 +83,9 @@ export const HelpCenterPage = ({ slug }: HelpCenterPageProps) => {
               That section could not be found in this article.
             </p>
           )}
-          {isLoading && <p className="text-base text-textColor">Loading help…</p>}
+          {isLoading && (
+            <p className="text-base text-textColor">Loading help…</p>
+          )}
           {!!error && (
             <p role="alert" className="text-base text-textColor">
               Help content could not be loaded. Please try again.
@@ -103,7 +105,9 @@ export const HelpCenterPage = ({ slug }: HelpCenterPageProps) => {
                 onNavigate={(nextSlug, nextHash) =>
                   navigateToTopic(nextSlug, nextHash)
                 }
-                onHashChange={(nextHash) => navigateToTopic(article.slug, nextHash)}
+                onHashChange={(nextHash) =>
+                  navigateToTopic(article.slug, nextHash)
+                }
               />
             </div>
           )}
@@ -124,7 +128,9 @@ export const HelpCenterPage = ({ slug }: HelpCenterPageProps) => {
             />
           </div>
           <div className="min-w-0">
-            <h2 className="text-2xl font-semibold text-textColor">Help center</h2>
+            <h2 className="text-2xl font-semibold text-textColor">
+              Help center
+            </h2>
             <p className="mt-1 text-base text-textItemBlur">
               Everything you need to know about Post++
             </p>

@@ -194,10 +194,7 @@ If the tool returns errors, fix the parameters and retry without asking again.
             integrations[platform.integrationId] = integration;
 
             const settings = platform.settings.reduce(
-              (
-                acc: AllProvidersSettings,
-                s: { key: string; value: any }
-              ) => ({
+              (acc: AllProvidersSettings, s: { key: string; value: any }) => ({
                 ...acc,
                 [s.key]: s.value,
               }),

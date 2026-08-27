@@ -154,7 +154,6 @@ export class PublicController {
     }
   }
 
-
   @Get('/stream')
   async streamFile(
     @Query() query: OnlyURL,

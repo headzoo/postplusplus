@@ -63,15 +63,21 @@ export async function channelInteractionMaintenanceWorkflowV2(
       });
       if (page.hasMore) {
         if (!page.nextCursor) {
-          throw new Error('Follower page indicated more results without a cursor');
+          throw new Error(
+            'Follower page indicated more results without a cursor'
+          );
         }
         return continueAsNew<typeof channelInteractionMaintenanceWorkflowV2>(
           poked
             ? {}
             : {
-              after: request.after,
-              followerSync: { candidate, generation, cursor: page.nextCursor },
-            }
+                after: request.after,
+                followerSync: {
+                  candidate,
+                  generation,
+                  cursor: page.nextCursor,
+                },
+              }
         );
       }
       await completeFollowerSync({ candidate, generation });
@@ -106,9 +112,9 @@ export async function channelInteractionMaintenanceWorkflowV2(
         poked
           ? {}
           : {
-            after: request.after,
-            followerSync: { candidate, generation: sync.generation },
-          }
+              after: request.after,
+              followerSync: { candidate, generation: sync.generation },
+            }
       );
     }
   } catch {
@@ -119,7 +125,9 @@ export async function channelInteractionMaintenanceWorkflowV2(
   return nextRequest(candidate.id);
 }
 
-async function rebuildWindows(candidate: ChannelInteractionMaintenanceCandidate) {
+async function rebuildWindows(
+  candidate: ChannelInteractionMaintenanceCandidate
+) {
   for (const window of WINDOWS) {
     try {
       await rebuildWindow({ candidate, window });

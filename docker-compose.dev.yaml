@@ -11,7 +11,7 @@ services:
       POSTGRES_PASSWORD: postiz-local-pwd
       POSTGRES_USER: postiz-local
       POSTGRES_DB: postiz-db-local
-      TEMPORAL_ADDRESS: "temporal:7233"
+      TEMPORAL_ADDRESS: 'temporal:7233'
     volumes:
       - postgres-volume:/var/lib/postgresql/data
     ports:
@@ -83,7 +83,7 @@ services:
     healthcheck:
       test:
         [
-          "CMD-SHELL",
+          'CMD-SHELL',
           "curl -sf 'http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s'",
         ]
       interval: 10s
@@ -112,7 +112,7 @@ services:
   temporal:
     container_name: temporal
     ports:
-      - "7233:7233"
+      - '7233:7233'
     image: temporalio/auto-setup:1.28.1
     depends_on:
       temporal-postgresql:
@@ -139,13 +139,13 @@ services:
     healthcheck:
       test:
         [
-          "CMD",
-          "temporal",
-          "operator",
-          "cluster",
-          "health",
-          "--address",
-          "temporal:7233",
+          'CMD',
+          'temporal',
+          'operator',
+          'cluster',
+          'health',
+          '--address',
+          'temporal:7233',
         ]
       interval: 10s
       timeout: 5s
@@ -175,7 +175,7 @@ services:
     networks:
       - temporal-network
     ports:
-      - "8080:8080"
+      - '8080:8080'
     depends_on:
       temporal:
         condition: service_healthy

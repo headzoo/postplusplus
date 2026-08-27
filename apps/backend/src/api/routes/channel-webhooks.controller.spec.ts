@@ -1,10 +1,9 @@
 import { BadRequestException, HttpException } from '@nestjs/common';
 import { ChannelWebhooksController } from './channel-webhooks.controller';
 
-jest.mock(
-  '@gitroom/nestjs-libraries/integrations/integration.manager',
-  () => ({ IntegrationManager: class IntegrationManager { } })
-);
+jest.mock('@gitroom/nestjs-libraries/integrations/integration.manager', () => ({
+  IntegrationManager: class IntegrationManager {},
+}));
 
 const sinkIncomingWebhook = jest.fn();
 jest.mock('@gitroom/nestjs-libraries/integrations/webhook.file.sink', () => ({

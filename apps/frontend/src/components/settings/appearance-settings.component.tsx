@@ -28,14 +28,10 @@ const AppearanceSettingsComponent = () => {
   return (
     <>
       <div className="my-[16px] mt-[16px] bg-sixth border-fifth border rounded-[4px] p-[24px] flex flex-col gap-[24px]">
-        <div className="mt-[4px]">
-          {t('appearance', 'Appearance')}
-        </div>
+        <div className="mt-[4px]">{t('appearance', 'Appearance')}</div>
         <div className="flex items-center justify-between">
           <div className="flex flex-col">
-            <div className="text-[14px]">
-              {t('dark_mode', 'Dark Mode')}
-            </div>
+            <div className="text-[14px]">{t('dark_mode', 'Dark Mode')}</div>
             <div className="text-[12px] text-customColor18">
               {t(
                 'dark_mode_description',
@@ -51,9 +47,7 @@ const AppearanceSettingsComponent = () => {
         </div>
       </div>
       <div className="my-[16px] mt-[16px] bg-sixth border-fifth border rounded-[4px] p-[24px] flex flex-col gap-[24px]">
-        <div className="mt-[4px]">
-          {t('language', 'Language')}
-        </div>
+        <div className="mt-[4px]">{t('language', 'Language')}</div>
         <ChangeLanguageComponent closeOnChange={false} />
       </div>
     </>

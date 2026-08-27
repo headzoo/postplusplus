@@ -14,9 +14,9 @@ const toEditorHtml = (content: string) =>
   content.indexOf('<p>') > -1
     ? content
     : content
-      .split('\n')
-      .map((line) => (line ? `<p>${line}</p>` : '<p><br></p>'))
-      .join('');
+        .split('\n')
+        .map((line) => (line ? `<p>${line}</p>` : '<p><br></p>'))
+        .join('');
 
 export const ADD_EDIT_MODAL_OPTIONS = {
   id: 'add-edit-modal',
@@ -104,17 +104,21 @@ export const AddEditModalInner: FC<AddEditModalProps> = (props) => {
       }
     }
 
-    const existingChannels = existingData.channels || (
-      existingData.integration
-        ? [{
-          integration: existingData.integration,
-          settings: existingData.settings,
-          posts: existingData.posts,
-        }]
-        : []
-    );
+    const existingChannels =
+      existingData.channels ||
+      (existingData.integration
+        ? [
+            {
+              integration: existingData.integration,
+              settings: existingData.settings,
+              posts: existingData.posts,
+            },
+          ]
+        : []);
     for (const channel of existingChannels) {
-      const integration = integrations.find((i) => i.id === channel.integration);
+      const integration = integrations.find(
+        (i) => i.id === channel.integration
+      );
       if (integration) {
         addOrRemoveSelectedIntegration(integration, channel.settings);
       }
@@ -164,15 +168,17 @@ export const AddEditModalInnerInner: FC<AddEditModalProps> = (props) => {
   );
 
   useEffect(() => {
-    const existingChannels = existingData.channels || (
-      existingData.integration
-        ? [{
-          integration: existingData.integration,
-          settings: existingData.settings,
-          posts: existingData.posts,
-        }]
-        : []
-    );
+    const existingChannels =
+      existingData.channels ||
+      (existingData.integration
+        ? [
+            {
+              integration: existingData.integration,
+              settings: existingData.settings,
+              posts: existingData.posts,
+            },
+          ]
+        : []);
     if (existingChannels.length) {
       if (existingChannels[0]?.posts?.[0]?.intervalInDays) {
         setRepeater(existingChannels[0].posts[0].intervalInDays);
@@ -185,13 +191,17 @@ export const AddEditModalInnerInner: FC<AddEditModalProps> = (props) => {
         })) || []
       );
       for (const channel of existingChannels) {
-        addInternalValue(0, channel.integration, channel.posts.map((post) => ({
-          delay: post.delay,
-          content: toEditorHtml(post.content),
-          id: post.id,
-          // @ts-ignore
-          media: post.image as any[],
-        })));
+        addInternalValue(
+          0,
+          channel.integration,
+          channel.posts.map((post) => ({
+            delay: post.delay,
+            content: toEditorHtml(post.content),
+            id: post.id,
+            // @ts-ignore
+            media: post.image as any[],
+          }))
+        );
       }
       setCurrent(existingChannels[0].integration);
     } else {
@@ -206,18 +216,18 @@ export const AddEditModalInnerInner: FC<AddEditModalProps> = (props) => {
       0,
       props.onlyValues?.length
         ? props.onlyValues.map((p) => ({
-          content: toEditorHtml(p.content),
-          id: makeId(10),
-          media: p.image || [],
-        }))
+            content: toEditorHtml(p.content),
+            id: makeId(10),
+            media: p.image || [],
+          }))
         : props.set?.posts?.length
-          ? props.set.posts[0].value.map((p: any) => ({
+        ? props.set.posts[0].value.map((p: any) => ({
             id: makeId(10),
             content: toEditorHtml(p.content),
             // @ts-ignore
             media: p.media,
           }))
-          : [
+        : [
             {
               content: '',
               id: makeId(10),
@@ -237,9 +247,7 @@ export const AddEditModalInnerInner: FC<AddEditModalProps> = (props) => {
 
   return (
     <>
-      <style>
-        {`#support-discord {display: none !important;}`}
-      </style>
+      <style>{`#support-discord {display: none !important;}`}</style>
       <ManageModal {...props} />
     </>
   );

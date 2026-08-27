@@ -24,9 +24,9 @@ describe('autoPostWorkflowV2', () => {
   });
 
   it('checks hourly after the immediate run', async () => {
-    sleep.mockResolvedValueOnce(undefined).mockRejectedValueOnce(
-      new Error('stop workflow')
-    );
+    sleep
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('stop workflow'));
 
     await expect(
       autoPostWorkflowV2({ id: 'feed', immediately: true })

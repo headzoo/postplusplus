@@ -51,13 +51,23 @@ const startOfMonth = () => {
   return d.toISOString().slice(0, 10);
 };
 
-const PRESETS: { label: string; range: () => { from: string; to: string } }[] = [
-  { label: 'Today', range: () => ({ from: today(), to: today() }) },
-  { label: 'This week', range: () => ({ from: startOfWeek(), to: today() }) },
-  { label: 'This month', range: () => ({ from: startOfMonth(), to: today() }) },
-  { label: 'Last 7 days', range: () => ({ from: isoDaysAgo(7), to: today() }) },
-  { label: 'Last 30 days', range: () => ({ from: isoDaysAgo(30), to: today() }) },
-];
+const PRESETS: { label: string; range: () => { from: string; to: string } }[] =
+  [
+    { label: 'Today', range: () => ({ from: today(), to: today() }) },
+    { label: 'This week', range: () => ({ from: startOfWeek(), to: today() }) },
+    {
+      label: 'This month',
+      range: () => ({ from: startOfMonth(), to: today() }),
+    },
+    {
+      label: 'Last 7 days',
+      range: () => ({ from: isoDaysAgo(7), to: today() }),
+    },
+    {
+      label: 'Last 30 days',
+      range: () => ({ from: isoDaysAgo(30), to: today() }),
+    },
+  ];
 
 const useStats = (params: {
   from: string;

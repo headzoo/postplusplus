@@ -215,10 +215,7 @@ export async function postWorkflowV108({
     type: 'retry' | 'stop' | 'bad-body' | 'timeout' | 'unknown';
     message: string;
   }> => {
-    if (
-      err instanceof ActivityFailure &&
-      err.cause instanceof TimeoutFailure
-    ) {
+    if (err instanceof ActivityFailure && err.cause instanceof TimeoutFailure) {
       return { type: 'timeout', message: '' };
     }
 
@@ -262,7 +259,8 @@ export async function postWorkflowV108({
       )}`,
       `Your post was sent to ${capitalize(
         post.integration?.providerIdentifier
-      )}, but we couldn't confirm it was published. Please check your ${post?.integration?.name
+      )}, but we couldn't confirm it was published. Please check your ${
+        post?.integration?.name
       } account before posting again to avoid duplicates.`,
       true,
       false,
@@ -333,7 +331,8 @@ export async function postWorkflowV108({
           await inAppNotification(
             post.organizationId,
             `Error posting on ${post.integration?.providerIdentifier} for ${post?.integration?.name}`,
-            `An error occurred while posting on ${post.integration?.providerIdentifier
+            `An error occurred while posting on ${
+              post.integration?.providerIdentifier
             }${handle.message ? `: ${handle.message}` : ``}`,
             true,
             false,
@@ -479,9 +478,11 @@ export async function postWorkflowV108({
         if (handle.type === 'bad-body') {
           await inAppNotification(
             post.organizationId,
-            `Error posting${i === 0 ? ' ' : ' comments '}on ${post.integration?.providerIdentifier
+            `Error posting${i === 0 ? ' ' : ' comments '}on ${
+              post.integration?.providerIdentifier
             } for ${post?.integration?.name}`,
-            `An error occurred while posting${i === 0 ? ' ' : ' comments '}on ${post.integration?.providerIdentifier
+            `An error occurred while posting${i === 0 ? ' ' : ' comments '}on ${
+              post.integration?.providerIdentifier
             }${handle.message ? `: ${handle.message}` : ``}`,
             true,
             false,
@@ -514,32 +515,29 @@ export async function postWorkflowV108({
   // load global plugs, like repost a post if it gets to a certain number of likes
   const globalPlugsList = (
     await globalPlugsV107(post.id, post.integration)
-  ).reduce(
-    (all, current) => {
-      for (let i = 1; i <= current.totalRuns; i++) {
-        all.push({
-          ...current,
-          delay: current.delay * i,
-          currentRun: i,
-        });
-      }
+  ).reduce((all, current) => {
+    for (let i = 1; i <= current.totalRuns; i++) {
+      all.push({
+        ...current,
+        delay: current.delay * i,
+        currentRun: i,
+      });
+    }
 
-      return all;
-    },
-    []
-  );
+    return all;
+  }, []);
 
   // Check if the post is repeatable
   const repeatPost = !post.intervalInDays
     ? []
     : [
-      {
-        type: 'repeat-post',
-        delay:
-          post.intervalInDays * 24 * 60 * 60 * 1000 -
-          (new Date().getTime() - startTime.getTime()),
-      },
-    ];
+        {
+          type: 'repeat-post',
+          delay:
+            post.intervalInDays * 24 * 60 * 60 * 1000 -
+            (new Date().getTime() - startTime.getTime()),
+        },
+      ];
 
   // Sort all the actions by delay, so we can process them in order
   const list = sortBy(

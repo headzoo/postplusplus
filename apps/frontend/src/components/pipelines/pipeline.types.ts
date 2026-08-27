@@ -105,7 +105,8 @@ export interface PipelineCalendarPost {
   integration: Integrations;
 }
 
-export interface DeletePipelineScheduleSlotPayload extends PipelineScheduleSlot { }
+export interface DeletePipelineScheduleSlotPayload
+  extends PipelineScheduleSlot {}
 
 export interface DeletePipelineScheduleSlotResult {
   pipelineId: string;

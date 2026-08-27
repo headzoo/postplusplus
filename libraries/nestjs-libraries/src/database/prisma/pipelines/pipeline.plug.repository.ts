@@ -17,7 +17,11 @@ export class PipelinePlugRepository {
     private _transaction: PrismaTransaction
   ) {}
 
-  getPipelineIntegration(orgId: string, pipelineId: string, integrationId: string) {
+  getPipelineIntegration(
+    orgId: string,
+    pipelineId: string,
+    integrationId: string
+  ) {
     return this._pipeline.model.pipeline.findFirst({
       where: {
         id: pipelineId,
@@ -52,7 +56,12 @@ export class PipelinePlugRepository {
     });
   }
 
-  upsert(orgId: string, pipelineId: string, integrationId: string, body: PlugDto) {
+  upsert(
+    orgId: string,
+    pipelineId: string,
+    integrationId: string,
+    body: PlugDto
+  ) {
     return this.withSerializableRetry(async (tx) => {
       const pipeline = await tx.pipeline.findFirst({
         where: {
@@ -138,7 +147,11 @@ export class PipelinePlugRepository {
     );
   }
 
-  deleteForRemovedIntegrations(tx: any, pipelineId: string, integrationIds: string[]) {
+  deleteForRemovedIntegrations(
+    tx: any,
+    pipelineId: string,
+    integrationIds: string[]
+  ) {
     if (!integrationIds.length) {
       return Promise.resolve({ count: 0 });
     }
@@ -184,10 +197,7 @@ export class PipelinePlugRepository {
         });
       } catch (caught: any) {
         error = caught;
-        if (
-          caught?.code !== 'P2034' ||
-          attempt === TRANSACTION_ATTEMPTS - 1
-        ) {
+        if (caught?.code !== 'P2034' || attempt === TRANSACTION_ATTEMPTS - 1) {
           throw caught;
         }
       }

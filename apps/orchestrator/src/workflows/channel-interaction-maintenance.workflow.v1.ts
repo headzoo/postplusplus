@@ -58,7 +58,9 @@ export async function channelInteractionMaintenanceWorkflowV1(
       });
       if (page.hasMore) {
         if (!page.nextCursor) {
-          throw new Error('Follower page indicated more results without a cursor');
+          throw new Error(
+            'Follower page indicated more results without a cursor'
+          );
         }
         return continueAsNew<typeof channelInteractionMaintenanceWorkflowV1>({
           after: request.after,
@@ -112,7 +114,9 @@ export async function channelInteractionMaintenanceWorkflowV1(
   });
 }
 
-async function rebuildWindows(candidate: ChannelInteractionMaintenanceCandidate) {
+async function rebuildWindows(
+  candidate: ChannelInteractionMaintenanceCandidate
+) {
   for (const window of WINDOWS) {
     try {
       await rebuildWindow({ candidate, window });

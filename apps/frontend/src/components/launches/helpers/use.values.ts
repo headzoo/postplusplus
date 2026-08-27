@@ -25,7 +25,7 @@ const finalInformation = {} as {
         }>
       >,
       settings: any,
-      additionalSettings: any,
+      additionalSettings: any
     ) => Promise<string | true>;
     maximumCharacters?: number;
   };
@@ -47,11 +47,10 @@ export const useValues = (
       }>
     >,
     settings: any,
-    additionalSettings: any,
+    additionalSettings: any
   ) => Promise<string | true>,
   maximumCharacters?: number
 ) => {
-
   const form = useForm({
     resolver: classValidatorResolver(dto || Empty),
     values: initialValues,

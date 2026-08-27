@@ -23,6 +23,11 @@ export class ThirdPartyService {
     apiKey: string,
     data: { name: string; username: string; id: string }
   ) {
-    return this._thirdPartyRepository.saveIntegration(org, identifier, apiKey, data);
+    return this._thirdPartyRepository.saveIntegration(
+      org,
+      identifier,
+      apiKey,
+      data
+    );
   }
 }

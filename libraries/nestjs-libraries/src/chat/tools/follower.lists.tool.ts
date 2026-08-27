@@ -21,14 +21,21 @@ export class FollowerListsTool implements AgentToolInterface {
       inputSchema: z.object({
         channelId: z.string().min(1).max(64),
       }),
-      mcp: { annotations: { ...followerToolAnnotations, title: 'List follower lists' } },
+      mcp: {
+        annotations: {
+          ...followerToolAnnotations,
+          title: 'List follower lists',
+        },
+      },
       outputSchema: z.object({
-        output: z.array(z.object({
-          id: z.string(),
-          name: z.string(),
-          createdAt: z.string(),
-          updatedAt: z.string(),
-        })),
+        output: z.array(
+          z.object({
+            id: z.string(),
+            name: z.string(),
+            createdAt: z.string(),
+            updatedAt: z.string(),
+          })
+        ),
       }),
       execute: async (inputData, context) => {
         const { organization } = getFollowerToolContext(inputData, context);

@@ -134,9 +134,7 @@ describe('admin passkey flows', () => {
 
     render(<AdminPasskeyVerifyComponent />);
 
-    expect(
-      screen.getByRole('button', { name: 'Verify passkey' })
-    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Verify passkey' })).toBeTruthy();
     await waitFor(() => {
       expect(mockReplace).not.toHaveBeenCalled();
     });

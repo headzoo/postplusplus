@@ -141,7 +141,11 @@ export function withContinueProvider<TItem, TSelection>(
           ))}
         </div>
         <div>
-          <Button disabled={!selection || isSaving} loading={isSaving} onClick={handleSave}>
+          <Button
+            disabled={!selection || isSaving}
+            loading={isSaving}
+            onClick={handleSave}
+          >
             {t('save', 'Save')}
           </Button>
         </div>

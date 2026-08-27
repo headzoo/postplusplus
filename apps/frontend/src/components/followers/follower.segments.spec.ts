@@ -24,6 +24,7 @@ describe('follower.segments', () => {
       type: 'unfollow',
     });
     expect(getFollowerBoardColumnAction('all')).toBeNull();
+    expect(getFollowerBoardColumnAction('conversions')).toBeNull();
   });
 
   it('places Followed before Mutual in green triage group', () => {
@@ -38,7 +39,9 @@ describe('follower.segments', () => {
     ).toBe('green');
 
     const tabSlugs = FOLLOWER_TAB_SEGMENTS.map((segment) => segment.slug);
-    expect(tabSlugs.indexOf('followed')).toBeLessThan(tabSlugs.indexOf('mutual'));
+    expect(tabSlugs.indexOf('followed')).toBeLessThan(
+      tabSlugs.indexOf('mutual')
+    );
 
     const boardSlugs = FOLLOWER_BOARD_SEGMENTS.map((segment) => segment.slug);
     expect(boardSlugs).toEqual([
@@ -46,6 +49,7 @@ describe('follower.segments', () => {
       'hot',
       'cultivate',
       'followed',
+      'conversions',
       'mutual',
       'quiet',
       'costly',
@@ -54,14 +58,17 @@ describe('follower.segments', () => {
       'bots',
     ]);
     expect(boardSlugs.indexOf('followed')).toBeLessThan(
+      boardSlugs.indexOf('conversions')
+    );
+    expect(boardSlugs.indexOf('conversions')).toBeLessThan(
       boardSlugs.indexOf('mutual')
     );
   });
 
   it('excludes All from built-in triage visibility options', () => {
-    expect(FOLLOWER_BUILTIN_TRIAGE_SEGMENTS.map((segment) => segment.slug)).not.toContain(
-      'all'
-    );
+    expect(
+      FOLLOWER_BUILTIN_TRIAGE_SEGMENTS.map((segment) => segment.slug)
+    ).not.toContain('all');
     expect(FOLLOWER_BUILTIN_TRIAGE_SEGMENTS).toHaveLength(
       FOLLOWER_SUMMARY_SEGMENTS.length - 1
     );

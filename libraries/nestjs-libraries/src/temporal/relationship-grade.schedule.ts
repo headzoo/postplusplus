@@ -31,11 +31,11 @@ export const RELATIONSHIP_GRADE_LEGACY_WORKFLOW_ID =
   'channel-relationship-grade-workflow-v1';
 
 export const DEFAULT_RELATIONSHIP_GRADE_SCHEDULE: RelationshipGradeScheduleConfig =
-{
-  unit: 'day',
-  interval: RELATIONSHIP_CADENCE_DAYS,
-  timeOfDay: '00:00',
-};
+  {
+    unit: 'day',
+    interval: RELATIONSHIP_CADENCE_DAYS,
+    timeOfDay: '00:00',
+  };
 
 const TIME_OF_DAY = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
@@ -51,7 +51,9 @@ export function normalizeRelationshipGradeSchedule(
   value: Partial<RelationshipGradeScheduleConfig> | null | undefined
 ): RelationshipGradeScheduleConfig {
   const unit = value?.unit ?? DEFAULT_RELATIONSHIP_GRADE_SCHEDULE.unit;
-  const interval = Number(value?.interval ?? DEFAULT_RELATIONSHIP_GRADE_SCHEDULE.interval);
+  const interval = Number(
+    value?.interval ?? DEFAULT_RELATIONSHIP_GRADE_SCHEDULE.interval
+  );
   if (
     !RELATIONSHIP_GRADE_SCHEDULE_UNITS.includes(
       unit as RelationshipGradeScheduleUnit
@@ -135,12 +137,12 @@ export function toRelationshipGradeScheduleSpec(
         ...(config.interval === 1
           ? {}
           : {
-            month: {
-              start: 'JANUARY' as const,
-              end: 'DECEMBER' as const,
-              step: config.interval,
-            },
-          }),
+              month: {
+                start: 'JANUARY' as const,
+                end: 'DECEMBER' as const,
+                step: config.interval,
+              },
+            }),
       },
     ],
   };

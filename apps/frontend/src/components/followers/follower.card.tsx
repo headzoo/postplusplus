@@ -9,7 +9,12 @@ import ImageWithFallback from '@gitroom/react/helpers/image.with.fallback';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { useTriageDismissModal } from '@gitroom/frontend/components/followers/triage.dismiss.modal';
 import { useLeadDismissModal } from '@gitroom/frontend/components/followers/lead.dismiss.modal';
-import { Follower, FollowerList, DismissibleTriage, getProfileLinkAutoSnoozeTriages } from '@gitroom/frontend/components/followers/use.followers';
+import {
+  Follower,
+  FollowerList,
+  DismissibleTriage,
+  getProfileLinkAutoSnoozeTriages,
+} from '@gitroom/frontend/components/followers/use.followers';
 import { RelationshipStars } from '@gitroom/frontend/components/followers/follower.relationship.stars';
 import { FollowerListDropdown } from '@gitroom/frontend/components/followers/follower.list.dropdown';
 import {
@@ -125,7 +130,15 @@ export const useRelationshipTriageDismiss = ({
       undefined,
       action === 'snooze' ? { snooze: true } : undefined
     );
-  }, [canFollow, displayLabel, leadDismiss, lists, onRemove, triage, triageDismiss]);
+  }, [
+    canFollow,
+    displayLabel,
+    leadDismiss,
+    lists,
+    onRemove,
+    triage,
+    triageDismiss,
+  ]);
 
   return { dismiss, displayLabel };
 };
@@ -191,7 +204,10 @@ export const FollowerIdentityBadges: FC<{
     reasons?: LeadFitDismissReason[],
     options?: DismissTriageOptions
   ) => Promise<void> | void;
-  onToggleList?: (list: FollowerList, assigned: boolean) => Promise<void> | void;
+  onToggleList?: (
+    list: FollowerList,
+    assigned: boolean
+  ) => Promise<void> | void;
   onToggleIgnored?: (ignored: boolean) => Promise<void> | void;
 }> = ({
   follower,
@@ -201,103 +217,102 @@ export const FollowerIdentityBadges: FC<{
   onToggleList,
   onToggleIgnored,
 }) => {
-    const t = useT();
+  const t = useT();
 
-    return (
-      <>
-        {follower.isBot === true && (
-          <span
-            role="img"
-            className="inline-flex shrink-0 text-textItemBlur"
-            title={t(
-              'followers_bot_tooltip',
-              'Likely bot · grade {{grade}} of 5',
-              {
-                grade:
-                  follower.botGrade != null ? String(follower.botGrade) : '?',
-              }
-            )}
-            aria-label={t(
-              'followers_bot_aria',
-              'Likely bot, grade {{grade}} of 5',
-              {
-                grade:
-                  follower.botGrade != null
-                    ? String(follower.botGrade)
-                    : 'unknown',
-              }
-            )}
-          >
-            <RobotIcon size={14} />
-          </span>
-        )}
-        {follower.isLead && (
-          <RelationshipTriageBadge
-            triage="lead"
-            canFollow={canFollow}
-            lists={lists}
-            onRemove={onDismissTriage}
-          />
-        )}
-        {follower.isCultivate && (
-          <RelationshipTriageBadge
-            triage="cultivate"
-            onRemove={onDismissTriage}
-          />
-        )}
-        {Number.isFinite(follower.leadFitScore) && (
-          <span
-            className="inline-flex w-fit shrink-0 items-center rounded-full border border-orange-600/50 px-[8px] py-[2px] text-[11px] font-[600] text-orange-500"
-            title={
-              follower.leadFitReason ||
-              t('followers_lead_fit_title', 'Lead fit score')
+  return (
+    <>
+      {follower.isBot === true && (
+        <span
+          role="img"
+          className="inline-flex shrink-0 text-textItemBlur"
+          title={t(
+            'followers_bot_tooltip',
+            'Likely bot · grade {{grade}} of 5',
+            {
+              grade:
+                follower.botGrade != null ? String(follower.botGrade) : '?',
             }
-          >
-            {t('followers_lead_fit', 'Fit {{score}}', {
-              score: Math.round(follower.leadFitScore!),
-            })}
-          </span>
-        )}
-        {follower.relationshipTriage && (
-          <RelationshipTriageBadge
-            triage={follower.relationshipTriage}
-            onRemove={onDismissTriage}
-          />
-        )}
-        {(follower.listIds ?? []).map((listId) => {
-          const list = lists.find((item) => item.id === listId);
-          if (!list) {
-            return null;
+          )}
+          aria-label={t(
+            'followers_bot_aria',
+            'Likely bot, grade {{grade}} of 5',
+            {
+              grade:
+                follower.botGrade != null
+                  ? String(follower.botGrade)
+                  : 'unknown',
+            }
+          )}
+        >
+          <RobotIcon size={14} />
+        </span>
+      )}
+      {follower.isLead && (
+        <RelationshipTriageBadge
+          triage="lead"
+          canFollow={canFollow}
+          lists={lists}
+          onRemove={onDismissTriage}
+        />
+      )}
+      {follower.isCultivate && (
+        <RelationshipTriageBadge
+          triage="cultivate"
+          onRemove={onDismissTriage}
+        />
+      )}
+      {Number.isFinite(follower.leadFitScore) && (
+        <span
+          className="inline-flex w-fit shrink-0 items-center rounded-full border border-orange-600/50 px-[8px] py-[2px] text-[11px] font-[600] text-orange-500"
+          title={
+            follower.leadFitReason ||
+            t('followers_lead_fit_title', 'Lead fit score')
           }
-          const listColor =
-            (list.color as FollowerSegmentColor | null | undefined) ??
-            'neutral';
-          const colorClasses = FOLLOWER_SEGMENT_COLOR_CLASSES[listColor];
-          return (
-            <span
-              key={list.id}
-              className={clsx(
-                'inline-flex w-fit shrink-0 items-center rounded-full border px-[8px] py-[2px] text-[11px] font-[600]',
-                colorClasses.border,
-                colorClasses.text
-              )}
-            >
-              {list.name}
-            </span>
-          );
-        })}
-        {(onToggleList || onToggleIgnored) && (
-          <FollowerListDropdown
-            lists={lists}
-            assignedListIds={follower.listIds ?? []}
-            isIgnored={!!follower.isIgnored}
-            onToggle={onToggleList ?? (async () => undefined)}
-            onToggleIgnored={onToggleIgnored}
-          />
-        )}
-      </>
-    );
-  };
+        >
+          {t('followers_lead_fit', 'Fit {{score}}', {
+            score: Math.round(follower.leadFitScore!),
+          })}
+        </span>
+      )}
+      {follower.relationshipTriage && (
+        <RelationshipTriageBadge
+          triage={follower.relationshipTriage}
+          onRemove={onDismissTriage}
+        />
+      )}
+      {(follower.listIds ?? []).map((listId) => {
+        const list = lists.find((item) => item.id === listId);
+        if (!list) {
+          return null;
+        }
+        const listColor =
+          (list.color as FollowerSegmentColor | null | undefined) ?? 'neutral';
+        const colorClasses = FOLLOWER_SEGMENT_COLOR_CLASSES[listColor];
+        return (
+          <span
+            key={list.id}
+            className={clsx(
+              'inline-flex w-fit shrink-0 items-center rounded-full border px-[8px] py-[2px] text-[11px] font-[600]',
+              colorClasses.border,
+              colorClasses.text
+            )}
+          >
+            {list.name}
+          </span>
+        );
+      })}
+      {(onToggleList || onToggleIgnored) && (
+        <FollowerListDropdown
+          lists={lists}
+          assignedListIds={follower.listIds ?? []}
+          isIgnored={!!follower.isIgnored}
+          onToggle={onToggleList ?? (async () => undefined)}
+          onToggleIgnored={onToggleIgnored}
+        />
+      )}
+    </>
+  );
+};
 
 const formatDate = (value: string) => {
   const date = new Date(value);
@@ -328,7 +343,10 @@ export const FollowerCard: FC<{
   lists?: FollowerList[];
   canFollow?: boolean;
   timelineHref?: string;
-  onToggleList?: (list: FollowerList, assigned: boolean) => Promise<void> | void;
+  onToggleList?: (
+    list: FollowerList,
+    assigned: boolean
+  ) => Promise<void> | void;
   onToggleIgnored?: (ignored: boolean) => Promise<void> | void;
   onDismissTriage?: (
     triage: DismissibleTriage,
@@ -346,158 +364,149 @@ export const FollowerCard: FC<{
   onDismissTriage,
   onOpen,
 }) => {
-    const t = useT();
-    const followedAt = follower.followedAt
-      ? formatDate(follower.followedAt)
-      : null;
-    const weFollowedAt = follower.weFollowedAt
-      ? dayjs(follower.weFollowedAt).fromNow()
-      : null;
-    const accountCreatedAt = follower.accountCreatedAt
-      ? formatDate(follower.accountCreatedAt)
-      : null;
-    const lastInteractionAt = follower.lastInteractionAt
-      ? formatDate(follower.lastInteractionAt)
-      : null;
-    const handle = follower.username ? `@${follower.username}` : undefined;
-    const hasInteractionCount = Number.isFinite(follower.interactionCount);
-    const hasNoteCount = Number.isFinite(follower.noteCount);
-    const hasLikesCount = Number.isFinite(follower.likesCount);
-    const hasFollowingCount = Number.isFinite(follower.followingCount);
-    const hasFollowersCount = Number.isFinite(follower.followersCount);
-    const hasInfluenceScore = Number.isFinite(follower.influenceScore);
-    const hasMetricsGrid =
-      hasFollowingCount ||
-      hasFollowersCount ||
-      hasLikesCount ||
-      hasNoteCount ||
-      hasInteractionCount ||
-      hasInfluenceScore;
-    const hasSecondaryInteractionMetrics =
-      Number.isFinite(follower.interactionScore) || !!lastInteractionAt;
-    const hasRelationshipEffort =
-      follower.effortStars !== undefined ||
-      follower.reciprocationStars !== undefined ||
-      follower.myGrade !== undefined ||
-      follower.relationshipTriage != null;
-    const leadBridge = (follower.leadBridges ?? [])
-      .slice(0, 1)
-      .find((item) => !!item.username);
-    const leadBridgeViaHandle = leadBridge?.username
-      ? `@${leadBridge.username.replace(/^@/, '')}`
-      : null;
-    const hasContextBadges =
-      !!(follower.isHot && follower.triageReason) ||
-      !!(follower.isHot && follower.suggestedAction) ||
-      !!(follower.isCultivate && follower.cultivateReason) ||
-      !!(follower.isCultivate && follower.suggestedAction) ||
-      !!leadBridgeViaHandle;
+  const t = useT();
+  const followedAt = follower.followedAt
+    ? formatDate(follower.followedAt)
+    : null;
+  const weFollowedAt = follower.weFollowedAt
+    ? dayjs(follower.weFollowedAt).fromNow()
+    : null;
+  const accountCreatedAt = follower.accountCreatedAt
+    ? formatDate(follower.accountCreatedAt)
+    : null;
+  const lastInteractionAt = follower.lastInteractionAt
+    ? formatDate(follower.lastInteractionAt)
+    : null;
+  const handle = follower.username ? `@${follower.username}` : undefined;
+  const hasInteractionCount = Number.isFinite(follower.interactionCount);
+  const hasNoteCount = Number.isFinite(follower.noteCount);
+  const hasLikesCount = Number.isFinite(follower.likesCount);
+  const hasFollowingCount = Number.isFinite(follower.followingCount);
+  const hasFollowersCount = Number.isFinite(follower.followersCount);
+  const hasInfluenceScore = Number.isFinite(follower.influenceScore);
+  const hasMetricsGrid =
+    hasFollowingCount ||
+    hasFollowersCount ||
+    hasLikesCount ||
+    hasNoteCount ||
+    hasInteractionCount ||
+    hasInfluenceScore;
+  const hasSecondaryInteractionMetrics =
+    Number.isFinite(follower.interactionScore) || !!lastInteractionAt;
+  const hasRelationshipEffort =
+    follower.effortStars !== undefined ||
+    follower.reciprocationStars !== undefined ||
+    follower.myGrade !== undefined ||
+    follower.relationshipTriage != null;
+  const leadBridge = (follower.leadBridges ?? [])
+    .slice(0, 1)
+    .find((item) => !!item.username);
+  const leadBridgeViaHandle = leadBridge?.username
+    ? `@${leadBridge.username.replace(/^@/, '')}`
+    : null;
+  const hasContextBadges =
+    !!(follower.isHot && follower.triageReason) ||
+    !!(follower.isHot && follower.suggestedAction) ||
+    !!(follower.isCultivate && follower.cultivateReason) ||
+    !!(follower.isCultivate && follower.suggestedAction) ||
+    !!leadBridgeViaHandle;
 
-    const handleCardClick = () => {
-      onOpen?.();
-    };
+  const handleCardClick = () => {
+    onOpen?.();
+  };
 
-    const handleCardKeyDown = (event: KeyboardEvent<HTMLElement>) => {
-      if (!onOpen) {
-        return;
-      }
-      if (
-        event.target instanceof HTMLElement &&
-        event.target.closest('a[href]')
-      ) {
-        return;
-      }
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        onOpen();
-      }
-    };
+  const handleCardKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (!onOpen) {
+      return;
+    }
+    if (
+      event.target instanceof HTMLElement &&
+      event.target.closest('a[href]')
+    ) {
+      return;
+    }
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onOpen();
+    }
+  };
 
-    const handleProfileLinkClick = async (
-      event: MouseEvent<HTMLAnchorElement>
-    ) => {
+  const handleProfileLinkClick = async (
+    event: MouseEvent<HTMLAnchorElement>
+  ) => {
+    event.stopPropagation();
+    if (!onDismissTriage) {
+      return;
+    }
+    const triages = getProfileLinkAutoSnoozeTriages(follower);
+    for (const triage of triages) {
+      await onDismissTriage(triage, undefined, { snooze: true });
+    }
+  };
+
+  const stopProfileKeyboard = (event: KeyboardEvent<HTMLAnchorElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
       event.stopPropagation();
-      if (!onDismissTriage) {
-        return;
-      }
-      const triages = getProfileLinkAutoSnoozeTriages(follower);
-      for (const triage of triages) {
-        await onDismissTriage(triage, undefined, { snooze: true });
-      }
-    };
+    }
+  };
 
-    const stopProfileKeyboard = (event: KeyboardEvent<HTMLAnchorElement>) => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.stopPropagation();
-      }
-    };
+  const stopTimelineNavigation = (event: MouseEvent<HTMLAnchorElement>) => {
+    event.stopPropagation();
+  };
 
-    const stopTimelineNavigation = (event: MouseEvent<HTMLAnchorElement>) => {
+  const stopTimelineKeyboard = (event: KeyboardEvent<HTMLAnchorElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
       event.stopPropagation();
-    };
+    }
+  };
 
-    const stopTimelineKeyboard = (event: KeyboardEvent<HTMLAnchorElement>) => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.stopPropagation();
-      }
-    };
-
-    return (
-      <article
-        role={onOpen ? 'button' : undefined}
-        tabIndex={onOpen ? 0 : undefined}
-        onClick={onOpen ? handleCardClick : undefined}
-        onKeyDown={onOpen ? handleCardKeyDown : undefined}
-        className={clsx(
-          'relative flex flex-col gap-[12px] h-full',
-          'bg-newTableHeader border border-newTableBorder rounded-[12px]',
-          'p-[16px] transition-all duration-200 hover:border-newTextColor/20',
-          onOpen && 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-newTextColor/30'
-        )}
-      >
-        {timelineHref && (
-          <Link
-            href={timelineHref}
-            onClick={stopTimelineNavigation}
-            onKeyDown={stopTimelineKeyboard}
-            className={clsx(
-              'absolute top-[16px] right-[16px] z-[1]',
-              'inline-flex h-[20px] w-[20px] items-center justify-center rounded-full border',
-              'border-newTableBorder text-textItemBlur hover:border-newTextColor/40 hover:text-newTextColor'
-            )}
-            aria-label={t('followers_timeline_button', 'Timeline')}
-          >
-            <TimelineIcon size={14} />
-          </Link>
-        )}
-        <div
-          data-follower-card-layout=""
-          className="grid flex-1 grid-cols-[48px_minmax(0,1fr)] items-start gap-x-[12px] gap-y-[12px] md:flex md:gap-[12px]"
+  return (
+    <article
+      role={onOpen ? 'button' : undefined}
+      tabIndex={onOpen ? 0 : undefined}
+      onClick={onOpen ? handleCardClick : undefined}
+      onKeyDown={onOpen ? handleCardKeyDown : undefined}
+      className={clsx(
+        'relative flex flex-col gap-[12px] h-full',
+        'bg-newTableHeader border border-newTableBorder rounded-[12px]',
+        'p-[16px] transition-all duration-200 hover:border-newTextColor/20',
+        onOpen &&
+          'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-newTextColor/30'
+      )}
+    >
+      {timelineHref && (
+        <Link
+          href={timelineHref}
+          onClick={stopTimelineNavigation}
+          onKeyDown={stopTimelineKeyboard}
+          className={clsx(
+            'absolute top-[16px] right-[16px] z-[1]',
+            'inline-flex h-[20px] w-[20px] items-center justify-center rounded-full border',
+            'border-newTableBorder text-textItemBlur hover:border-newTextColor/40 hover:text-newTextColor'
+          )}
+          aria-label={t('followers_timeline_button', 'Timeline')}
         >
-          {follower.profileUrl ? (
-            <a
-              href={follower.profileUrl}
-              target="_blank"
-              rel="noreferrer noopener"
-              onClick={handleProfileLinkClick}
-              onKeyDown={stopProfileKeyboard}
-              className="shrink-0 rounded-full hover:opacity-80"
-              aria-label={t(
-                'followers_view_profile_for',
-                'View profile for {{name}}',
-                { name: follower.name }
-              )}
-            >
-              <ImageWithFallback
-                fallbackSrc="/no-picture.jpg"
-                src={follower.picture || '/no-picture.jpg'}
-                className="rounded-full shrink-0 object-cover"
-                alt={follower.name}
-                width={48}
-                height={48}
-              />
-            </a>
-          ) : (
+          <TimelineIcon size={14} />
+        </Link>
+      )}
+      <div
+        data-follower-card-layout=""
+        className="grid flex-1 grid-cols-[48px_minmax(0,1fr)] items-start gap-x-[12px] gap-y-[12px] md:flex md:gap-[12px]"
+      >
+        {follower.profileUrl ? (
+          <a
+            href={follower.profileUrl}
+            target="_blank"
+            rel="noreferrer noopener"
+            onClick={handleProfileLinkClick}
+            onKeyDown={stopProfileKeyboard}
+            className="shrink-0 rounded-full hover:opacity-80"
+            aria-label={t(
+              'followers_view_profile_for',
+              'View profile for {{name}}',
+              { name: follower.name }
+            )}
+          >
             <ImageWithFallback
               fallbackSrc="/no-picture.jpg"
               src={follower.picture || '/no-picture.jpg'}
@@ -506,255 +515,268 @@ export const FollowerCard: FC<{
               width={48}
               height={48}
             />
-          )}
-          <div className="contents md:flex md:h-full md:min-w-0 md:flex-1 md:flex-col md:gap-[12px]">
-            <div className="col-start-2 min-w-0">
-              <div className="flex min-w-0 flex-wrap items-center gap-[8px]">
-                <h3 className="text-[15px] font-[600] text-newTextColor truncate">
-                  {follower.name}
-                </h3>
-                <FollowerIdentityBadges
-                  follower={follower}
-                  lists={lists}
-                  canFollow={canFollow}
-                  onDismissTriage={onDismissTriage}
-                  onToggleList={onToggleList}
-                  onToggleIgnored={onToggleIgnored}
-                />
-              </div>
-              {handle &&
-                (follower.profileUrl ? (
-                  <a
-                    href={follower.profileUrl}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    onClick={handleProfileLinkClick}
-                    onKeyDown={stopProfileKeyboard}
-                    className="mt-[2px] inline-block max-w-full shrink-0 text-[13px] text-textItemBlur truncate hover:underline hover:opacity-80"
+          </a>
+        ) : (
+          <ImageWithFallback
+            fallbackSrc="/no-picture.jpg"
+            src={follower.picture || '/no-picture.jpg'}
+            className="rounded-full shrink-0 object-cover"
+            alt={follower.name}
+            width={48}
+            height={48}
+          />
+        )}
+        <div className="contents md:flex md:h-full md:min-w-0 md:flex-1 md:flex-col md:gap-[12px]">
+          <div className="col-start-2 min-w-0">
+            <div className="flex min-w-0 flex-wrap items-center gap-[8px]">
+              <h3 className="text-[15px] font-[600] text-newTextColor truncate">
+                {follower.name}
+              </h3>
+              <FollowerIdentityBadges
+                follower={follower}
+                lists={lists}
+                canFollow={canFollow}
+                onDismissTriage={onDismissTriage}
+                onToggleList={onToggleList}
+                onToggleIgnored={onToggleIgnored}
+              />
+            </div>
+            {handle &&
+              (follower.profileUrl ? (
+                <a
+                  href={follower.profileUrl}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  onClick={handleProfileLinkClick}
+                  onKeyDown={stopProfileKeyboard}
+                  className="mt-[2px] inline-block max-w-full shrink-0 text-[13px] text-textItemBlur truncate hover:underline hover:opacity-80"
+                >
+                  {handle}
+                </a>
+              ) : (
+                <span className="mt-[2px] inline-block max-w-full shrink-0 text-[13px] text-textItemBlur truncate">
+                  {handle}
+                </span>
+              ))}
+            {hasContextBadges && (
+              <div className="mt-[4px] flex min-w-0 flex-wrap items-center gap-[8px]">
+                {follower.isHot && follower.triageReason && (
+                  <span
+                    className="inline-flex max-w-[240px] shrink truncate rounded-full border border-newTableBorder px-[8px] py-[2px] text-[11px] font-[500] text-textItemBlur"
+                    title={follower.triageReason}
                   >
-                    {handle}
-                  </a>
-                ) : (
-                  <span className="mt-[2px] inline-block max-w-full shrink-0 text-[13px] text-textItemBlur truncate">
-                    {handle}
+                    {follower.triageReason}
                   </span>
-                ))}
-              {hasContextBadges && (
-                <div className="mt-[4px] flex min-w-0 flex-wrap items-center gap-[8px]">
-                  {follower.isHot && follower.triageReason && (
-                    <span
-                      className="inline-flex max-w-[240px] shrink truncate rounded-full border border-newTableBorder px-[8px] py-[2px] text-[11px] font-[500] text-textItemBlur"
-                      title={follower.triageReason}
-                    >
-                      {follower.triageReason}
-                    </span>
-                  )}
-                  {follower.isHot && follower.suggestedAction && (
-                    <span
-                      className="inline-flex max-w-[200px] shrink truncate rounded-full border border-newTableBorder px-[8px] py-[2px] text-[11px] font-[500] text-textItemBlur"
-                      title={follower.suggestedAction}
-                    >
-                      {follower.suggestedAction}
-                    </span>
-                  )}
-                  {follower.isCultivate && follower.cultivateReason && (
-                    <span
-                      className="inline-flex max-w-[240px] shrink truncate rounded-full border border-newTableBorder px-[8px] py-[2px] text-[11px] font-[500] text-textItemBlur"
-                      title={follower.cultivateReason}
-                    >
-                      {follower.cultivateReason}
-                    </span>
-                  )}
-                  {follower.isCultivate && follower.suggestedAction && (
-                    <span
-                      className="inline-flex max-w-[200px] shrink truncate rounded-full border border-newTableBorder px-[8px] py-[2px] text-[11px] font-[500] text-textItemBlur"
-                      title={follower.suggestedAction}
-                    >
-                      {follower.suggestedAction}
-                    </span>
-                  )}
-                  {leadBridgeViaHandle && leadBridge && (
-                    <span
-                      key={leadBridge.externalId}
-                      className="inline-flex w-fit shrink-0 items-center rounded-full border border-newTableBorder px-[8px] py-[2px] text-[11px] font-[600] text-textItemBlur"
-                      title={t(
-                        'followers_lead_via_title',
-                        'Discovered via {{handle}}',
-                        { handle: leadBridgeViaHandle }
-                      )}
-                    >
-                      {t('followers_lead_via', 'Via {{handle}}', {
-                        handle: leadBridgeViaHandle,
-                      })}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="col-span-2 flex min-w-0 flex-col gap-[12px] h-full md:col-auto md:flex-1">
-              <div>
-
-                {accountCreatedAt && (
-                  <div className="mt-[4px] min-w-0 overflow-hidden whitespace-nowrap text-[13px]">
-                    <span className="font-[700] text-newTextColor">
-                      {t('followers_joined_label', 'Joined')}
-                    </span>{' '}
-                    <span className="text-textItemBlur">{accountCreatedAt}</span>
-                  </div>
                 )}
-
-                {hasSecondaryInteractionMetrics && (
-                  <div className="mt-[6px] flex flex-wrap items-center gap-x-[16px] gap-y-[4px] text-[12px] text-textItemBlur">
-                    {Number.isFinite(follower.interactionScore) && (
-                      <span>
-                        {t('followers_activity_score', 'Activity score {{score}}', {
-                          score: follower.interactionScore!,
-                        })}
-                      </span>
-                    )}
-                    {lastInteractionAt && (
-                      <span>
-                        {t(
-                          'followers_last_interaction',
-                          'Last interaction {{date}}',
-                          { date: lastInteractionAt }
-                        )}
-                      </span>
-                    )}
-                  </div>
+                {follower.isHot && follower.suggestedAction && (
+                  <span
+                    className="inline-flex max-w-[200px] shrink truncate rounded-full border border-newTableBorder px-[8px] py-[2px] text-[11px] font-[500] text-textItemBlur"
+                    title={follower.suggestedAction}
+                  >
+                    {follower.suggestedAction}
+                  </span>
                 )}
-
-                {(hasRelationshipEffort || hasMetricsGrid) && (
-                  <div
-                    data-follower-metrics-row=""
-                    className={clsx(
-                      'mt-[8px] grid gap-x-[16px] gap-y-[8px]',
-                      hasRelationshipEffort && hasMetricsGrid
-                        ? 'grid-cols-1 md:grid-cols-[max-content_minmax(0,1fr)]'
-                        : 'grid-cols-1'
+                {follower.isCultivate && follower.cultivateReason && (
+                  <span
+                    className="inline-flex max-w-[240px] shrink truncate rounded-full border border-newTableBorder px-[8px] py-[2px] text-[11px] font-[500] text-textItemBlur"
+                    title={follower.cultivateReason}
+                  >
+                    {follower.cultivateReason}
+                  </span>
+                )}
+                {follower.isCultivate && follower.suggestedAction && (
+                  <span
+                    className="inline-flex max-w-[200px] shrink truncate rounded-full border border-newTableBorder px-[8px] py-[2px] text-[11px] font-[500] text-textItemBlur"
+                    title={follower.suggestedAction}
+                  >
+                    {follower.suggestedAction}
+                  </span>
+                )}
+                {leadBridgeViaHandle && leadBridge && (
+                  <span
+                    key={leadBridge.externalId}
+                    className="inline-flex w-fit shrink-0 items-center rounded-full border border-newTableBorder px-[8px] py-[2px] text-[11px] font-[600] text-textItemBlur"
+                    title={t(
+                      'followers_lead_via_title',
+                      'Discovered via {{handle}}',
+                      { handle: leadBridgeViaHandle }
                     )}
                   >
-                    {hasRelationshipEffort && (
-                      <div className="grid grid-cols-[auto_auto] items-center gap-x-[8px] gap-y-[6px] text-[12px]">
-                        <span className="text-textItemBlur">
-                          {t('followers_card_grade', 'Grade')}
-                        </span>
-                        <RelationshipStars
-                          grade={follower.myGrade ?? null}
-                          compact={true}
-                        />
-                        <span className="text-textItemBlur">
-                          {t('followers_card_them', 'Them')}
-                        </span>
-                        <RelationshipStars
-                          grade={follower.reciprocationStars ?? null}
-                          compact={true}
-                        />
-                        <span className="text-textItemBlur">
-                          {t('followers_card_you', 'You')}
-                        </span>
-                        <RelationshipStars
-                          grade={follower.effortStars ?? null}
-                          compact={true}
-                        />
-                      </div>
-                    )}
-                    {hasMetricsGrid && (
-                      <div className="flex min-w-0 flex-wrap gap-x-[12px] gap-y-[6px] text-[13px]">
-                        {hasFollowingCount && (
-                          <span className="whitespace-nowrap">
-                            <span className="font-[700] text-newTextColor">
-                              {formatCompactCount(follower.followingCount!)}
-                            </span>{' '}
-                            <span className="text-textItemBlur">
-                              {t('followers_following_label', 'Following')}
-                            </span>
-                          </span>
-                        )}
-                        {hasFollowersCount && (
-                          <span className="whitespace-nowrap">
-                            <span className="font-[700] text-newTextColor">
-                              {formatCompactCount(follower.followersCount!)}
-                            </span>{' '}
-                            <span className="text-textItemBlur">
-                              {t('followers_followers_label', 'Followers')}
-                            </span>
-                          </span>
-                        )}
-                        {hasLikesCount && (
-                          <span className="whitespace-nowrap">
-                            <span className="font-[700] text-newTextColor">
-                              {formatCompactCount(follower.likesCount!)}
-                            </span>{' '}
-                            <span className="text-textItemBlur">
-                              {t('followers_like_count', 'likes')}
-                            </span>
-                          </span>
-                        )}
-                        {hasNoteCount && (
-                          <span className="whitespace-nowrap">
-                            <span className="font-[700] text-newTextColor">
-                              {formatCompactCount(follower.noteCount!)}
-                            </span>{' '}
-                            <span className="text-textItemBlur">
-                              {t('followers_note_count', 'notes')}
-                            </span>
-                          </span>
-                        )}
-                        {hasInteractionCount && (
-                          <span className="whitespace-nowrap">
-                            <span className="font-[700] text-newTextColor">
-                              {formatCompactCount(follower.interactionCount!)}
-                            </span>{' '}
-                            <span className="text-textItemBlur">
-                              {t('followers_interaction_count', 'interactions')}
-                            </span>
-                          </span>
-                        )}
-                        {hasInfluenceScore && (
-                          <span className="text-textItemBlur">
-                            {t(
-                              'followers_recommendation_score',
-                              'Score {{score}}',
-                              {
-                                score: follower.influenceScore!,
-                              }
-                            )}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-                {follower.bio && (
-                  <p className="mt-[8px] text-[13px] text-newTextColor line-clamp-3">
-                    {follower.bio}
-                  </p>
+                    {t('followers_lead_via', 'Via {{handle}}', {
+                      handle: leadBridgeViaHandle,
+                    })}
+                  </span>
                 )}
               </div>
+            )}
+          </div>
 
-              {(followedAt || weFollowedAt) && (
-                <div className="mt-auto flex flex-col gap-[4px] text-[12px] text-textItemBlur">
-                  {weFollowedAt && (
+          <div className="col-span-2 flex min-w-0 flex-col gap-[12px] h-full md:col-auto md:flex-1">
+            <div>
+              {accountCreatedAt && (
+                <div className="mt-[4px] min-w-0 overflow-hidden whitespace-nowrap text-[13px]">
+                  <span className="font-[700] text-newTextColor">
+                    {t('followers_joined_label', 'Joined')}
+                  </span>{' '}
+                  <span className="text-textItemBlur">{accountCreatedAt}</span>
+                </div>
+              )}
+
+              {hasSecondaryInteractionMetrics && (
+                <div className="mt-[6px] flex flex-wrap items-center gap-x-[16px] gap-y-[4px] text-[12px] text-textItemBlur">
+                  {Number.isFinite(follower.interactionScore) && (
                     <span>
-                      {t('followers_we_followed_at', 'You followed {{time}}', {
-                        time: weFollowedAt,
-                      })}
+                      {t(
+                        'followers_activity_score',
+                        'Activity score {{score}}',
+                        {
+                          score: follower.interactionScore!,
+                        }
+                      )}
                     </span>
                   )}
-                  {followedAt && (
+                  {lastInteractionAt && (
                     <span>
-                      {t('followers_followed_at', 'Followed {{date}}', {
-                        date: followedAt,
-                      })}
+                      {t(
+                        'followers_last_interaction',
+                        'Last interaction {{date}}',
+                        { date: lastInteractionAt }
+                      )}
                     </span>
                   )}
                 </div>
               )}
+
+              {(hasRelationshipEffort || hasMetricsGrid) && (
+                <div
+                  data-follower-metrics-row=""
+                  className={clsx(
+                    'mt-[8px] grid gap-x-[16px] gap-y-[8px]',
+                    hasRelationshipEffort && hasMetricsGrid
+                      ? 'grid-cols-1 md:grid-cols-[max-content_minmax(0,1fr)]'
+                      : 'grid-cols-1'
+                  )}
+                >
+                  {hasRelationshipEffort && (
+                    <div className="grid grid-cols-[auto_auto] items-center gap-x-[8px] gap-y-[6px] text-[12px]">
+                      <span className="text-textItemBlur">
+                        {t('followers_card_grade', 'Grade')}
+                      </span>
+                      <RelationshipStars
+                        grade={follower.myGrade ?? null}
+                        compact={true}
+                      />
+                      <span className="text-textItemBlur">
+                        {t('followers_card_them', 'Them')}
+                      </span>
+                      <RelationshipStars
+                        grade={follower.reciprocationStars ?? null}
+                        compact={true}
+                      />
+                      <span className="text-textItemBlur">
+                        {t('followers_card_you', 'You')}
+                      </span>
+                      <RelationshipStars
+                        grade={follower.effortStars ?? null}
+                        compact={true}
+                      />
+                    </div>
+                  )}
+                  {hasMetricsGrid && (
+                    <div className="flex min-w-0 flex-wrap gap-x-[12px] gap-y-[6px] text-[13px]">
+                      {hasFollowingCount && (
+                        <span className="whitespace-nowrap">
+                          <span className="font-[700] text-newTextColor">
+                            {formatCompactCount(follower.followingCount!)}
+                          </span>{' '}
+                          <span className="text-textItemBlur">
+                            {t('followers_following_label', 'Following')}
+                          </span>
+                        </span>
+                      )}
+                      {hasFollowersCount && (
+                        <span className="whitespace-nowrap">
+                          <span className="font-[700] text-newTextColor">
+                            {formatCompactCount(follower.followersCount!)}
+                          </span>{' '}
+                          <span className="text-textItemBlur">
+                            {t('followers_followers_label', 'Followers')}
+                          </span>
+                        </span>
+                      )}
+                      {hasLikesCount && (
+                        <span className="whitespace-nowrap">
+                          <span className="font-[700] text-newTextColor">
+                            {formatCompactCount(follower.likesCount!)}
+                          </span>{' '}
+                          <span className="text-textItemBlur">
+                            {t('followers_like_count', 'likes')}
+                          </span>
+                        </span>
+                      )}
+                      {hasNoteCount && (
+                        <span className="whitespace-nowrap">
+                          <span className="font-[700] text-newTextColor">
+                            {formatCompactCount(follower.noteCount!)}
+                          </span>{' '}
+                          <span className="text-textItemBlur">
+                            {t('followers_note_count', 'notes')}
+                          </span>
+                        </span>
+                      )}
+                      {hasInteractionCount && (
+                        <span className="whitespace-nowrap">
+                          <span className="font-[700] text-newTextColor">
+                            {formatCompactCount(follower.interactionCount!)}
+                          </span>{' '}
+                          <span className="text-textItemBlur">
+                            {t('followers_interaction_count', 'interactions')}
+                          </span>
+                        </span>
+                      )}
+                      {hasInfluenceScore && (
+                        <span className="text-textItemBlur">
+                          {t(
+                            'followers_recommendation_score',
+                            'Score {{score}}',
+                            {
+                              score: follower.influenceScore!,
+                            }
+                          )}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+              {follower.bio && (
+                <p className="mt-[8px] text-[13px] text-newTextColor line-clamp-3">
+                  {follower.bio}
+                </p>
+              )}
             </div>
+
+            {(followedAt || weFollowedAt) && (
+              <div className="mt-auto flex flex-col gap-[4px] text-[12px] text-textItemBlur">
+                {weFollowedAt && (
+                  <span>
+                    {t('followers_we_followed_at', 'You followed {{time}}', {
+                      time: weFollowedAt,
+                    })}
+                  </span>
+                )}
+                {followedAt && (
+                  <span>
+                    {t('followers_followed_at', 'Followed {{date}}', {
+                      date: followedAt,
+                    })}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
-      </article>
-    );
-  };
+      </div>
+    </article>
+  );
+};

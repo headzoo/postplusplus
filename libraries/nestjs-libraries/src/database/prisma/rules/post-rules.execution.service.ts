@@ -93,7 +93,7 @@ export class PostRulesExecutionService {
     private _postsService: PostsService,
     private _pipelineService: PipelineService,
     private _notificationService: NotificationService
-  ) { }
+  ) {}
 
   /**
    * Turns a freshly published post into durable evaluation work. Called once per
@@ -115,9 +115,10 @@ export class PostRulesExecutionService {
       return { items: [] };
     }
 
-    const capabilities = this._integrationManager.getPostRulesCapabilities()[
-      root.integration.providerIdentifier
-    ];
+    const capabilities =
+      this._integrationManager.getPostRulesCapabilities()[
+        root.integration.providerIdentifier
+      ];
     if (!capabilities) {
       return { items: [] };
     }
@@ -176,10 +177,7 @@ export class PostRulesExecutionService {
       }
 
       for (const evaluation of run.evaluations) {
-        if (
-          evaluation.status !== 'PENDING' &&
-          evaluation.status !== 'FAILED'
-        ) {
+        if (evaluation.status !== 'PENDING' && evaluation.status !== 'FAILED') {
           continue;
         }
         items.push({
@@ -292,11 +290,7 @@ export class PostRulesExecutionService {
 
     const session = await this.openSession(post.integration, provider);
     if (!session) {
-      return this.fail(
-        claim,
-        'Channel token could not be refreshed',
-        snapshot
-      );
+      return this.fail(claim, 'Channel token could not be refreshed', snapshot);
     }
 
     const conditions = (rule.conditions || []) as PostRuleCondition[];
@@ -371,7 +365,9 @@ export class PostRulesExecutionService {
     claim: PostRuleClaim,
     rule: PostRuleAssignedRule,
     capability: PostRulesCapability,
-    session: { run: <T>(call: (live: Integration) => Promise<T>) => Promise<T> },
+    session: {
+      run: <T>(call: (live: Integration) => Promise<T>) => Promise<T>;
+    },
     snapshot: PostRuleSnapshot,
     metrics: PostRuleNormalizedMetrics,
     matched: boolean
@@ -404,7 +400,10 @@ export class PostRulesExecutionService {
       if (result.status === 'unsupported') {
         return this.skip(claim, 'CAPABILITY_UNAVAILABLE', snapshot, metrics);
       }
-      if (result.status !== 'reposted' && result.status !== 'already_reposted') {
+      if (
+        result.status !== 'reposted' &&
+        result.status !== 'already_reposted'
+      ) {
         return this.fail(
           claim,
           `Auto repost failed (${result.status})`,
@@ -494,7 +493,9 @@ export class PostRulesExecutionService {
     claim: PostRuleClaim,
     rule: PostRuleAssignedRule,
     capability: PostRulesCapability,
-    session: { run: <T>(call: (live: Integration) => Promise<T>) => Promise<T> },
+    session: {
+      run: <T>(call: (live: Integration) => Promise<T>) => Promise<T>;
+    },
     snapshot: PostRuleSnapshot,
     metrics: PostRuleNormalizedMetrics,
     matched: boolean
@@ -635,8 +636,8 @@ export class PostRulesExecutionService {
         message: attemptLimitReached
           ? `Reschedule attempt limit of ${maxRescheduleAttempts} was reached, the post was removed without another reschedule`
           : successorPostId
-            ? 'The post was rescheduled and the published copy was removed'
-            : 'The post was removed',
+          ? 'The post was rescheduled and the published copy was removed'
+          : 'The post was removed',
       },
       metrics,
       'COMPLETED',
@@ -763,7 +764,9 @@ export class PostRulesExecutionService {
       claim.post.integrationId
     );
     if (!successor) {
-      throw new Error('The rescheduled Pipeline content is missing its channel');
+      throw new Error(
+        'The rescheduled Pipeline content is missing its channel'
+      );
     }
     return successor.id;
   }
@@ -782,11 +785,13 @@ export class PostRulesExecutionService {
     const [root] = ordered;
     return {
       settings: parseJson<Record<string, unknown>>(root.settings, {}),
-      tags: (((root as unknown as { tags?: { tag: { name: string } }[] }).tags ||
-        []) as { tag: { name: string } }[]).map((entry) => ({
-          value: entry.tag.name,
-          label: entry.tag.name,
-        })),
+      tags: (
+        ((root as unknown as { tags?: { tag: { name: string } }[] }).tags ||
+          []) as { tag: { name: string } }[]
+      ).map((entry) => ({
+        value: entry.tag.name,
+        label: entry.tag.name,
+      })),
       value: ordered.map((entry) => ({
         content: entry.content,
         image: parseJson<unknown[]>(entry.image, []),
@@ -806,7 +811,8 @@ export class PostRulesExecutionService {
     );
     if (invalid) {
       throw new Error(
-        `${invalid.name}: ${invalid.settingsError || invalid.errors || 'the content is invalid'
+        `${invalid.name}: ${
+          invalid.settingsError || invalid.errors || 'the content is invalid'
         }`
       );
     }
@@ -913,8 +919,7 @@ export class PostRulesExecutionService {
     const live = { ...integration };
     if (
       forceRefresh ||
-      (!!live.tokenExpiration &&
-        dayjs(live.tokenExpiration).isBefore(dayjs()))
+      (!!live.tokenExpiration && dayjs(live.tokenExpiration).isBefore(dayjs()))
     ) {
       const refreshed = await this._refreshIntegrationService.refresh(live);
       if (!refreshed || !refreshed.accessToken) {

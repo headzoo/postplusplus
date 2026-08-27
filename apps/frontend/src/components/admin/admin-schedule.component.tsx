@@ -221,7 +221,9 @@ const formatCadence = (cadence: ScheduleCadence) => {
       : `Every ${cadence.interval} days at ${time} UTC`;
   }
   const time = cadence.timeOfDay || '00:00';
-  return `Every ${cadence.interval} month(s) on day ${cadence.dayOfMonth || 1} at ${time} UTC`;
+  return `Every ${cadence.interval} month(s) on day ${
+    cadence.dayOfMonth || 1
+  } at ${time} UTC`;
 };
 
 const formatBotScoreCadence = (intervalHours: number) =>
@@ -331,7 +333,10 @@ export const AdminScheduleComponent: FC = () => {
       await relationship.mutate(await res.json(), false);
     } catch {
       setFormError(
-        t('admin_schedule_save_error', 'Could not save this schedule. Try again.')
+        t(
+          'admin_schedule_save_error',
+          'Could not save this schedule. Try again.'
+        )
       );
     } finally {
       setSavingGrades(false);
@@ -382,7 +387,10 @@ export const AdminScheduleComponent: FC = () => {
       await botScores.mutate(await res.json(), false);
     } catch {
       setFormError(
-        t('admin_schedule_save_error', 'Could not save this schedule. Try again.')
+        t(
+          'admin_schedule_save_error',
+          'Could not save this schedule. Try again.'
+        )
       );
     } finally {
       setSavingBotScores(false);
@@ -433,7 +441,10 @@ export const AdminScheduleComponent: FC = () => {
       await hotTriage.mutate(await res.json(), false);
     } catch {
       setFormError(
-        t('admin_schedule_save_error', 'Could not save this schedule. Try again.')
+        t(
+          'admin_schedule_save_error',
+          'Could not save this schedule. Try again.'
+        )
       );
     } finally {
       setSavingHotTriage(false);
@@ -484,7 +495,10 @@ export const AdminScheduleComponent: FC = () => {
       await followerCultivate.mutate(await res.json(), false);
     } catch {
       setFormError(
-        t('admin_schedule_save_error', 'Could not save this schedule. Try again.')
+        t(
+          'admin_schedule_save_error',
+          'Could not save this schedule. Try again.'
+        )
       );
     } finally {
       setSavingFollowerCultivate(false);
@@ -699,9 +713,9 @@ export const AdminScheduleComponent: FC = () => {
           {relationship.data?.exists
             ? t('admin_schedule_active', 'Temporal schedule is active.')
             : t(
-              'admin_schedule_missing',
-              'No Temporal schedule exists yet. Saving will create one.'
-            )}
+                'admin_schedule_missing',
+                'No Temporal schedule exists yet. Saving will create one.'
+              )}
         </div>
         {relationship.data?.cadence ? (
           <div className="text-[13px]">
@@ -716,7 +730,10 @@ export const AdminScheduleComponent: FC = () => {
         ) : null}
 
         <div className="flex flex-wrap gap-[12px] items-end">
-          <label className="flex flex-col gap-[6px] min-w-[160px]" htmlFor="admin-schedule-repeat">
+          <label
+            className="flex flex-col gap-[6px] min-w-[160px]"
+            htmlFor="admin-schedule-repeat"
+          >
             <span className="text-[12px] opacity-70">
               {t('admin_schedule_repeat', 'Repeat')}
             </span>
@@ -737,7 +754,10 @@ export const AdminScheduleComponent: FC = () => {
               </option>
             </select>
           </label>
-          <label className="flex flex-col gap-[6px] w-[120px]" htmlFor="admin-schedule-interval">
+          <label
+            className="flex flex-col gap-[6px] w-[120px]"
+            htmlFor="admin-schedule-interval"
+          >
             <span className="text-[12px] opacity-70">
               {t('admin_schedule_interval', 'Interval')}
             </span>
@@ -788,10 +808,7 @@ export const AdminScheduleComponent: FC = () => {
           <Button secondary disabled={triggeringGrades} onClick={triggerGrades}>
             {t('admin_schedule_trigger_now', 'Trigger now')}
           </Button>
-          <Button
-            secondary
-            onClick={() => openLogs('relationship-grades')}
-          >
+          <Button secondary onClick={() => openLogs('relationship-grades')}>
             {t('admin_schedule_logs', 'Logs')}
           </Button>
         </div>
@@ -805,9 +822,9 @@ export const AdminScheduleComponent: FC = () => {
           {botScores.data?.exists
             ? t('admin_schedule_active', 'Temporal schedule is active.')
             : t(
-              'admin_schedule_missing',
-              'No Temporal schedule exists yet. Saving will create one.'
-            )}
+                'admin_schedule_missing',
+                'No Temporal schedule exists yet. Saving will create one.'
+              )}
         </div>
         {botScores.data?.cadence ? (
           <div className="text-[13px]">
@@ -822,7 +839,10 @@ export const AdminScheduleComponent: FC = () => {
         ) : null}
 
         <div className="flex flex-wrap gap-[12px] items-end">
-          <label className="flex flex-col gap-[6px] w-[160px]" htmlFor="admin-schedule-bot-interval">
+          <label
+            className="flex flex-col gap-[6px] w-[160px]"
+            htmlFor="admin-schedule-bot-interval"
+          >
             <span className="text-[12px] opacity-70">
               {t('admin_schedule_interval_hours', 'Interval (hours)')}
             </span>
@@ -832,7 +852,9 @@ export const AdminScheduleComponent: FC = () => {
               min={1}
               max={168}
               value={botIntervalHours}
-              onChange={(event) => setBotIntervalHours(Number(event.target.value))}
+              onChange={(event) =>
+                setBotIntervalHours(Number(event.target.value))
+              }
               className="bg-newBgColorInner h-[38px] border border-newTableBorder rounded-[8px] px-[10px] text-[14px] text-textColor"
             />
           </label>
@@ -842,13 +864,14 @@ export const AdminScheduleComponent: FC = () => {
           <Button disabled={savingBotScores} onClick={saveBotScores}>
             {t('save', 'Save')}
           </Button>
-          <Button secondary disabled={triggeringBotScores} onClick={triggerBotScores}>
-            {t('admin_schedule_trigger_now', 'Trigger now')}
-          </Button>
           <Button
             secondary
-            onClick={() => openLogs('follower-bot-scores')}
+            disabled={triggeringBotScores}
+            onClick={triggerBotScores}
           >
+            {t('admin_schedule_trigger_now', 'Trigger now')}
+          </Button>
+          <Button secondary onClick={() => openLogs('follower-bot-scores')}>
             {t('admin_schedule_logs', 'Logs')}
           </Button>
         </div>
@@ -862,9 +885,9 @@ export const AdminScheduleComponent: FC = () => {
           {hotTriage.data?.exists
             ? t('admin_schedule_active', 'Temporal schedule is active.')
             : t(
-              'admin_schedule_missing',
-              'No Temporal schedule exists yet. Saving will create one.'
-            )}
+                'admin_schedule_missing',
+                'No Temporal schedule exists yet. Saving will create one.'
+              )}
         </div>
         {hotTriage.data?.cadence ? (
           <div className="text-[13px]">
@@ -879,7 +902,10 @@ export const AdminScheduleComponent: FC = () => {
         ) : null}
 
         <div className="flex flex-wrap gap-[12px] items-end">
-          <label className="flex flex-col gap-[6px] w-[160px]" htmlFor="admin-schedule-hot-interval">
+          <label
+            className="flex flex-col gap-[6px] w-[160px]"
+            htmlFor="admin-schedule-hot-interval"
+          >
             <span className="text-[12px] opacity-70">
               {t('admin_schedule_interval_hours', 'Interval (hours)')}
             </span>
@@ -889,7 +915,9 @@ export const AdminScheduleComponent: FC = () => {
               min={1}
               max={168}
               value={hotIntervalHours}
-              onChange={(event) => setHotIntervalHours(Number(event.target.value))}
+              onChange={(event) =>
+                setHotIntervalHours(Number(event.target.value))
+              }
               className="bg-newBgColorInner h-[38px] border border-newTableBorder rounded-[8px] px-[10px] text-[14px] text-textColor"
             />
           </label>
@@ -899,7 +927,11 @@ export const AdminScheduleComponent: FC = () => {
           <Button disabled={savingHotTriage} onClick={saveHotTriage}>
             {t('save', 'Save')}
           </Button>
-          <Button secondary disabled={triggeringHotTriage} onClick={triggerHotTriage}>
+          <Button
+            secondary
+            disabled={triggeringHotTriage}
+            onClick={triggerHotTriage}
+          >
             {t('admin_schedule_trigger_now', 'Trigger now')}
           </Button>
           <Button secondary onClick={() => openLogs('hot-triage')}>
@@ -916,13 +948,15 @@ export const AdminScheduleComponent: FC = () => {
           {followerCultivate.data?.exists
             ? t('admin_schedule_active', 'Temporal schedule is active.')
             : t(
-              'admin_schedule_missing',
-              'No Temporal schedule exists yet. Saving will create one.'
-            )}
+                'admin_schedule_missing',
+                'No Temporal schedule exists yet. Saving will create one.'
+              )}
         </div>
         {followerCultivate.data?.cadence ? (
           <div className="text-[13px]">
-            {formatBotScoreCadence(followerCultivate.data.cadence.intervalHours)}
+            {formatBotScoreCadence(
+              followerCultivate.data.cadence.intervalHours
+            )}
           </div>
         ) : null}
         {followerCultivate.data?.nextRunTimes?.length ? (
@@ -933,7 +967,10 @@ export const AdminScheduleComponent: FC = () => {
         ) : null}
 
         <div className="flex flex-wrap gap-[12px] items-end">
-          <label className="flex flex-col gap-[6px] w-[160px]" htmlFor="admin-schedule-cultivate-interval">
+          <label
+            className="flex flex-col gap-[6px] w-[160px]"
+            htmlFor="admin-schedule-cultivate-interval"
+          >
             <span className="text-[12px] opacity-70">
               {t('admin_schedule_interval_hours', 'Interval (hours)')}
             </span>
@@ -952,7 +989,10 @@ export const AdminScheduleComponent: FC = () => {
         </div>
 
         <div className="flex flex-wrap gap-[12px]">
-          <Button disabled={savingFollowerCultivate} onClick={saveFollowerCultivate}>
+          <Button
+            disabled={savingFollowerCultivate}
+            onClick={saveFollowerCultivate}
+          >
             {t('save', 'Save')}
           </Button>
           <Button
@@ -975,13 +1015,13 @@ export const AdminScheduleComponent: FC = () => {
         <div className="text-[13px] opacity-70">
           {leadBridge.data?.exists
             ? t(
-              'admin_schedule_lead_bridge_running',
-              'Lead discovery workflow is present.'
-            )
+                'admin_schedule_lead_bridge_running',
+                'Lead discovery workflow is present.'
+              )
             : t(
-              'admin_schedule_lead_bridge_missing',
-              'Lead discovery workflow is not running.'
-            )}
+                'admin_schedule_lead_bridge_missing',
+                'Lead discovery workflow is not running.'
+              )}
         </div>
         <div className="text-[13px]">
           {leadBridge.data?.cadence?.label ||
@@ -1017,28 +1057,30 @@ export const AdminScheduleComponent: FC = () => {
         <div className="text-[13px] opacity-70">
           {missingPosts.data?.exists
             ? t(
-              'admin_schedule_workflow_running',
-              'Recovery workflow is present.'
-            )
+                'admin_schedule_workflow_running',
+                'Recovery workflow is present.'
+              )
             : t(
-              'admin_schedule_workflow_missing',
-              'Recovery workflow is not running.'
-            )}
+                'admin_schedule_workflow_missing',
+                'Recovery workflow is not running.'
+              )}
         </div>
         <div className="text-[13px]">
-          {missingPosts.data?.cadence?.label || 'Every hour (fixed in workflow)'}
+          {missingPosts.data?.cadence?.label ||
+            'Every hour (fixed in workflow)'}
         </div>
         <div className="text-[13px]">
           {t('admin_schedule_status', 'Status')}: {missingPosts.data?.status}
         </div>
         <div className="flex flex-wrap gap-[12px]">
-          <Button secondary disabled={triggeringMissing} onClick={triggerMissing}>
-            {t('admin_schedule_trigger_scan_now', 'Trigger scan now')}
-          </Button>
           <Button
             secondary
-            onClick={() => openLogs('missing-post-recovery')}
+            disabled={triggeringMissing}
+            onClick={triggerMissing}
           >
+            {t('admin_schedule_trigger_scan_now', 'Trigger scan now')}
+          </Button>
+          <Button secondary onClick={() => openLogs('missing-post-recovery')}>
             {t('admin_schedule_logs', 'Logs')}
           </Button>
         </div>

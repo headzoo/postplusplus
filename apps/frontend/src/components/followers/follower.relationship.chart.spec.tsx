@@ -15,16 +15,17 @@ import { FollowerRelationshipChart } from './follower.relationship.chart';
 import { FollowerRelationshipSnapshot } from './use.followers';
 
 jest.mock('@gitroom/react/translation/get.transation.service.client', () => ({
-  useT: () => (key: string, fallback: string, params?: Record<string, unknown>) => {
-    if (!params) {
-      return fallback;
-    }
-    return Object.entries(params).reduce(
-      (result, [name, value]) =>
-        result.replace(new RegExp(`{{${name}}}`, 'g'), String(value)),
-      fallback
-    );
-  },
+  useT:
+    () => (key: string, fallback: string, params?: Record<string, unknown>) => {
+      if (!params) {
+        return fallback;
+      }
+      return Object.entries(params).reduce(
+        (result, [name, value]) =>
+          result.replace(new RegExp(`{{${name}}}`, 'g'), String(value)),
+        fallback
+      );
+    },
 }));
 
 const v1History: FollowerRelationshipSnapshot[] = [

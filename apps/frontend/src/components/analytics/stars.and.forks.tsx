@@ -139,7 +139,10 @@ export const StarsAndForks: FC<StarsAndForksInterface> = (props) => {
               <div className="text-[20px]">
                 {p === 0
                   ? t('last_github_trending', 'Last Github Trending')
-                  : t('next_predicted_github_trending', 'Next Predicted GitHub Trending')}
+                  : t(
+                      'next_predicted_github_trending',
+                      'Next Predicted GitHub Trending'
+                    )}
               </div>
             </div>
             <div className="flex items-center">

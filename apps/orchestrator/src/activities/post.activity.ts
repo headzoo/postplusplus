@@ -82,7 +82,7 @@ export class PostActivity {
     private _pipelinePlugService: PipelinePlugService,
     private _postRulesExecutionService: PostRulesExecutionService,
     private _adminScheduleLogService: AdminScheduleLogService
-  ) { }
+  ) {}
 
   @ActivityMethod()
   async getIntegrationById(orgId: string, id: string) {
@@ -334,16 +334,13 @@ export class PostActivity {
         status: 'completed',
       }));
     } else if (allowPending && getIntegration.postPending) {
-      postNow = await this.withPostHttpLog(
-        integration,
-        posts[0]?.id,
-        () =>
-          getIntegration.postPending!(
-            integration.internalId,
-            integration.token,
-            mappedPosts,
-            integration
-          )
+      postNow = await this.withPostHttpLog(integration, posts[0]?.id, () =>
+        getIntegration.postPending!(
+          integration.internalId,
+          integration.token,
+          mappedPosts,
+          integration
+        )
       );
     } else {
       postNow = await this.withPostHttpLog(integration, posts[0]?.id, () =>
@@ -525,11 +522,7 @@ export class PostActivity {
     );
 
     return this.withPostHttpLog(integration, undefined, () =>
-      getIntegration.finalizePost(
-        integration.token,
-        pendingData,
-        integration
-      )
+      getIntegration.finalizePost(integration.token, pendingData, integration)
     );
   }
 

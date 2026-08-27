@@ -1,8 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import {
-  PipelineQueueItemStatus,
-  Prisma,
-} from '@prisma/client';
+import { PipelineQueueItemStatus, Prisma } from '@prisma/client';
 import {
   CreatePipelineDto,
   UpdatePipelineDto,
@@ -16,11 +13,11 @@ import { parseSkillFilename } from '@gitroom/nestjs-libraries/upload/context-doc
 const QUEUE_POSITION_INCREMENT = 1024;
 const TRANSACTION_ATTEMPTS = 3;
 
-class PipelineQueueChangedError extends Error { }
-class PipelineScheduleRevisionChangedError extends Error { }
-class PipelineScheduleSourceChangedError extends Error { }
-class PipelineContextDocumentsChangedError extends Error { }
-class PipelineSkillContextDocumentsChangedError extends Error { }
+class PipelineQueueChangedError extends Error {}
+class PipelineScheduleRevisionChangedError extends Error {}
+class PipelineScheduleSourceChangedError extends Error {}
+class PipelineContextDocumentsChangedError extends Error {}
+class PipelineSkillContextDocumentsChangedError extends Error {}
 
 export const activePipelineIntegrationWhere = {
   deletedAt: null,
@@ -93,16 +90,24 @@ export class PipelineRepository {
     private _queueItem: PrismaRepository<'pipelineQueueItem'>,
     private _contextDocument: PrismaRepository<'contextDocument'>,
     private _transaction: PrismaTransaction
-  ) { }
+  ) {}
 
   getPipelines(orgId: string) {
     return this._pipeline.model.pipeline.findMany({
       where: { organizationId: orgId, deletedAt: null },
       include: {
-        integrations: { include: { integration: { select: pipelineIntegrationSelect } } },
+        integrations: {
+          include: { integration: { select: pipelineIntegrationSelect } },
+        },
         contextDocuments: { include: pipelineContextDocumentInclude },
-        scheduleSlots: { orderBy: [{ dayOfWeek: 'asc' }, { minuteOfDay: 'asc' }] },
-        _count: { select: { queueItems: { where: { status: 'QUEUED', deletedAt: null } } } },
+        scheduleSlots: {
+          orderBy: [{ dayOfWeek: 'asc' }, { minuteOfDay: 'asc' }],
+        },
+        _count: {
+          select: {
+            queueItems: { where: { status: 'QUEUED', deletedAt: null } },
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -112,9 +117,13 @@ export class PipelineRepository {
     return this._pipeline.model.pipeline.findFirst({
       where: { id, organizationId: orgId, deletedAt: null },
       include: {
-        integrations: { include: { integration: { select: pipelineIntegrationSelect } } },
+        integrations: {
+          include: { integration: { select: pipelineIntegrationSelect } },
+        },
         contextDocuments: { include: pipelineContextDocumentInclude },
-        scheduleSlots: { orderBy: [{ dayOfWeek: 'asc' }, { minuteOfDay: 'asc' }] },
+        scheduleSlots: {
+          orderBy: [{ dayOfWeek: 'asc' }, { minuteOfDay: 'asc' }],
+        },
         queueItems: {
           where: { deletedAt: null },
           include: {
@@ -210,12 +219,12 @@ export class PipelineRepository {
         },
         ...(body.contextDocumentIds?.length
           ? {
-            contextDocuments: {
-              create: body.contextDocumentIds.map((contextDocumentId) => ({
-                contextDocumentId,
-              })),
-            },
-          }
+              contextDocuments: {
+                create: body.contextDocumentIds.map((contextDocumentId) => ({
+                  contextDocumentId,
+                })),
+              },
+            }
           : {}),
       },
     });
@@ -236,7 +245,9 @@ export class PipelineRepository {
           where: { pipelineId: id, status: 'QUEUED', deletedAt: null },
           select: { id: true },
         });
-        const oldIds = existing.integrations.map((item: any) => item.integrationId).sort();
+        const oldIds = existing.integrations
+          .map((item: any) => item.integrationId)
+          .sort();
         const newIds = body.integrations.map((item) => item.id).sort();
         const integrationsChanged = oldIds.join(',') !== newIds.join(',');
         const removedIntegrationIds = oldIds.filter(
@@ -258,7 +269,11 @@ export class PipelineRepository {
           if (ownedDocuments.length !== body.contextDocumentIds.length) {
             throw new PipelineContextDocumentsChangedError();
           }
-          if (ownedDocuments.some((document: any) => parseSkillFilename(document.name))) {
+          if (
+            ownedDocuments.some((document: any) =>
+              parseSkillFilename(document.name)
+            )
+          ) {
             throw new PipelineSkillContextDocumentsChangedError();
           }
         }
@@ -280,23 +295,25 @@ export class PipelineRepository {
             ...(body.color !== undefined ? { color: body.color } : {}),
             ...(integrationsChanged
               ? {
-                integrations: {
-                  deleteMany: {},
-                  create: body.integrations.map(({ id: integrationId }) => ({
-                    integrationId,
-                  })),
-                },
-              }
+                  integrations: {
+                    deleteMany: {},
+                    create: body.integrations.map(({ id: integrationId }) => ({
+                      integrationId,
+                    })),
+                  },
+                }
               : {}),
             ...(documentsChanged
               ? {
-                contextDocuments: {
-                  deleteMany: {},
-                  create: body.contextDocumentIds!.map((contextDocumentId) => ({
-                    contextDocumentId,
-                  })),
-                },
-              }
+                  contextDocuments: {
+                    deleteMany: {},
+                    create: body.contextDocumentIds!.map(
+                      (contextDocumentId) => ({
+                        contextDocumentId,
+                      })
+                    ),
+                  },
+                }
               : {}),
           },
         });
@@ -485,7 +502,11 @@ export class PipelineRepository {
     }
   }
 
-  async reorderQueuedItems(orgId: string, pipelineId: string, itemIds: string[]) {
+  async reorderQueuedItems(
+    orgId: string,
+    pipelineId: string,
+    itemIds: string[]
+  ) {
     try {
       return await this.withSerializableRetry(async (tx) => {
         const pipeline = await tx.pipeline.findFirst({
@@ -577,7 +598,11 @@ export class PipelineRepository {
       }
       return tx.pipeline.update({
         where: { id },
-        data: { deletedAt: new Date(), active: false, scheduleRevision: { increment: 1 } },
+        data: {
+          deletedAt: new Date(),
+          active: false,
+          scheduleRevision: { increment: 1 },
+        },
       });
     });
   }
@@ -735,8 +760,17 @@ export class PipelineRepository {
       if (!item) {
         return null;
       }
-      const position = await this.positionFor(tx, pipelineId, itemId, beforeItemId, afterItemId);
-      return tx.pipelineQueueItem.update({ where: { id: itemId }, data: { position } });
+      const position = await this.positionFor(
+        tx,
+        pipelineId,
+        itemId,
+        beforeItemId,
+        afterItemId
+      );
+      return tx.pipelineQueueItem.update({
+        where: { id: itemId },
+        data: { position },
+      });
     });
   }
 
@@ -756,22 +790,39 @@ export class PipelineRepository {
           pipeline: { organizationId: orgId, deletedAt: null },
         },
         include: {
-          posts: { where: { parentPostId: null, deletedAt: null }, select: { integrationId: true } },
+          posts: {
+            where: { parentPostId: null, deletedAt: null },
+            select: { integrationId: true },
+          },
         },
       });
       const destination = await tx.pipeline.findFirst({
-        where: { id: destinationPipelineId, organizationId: orgId, deletedAt: null },
+        where: {
+          id: destinationPipelineId,
+          organizationId: orgId,
+          deletedAt: null,
+        },
         include: { integrations: { select: { integrationId: true } } },
       });
       if (!item || !destination) {
         return null;
       }
-      const itemChannels = item.posts.map((post: any) => post.integrationId).sort();
-      const destinationChannels = destination.integrations.map((entry: any) => entry.integrationId).sort();
+      const itemChannels = item.posts
+        .map((post: any) => post.integrationId)
+        .sort();
+      const destinationChannels = destination.integrations
+        .map((entry: any) => entry.integrationId)
+        .sort();
       if (itemChannels.join(',') !== destinationChannels.join(',')) {
         return false;
       }
-      const position = await this.positionFor(tx, destination.id, undefined, beforeItemId, afterItemId);
+      const position = await this.positionFor(
+        tx,
+        destination.id,
+        undefined,
+        beforeItemId,
+        afterItemId
+      );
       return tx.pipelineQueueItem.update({
         where: { id: itemId },
         data: { pipelineId: destination.id, position },
@@ -923,14 +974,25 @@ export class PipelineRepository {
       orderBy: [{ position: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
       select: { id: true, position: true },
     });
-    const beforeIndex = beforeItemId ? items.findIndex((item: any) => item.id === beforeItemId) : -1;
-    const afterIndex = afterItemId ? items.findIndex((item: any) => item.id === afterItemId) : -1;
-    const insertIndex = beforeIndex >= 0 ? beforeIndex : afterIndex >= 0 ? afterIndex + 1 : items.length;
+    const beforeIndex = beforeItemId
+      ? items.findIndex((item: any) => item.id === beforeItemId)
+      : -1;
+    const afterIndex = afterItemId
+      ? items.findIndex((item: any) => item.id === afterItemId)
+      : -1;
+    const insertIndex =
+      beforeIndex >= 0
+        ? beforeIndex
+        : afterIndex >= 0
+        ? afterIndex + 1
+        : items.length;
     const previous = items[insertIndex - 1]?.position;
     const next = items[insertIndex]?.position;
-    if (previous === undefined) return (next ?? QUEUE_POSITION_INCREMENT) - QUEUE_POSITION_INCREMENT;
+    if (previous === undefined)
+      return (next ?? QUEUE_POSITION_INCREMENT) - QUEUE_POSITION_INCREMENT;
     if (next === undefined) return previous + QUEUE_POSITION_INCREMENT;
-    if (next - previous > 1) return previous + Math.floor((next - previous) / 2);
+    if (next - previous > 1)
+      return previous + Math.floor((next - previous) / 2);
     await Promise.all(
       items.map((item: any, index: number) =>
         tx.pipelineQueueItem.update({
@@ -939,10 +1001,14 @@ export class PipelineRepository {
         })
       )
     );
-    return insertIndex * QUEUE_POSITION_INCREMENT + QUEUE_POSITION_INCREMENT / 2;
+    return (
+      insertIndex * QUEUE_POSITION_INCREMENT + QUEUE_POSITION_INCREMENT / 2
+    );
   }
 
-  private async withSerializableRetry<T>(callback: (tx: any) => Promise<T>): Promise<T> {
+  private async withSerializableRetry<T>(
+    callback: (tx: any) => Promise<T>
+  ): Promise<T> {
     let error: unknown;
     for (let attempt = 0; attempt < TRANSACTION_ATTEMPTS; attempt++) {
       try {
@@ -951,7 +1017,8 @@ export class PipelineRepository {
         });
       } catch (caught: any) {
         error = caught;
-        if (caught?.code !== 'P2034' || attempt === TRANSACTION_ATTEMPTS - 1) throw caught;
+        if (caught?.code !== 'P2034' || attempt === TRANSACTION_ATTEMPTS - 1)
+          throw caught;
       }
     }
     throw error;

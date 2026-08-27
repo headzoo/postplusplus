@@ -111,6 +111,10 @@ import {
 } from '@gitroom/nestjs-libraries/channel-strategies/channel-strategy.registry';
 import { getRelationshipTriage as getStrategyRelationshipTriage } from '@gitroom/nestjs-libraries/channel-strategies/channel-strategy.scoring';
 import { RelationshipGradeScheduleService } from '@gitroom/nestjs-libraries/temporal/relationship-grade.schedule.service';
+import {
+  ConversionRepository,
+  ConvertedActorCursor,
+} from '@gitroom/nestjs-libraries/database/prisma/conversions/conversion.repository';
 
 dayjs.extend(utc);
 
@@ -143,7 +147,8 @@ export class IntegrationService {
     private _channelInteractionRepository: ChannelInteractionRepository,
     private _channelAnalyticsService: ChannelAnalyticsService,
     private _channelAnalyticsRepository: ChannelAnalyticsRepository,
-    private _relationshipGradeScheduleService: RelationshipGradeScheduleService
+    private _relationshipGradeScheduleService: RelationshipGradeScheduleService,
+    private _conversionRepository: ConversionRepository
   ) { }
 
   async changeActiveCron(orgId: string) {
@@ -227,7 +232,9 @@ export class IntegrationService {
       throw new BadRequestException('Disabled channels cannot update strategy');
     }
     if (integration.type !== 'social') {
-      throw new BadRequestException('Channel strategy is only available for social channels');
+      throw new BadRequestException(
+        'Channel strategy is only available for social channels'
+      );
     }
 
     let provider: SocialProvider | undefined;
@@ -339,7 +346,9 @@ export class IntegrationService {
     }>
   ) {
     return [...assignments]
-      .filter(({ contextDocument }) => !parseSkillFilename(contextDocument.name))
+      .filter(
+        ({ contextDocument }) => !parseSkillFilename(contextDocument.name)
+      )
       .map(({ contextDocument }) => ({
         id: contextDocument.id,
         name: contextDocument.name,
@@ -348,7 +357,8 @@ export class IntegrationService {
       }))
       .sort(
         (first, second) =>
-          first.name.localeCompare(second.name) || first.id.localeCompare(second.id)
+          first.name.localeCompare(second.name) ||
+          first.id.localeCompare(second.id)
       );
   }
 
@@ -391,24 +401,25 @@ export class IntegrationService {
         })
       : undefined;
 
-    const integration = await this._integrationRepository.createOrUpdateIntegration(
-      additionalSettings,
-      oneTimeToken,
-      org,
-      name,
-      uploadedPicture,
-      type,
-      internalId,
-      provider,
-      token,
-      refreshToken,
-      expiresIn,
-      username,
-      isBetweenSteps,
-      refresh,
-      timezone,
-      customInstanceDetails
-    );
+    const integration =
+      await this._integrationRepository.createOrUpdateIntegration(
+        additionalSettings,
+        oneTimeToken,
+        org,
+        name,
+        uploadedPicture,
+        type,
+        internalId,
+        provider,
+        token,
+        refreshToken,
+        expiresIn,
+        username,
+        isBetweenSteps,
+        refresh,
+        timezone,
+        customInstanceDetails
+      );
     await this.requestInteractionReconciliation(integration);
     return integration;
   }
@@ -435,7 +446,9 @@ export class IntegrationService {
       throw new NotFoundException('Customer not found');
     }
     if (result === false) {
-      throw new BadRequestException('Customer cannot be moved in that direction');
+      throw new BadRequestException(
+        'Customer cannot be moved in that direction'
+      );
     }
     return result;
   }
@@ -491,7 +504,9 @@ export class IntegrationService {
 
           const interactionCapability = provider.channelInteractionWebhooks;
           const cacheKey = `integration:followers:probe:${org.id}:${integration.id}`;
-          let eligible: boolean | undefined = interactionCapability ? true : undefined;
+          let eligible: boolean | undefined = interactionCapability
+            ? true
+            : undefined;
           try {
             const cached = await ioRedis.get(cacheKey);
             if (cached === '1') {
@@ -503,18 +518,17 @@ export class IntegrationService {
 
           if (eligible === undefined) {
             try {
-              const page = await this.getFollowerPage(
-                integration,
-                provider,
-                { limit: 1 }
-              );
+              const page = await this.getFollowerPage(integration, provider, {
+                limit: 1,
+              });
               eligible = page.items.length > 0;
               try {
                 await ioRedis.set(
                   cacheKey,
                   eligible ? '1' : '0',
                   'EX',
-                  !process.env.NODE_ENV || process.env.NODE_ENV === 'development'
+                  !process.env.NODE_ENV ||
+                    process.env.NODE_ENV === 'development'
                     ? 1
                     : 300
                 );
@@ -762,7 +776,9 @@ export class IntegrationService {
             ? { reason: subscription.failureReason.slice(0, 160) }
             : {}),
           ...(subscription.trackingStartedAt
-            ? { trackingStartedAt: subscription.trackingStartedAt.toISOString() }
+            ? {
+              trackingStartedAt: subscription.trackingStartedAt.toISOString(),
+            }
             : {}),
           ...(subscription.createdAt
             ? { createdAt: subscription.createdAt.toISOString() }
@@ -780,11 +796,12 @@ export class IntegrationService {
     integrationId: string,
     query: FollowerQuery
   ) {
-    const actorUserId = actor && 'userId' in actor
-      ? actor.userId
-      : actor && 'id' in actor
-        ? actor.id
-        : undefined;
+    const actorUserId =
+      actor && 'userId' in actor
+        ? actor.userId
+        : actor && 'id' in actor
+          ? actor.id
+          : undefined;
     const integration = await this._integrationRepository.getIntegrationById(
       org.id,
       integrationId
@@ -799,7 +816,10 @@ export class IntegrationService {
       integration.deletedAt ||
       integration.type !== 'social'
     ) {
-      throw new HttpException('Followers are unavailable', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Followers are unavailable',
+        HttpStatus.BAD_REQUEST
+      );
     }
 
     let provider: SocialProvider;
@@ -808,11 +828,17 @@ export class IntegrationService {
         integration.providerIdentifier
       );
     } catch {
-      throw new HttpException('Followers are unavailable', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Followers are unavailable',
+        HttpStatus.BAD_REQUEST
+      );
     }
 
     if (!provider?.followers) {
-      throw new HttpException('Followers are unavailable', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Followers are unavailable',
+        HttpStatus.BAD_REQUEST
+      );
     }
 
     const search = normalizeFollowerSearch(query.search);
@@ -840,7 +866,10 @@ export class IntegrationService {
     }
     if (normalizedQuery.audience === 'ignored') {
       if (normalizedQuery.cursor && this.isHttpUrl(normalizedQuery.cursor)) {
-        throw new HttpException('Invalid follower cursor', HttpStatus.BAD_REQUEST);
+        throw new HttpException(
+          'Invalid follower cursor',
+          HttpStatus.BAD_REQUEST
+        );
       }
       this.assertFollowerCursorQueryIdentity(
         normalizedQuery.cursor,
@@ -858,7 +887,10 @@ export class IntegrationService {
     }
     if (normalizedQuery.audience === 'lead') {
       if (normalizedQuery.cursor && this.isHttpUrl(normalizedQuery.cursor)) {
-        throw new HttpException('Invalid follower cursor', HttpStatus.BAD_REQUEST);
+        throw new HttpException(
+          'Invalid follower cursor',
+          HttpStatus.BAD_REQUEST
+        );
       }
       this.assertFollowerCursorQueryIdentity(
         normalizedQuery.cursor,
@@ -875,7 +907,10 @@ export class IntegrationService {
     }
     if (normalizedQuery.audience === 'followed') {
       if (normalizedQuery.cursor && this.isHttpUrl(normalizedQuery.cursor)) {
-        throw new HttpException('Invalid follower cursor', HttpStatus.BAD_REQUEST);
+        throw new HttpException(
+          'Invalid follower cursor',
+          HttpStatus.BAD_REQUEST
+        );
       }
       this.assertFollowerCursorQueryIdentity(
         normalizedQuery.cursor,
@@ -892,7 +927,10 @@ export class IntegrationService {
     }
     if (normalizedQuery.audience === 'unfollowed') {
       if (normalizedQuery.cursor && this.isHttpUrl(normalizedQuery.cursor)) {
-        throw new HttpException('Invalid follower cursor', HttpStatus.BAD_REQUEST);
+        throw new HttpException(
+          'Invalid follower cursor',
+          HttpStatus.BAD_REQUEST
+        );
       }
       this.assertFollowerCursorQueryIdentity(
         normalizedQuery.cursor,
@@ -909,7 +947,10 @@ export class IntegrationService {
     }
     if (normalizedQuery.audience === 'cultivate') {
       if (normalizedQuery.cursor && this.isHttpUrl(normalizedQuery.cursor)) {
-        throw new HttpException('Invalid follower cursor', HttpStatus.BAD_REQUEST);
+        throw new HttpException(
+          'Invalid follower cursor',
+          HttpStatus.BAD_REQUEST
+        );
       }
       this.assertFollowerCursorQueryIdentity(
         normalizedQuery.cursor,
@@ -925,9 +966,32 @@ export class IntegrationService {
         normalizedQuery
       );
     }
+    if (normalizedQuery.audience === 'converted') {
+      if (normalizedQuery.cursor && this.isHttpUrl(normalizedQuery.cursor)) {
+        throw new HttpException(
+          'Invalid follower cursor',
+          HttpStatus.BAD_REQUEST
+        );
+      }
+      this.assertFollowerCursorQueryIdentity(
+        normalizedQuery.cursor,
+        search,
+        undefined,
+        'converted'
+      );
+      return this.getConvertedAudiencePage(
+        org.id,
+        actorUserId,
+        integration,
+        normalizedQuery
+      );
+    }
     if (this.isHotMaterializedQuery(normalizedQuery)) {
       if (normalizedQuery.cursor && this.isHttpUrl(normalizedQuery.cursor)) {
-        throw new HttpException('Invalid follower cursor', HttpStatus.BAD_REQUEST);
+        throw new HttpException(
+          'Invalid follower cursor',
+          HttpStatus.BAD_REQUEST
+        );
       }
       this.assertHotMaterializedQueryCompatible(normalizedQuery);
       this.assertFollowerCursorQueryIdentity(
@@ -992,11 +1056,12 @@ export class IntegrationService {
     integrationId: string,
     query: RecentFollowersQuery = {}
   ): Promise<FollowerPage> {
-    const actorUserId = actor && 'userId' in actor
-      ? actor.userId
-      : actor && 'id' in actor
-        ? actor.id
-        : undefined;
+    const actorUserId =
+      actor && 'userId' in actor
+        ? actor.userId
+        : actor && 'id' in actor
+          ? actor.id
+          : undefined;
     const integration = await this._integrationRepository.getIntegrationById(
       org.id,
       integrationId
@@ -1011,7 +1076,10 @@ export class IntegrationService {
       integration.deletedAt ||
       integration.type !== 'social'
     ) {
-      throw new HttpException('Followers are unavailable', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Followers are unavailable',
+        HttpStatus.BAD_REQUEST
+      );
     }
 
     let provider: SocialProvider;
@@ -1020,11 +1088,17 @@ export class IntegrationService {
         integration.providerIdentifier
       );
     } catch {
-      throw new HttpException('Followers are unavailable', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Followers are unavailable',
+        HttpStatus.BAD_REQUEST
+      );
     }
 
     if (!provider?.followers) {
-      throw new HttpException('Followers are unavailable', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Followers are unavailable',
+        HttpStatus.BAD_REQUEST
+      );
     }
 
     const sinceDays = Math.min(
@@ -1037,10 +1111,14 @@ export class IntegrationService {
       RECENT_FOLLOWERS_MAX_SINCE_DAYS
     );
     const limit = Math.min(
-      Math.max(1, Number.isSafeInteger(query.limit) ? (query.limit as number) : 20),
+      Math.max(
+        1,
+        Number.isSafeInteger(query.limit) ? (query.limit as number) : 20
+      ),
       100
     );
-    const withoutOutboundSinceFollow = query.withoutOutboundSinceFollow === true;
+    const withoutOutboundSinceFollow =
+      query.withoutOutboundSinceFollow === true;
     const since = dayjs.utc().subtract(sinceDays, 'day').toDate();
     let cursor = query.cursor
       ? this.decodeRecentFollowerCursor(
@@ -1065,14 +1143,15 @@ export class IntegrationService {
         : 1);
       pageIndex++
     ) {
-      const ranked = await this._channelInteractionRepository.getRecentFollowers({
-        organizationId: org.id,
-        integrationId: integration.id,
-        userId: actorUserId,
-        since,
-        limit,
-        ...(cursor ? { cursor } : {}),
-      });
+      const ranked =
+        await this._channelInteractionRepository.getRecentFollowers({
+          organizationId: org.id,
+          integrationId: integration.id,
+          userId: actorUserId,
+          since,
+          limit,
+          ...(cursor ? { cursor } : {}),
+        });
 
       const mapped = ranked.items.map((row) =>
         this.mapAudienceMemberProfile(row)
@@ -1117,11 +1196,7 @@ export class IntegrationService {
       }
     }
 
-    if (
-      withoutOutboundSinceFollow &&
-      accumulated.length < limit &&
-      dbHasMore
-    ) {
+    if (withoutOutboundSinceFollow && accumulated.length < limit && dbHasMore) {
       hasMore = true;
     }
 
@@ -1171,7 +1246,10 @@ export class IntegrationService {
     externalId?: string,
     username?: string
   ): Promise<FollowerMemberDetail> {
-    const { provider } = await this.getFollowerIntegrationProvider(org, integrationId);
+    const { provider } = await this.getFollowerIntegrationProvider(
+      org,
+      integrationId
+    );
     try {
       const resolvedExternalId = externalId
         ? externalId
@@ -1226,7 +1304,10 @@ export class IntegrationService {
       integration.deletedAt ||
       integration.type !== 'social'
     ) {
-      throw new HttpException('Followers are unavailable', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Followers are unavailable',
+        HttpStatus.BAD_REQUEST
+      );
     }
 
     let provider: SocialProvider;
@@ -1235,7 +1316,10 @@ export class IntegrationService {
         integration.providerIdentifier
       );
     } catch {
-      throw new HttpException('Followers are unavailable', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Followers are unavailable',
+        HttpStatus.BAD_REQUEST
+      );
     }
 
     if (!provider?.memberPosts) {
@@ -1320,7 +1404,10 @@ export class IntegrationService {
       );
     } catch (error) {
       if (error instanceof NotFoundException) {
-        throw new HttpException('Follower note was not found', HttpStatus.NOT_FOUND);
+        throw new HttpException(
+          'Follower note was not found',
+          HttpStatus.NOT_FOUND
+        );
       }
       throw error;
     }
@@ -1340,13 +1427,19 @@ export class IntegrationService {
       );
     } catch (error) {
       if (error instanceof NotFoundException) {
-        throw new HttpException('Follower note was not found', HttpStatus.NOT_FOUND);
+        throw new HttpException(
+          'Follower note was not found',
+          HttpStatus.NOT_FOUND
+        );
       }
       throw error;
     }
   }
 
-  async listFollowerLists(org: Organization, integrationId: string): Promise<FollowerList[]> {
+  async listFollowerLists(
+    org: Organization,
+    integrationId: string
+  ): Promise<FollowerList[]> {
     await this.getFollowerIntegrationProvider(org, integrationId);
     const lists = await this._channelInteractionService.listFollowerLists(
       org.id,
@@ -1376,10 +1469,13 @@ export class IntegrationService {
     actor: FollowerReadActor | User | undefined,
     integrationId: string
   ) {
-    const [all, stored, snapshot] = await Promise.all([
+    const [all, stored, snapshot, convertedCount] = await Promise.all([
       this.getFollowers(org, actor, integrationId, { limit: 1 }),
       this.getStoredFollowerAudienceCounts(org, integrationId),
       this.getLatestAccountAudienceTotal(org, integrationId).catch(() => null),
+      this._conversionRepository
+        .countDistinctConvertedActorsWithProfiles(org.id, integrationId)
+        .catch(() => 0),
     ]);
 
     const listTotal = all.total ?? null;
@@ -1395,7 +1491,10 @@ export class IntegrationService {
       total,
       totalAsOf: snapshot?.asOf ?? null,
       totalSource,
-      categories: stored.categories,
+      categories: {
+        ...stored.categories,
+        converted: convertedCount,
+      },
       lists: stored.lists,
       listsTruncated: stored.listsTruncated,
       tracking: all.tracking ?? null,
@@ -1508,7 +1607,10 @@ export class IntegrationService {
       integration.deletedAt ||
       integration.type !== 'social'
     ) {
-      throw new HttpException('Followers are unavailable', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Followers are unavailable',
+        HttpStatus.BAD_REQUEST
+      );
     }
 
     let provider: SocialProvider;
@@ -1517,10 +1619,16 @@ export class IntegrationService {
         integration.providerIdentifier
       );
     } catch {
-      throw new HttpException('Followers are unavailable', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Followers are unavailable',
+        HttpStatus.BAD_REQUEST
+      );
     }
     if (!provider?.followers) {
-      throw new HttpException('Followers are unavailable', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Followers are unavailable',
+        HttpStatus.BAD_REQUEST
+      );
     }
     if (!provider.resolveAudienceProfileFromUrl) {
       throw new HttpException(
@@ -1534,7 +1642,9 @@ export class IntegrationService {
       !!liveIntegration.tokenExpiration &&
       dayjs(liveIntegration.tokenExpiration).isBefore(dayjs())
     ) {
-      const data = await this._refreshIntegrationService.refresh(liveIntegration);
+      const data = await this._refreshIntegrationService.refresh(
+        liveIntegration
+      );
       if (!data || !data.accessToken) {
         throw new HttpException(
           'Followers are temporarily unavailable',
@@ -1642,7 +1752,9 @@ export class IntegrationService {
       !!liveIntegration.tokenExpiration &&
       dayjs(liveIntegration.tokenExpiration).isBefore(dayjs())
     ) {
-      const data = await this._refreshIntegrationService.refresh(liveIntegration);
+      const data = await this._refreshIntegrationService.refresh(
+        liveIntegration
+      );
       if (!data || !data.accessToken) {
         throw new HttpException(
           'Followers are temporarily unavailable',
@@ -1707,7 +1819,9 @@ export class IntegrationService {
       !!liveIntegration.tokenExpiration &&
       dayjs(liveIntegration.tokenExpiration).isBefore(dayjs())
     ) {
-      const data = await this._refreshIntegrationService.refresh(liveIntegration);
+      const data = await this._refreshIntegrationService.refresh(
+        liveIntegration
+      );
       if (!data || !data.accessToken) {
         throw new HttpException(
           'Followers are temporarily unavailable',
@@ -1933,7 +2047,10 @@ export class IntegrationService {
       integration.deletedAt ||
       integration.type !== 'social'
     ) {
-      throw new HttpException('Followers are unavailable', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Followers are unavailable',
+        HttpStatus.BAD_REQUEST
+      );
     }
 
     let provider: SocialProvider;
@@ -1942,11 +2059,17 @@ export class IntegrationService {
         integration.providerIdentifier
       );
     } catch {
-      throw new HttpException('Followers are unavailable', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Followers are unavailable',
+        HttpStatus.BAD_REQUEST
+      );
     }
 
     if (!provider?.followers) {
-      throw new HttpException('Followers are unavailable', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Followers are unavailable',
+        HttpStatus.BAD_REQUEST
+      );
     }
 
     return { integration, provider };
@@ -1976,7 +2099,10 @@ export class IntegrationService {
         leadBridgesAsLead?: Array<{
           bridgeExternalId: string;
           bridgeRelationshipGrade: number | null;
-          bridgeMember?: { username: string | null; name: string | null } | null;
+          bridgeMember?: {
+            username: string | null;
+            name: string | null;
+          } | null;
         }>;
         relationshipGrade: number | null;
         relationshipEffortScore: number | null;
@@ -2187,9 +2313,10 @@ export class IntegrationService {
       ...this.followerBotFields(member),
       ...this.followerRelationshipFields(member),
       ...(() => {
-        const listIds = member.listIds
-          ?? member.listMemberships?.map((membership) => membership.listId)
-          ?? [];
+        const listIds =
+          member.listIds ??
+          member.listMemberships?.map((membership) => membership.listId) ??
+          [];
         return listIds.length ? { listIds } : {};
       })(),
       ...(member.ignoredAt ? { isIgnored: true } : {}),
@@ -2215,7 +2342,8 @@ export class IntegrationService {
     personalGrades?: Array<{ grade: number }>;
   }) {
     const relationshipGrade = member?.relationshipGrade ?? null;
-    const myGrade = member?.myGrade ?? member?.personalGrades?.[0]?.grade ?? null;
+    const myGrade =
+      member?.myGrade ?? member?.personalGrades?.[0]?.grade ?? null;
     return {
       relationshipGrade,
       myGrade,
@@ -2237,7 +2365,8 @@ export class IntegrationService {
       ...(member?.isBot === null || typeof member?.isBot === 'boolean'
         ? { isBot: member?.isBot ?? null }
         : {}),
-      ...(member?.botConfidence === null || Number.isFinite(member?.botConfidence)
+      ...(member?.botConfidence === null ||
+        Number.isFinite(member?.botConfidence)
         ? { botConfidence: member?.botConfidence ?? null }
         : {}),
       ...(member?.botFormulaVersion === null ||
@@ -2308,8 +2437,7 @@ export class IntegrationService {
     return {
       effortScore,
       reciprocationScore,
-      netGap: member?.relationshipNetGap ??
-        reciprocationScore! - effortScore!,
+      netGap: member?.relationshipNetGap ?? reciprocationScore! - effortScore!,
       effortStars: scoreToStars(effortScore!),
       reciprocationStars: scoreToStars(reciprocationScore!),
       ...(visibleTriage ? { relationshipTriage: visibleTriage } : {}),
@@ -2378,8 +2506,7 @@ export class IntegrationService {
     if (!localPart) {
       return '';
     }
-    const capitalized =
-      localPart.charAt(0).toUpperCase() + localPart.slice(1);
+    const capitalized = localPart.charAt(0).toUpperCase() + localPart.slice(1);
     return capitalized.split('.')[0];
   }
 
@@ -2393,9 +2520,12 @@ export class IntegrationService {
     return {
       id: event.id,
       kind: event.kind.toLowerCase() as FollowerMemberInteraction['kind'],
-      direction: event.direction.toLowerCase() as FollowerMemberInteraction['direction'],
+      direction:
+        event.direction.toLowerCase() as FollowerMemberInteraction['direction'],
       timestamp: event.eventAt.toISOString(),
-      ...(event.relatedObjectId ? { relatedObjectId: event.relatedObjectId } : {}),
+      ...(event.relatedObjectId
+        ? { relatedObjectId: event.relatedObjectId }
+        : {}),
     };
   }
 
@@ -2517,7 +2647,10 @@ export class IntegrationService {
     query: FollowerQuery
   ): FollowerSort | undefined {
     if (query.cursor && this.isHttpUrl(query.cursor)) {
-      throw new HttpException('Invalid follower cursor', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Invalid follower cursor',
+        HttpStatus.BAD_REQUEST
+      );
     }
 
     const search = normalizeFollowerSearch(query.search);
@@ -2536,24 +2669,36 @@ export class IntegrationService {
       query.cursor?.startsWith('follower-cultivate:v1:') ||
       query.cursor?.startsWith('follower-cultivate:v2:')
     ) {
-      throw new HttpException('Invalid follower cursor', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Invalid follower cursor',
+        HttpStatus.BAD_REQUEST
+      );
     }
     if (query.cursor?.startsWith('follower-ignored:v1:')) {
-      throw new HttpException('Invalid follower cursor', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Invalid follower cursor',
+        HttpStatus.BAD_REQUEST
+      );
     }
-    const isAudienceCursor = !!query.cursor?.startsWith('follower-audience:v1:');
+    const isAudienceCursor = !!query.cursor?.startsWith(
+      'follower-audience:v1:'
+    );
     const isRankCursor = !!query.cursor?.startsWith('follower-rank:v1:');
     const isNotesCursor = !!query.cursor?.startsWith('follower-notes:v1:');
     const isLikesCursor = !!query.cursor?.startsWith('follower-likes:v1:');
-    const isProjectionCursor =
-      !!query.cursor?.startsWith('follower-projection:v1:');
+    const isProjectionCursor = !!query.cursor?.startsWith(
+      'follower-projection:v1:'
+    );
     const isGradeCursor =
       !!query.cursor?.startsWith('follower-relationship-grade:v1:') ||
       !!query.cursor?.startsWith('follower-my-grade:v1:') ||
       !!query.cursor?.startsWith('follower-bot-grade:v1:');
 
     if (isAudienceCursor && !search && !query.triage && !query.listId) {
-      throw new HttpException('Invalid follower cursor', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Invalid follower cursor',
+        HttpStatus.BAD_REQUEST
+      );
     }
 
     if (!query.sort && !query.direction) {
@@ -2564,7 +2709,10 @@ export class IntegrationService {
         isGradeCursor ||
         isProjectionCursor
       ) {
-        throw new HttpException('Invalid follower cursor', HttpStatus.BAD_REQUEST);
+        throw new HttpException(
+          'Invalid follower cursor',
+          HttpStatus.BAD_REQUEST
+        );
       }
       return undefined;
     }
@@ -2572,12 +2720,21 @@ export class IntegrationService {
     const sort = this.getFollowerSorts(provider).find(
       (candidate) => candidate.key === query.sort
     );
-    if (!sort || (query.direction && !sort.directions.includes(query.direction))) {
-      throw new HttpException('Unsupported follower sort', HttpStatus.BAD_REQUEST);
+    if (
+      !sort ||
+      (query.direction && !sort.directions.includes(query.direction))
+    ) {
+      throw new HttpException(
+        'Unsupported follower sort',
+        HttpStatus.BAD_REQUEST
+      );
     }
     if (sort.scope === 'database') {
       if (isAudienceCursor) {
-        throw new HttpException('Invalid follower cursor', HttpStatus.BAD_REQUEST);
+        throw new HttpException(
+          'Invalid follower cursor',
+          HttpStatus.BAD_REQUEST
+        );
       }
       if (sort.requiresWindow && !query.window) {
         throw new HttpException(
@@ -2594,7 +2751,10 @@ export class IntegrationService {
       isGradeCursor ||
       isProjectionCursor
     ) {
-      throw new HttpException('Invalid follower cursor', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Invalid follower cursor',
+        HttpStatus.BAD_REQUEST
+      );
     }
     return sort;
   }
@@ -2608,10 +2768,22 @@ export class IntegrationService {
     sort: FollowerSort
   ): Promise<FollowerPage> {
     if (sort.key === FOLLOWER_DATABASE_NOTES_SORT.key) {
-      return this.getNoteCountFollowerPage(organizationId, userId, integration, query, sort);
+      return this.getNoteCountFollowerPage(
+        organizationId,
+        userId,
+        integration,
+        query,
+        sort
+      );
     }
     if (sort.key === FOLLOWER_DATABASE_LIKES_SORT.key) {
-      return this.getLikesCountFollowerPage(organizationId, userId, integration, query, sort);
+      return this.getLikesCountFollowerPage(
+        organizationId,
+        userId,
+        integration,
+        query,
+        sort
+      );
     }
     if (sort.key === FOLLOWER_DATABASE_RELATIONSHIP_GRADE_SORT.key) {
       return this.getRelationshipGradeFollowerPage(
@@ -2629,7 +2801,13 @@ export class IntegrationService {
           HttpStatus.BAD_REQUEST
         );
       }
-      return this.getMyGradeFollowerPage(organizationId, userId, integration, query, sort);
+      return this.getMyGradeFollowerPage(
+        organizationId,
+        userId,
+        integration,
+        query,
+        sort
+      );
     }
     if (sort.key === FOLLOWER_DATABASE_BOT_GRADE_SORT.key) {
       return this.getBotGradeFollowerPage(
@@ -2678,7 +2856,10 @@ export class IntegrationService {
       ignoredVisibility: 'exclude',
     });
     if (cursor && ranked.rollup?.activeGeneration !== cursor.generation) {
-      throw new HttpException('Invalid follower cursor', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Invalid follower cursor',
+        HttpStatus.BAD_REQUEST
+      );
     }
     const tracking = this.getInteractionTrackingMetadata(
       ranked.followerSync,
@@ -2705,22 +2886,50 @@ export class IntegrationService {
     const items = ranked.items.map((row) =>
       this.sanitizeFollower({
         id: row.counterpartyExternalId,
-        name: row.audienceMember.name || row.audienceMember.username || row.counterpartyExternalId,
-        ...(row.audienceMember.username ? { username: row.audienceMember.username } : {}),
-        ...(row.audienceMember.picture ? { picture: row.audienceMember.picture } : {}),
-        ...(row.audienceMember.profileUrl ? { profileUrl: row.audienceMember.profileUrl } : {}),
+        name:
+          row.audienceMember.name ||
+          row.audienceMember.username ||
+          row.counterpartyExternalId,
+        ...(row.audienceMember.username
+          ? { username: row.audienceMember.username }
+          : {}),
+        ...(row.audienceMember.picture
+          ? { picture: row.audienceMember.picture }
+          : {}),
+        ...(row.audienceMember.profileUrl
+          ? { profileUrl: row.audienceMember.profileUrl }
+          : {}),
         ...(row.audienceMember.bio ? { bio: row.audienceMember.bio } : {}),
-        ...(row.audienceMember.followersCount !== null ? { followersCount: row.audienceMember.followersCount } : {}),
-        ...(row.audienceMember.followingCount !== null ? { followingCount: row.audienceMember.followingCount } : {}),
-        ...(row.audienceMember.followedAt ? { followedAt: row.audienceMember.followedAt.toISOString() } : {}),
-        ...(row.audienceMember.accountCreatedAt ? { accountCreatedAt: row.audienceMember.accountCreatedAt.toISOString() } : {}),
+        ...(row.audienceMember.followersCount !== null
+          ? { followersCount: row.audienceMember.followersCount }
+          : {}),
+        ...(row.audienceMember.followingCount !== null
+          ? { followingCount: row.audienceMember.followingCount }
+          : {}),
+        ...(row.audienceMember.followedAt
+          ? { followedAt: row.audienceMember.followedAt.toISOString() }
+          : {}),
+        ...(row.audienceMember.accountCreatedAt
+          ? {
+            accountCreatedAt:
+              row.audienceMember.accountCreatedAt.toISOString(),
+          }
+          : {}),
         interactionCount: row.interactionCount,
         interactionScore: row.interactionScore,
-        ...(row.lastInteractionAt ? { lastInteractionAt: row.lastInteractionAt.toISOString() } : {}),
-        noteCount: audienceCounts.get(row.counterpartyExternalId)?.noteCount ?? 0,
-        likesCount: audienceCounts.get(row.counterpartyExternalId)?.likesCount ?? 0,
-        ...this.followerGradeFields(audienceCounts.get(row.counterpartyExternalId)),
-        ...this.followerBotFields(audienceCounts.get(row.counterpartyExternalId)),
+        ...(row.lastInteractionAt
+          ? { lastInteractionAt: row.lastInteractionAt.toISOString() }
+          : {}),
+        noteCount:
+          audienceCounts.get(row.counterpartyExternalId)?.noteCount ?? 0,
+        likesCount:
+          audienceCounts.get(row.counterpartyExternalId)?.likesCount ?? 0,
+        ...this.followerGradeFields(
+          audienceCounts.get(row.counterpartyExternalId)
+        ),
+        ...this.followerBotFields(
+          audienceCounts.get(row.counterpartyExternalId)
+        ),
         ...this.followerRelationshipFields(
           audienceCounts.get(row.counterpartyExternalId)
         ),
@@ -2834,16 +3043,18 @@ export class IntegrationService {
         query.search
       )
       : undefined;
-    const ranked = await this._channelInteractionRepository.getAudienceFollowed({
-      organizationId,
-      integrationId: integration.id,
-      userId,
-      direction,
-      limit: query.limit,
-      ...(cursor ? { cursor } : {}),
-      ...(query.search ? { search: query.search } : {}),
-      ignoredVisibility: 'exclude',
-    });
+    const ranked = await this._channelInteractionRepository.getAudienceFollowed(
+      {
+        organizationId,
+        integrationId: integration.id,
+        userId,
+        direction,
+        limit: query.limit,
+        ...(cursor ? { cursor } : {}),
+        ...(query.search ? { search: query.search } : {}),
+        ignoredVisibility: 'exclude',
+      }
+    );
     const items = ranked.items.map((row) => this.mapAudienceMemberProfile(row));
     const last = ranked.items.at(-1);
     return {
@@ -2881,16 +3092,17 @@ export class IntegrationService {
         query.search
       )
       : undefined;
-    const ranked = await this._channelInteractionRepository.getAudienceUnfollowed({
-      organizationId,
-      integrationId: integration.id,
-      userId,
-      direction,
-      limit: query.limit,
-      ...(cursor ? { cursor } : {}),
-      ...(query.search ? { search: query.search } : {}),
-      ignoredVisibility: 'exclude',
-    });
+    const ranked =
+      await this._channelInteractionRepository.getAudienceUnfollowed({
+        organizationId,
+        integrationId: integration.id,
+        userId,
+        direction,
+        limit: query.limit,
+        ...(cursor ? { cursor } : {}),
+        ...(query.search ? { search: query.search } : {}),
+        ignoredVisibility: 'exclude',
+      });
     const items = ranked.items.map((row) => this.mapAudienceMemberProfile(row));
     const last = ranked.items.at(-1);
     return {
@@ -2912,6 +3124,90 @@ export class IntegrationService {
     };
   }
 
+  private async getConvertedAudiencePage(
+    organizationId: string,
+    userId: string | undefined,
+    integration: Integration,
+    query: FollowerQuery
+  ): Promise<FollowerPage> {
+    const direction = query.direction ?? 'desc';
+    if (direction !== 'desc') {
+      throw new HttpException(
+        'Converted audience only supports desc sort order',
+        HttpStatus.BAD_REQUEST
+      );
+    }
+    const cursor = query.cursor
+      ? this.decodeConvertedAudienceCursor(
+        query.cursor,
+        organizationId,
+        integration.id,
+        direction,
+        query.search
+      )
+      : undefined;
+    const actorExternalIds = query.search
+      ? await this._channelInteractionRepository.listAudienceMemberExternalIdsMatchingSearch(
+        organizationId,
+        integration.id,
+        query.search
+      )
+      : undefined;
+    if (query.search && !actorExternalIds?.length) {
+      return { items: [], hasMore: false };
+    }
+    const ranked = await this._conversionRepository.getConvertedActorsPage(
+      organizationId,
+      integration.id,
+      {
+        limit: query.limit,
+        ...(cursor ? { cursor } : {}),
+        ...(actorExternalIds?.length ? { actorExternalIds } : {}),
+      }
+    );
+    const members =
+      await this._channelInteractionRepository.getAudienceMembersByExternalIds(
+        organizationId,
+        integration.id,
+        ranked.items.map((row) => row.externalId),
+        userId
+      );
+    const conversionByExternalId = new Map(
+      ranked.items.map((row) => [row.externalId, row])
+    );
+    const items = members.map((member) => {
+      const conversion = conversionByExternalId.get(member.externalId);
+      return {
+        ...this.mapAudienceMemberProfile(member),
+        ...(conversion
+          ? {
+            lastConvertedAt: conversion.lastConvertedAt.toISOString(),
+            latestConversionType: conversion.latestConversionType,
+            conversionCount: conversion.conversionCount,
+          }
+          : {}),
+      };
+    });
+    const last = ranked.items.at(-1);
+    return {
+      items,
+      hasMore: ranked.hasMore,
+      ...(ranked.hasMore && last
+        ? {
+          nextCursor: this.encodeConvertedAudienceCursor({
+            organizationId,
+            integrationId: integration.id,
+            direction,
+            search: query.search,
+            audience: 'converted',
+            lastConvertedAt: last.lastConvertedAt.toISOString(),
+            externalId: last.externalId,
+          }),
+        }
+        : {}),
+    };
+  }
+
   private async getCultivateAudiencePage(
     organizationId: string,
     userId: string | undefined,
@@ -2919,7 +3215,9 @@ export class IntegrationService {
     provider: SocialProvider,
     query: FollowerQuery
   ): Promise<FollowerPage> {
-    const materialization = resolveMaterializationConfig(integration.strategyId);
+    const materialization = resolveMaterializationConfig(
+      integration.strategyId
+    );
     const direction = query.direction ?? 'asc';
     const cursor = query.cursor
       ? this.decodeCultivateAudienceCursor(
@@ -2930,26 +3228,27 @@ export class IntegrationService {
         query.search
       )
       : undefined;
-    const ranked = await this._channelInteractionRepository.getAudienceCultivate({
-      organizationId,
-      integrationId: integration.id,
-      strategyId: materialization.strategyId,
-      strategyVersion: materialization.strategyVersion,
-      materializationVersion: materialization.materializationVersion,
-      userId,
-      direction,
-      limit: query.limit,
-      ...(cursor
-        ? {
-          hour: cursor.hour,
-          cursor: {
-            finalRank: cursor.finalRank,
-            externalId: cursor.externalId,
-          },
-        }
-        : {}),
-      ...(query.search ? { search: query.search } : {}),
-    });
+    const ranked =
+      await this._channelInteractionRepository.getAudienceCultivate({
+        organizationId,
+        integrationId: integration.id,
+        strategyId: materialization.strategyId,
+        strategyVersion: materialization.strategyVersion,
+        materializationVersion: materialization.materializationVersion,
+        userId,
+        direction,
+        limit: query.limit,
+        ...(cursor
+          ? {
+            hour: cursor.hour,
+            cursor: {
+              finalRank: cursor.finalRank,
+              externalId: cursor.externalId,
+            },
+          }
+          : {}),
+        ...(query.search ? { search: query.search } : {}),
+      });
     const items = ranked.items.map((row) => ({
       ...this.mapAudienceMemberProfile(row),
       isCultivate: true,
@@ -2992,7 +3291,9 @@ export class IntegrationService {
     provider: SocialProvider,
     query: FollowerQuery
   ): Promise<FollowerPage> {
-    const materialization = resolveMaterializationConfig(integration.strategyId);
+    const materialization = resolveMaterializationConfig(
+      integration.strategyId
+    );
     const direction = query.direction ?? 'asc';
     const cursor = query.cursor
       ? this.decodeHotAudienceCursor(
@@ -3196,20 +3497,21 @@ export class IntegrationService {
         query.isBot
       )
       : undefined;
-    const ranked = await this._channelInteractionRepository.getAudienceFollowers({
-      organizationId,
-      integrationId: integration.id,
-      userId,
-      ...(search ? { search } : {}),
-      ...(query.triage ? { triage: query.triage } : {}),
-      ...(query.listId ? { listId: query.listId } : {}),
-      ...(query.isBot !== undefined ? { isBot: query.isBot } : {}),
-      ignoredVisibility: 'exclude',
-      sortField,
-      direction,
-      limit: query.limit,
-      ...(cursor ? { cursor } : {}),
-    });
+    const ranked =
+      await this._channelInteractionRepository.getAudienceFollowers({
+        organizationId,
+        integrationId: integration.id,
+        userId,
+        ...(search ? { search } : {}),
+        ...(query.triage ? { triage: query.triage } : {}),
+        ...(query.listId ? { listId: query.listId } : {}),
+        ...(query.isBot !== undefined ? { isBot: query.isBot } : {}),
+        ignoredVisibility: 'exclude',
+        sortField,
+        direction,
+        limit: query.limit,
+        ...(cursor ? { cursor } : {}),
+      });
     const items = ranked.items.map((row) => this.mapAudienceMemberProfile(row));
     const last = ranked.items.at(-1);
     const page: FollowerPage = {
@@ -3259,19 +3561,20 @@ export class IntegrationService {
         direction
       )
       : undefined;
-    const ranked = await this._channelInteractionRepository.getFollowersByNoteCount({
-      organizationId,
-      integrationId: integration.id,
-      userId,
-      direction,
-      limit: query.limit,
-      ...(cursor ? { cursor } : {}),
-      ...(query.search ? { search: query.search } : {}),
-      ...(query.triage ? { triage: query.triage } : {}),
-      ...(query.listId ? { listId: query.listId } : {}),
-      ...(query.isBot !== undefined ? { isBot: query.isBot } : {}),
-      ignoredVisibility: 'exclude',
-    });
+    const ranked =
+      await this._channelInteractionRepository.getFollowersByNoteCount({
+        organizationId,
+        integrationId: integration.id,
+        userId,
+        direction,
+        limit: query.limit,
+        ...(cursor ? { cursor } : {}),
+        ...(query.search ? { search: query.search } : {}),
+        ...(query.triage ? { triage: query.triage } : {}),
+        ...(query.listId ? { listId: query.listId } : {}),
+        ...(query.isBot !== undefined ? { isBot: query.isBot } : {}),
+        ignoredVisibility: 'exclude',
+      });
 
     const items = ranked.items.map((row) => this.mapAudienceMemberProfile(row));
     const last = items.at(-1);
@@ -3312,19 +3615,20 @@ export class IntegrationService {
         direction
       )
       : undefined;
-    const ranked = await this._channelInteractionRepository.getFollowersByLikesCount({
-      organizationId,
-      integrationId: integration.id,
-      userId,
-      direction,
-      limit: query.limit,
-      ...(cursor ? { cursor } : {}),
-      ...(query.search ? { search: query.search } : {}),
-      ...(query.triage ? { triage: query.triage } : {}),
-      ...(query.listId ? { listId: query.listId } : {}),
-      ...(query.isBot !== undefined ? { isBot: query.isBot } : {}),
-      ignoredVisibility: 'exclude',
-    });
+    const ranked =
+      await this._channelInteractionRepository.getFollowersByLikesCount({
+        organizationId,
+        integrationId: integration.id,
+        userId,
+        direction,
+        limit: query.limit,
+        ...(cursor ? { cursor } : {}),
+        ...(query.search ? { search: query.search } : {}),
+        ...(query.triage ? { triage: query.triage } : {}),
+        ...(query.listId ? { listId: query.listId } : {}),
+        ...(query.isBot !== undefined ? { isBot: query.isBot } : {}),
+        ignoredVisibility: 'exclude',
+      });
 
     const items = ranked.items.map((row) => this.mapAudienceMemberProfile(row));
     const last = items.at(-1);
@@ -3423,19 +3727,20 @@ export class IntegrationService {
         direction
       )
       : undefined;
-    const ranked = await this._channelInteractionRepository.getFollowersByBotGrade({
-      organizationId,
-      integrationId: integration.id,
-      userId,
-      direction,
-      limit: query.limit,
-      ...(cursor ? { cursor } : {}),
-      ...(query.search ? { search: query.search } : {}),
-      ...(query.triage ? { triage: query.triage } : {}),
-      ...(query.listId ? { listId: query.listId } : {}),
-      ...(query.isBot !== undefined ? { isBot: query.isBot } : {}),
-      ignoredVisibility: 'exclude',
-    });
+    const ranked =
+      await this._channelInteractionRepository.getFollowersByBotGrade({
+        organizationId,
+        integrationId: integration.id,
+        userId,
+        direction,
+        limit: query.limit,
+        ...(cursor ? { cursor } : {}),
+        ...(query.search ? { search: query.search } : {}),
+        ...(query.triage ? { triage: query.triage } : {}),
+        ...(query.listId ? { listId: query.listId } : {}),
+        ...(query.isBot !== undefined ? { isBot: query.isBot } : {}),
+        ignoredVisibility: 'exclude',
+      });
     const items = ranked.items.map((row) => this.mapAudienceMemberProfile(row));
     const last = ranked.items.at(-1);
     return {
@@ -3443,17 +3748,20 @@ export class IntegrationService {
       hasMore: ranked.hasMore,
       ...(ranked.hasMore && last
         ? {
-          nextCursor: this.encodeGradeFollowerCursor('follower-bot-grade:v1:', {
-            organizationId,
-            integrationId: integration.id,
-            direction,
-            search: query.search,
-            triage: query.triage,
-            listId: query.listId,
-            isBot: query.isBot,
-            grade: last.botGrade ?? null,
-            externalId: last.externalId,
-          }),
+          nextCursor: this.encodeGradeFollowerCursor(
+            'follower-bot-grade:v1:',
+            {
+              organizationId,
+              integrationId: integration.id,
+              direction,
+              search: query.search,
+              triage: query.triage,
+              listId: query.listId,
+              isBot: query.isBot,
+              grade: last.botGrade ?? null,
+              externalId: last.externalId,
+            }
+          ),
         }
         : {}),
     };
@@ -3467,9 +3775,10 @@ export class IntegrationService {
     sort: FollowerSort
   ): Promise<FollowerPage> {
     const direction = query.direction ?? sort.defaultDirection;
-    const field = sort.key === FOLLOWER_DATABASE_THEIR_EFFORT_SORT.key
-      ? 'relationshipReciprocationScore' as const
-      : 'relationshipNetGap' as const;
+    const field =
+      sort.key === FOLLOWER_DATABASE_THEIR_EFFORT_SORT.key
+        ? ('relationshipReciprocationScore' as const)
+        : ('relationshipNetGap' as const);
     const cursor = query.cursor
       ? this.decodeProjectedFollowerCursor(
         query.cursor,
@@ -3538,19 +3847,20 @@ export class IntegrationService {
         direction
       )
       : undefined;
-    const ranked = await this._channelInteractionRepository.getFollowersByMyGrade({
-      organizationId,
-      integrationId: integration.id,
-      userId,
-      direction,
-      limit: query.limit,
-      ...(cursor ? { cursor } : {}),
-      ...(query.search ? { search: query.search } : {}),
-      ...(query.triage ? { triage: query.triage } : {}),
-      ...(query.listId ? { listId: query.listId } : {}),
-      ...(query.isBot !== undefined ? { isBot: query.isBot } : {}),
-      ignoredVisibility: 'exclude',
-    });
+    const ranked =
+      await this._channelInteractionRepository.getFollowersByMyGrade({
+        organizationId,
+        integrationId: integration.id,
+        userId,
+        direction,
+        limit: query.limit,
+        ...(cursor ? { cursor } : {}),
+        ...(query.search ? { search: query.search } : {}),
+        ...(query.triage ? { triage: query.triage } : {}),
+        ...(query.listId ? { listId: query.listId } : {}),
+        ...(query.isBot !== undefined ? { isBot: query.isBot } : {}),
+        ignoredVisibility: 'exclude',
+      });
     const items = ranked.items.map((row) => this.mapAudienceMemberProfile(row));
     const last = ranked.items.at(-1);
     return {
@@ -3558,17 +3868,20 @@ export class IntegrationService {
       hasMore: ranked.hasMore,
       ...(ranked.hasMore && last
         ? {
-          nextCursor: this.encodeGradeFollowerCursor('follower-my-grade:v1:', {
-            organizationId,
-            integrationId: integration.id,
-            direction,
-            search: query.search,
-            triage: query.triage,
-            listId: query.listId,
-            isBot: query.isBot,
-            grade: last.personalGrades[0]?.grade ?? null,
-            externalId: last.externalId,
-          }),
+          nextCursor: this.encodeGradeFollowerCursor(
+            'follower-my-grade:v1:',
+            {
+              organizationId,
+              integrationId: integration.id,
+              direction,
+              search: query.search,
+              triage: query.triage,
+              listId: query.listId,
+              isBot: query.isBot,
+              grade: last.personalGrades[0]?.grade ?? null,
+              externalId: last.externalId,
+            }
+          ),
         }
         : {}),
     };
@@ -3579,10 +3892,11 @@ export class IntegrationService {
     integrationId: string,
     coverage: ChannelInteractionKindCoverage[]
   ) {
-    const tracking = await this._channelInteractionRepository.getInteractionTracking(
-      organizationId,
-      integrationId
-    );
+    const tracking =
+      await this._channelInteractionRepository.getInteractionTracking(
+        organizationId,
+        integrationId
+      );
     return this.getInteractionTrackingMetadata(
       tracking.followerSync,
       tracking.subscriptions,
@@ -3593,11 +3907,14 @@ export class IntegrationService {
   }
 
   private getInteractionTrackingMetadata(
-    followerSync: {
-      activeGeneration: string | null;
-      status: ChannelFollowerSyncStatus;
-      completedAt: Date | null;
-    } | null | undefined,
+    followerSync:
+      | {
+        activeGeneration: string | null;
+        status: ChannelFollowerSyncStatus;
+        completedAt: Date | null;
+      }
+      | null
+      | undefined,
     subscriptions: {
       eventKey?: string;
       direction?: string;
@@ -3616,7 +3933,8 @@ export class IntegrationService {
     const states = subscriptions.map((subscription) => subscription.state);
     const failedSubscriptions = subscriptions
       .filter(
-        (subscription) => subscription.state === ChannelInteractionTrackingState.ERROR
+        (subscription) =>
+          subscription.state === ChannelInteractionTrackingState.ERROR
       )
       .map((subscription) => ({
         eventKey: subscription.eventKey || 'unknown',
@@ -3626,23 +3944,25 @@ export class IntegrationService {
           : {}),
       }));
     const failedSubscription = subscriptions.find(
-      (subscription) => subscription.state === ChannelInteractionTrackingState.ERROR
+      (subscription) =>
+        subscription.state === ChannelInteractionTrackingState.ERROR
     );
     const hasError = states.includes(ChannelInteractionTrackingState.ERROR);
     const hasActive = states.includes(ChannelInteractionTrackingState.ACTIVE);
-    const state = hasError && hasActive
-      ? 'partial'
-      : hasError
-        ? 'error'
-        : states.includes(ChannelInteractionTrackingState.PROVISIONING) ||
-          !states.length
-          ? 'provisioning'
-          : states.includes(ChannelInteractionTrackingState.UNCONFIGURED)
-            ? 'unconfigured'
-            : states.includes(ChannelInteractionTrackingState.PARTIAL) ||
-              this.hasLimitedInteractionCoverage(coverage)
-              ? 'partial'
-              : 'active';
+    const state =
+      hasError && hasActive
+        ? 'partial'
+        : hasError
+          ? 'error'
+          : states.includes(ChannelInteractionTrackingState.PROVISIONING) ||
+            !states.length
+            ? 'provisioning'
+            : states.includes(ChannelInteractionTrackingState.UNCONFIGURED)
+              ? 'unconfigured'
+              : states.includes(ChannelInteractionTrackingState.PARTIAL) ||
+                this.hasLimitedInteractionCoverage(coverage)
+                ? 'partial'
+                : 'active';
     const availability = options?.rankingAvailability
       ? followerSync?.activeGeneration && followerSync.completedAt && computedAt
         ? 'ready'
@@ -3679,9 +3999,7 @@ export class IntegrationService {
       ...(computedAt ? { computedAt: computedAt.toISOString() } : {}),
       ...(failureCategory ? { failureCategory } : {}),
       ...(failureSummary ? { reason: failureSummary } : {}),
-      ...(failedSubscriptions.length
-        ? { failedSubscriptions }
-        : {}),
+      ...(failedSubscriptions.length ? { failedSubscriptions } : {}),
       coverage,
     };
   }
@@ -3721,11 +4039,13 @@ export class IntegrationService {
       'transient',
       'unknown',
     ].includes(value || '')
-      ? value as ChannelInteractionTrackingFailureCategory
+      ? (value as ChannelInteractionTrackingFailureCategory)
       : undefined;
   }
 
-  private toPrismaInteractionWindow(window: NonNullable<FollowerQuery['window']>) {
+  private toPrismaInteractionWindow(
+    window: NonNullable<FollowerQuery['window']>
+  ) {
     return {
       week: ChannelInteractionWindow.WEEK,
       month: ChannelInteractionWindow.MONTH,
@@ -3734,17 +4054,19 @@ export class IntegrationService {
     }[window];
   }
 
-  private encodeRankedFollowerCursor(cursor: {
-    organizationId: string;
-    integrationId: string;
-    window: NonNullable<FollowerQuery['window']>;
-    direction: 'asc' | 'desc';
-    generation: string;
-    search?: string;
-    triage?: FollowerQuery['triage'];
-    listId?: string;
-    isBot?: boolean;
-  } & RankedFollowerCursor) {
+  private encodeRankedFollowerCursor(
+    cursor: {
+      organizationId: string;
+      integrationId: string;
+      window: NonNullable<FollowerQuery['window']>;
+      direction: 'asc' | 'desc';
+      generation: string;
+      search?: string;
+      triage?: FollowerQuery['triage'];
+      listId?: string;
+      isBot?: boolean;
+    } & RankedFollowerCursor
+  ) {
     return `follower-rank:v1:${Buffer.from(
       JSON.stringify({ version: 1, ...cursor })
     ).toString('base64url')}`;
@@ -3760,9 +4082,10 @@ export class IntegrationService {
     try {
       if (!value.startsWith('follower-rank:v1:')) throw new Error();
       const cursor = JSON.parse(
-        Buffer.from(value.slice('follower-rank:v1:'.length), 'base64url').toString(
-          'utf8'
-        )
+        Buffer.from(
+          value.slice('follower-rank:v1:'.length),
+          'base64url'
+        ).toString('utf8')
       );
       if (
         cursor?.version !== 1 ||
@@ -3782,30 +4105,37 @@ export class IntegrationService {
       }
       return cursor;
     } catch {
-      throw new HttpException('Invalid follower cursor', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Invalid follower cursor',
+        HttpStatus.BAD_REQUEST
+      );
     }
   }
 
-  private encodeNoteCountFollowerCursor(cursor: {
-    organizationId: string;
-    integrationId: string;
-    direction: 'asc' | 'desc';
-    search?: string;
-    triage?: FollowerQuery['triage'];
-    listId?: string;
-    isBot?: boolean;
-  } & NoteCountFollowerCursor) {
+  private encodeNoteCountFollowerCursor(
+    cursor: {
+      organizationId: string;
+      integrationId: string;
+      direction: 'asc' | 'desc';
+      search?: string;
+      triage?: FollowerQuery['triage'];
+      listId?: string;
+      isBot?: boolean;
+    } & NoteCountFollowerCursor
+  ) {
     return `follower-notes:v1:${Buffer.from(
       JSON.stringify({ version: 1, ...cursor })
     ).toString('base64url')}`;
   }
 
-  private encodeRecentFollowerCursor(cursor: {
-    organizationId: string;
-    integrationId: string;
-    sinceDays: number;
-    withoutOutboundSinceFollow: boolean;
-  } & RecentFollowerCursor) {
+  private encodeRecentFollowerCursor(
+    cursor: {
+      organizationId: string;
+      integrationId: string;
+      sinceDays: number;
+      withoutOutboundSinceFollow: boolean;
+    } & RecentFollowerCursor
+  ) {
     return `follower-recent:v1:${Buffer.from(
       JSON.stringify({ version: 1, ...cursor })
     ).toString('base64url')}`;
@@ -3843,7 +4173,10 @@ export class IntegrationService {
         externalId: cursor.externalId,
       };
     } catch {
-      throw new HttpException('Invalid follower cursor', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Invalid follower cursor',
+        HttpStatus.BAD_REQUEST
+      );
     }
   }
 
@@ -3877,67 +4210,94 @@ export class IntegrationService {
         externalId: cursor.externalId,
       };
     } catch {
-      throw new HttpException('Invalid follower cursor', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Invalid follower cursor',
+        HttpStatus.BAD_REQUEST
+      );
     }
   }
 
-  private encodeLeadAudienceCursor(cursor: {
-    organizationId: string;
-    integrationId: string;
-    direction: 'asc' | 'desc';
-    search?: string;
-    audience: 'lead';
-  } & AudienceLeadCursor) {
+  private encodeLeadAudienceCursor(
+    cursor: {
+      organizationId: string;
+      integrationId: string;
+      direction: 'asc' | 'desc';
+      search?: string;
+      audience: 'lead';
+    } & AudienceLeadCursor
+  ) {
     return `follower-lead:v3:${Buffer.from(
       JSON.stringify({ version: 3, ...cursor })
     ).toString('base64url')}`;
   }
 
-  private encodeFollowedAudienceCursor(cursor: {
-    organizationId: string;
-    integrationId: string;
-    direction: 'asc' | 'desc';
-    search?: string;
-    audience: 'followed';
-  } & AudienceFollowedCursor) {
+  private encodeFollowedAudienceCursor(
+    cursor: {
+      organizationId: string;
+      integrationId: string;
+      direction: 'asc' | 'desc';
+      search?: string;
+      audience: 'followed';
+    } & AudienceFollowedCursor
+  ) {
     return `follower-followed:v1:${Buffer.from(
       JSON.stringify({ version: 1, ...cursor })
     ).toString('base64url')}`;
   }
 
-  private encodeUnfollowedAudienceCursor(cursor: {
-    organizationId: string;
-    integrationId: string;
-    direction: 'asc' | 'desc';
-    search?: string;
-    audience: 'unfollowed';
-  } & AudienceUnfollowedCursor) {
+  private encodeUnfollowedAudienceCursor(
+    cursor: {
+      organizationId: string;
+      integrationId: string;
+      direction: 'asc' | 'desc';
+      search?: string;
+      audience: 'unfollowed';
+    } & AudienceUnfollowedCursor
+  ) {
     return `follower-unfollowed:v1:${Buffer.from(
       JSON.stringify({ version: 1, ...cursor })
     ).toString('base64url')}`;
   }
 
-  private encodeCultivateAudienceCursor(cursor: {
-    organizationId: string;
-    integrationId: string;
-    direction: 'asc' | 'desc';
-    search?: string;
-    audience: 'cultivate';
-    hour: string;
-  } & AudienceCultivateCursor) {
+  private encodeConvertedAudienceCursor(
+    cursor: {
+      organizationId: string;
+      integrationId: string;
+      direction: 'asc' | 'desc';
+      search?: string;
+      audience: 'converted';
+    } & ConvertedActorCursor
+  ) {
+    return `follower-converted:v1:${Buffer.from(
+      JSON.stringify({ version: 1, ...cursor })
+    ).toString('base64url')}`;
+  }
+
+  private encodeCultivateAudienceCursor(
+    cursor: {
+      organizationId: string;
+      integrationId: string;
+      direction: 'asc' | 'desc';
+      search?: string;
+      audience: 'cultivate';
+      hour: string;
+    } & AudienceCultivateCursor
+  ) {
     return `follower-cultivate:v2:${Buffer.from(
       JSON.stringify({ version: 2, ...cursor })
     ).toString('base64url')}`;
   }
 
-  private encodeHotAudienceCursor(cursor: {
-    organizationId: string;
-    integrationId: string;
-    direction: 'asc' | 'desc';
-    search?: string;
-    audience: 'hot';
-    hour: string;
-  } & HotPickCursor) {
+  private encodeHotAudienceCursor(
+    cursor: {
+      organizationId: string;
+      integrationId: string;
+      direction: 'asc' | 'desc';
+      search?: string;
+      audience: 'hot';
+      hour: string;
+    } & HotPickCursor
+  ) {
     return `follower-hot:v1:${Buffer.from(
       JSON.stringify({ version: 1, ...cursor })
     ).toString('base64url')}`;
@@ -3979,7 +4339,50 @@ export class IntegrationService {
         externalId: cursor.externalId,
       };
     } catch {
-      throw new HttpException('Invalid follower cursor', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Invalid follower cursor',
+        HttpStatus.BAD_REQUEST
+      );
+    }
+  }
+
+  private decodeConvertedAudienceCursor(
+    value: string,
+    organizationId: string,
+    integrationId: string,
+    direction: 'asc' | 'desc',
+    search: string | undefined
+  ): ConvertedActorCursor {
+    try {
+      if (!value.startsWith('follower-converted:v1:')) throw new Error();
+      const cursor = JSON.parse(
+        Buffer.from(
+          value.slice('follower-converted:v1:'.length),
+          'base64url'
+        ).toString('utf8')
+      );
+      if (
+        cursor?.version !== 1 ||
+        cursor.organizationId !== organizationId ||
+        cursor.integrationId !== integrationId ||
+        cursor.direction !== direction ||
+        cursor.search !== search ||
+        cursor.audience !== 'converted' ||
+        typeof cursor.lastConvertedAt !== 'string' ||
+        Number.isNaN(Date.parse(cursor.lastConvertedAt)) ||
+        typeof cursor.externalId !== 'string'
+      ) {
+        throw new Error();
+      }
+      return {
+        lastConvertedAt: cursor.lastConvertedAt,
+        externalId: cursor.externalId,
+      };
+    } catch {
+      throw new HttpException(
+        'Invalid follower cursor',
+        HttpStatus.BAD_REQUEST
+      );
     }
   }
 
@@ -4019,17 +4422,22 @@ export class IntegrationService {
         externalId: cursor.externalId,
       };
     } catch {
-      throw new HttpException('Invalid follower cursor', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Invalid follower cursor',
+        HttpStatus.BAD_REQUEST
+      );
     }
   }
 
-  private encodeIgnoredAudienceCursor(cursor: {
-    organizationId: string;
-    integrationId: string;
-    direction: 'asc' | 'desc';
-    search?: string;
-    audience: 'ignored';
-  } & IgnoredAudienceFollowerCursor) {
+  private encodeIgnoredAudienceCursor(
+    cursor: {
+      organizationId: string;
+      integrationId: string;
+      direction: 'asc' | 'desc';
+      search?: string;
+      audience: 'ignored';
+    } & IgnoredAudienceFollowerCursor
+  ) {
     return `follower-ignored:v1:${Buffer.from(
       JSON.stringify({ version: 1, ...cursor })
     ).toString('base64url')}`;
@@ -4068,7 +4476,10 @@ export class IntegrationService {
         externalId: cursor.externalId,
       };
     } catch {
-      throw new HttpException('Invalid follower cursor', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Invalid follower cursor',
+        HttpStatus.BAD_REQUEST
+      );
     }
   }
 
@@ -4112,7 +4523,10 @@ export class IntegrationService {
         externalId: cursor.externalId,
       };
     } catch {
-      throw new HttpException('Invalid follower cursor', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Invalid follower cursor',
+        HttpStatus.BAD_REQUEST
+      );
     }
   }
 
@@ -4149,7 +4563,10 @@ export class IntegrationService {
         externalId: cursor.externalId,
       };
     } catch {
-      throw new HttpException('Invalid follower cursor', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Invalid follower cursor',
+        HttpStatus.BAD_REQUEST
+      );
     }
   }
 
@@ -4186,19 +4603,24 @@ export class IntegrationService {
         externalId: cursor.externalId,
       };
     } catch {
-      throw new HttpException('Invalid follower cursor', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Invalid follower cursor',
+        HttpStatus.BAD_REQUEST
+      );
     }
   }
 
-  private encodeLikesCountFollowerCursor(cursor: {
-    organizationId: string;
-    integrationId: string;
-    direction: 'asc' | 'desc';
-    search?: string;
-    triage?: FollowerQuery['triage'];
-    listId?: string;
-    isBot?: boolean;
-  } & LikesCountFollowerCursor) {
+  private encodeLikesCountFollowerCursor(
+    cursor: {
+      organizationId: string;
+      integrationId: string;
+      direction: 'asc' | 'desc';
+      search?: string;
+      triage?: FollowerQuery['triage'];
+      listId?: string;
+      isBot?: boolean;
+    } & LikesCountFollowerCursor
+  ) {
     return `follower-likes:v1:${Buffer.from(
       JSON.stringify({ version: 1, ...cursor })
     ).toString('base64url')}`;
@@ -4234,7 +4656,10 @@ export class IntegrationService {
         externalId: cursor.externalId,
       };
     } catch {
-      throw new HttpException('Invalid follower cursor', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Invalid follower cursor',
+        HttpStatus.BAD_REQUEST
+      );
     }
   }
 
@@ -4258,16 +4683,18 @@ export class IntegrationService {
     ).toString('base64url')}`;
   }
 
-  private encodeProjectedFollowerCursor(cursor: {
-    organizationId: string;
-    integrationId: string;
-    sort: string;
-    direction: 'asc' | 'desc';
-    search?: string;
-    triage?: FollowerQuery['triage'];
-    listId?: string;
-    isBot?: boolean;
-  } & ProjectedFollowerCursor) {
+  private encodeProjectedFollowerCursor(
+    cursor: {
+      organizationId: string;
+      integrationId: string;
+      sort: string;
+      direction: 'asc' | 'desc';
+      search?: string;
+      triage?: FollowerQuery['triage'];
+      listId?: string;
+      isBot?: boolean;
+    } & ProjectedFollowerCursor
+  ) {
     return `follower-projection:v1:${Buffer.from(
       JSON.stringify({ version: 1, ...cursor })
     ).toString('base64url')}`;
@@ -4300,13 +4727,19 @@ export class IntegrationService {
         cursor.triage !== triage ||
         typeof cursor.externalId !== 'string' ||
         (cursor.value !== null &&
-          !(typeof cursor.value === 'number' && Number.isSafeInteger(cursor.value)))
+          !(
+            typeof cursor.value === 'number' &&
+            Number.isSafeInteger(cursor.value)
+          ))
       ) {
         throw new Error();
       }
       return { value: cursor.value, externalId: cursor.externalId };
     } catch {
-      throw new HttpException('Invalid follower cursor', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Invalid follower cursor',
+        HttpStatus.BAD_REQUEST
+      );
     }
   }
 
@@ -4341,21 +4774,26 @@ export class IntegrationService {
         externalId: cursor.externalId,
       };
     } catch {
-      throw new HttpException('Invalid follower cursor', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Invalid follower cursor',
+        HttpStatus.BAD_REQUEST
+      );
     }
   }
 
-  private encodeAudienceFollowerCursor(cursor: {
-    organizationId: string;
-    integrationId: string;
-    sort: string;
-    direction: 'asc' | 'desc';
-    search?: string;
-    triage?: FollowerQuery['triage'];
-    listId?: string;
-    isBot?: boolean;
-    sortField: AudienceFollowerSortField;
-  } & AudienceFollowerCursor) {
+  private encodeAudienceFollowerCursor(
+    cursor: {
+      organizationId: string;
+      integrationId: string;
+      sort: string;
+      direction: 'asc' | 'desc';
+      search?: string;
+      triage?: FollowerQuery['triage'];
+      listId?: string;
+      isBot?: boolean;
+      sortField: AudienceFollowerSortField;
+    } & AudienceFollowerCursor
+  ) {
     return `follower-audience:v1:${Buffer.from(
       JSON.stringify({ version: 1, ...cursor })
     ).toString('base64url')}`;
@@ -4403,7 +4841,10 @@ export class IntegrationService {
         externalId: cursor.externalId,
       };
     } catch {
-      throw new HttpException('Invalid follower cursor', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Invalid follower cursor',
+        HttpStatus.BAD_REQUEST
+      );
     }
   }
 
@@ -4429,12 +4870,16 @@ export class IntegrationService {
       'follower-lead:v3:',
       'follower-followed:v1:',
       'follower-unfollowed:v1:',
+      'follower-converted:v1:',
       'follower-cultivate:v1:',
       'follower-cultivate:v2:',
       'follower-hot:v1:',
       'follower-ignored:v1:',
     ];
-    if (!value || !internalPrefixes.some((prefix) => value.startsWith(prefix))) {
+    if (
+      !value ||
+      !internalPrefixes.some((prefix) => value.startsWith(prefix))
+    ) {
       return;
     }
     try {
@@ -4452,7 +4897,10 @@ export class IntegrationService {
         throw new Error();
       }
     } catch {
-      throw new HttpException('Invalid follower cursor', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Invalid follower cursor',
+        HttpStatus.BAD_REQUEST
+      );
     }
   }
 
@@ -4467,7 +4915,9 @@ export class IntegrationService {
       return typeof value === 'number' && Number.isSafeInteger(value);
     }
     if (field === 'followedAt' || field === 'accountCreatedAt') {
-      return typeof value === 'string' && !Number.isNaN(new Date(value).getTime());
+      return (
+        typeof value === 'string' && !Number.isNaN(new Date(value).getTime())
+      );
     }
     return typeof value === 'string';
   }
@@ -4553,8 +5003,7 @@ export class IntegrationService {
               interactionScore: metric.interactionScore,
               ...(metric.lastInteractionAt
                 ? {
-                  lastInteractionAt:
-                    metric.lastInteractionAt.toISOString(),
+                  lastInteractionAt: metric.lastInteractionAt.toISOString(),
                 }
                 : {}),
             }
@@ -4618,7 +5067,9 @@ export class IntegrationService {
       (!!liveIntegration.tokenExpiration &&
         dayjs(liveIntegration.tokenExpiration).isBefore(dayjs()))
     ) {
-      const data = await this._refreshIntegrationService.refresh(liveIntegration);
+      const data = await this._refreshIntegrationService.refresh(
+        liveIntegration
+      );
       if (!data || !data.accessToken) {
         throw new HttpException(
           'Member timeline is temporarily unavailable',
@@ -4761,7 +5212,9 @@ export class IntegrationService {
       (!!liveIntegration.tokenExpiration &&
         dayjs(liveIntegration.tokenExpiration).isBefore(dayjs()))
     ) {
-      const data = await this._refreshIntegrationService.refresh(liveIntegration);
+      const data = await this._refreshIntegrationService.refresh(
+        liveIntegration
+      );
       if (!data || !data.accessToken) {
         throw new HttpException(
           'Followers are temporarily unavailable',
@@ -4893,10 +5346,12 @@ export class IntegrationService {
       ...(follower.myGrade === null || Number.isFinite(follower.myGrade)
         ? { myGrade: follower.myGrade }
         : {}),
-      ...(follower.adjustedGrade === null || Number.isFinite(follower.adjustedGrade)
+      ...(follower.adjustedGrade === null ||
+        Number.isFinite(follower.adjustedGrade)
         ? { adjustedGrade: follower.adjustedGrade }
         : {}),
-      ...(follower.effortScore === null || Number.isSafeInteger(follower.effortScore)
+      ...(follower.effortScore === null ||
+        Number.isSafeInteger(follower.effortScore)
         ? { effortScore: follower.effortScore }
         : {}),
       ...(follower.reciprocationScore === null ||
@@ -4931,20 +5386,23 @@ export class IntegrationService {
       ...(follower.isBot === null || typeof follower.isBot === 'boolean'
         ? { isBot: follower.isBot }
         : {}),
-      ...(follower.botConfidence === null || Number.isFinite(follower.botConfidence)
+      ...(follower.botConfidence === null ||
+        Number.isFinite(follower.botConfidence)
         ? { botConfidence: follower.botConfidence }
         : {}),
       ...(follower.botFormulaVersion === null ||
         Number.isSafeInteger(follower.botFormulaVersion)
         ? { botFormulaVersion: follower.botFormulaVersion }
         : {}),
-      ...(follower.botGradedAt === null || typeof follower.botGradedAt === 'string'
+      ...(follower.botGradedAt === null ||
+        typeof follower.botGradedAt === 'string'
         ? { botGradedAt: follower.botGradedAt }
         : {}),
       ...(Array.isArray(follower.listIds)
         ? {
           listIds: follower.listIds.filter(
-            (listId): listId is string => typeof listId === 'string' && !!listId
+            (listId): listId is string =>
+              typeof listId === 'string' && !!listId
           ),
         }
         : {}),
@@ -4968,7 +5426,8 @@ export class IntegrationService {
         Number.isFinite(follower.leadBridgeScore)
         ? { leadBridgeScore: follower.leadBridgeScore }
         : {}),
-      ...(follower.leadFitScore === null || Number.isFinite(follower.leadFitScore)
+      ...(follower.leadFitScore === null ||
+        Number.isFinite(follower.leadFitScore)
         ? { leadFitScore: follower.leadFitScore }
         : {}),
       ...(typeof follower.leadFitReason === 'string'
@@ -4988,7 +5447,9 @@ export class IntegrationService {
               ...(typeof bridge.username === 'string'
                 ? { username: bridge.username }
                 : {}),
-              ...(Number.isFinite(bridge.grade) ? { grade: bridge.grade } : {}),
+              ...(Number.isFinite(bridge.grade)
+                ? { grade: bridge.grade }
+                : {}),
             })),
         }
         : {}),
@@ -5020,18 +5481,26 @@ export class IntegrationService {
     ) {
       sorts.push(FOLLOWER_DATABASE_RELATIONSHIP_GRADE_SORT);
     }
-    if (!sorts.some((sort) => sort.key === FOLLOWER_DATABASE_MY_GRADE_SORT.key)) {
+    if (
+      !sorts.some((sort) => sort.key === FOLLOWER_DATABASE_MY_GRADE_SORT.key)
+    ) {
       sorts.push(FOLLOWER_DATABASE_MY_GRADE_SORT);
     }
-    if (!sorts.some((sort) => sort.key === FOLLOWER_DATABASE_BOT_GRADE_SORT.key)) {
+    if (
+      !sorts.some((sort) => sort.key === FOLLOWER_DATABASE_BOT_GRADE_SORT.key)
+    ) {
       sorts.push(FOLLOWER_DATABASE_BOT_GRADE_SORT);
     }
     if (
-      !sorts.some((sort) => sort.key === FOLLOWER_DATABASE_THEIR_EFFORT_SORT.key)
+      !sorts.some(
+        (sort) => sort.key === FOLLOWER_DATABASE_THEIR_EFFORT_SORT.key
+      )
     ) {
       sorts.push(FOLLOWER_DATABASE_THEIR_EFFORT_SORT);
     }
-    if (!sorts.some((sort) => sort.key === FOLLOWER_DATABASE_NET_GAP_SORT.key)) {
+    if (
+      !sorts.some((sort) => sort.key === FOLLOWER_DATABASE_NET_GAP_SORT.key)
+    ) {
       sorts.push(FOLLOWER_DATABASE_NET_GAP_SORT);
     }
     return sorts;
@@ -5150,7 +5619,10 @@ export class IntegrationService {
   }
 
   async disableChannel(org: string, id: string) {
-    const integration = await this._integrationRepository.getIntegrationById(org, id);
+    const integration = await this._integrationRepository.getIntegrationById(
+      org,
+      id
+    );
     await this._integrationRepository.disableChannel(org, id);
     if (integration) {
       await this.requestInteractionRemoval(integration);
@@ -5169,7 +5641,10 @@ export class IntegrationService {
     }
 
     await this._integrationRepository.enableChannel(org, id);
-    const integration = await this._integrationRepository.getIntegrationById(org, id);
+    const integration = await this._integrationRepository.getIntegrationById(
+      org,
+      id
+    );
     if (integration) {
       await this.requestInteractionReconciliation(integration);
     }
@@ -5180,7 +5655,10 @@ export class IntegrationService {
   }
 
   async deleteChannel(org: string, id: string) {
-    const integration = await this._integrationRepository.getIntegrationById(org, id);
+    const integration = await this._integrationRepository.getIntegrationById(
+      org,
+      id
+    );
     await this._integrationRepository.deleteChannel(org, id);
     if (integration) {
       await this.requestInteractionRemoval(integration);
@@ -5289,9 +5767,7 @@ export class IntegrationService {
     const integrations = await this._integrationRepository.getIntegrationsList(
       org.id
     );
-    const requested = channelIds?.length
-      ? new Set(channelIds)
-      : undefined;
+    const requested = channelIds?.length ? new Set(channelIds) : undefined;
     const selected = integrations.filter((integration) => {
       if (requested && !requested.has(integration.id)) {
         return false;
@@ -5434,11 +5910,12 @@ export class IntegrationService {
           }
 
           try {
-            const analytics = await this._channelAnalyticsService.getStoredAnalytics(
-              org.id,
-              integration.id,
-              date
-            );
+            const analytics =
+              await this._channelAnalyticsService.getStoredAnalytics(
+                org.id,
+                integration.id,
+                date
+              );
 
             return {
               ...channel,
@@ -5457,11 +5934,10 @@ export class IntegrationService {
     const integrations = await this._integrationRepository.getIntegrationsList(
       org.id
     );
-    const readStates =
-      await this._integrationRepository.getNoticeReadsForUser(
-        user.id,
-        integrations.map((integration) => integration.id)
-      );
+    const readStates = await this._integrationRepository.getNoticeReadsForUser(
+      user.id,
+      integrations.map((integration) => integration.id)
+    );
     const lastReadByIntegration = new Map(
       readStates.map((read) => [read.integrationId, read.lastReadAt])
     );
@@ -5476,7 +5952,12 @@ export class IntegrationService {
             state: 'unsupported' as ChannelNoticeStatus['state'] | 'disabled',
             unreadCount: 0,
             categories: undefined as
-              | Partial<Record<'mention' | 'reply' | 'like' | 'repost' | 'follow', number>>
+              | Partial<
+                Record<
+                  'mention' | 'reply' | 'like' | 'repost' | 'follow',
+                  number
+                >
+              >
               | undefined,
           };
 
@@ -5513,8 +5994,7 @@ export class IntegrationService {
               id: integration.id,
               state: status.state,
               unreadCount: status.state === 'ok' ? status.unreadCount : 0,
-              categories:
-                status.state === 'ok' ? status.categories : undefined,
+              categories: status.state === 'ok' ? status.categories : undefined,
             };
           } catch {
             return {
@@ -5565,7 +6045,8 @@ export class IntegrationService {
       }
     }
 
-    const cacheKey = `integration:notices:${org.id}:${liveIntegration.id}:${since.toISOString()}`;
+    const cacheKey = `integration:notices:${org.id}:${liveIntegration.id
+      }:${since.toISOString()}`;
     const cached = await ioRedis.get(cacheKey);
     if (cached) {
       return JSON.parse(cached) as ChannelNoticeStatus;
@@ -5798,8 +6279,7 @@ export class IntegrationService {
       integration.deletedAt ||
       !provider.channelInteractionWebhooks ||
       !subscriptions.some(
-        (subscription) =>
-          String(subscription.state).toUpperCase() === 'ERROR'
+        (subscription) => String(subscription.state).toUpperCase() === 'ERROR'
       )
     ) {
       return;
@@ -5811,8 +6291,9 @@ export class IntegrationService {
         liveIntegration.tokenExpiration &&
         dayjs(liveIntegration.tokenExpiration).isBefore(dayjs())
       ) {
-        const refreshed =
-          await this._refreshIntegrationService.refresh(liveIntegration);
+        const refreshed = await this._refreshIntegrationService.refresh(
+          liveIntegration
+        );
         if (refreshed && refreshed.accessToken) {
           liveIntegration = {
             ...liveIntegration,
@@ -5864,7 +6345,9 @@ export class IntegrationService {
 
   private async requestInteractionRemoval(integration: Integration) {
     try {
-      await this._channelInteractionService.requestSubscriptionRemoval(integration);
+      await this._channelInteractionService.requestSubscriptionRemoval(
+        integration
+      );
       await this.pokeChannelInteractionMaintenance();
     } catch {
       // Remote cleanup is performed by maintenance and never blocks local disable/delete.

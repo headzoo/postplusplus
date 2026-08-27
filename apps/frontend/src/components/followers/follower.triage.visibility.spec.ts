@@ -22,10 +22,7 @@ describe('follower.triage.visibility', () => {
   });
 
   it('falls back to empty hidden slugs for invalid stored json', () => {
-    localStorage.setItem(
-      'followers.triage.visibility.channel-1',
-      '{not-json'
-    );
+    localStorage.setItem('followers.triage.visibility.channel-1', '{not-json');
 
     expect(readHiddenTriageSlugs('channel-1')).toEqual([]);
   });

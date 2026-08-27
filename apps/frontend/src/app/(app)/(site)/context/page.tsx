@@ -5,7 +5,11 @@ import { isGeneralServerSide } from '@gitroom/helpers/utils/is.general.server.si
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: `${isGeneralServerSide() ? 'Context documents : Post++' : 'Gitroom Context documents'}`,
+  title: `${
+    isGeneralServerSide()
+      ? 'Context documents : Post++'
+      : 'Gitroom Context documents'
+  }`,
   description: '',
 };
 

@@ -11,7 +11,7 @@ import z from 'zod';
 
 @Injectable()
 export class FollowersRecentTool implements AgentToolInterface {
-  constructor(private _integrationService: IntegrationService) { }
+  constructor(private _integrationService: IntegrationService) {}
   name = 'listRecentFollowers';
 
   run() {

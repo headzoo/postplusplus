@@ -56,9 +56,11 @@ export const useHelpSearch = (
     const pagesBySlug = new Map(
       manifest.pages.map((article) => [article.slug, article])
     );
-    return index
-      ?.search(normalizedQuery)
-      .map((result) => pagesBySlug.get(result.slug))
-      .filter((article): article is HelpArticle => Boolean(article)) ?? [];
+    return (
+      index
+        ?.search(normalizedQuery)
+        .map((result) => pagesBySlug.get(result.slug))
+        .filter((article): article is HelpArticle => Boolean(article)) ?? []
+    );
   }, [index, manifest, query]);
 };

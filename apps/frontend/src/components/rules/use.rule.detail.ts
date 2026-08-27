@@ -11,7 +11,9 @@ export const useRuleDetail = (id?: string) => {
   const fetch = useFetch();
 
   const load = useCallback(async () => {
-    return (await fetch(ruleDetailKey(id!))).json() as Promise<PostRuleResponse>;
+    return (
+      await fetch(ruleDetailKey(id!))
+    ).json() as Promise<PostRuleResponse>;
   }, [fetch, id]);
 
   return useSWR<PostRuleResponse>(id ? ruleDetailKey(id) : null, load, {

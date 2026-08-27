@@ -4,10 +4,10 @@ import { validateSync } from 'class-validator';
 
 jest.mock(
   '@gitroom/nestjs-libraries/database/prisma/posts/posts.service',
-  () => ({ PostsService: class PostsService { } })
+  () => ({ PostsService: class PostsService {} })
 );
 jest.mock('@gitroom/nestjs-libraries/dtos/posts/create.post.dto', () => ({
-  CreatePostDto: class CreatePostDto { },
+  CreatePostDto: class CreatePostDto {},
 }));
 jest.mock('@gitroom/nestjs-libraries/integrations/integration.manager', () => ({
   socialIntegrationList: [
@@ -128,10 +128,7 @@ describe('Pipeline API boundaries', () => {
         active: true,
         scheduleRevision: 1,
         scheduleSlots: [],
-        integrations: [
-          { integration: twitter },
-          { integration: linkedin },
-        ],
+        integrations: [{ integration: twitter }, { integration: linkedin }],
         contextDocuments: [
           {
             contextDocument: {
@@ -212,10 +209,7 @@ describe('Pipeline API boundaries', () => {
     };
     const service = new PipelineService(repository as any, {} as any);
     const list = await service.getPipelines('organization');
-    const detail = await service.getPipeline(
-      'organization',
-      'pipeline'
-    );
+    const detail = await service.getPipeline('organization', 'pipeline');
 
     expect(list[0]).toMatchObject({ color: '#612BD3' });
     expect(detail).toMatchObject({ color: '#612BD3' });
@@ -271,15 +265,23 @@ describe('Pipeline API boundaries', () => {
               settings: { audience: 'all' },
               image: [{ id: 'media', path: 'image.jpg' }],
             }),
-            expect.objectContaining({ id: 'twitter-thread', parentPostId: 'twitter-root' }),
-            expect.objectContaining({ id: 'linkedin-root', parentPostId: null }),
+            expect.objectContaining({
+              id: 'twitter-thread',
+              parentPostId: 'twitter-root',
+            }),
+            expect.objectContaining({
+              id: 'linkedin-root',
+              parentPostId: null,
+            }),
           ],
         }),
       ],
     });
     expect(JSON.stringify(list)).not.toContain('must-not-leak');
     expect(JSON.stringify(detail)).not.toContain('must-not-leak');
-    expect(JSON.stringify(detail.contextDocuments)).not.toContain('legacy-skill');
+    expect(JSON.stringify(detail.contextDocuments)).not.toContain(
+      'legacy-skill'
+    );
     expect(JSON.stringify(detail)).not.toContain('"organizationId"');
     expect(JSON.stringify(detail)).not.toContain('"internalId"');
   });
@@ -313,11 +315,7 @@ describe('Pipeline API boundaries', () => {
       { dayOfWeek: 0, minuteOfDay: 60 },
       { dayOfWeek: 1, minuteOfDay: 60 },
     ];
-    const pipeline = (
-      id: string,
-      queueCount: number,
-      active = true
-    ) => ({
+    const pipeline = (id: string, queueCount: number, active = true) => ({
       id,
       name: id,
       timezone: 'UTC',
@@ -330,11 +328,13 @@ describe('Pipeline API boundaries', () => {
       _count: { queueItems: queueCount },
     });
     const repository = {
-      getPipelines: jest.fn().mockResolvedValue([
-        pipeline('empty', 0),
-        pipeline('queued', 2),
-        pipeline('paused', 2, false),
-      ]),
+      getPipelines: jest
+        .fn()
+        .mockResolvedValue([
+          pipeline('empty', 0),
+          pipeline('queued', 2),
+          pipeline('paused', 2, false),
+        ]),
     };
     const service = new PipelineService(repository as any, {} as any);
 
@@ -407,7 +407,9 @@ describe('Pipeline API boundaries', () => {
       transaction as any
     );
 
-    await expect(repository.publishQueueItem('org', 'pipeline', 'group')).resolves.toMatchObject({
+    await expect(
+      repository.publishQueueItem('org', 'pipeline', 'group')
+    ).resolves.toMatchObject({
       id: 'item',
     });
     expect(claimableDuringLink).toBe(false);
@@ -432,7 +434,9 @@ describe('Pipeline API boundaries', () => {
 
   it('creates Pipelines without schedule rows and preserves schedules during metadata updates', async () => {
     const create = jest.fn().mockResolvedValue({ id: 'pipeline' });
-    const update = jest.fn().mockResolvedValue({ id: 'pipeline', scheduleRevision: 3 });
+    const update = jest
+      .fn()
+      .mockResolvedValue({ id: 'pipeline', scheduleRevision: 3 });
     const transaction = {
       model: {
         $transaction: jest.fn(async (callback: any) =>
@@ -482,8 +486,16 @@ describe('Pipeline API boundaries', () => {
   });
 
   it('persists supplied colors on create and update while preserving omitted updates', async () => {
-    const create = jest.fn().mockResolvedValue({ id: 'pipeline', color: '#FF5500' });
-    const update = jest.fn().mockResolvedValue({ id: 'pipeline', color: '#00AAFF', scheduleRevision: 3 });
+    const create = jest
+      .fn()
+      .mockResolvedValue({ id: 'pipeline', color: '#FF5500' });
+    const update = jest
+      .fn()
+      .mockResolvedValue({
+        id: 'pipeline',
+        color: '#00AAFF',
+        scheduleRevision: 3,
+      });
     const transaction = {
       model: {
         $transaction: jest.fn(async (callback: any) =>
@@ -542,7 +554,13 @@ describe('Pipeline API boundaries', () => {
   });
 
   it('rejects invalid pipeline color formats at the DTO boundary', () => {
-    const invalidColors = ['purple', '#612', '#612BD3AA', 'rgb(1,2,3)', '#GGGGGG'];
+    const invalidColors = [
+      'purple',
+      '#612',
+      '#612BD3AA',
+      'rgb(1,2,3)',
+      '#GGGGGG',
+    ];
     for (const color of invalidColors) {
       const dto = plainToInstance(CreatePipelineDto, {
         name: 'Pipeline',
@@ -985,9 +1003,8 @@ describe('Pipeline API boundaries', () => {
     );
     const service = new PipelineService(
       {
-        deletePipelineScheduleSlot: repository.deletePipelineScheduleSlot.bind(
-          repository
-        ),
+        deletePipelineScheduleSlot:
+          repository.deletePipelineScheduleSlot.bind(repository),
       } as any,
       {} as any
     );
@@ -1019,7 +1036,9 @@ describe('Pipeline API boundaries', () => {
       { ...valid, expectedScheduleRevision: 0 },
       { ...valid, expectedScheduleRevision: 1.5 },
     ]) {
-      expect(validateSync(plainToInstance(MovePipelineScheduleSlotDto, body)).length).toBeGreaterThan(0);
+      expect(
+        validateSync(plainToInstance(MovePipelineScheduleSlotDto, body)).length
+      ).toBeGreaterThan(0);
     }
   });
 
@@ -1035,7 +1054,11 @@ describe('Pipeline API boundaries', () => {
     const revisionUpdate = jest.fn().mockResolvedValue({ count: 1 });
     const findFirst = jest
       .fn()
-      .mockResolvedValueOnce({ id: 'pipeline', scheduleRevision: 4, active: false });
+      .mockResolvedValueOnce({
+        id: 'pipeline',
+        scheduleRevision: 4,
+        active: false,
+      });
     const slotFindFirst = jest
       .fn()
       .mockResolvedValueOnce({ id: 'source-slot' })
@@ -1046,7 +1069,10 @@ describe('Pipeline API boundaries', () => {
           expect(options.isolationLevel).toBe('Serializable');
           return callback({
             pipeline: { findFirst, updateMany: revisionUpdate },
-            pipelineScheduleSlot: { findFirst: slotFindFirst, updateMany: slotUpdate },
+            pipelineScheduleSlot: {
+              findFirst: slotFindFirst,
+              updateMany: slotUpdate,
+            },
           });
         }),
       },
@@ -1060,7 +1086,9 @@ describe('Pipeline API boundaries', () => {
       transaction as any
     );
 
-    await expect(repository.movePipelineScheduleSlot('org', 'pipeline', move)).resolves.toEqual({
+    await expect(
+      repository.movePipelineScheduleSlot('org', 'pipeline', move)
+    ).resolves.toEqual({
       id: 'pipeline',
       scheduleRevision: 5,
     });
@@ -1096,7 +1124,9 @@ describe('Pipeline API boundaries', () => {
         $transaction: jest.fn((callback: any) =>
           callback({
             pipeline: {
-              findFirst: jest.fn().mockResolvedValue({ id: 'pipeline', scheduleRevision: 4 }),
+              findFirst: jest
+                .fn()
+                .mockResolvedValue({ id: 'pipeline', scheduleRevision: 4 }),
               updateMany: revisionUpdate,
             },
             pipelineScheduleSlot: {
@@ -1147,16 +1177,25 @@ describe('Pipeline API boundaries', () => {
       expectedScheduleRevision: 4,
     };
 
-    await expect(service.movePipelineScheduleSlot('org', 'pipeline', move)).rejects.toMatchObject({
+    await expect(
+      service.movePipelineScheduleSlot('org', 'pipeline', move)
+    ).rejects.toMatchObject({
       message: 'Pipeline schedule changed; refresh and try again',
     });
-    await expect(service.movePipelineScheduleSlot('org', 'pipeline', move)).rejects.toMatchObject({
-      message: 'Pipeline schedule source no longer exists; refresh and try again',
+    await expect(
+      service.movePipelineScheduleSlot('org', 'pipeline', move)
+    ).rejects.toMatchObject({
+      message:
+        'Pipeline schedule source no longer exists; refresh and try again',
     });
-    await expect(service.movePipelineScheduleSlot('org', 'pipeline', move)).rejects.toMatchObject({
+    await expect(
+      service.movePipelineScheduleSlot('org', 'pipeline', move)
+    ).rejects.toMatchObject({
       message: 'Pipeline schedule target is already occupied',
     });
-    await expect(service.movePipelineScheduleSlot('org', 'pipeline', move)).rejects.toMatchObject({
+    await expect(
+      service.movePipelineScheduleSlot('org', 'pipeline', move)
+    ).rejects.toMatchObject({
       message: 'Pipeline not found',
     });
   });
@@ -1168,10 +1207,14 @@ describe('Pipeline API boundaries', () => {
         $transaction: jest.fn((callback: any) =>
           callback({
             pipeline: {
-              findFirst: jest.fn().mockResolvedValue({ id: 'pipeline', scheduleRevision: 4 }),
+              findFirst: jest
+                .fn()
+                .mockResolvedValue({ id: 'pipeline', scheduleRevision: 4 }),
               updateMany: revisionUpdate,
             },
-            pipelineScheduleSlot: { findFirst: jest.fn().mockResolvedValue(null) },
+            pipelineScheduleSlot: {
+              findFirst: jest.fn().mockResolvedValue(null),
+            },
           })
         ),
       },
@@ -1192,9 +1235,9 @@ describe('Pipeline API boundaries', () => {
       expectedScheduleRevision: 4,
     };
 
-    await expect(staleRepository.movePipelineScheduleSlot('org', 'pipeline', move)).resolves.toBe(
-      'missing-source'
-    );
+    await expect(
+      staleRepository.movePipelineScheduleSlot('org', 'pipeline', move)
+    ).resolves.toBe('missing-source');
     expect(revisionUpdate).not.toHaveBeenCalled();
 
     const occupiedRevisionUpdate = jest.fn();
@@ -1209,7 +1252,9 @@ describe('Pipeline API boundaries', () => {
           $transaction: jest.fn((callback: any) =>
             callback({
               pipeline: {
-                findFirst: jest.fn().mockResolvedValue({ id: 'pipeline', scheduleRevision: 4 }),
+                findFirst: jest
+                  .fn()
+                  .mockResolvedValue({ id: 'pipeline', scheduleRevision: 4 }),
                 updateMany: occupiedRevisionUpdate,
               },
               pipelineScheduleSlot: {
@@ -1223,9 +1268,9 @@ describe('Pipeline API boundaries', () => {
         },
       } as any
     );
-    await expect(occupiedRepository.movePipelineScheduleSlot('org', 'pipeline', move)).resolves.toBe(
-      'occupied'
-    );
+    await expect(
+      occupiedRepository.movePipelineScheduleSlot('org', 'pipeline', move)
+    ).resolves.toBe('occupied');
     expect(occupiedRevisionUpdate).not.toHaveBeenCalled();
 
     const raceRepository = new PipelineRepository(
@@ -1240,9 +1285,9 @@ describe('Pipeline API boundaries', () => {
         },
       } as any
     );
-    await expect(raceRepository.movePipelineScheduleSlot('org', 'pipeline', move)).resolves.toBe(
-      'occupied'
-    );
+    await expect(
+      raceRepository.movePipelineScheduleSlot('org', 'pipeline', move)
+    ).resolves.toBe('occupied');
   });
 
   it('rejects duplicate bulk queue IDs before attempting a reorder', async () => {
@@ -1266,7 +1311,9 @@ describe('Pipeline API boundaries', () => {
         posts: [{ id: 'root-post', providerIdentifier: 'x' }],
       }),
     };
-    const manager = { startScheduledPosts: jest.fn().mockResolvedValue(undefined) };
+    const manager = {
+      startScheduledPosts: jest.fn().mockResolvedValue(undefined),
+    };
     const service = new PipelineService(repository as any, manager as any);
 
     await expect(
@@ -1280,10 +1327,9 @@ describe('Pipeline API boundaries', () => {
       'item',
       new Date('2026-08-10T12:00:00.000Z')
     );
-    expect(manager.startScheduledPosts).toHaveBeenCalledWith(
-      'org',
-      [{ id: 'root-post', providerIdentifier: 'x' }]
-    );
+    expect(manager.startScheduledPosts).toHaveBeenCalledWith('org', [
+      { id: 'root-post', providerIdentifier: 'x' },
+    ]);
   });
 
   it('projects queued items in order and hides projections while paused', async () => {
@@ -1307,27 +1353,37 @@ describe('Pipeline API boundaries', () => {
     };
     const service = new PipelineService(repository as any, {} as any);
 
-    await expect(service.getPipeline('org', 'pipeline')).resolves.toMatchObject({
-      nextSlot: new Date('2026-08-09T01:00:00.000Z'),
-      projections: [
-        { itemId: 'first', projectedFor: new Date('2026-08-09T01:00:00.000Z') },
-        { itemId: 'publishing', projectedFor: undefined },
-        { itemId: 'second', projectedFor: new Date('2026-08-10T01:00:00.000Z') },
-      ],
-    });
+    await expect(service.getPipeline('org', 'pipeline')).resolves.toMatchObject(
+      {
+        nextSlot: new Date('2026-08-09T01:00:00.000Z'),
+        projections: [
+          {
+            itemId: 'first',
+            projectedFor: new Date('2026-08-09T01:00:00.000Z'),
+          },
+          { itemId: 'publishing', projectedFor: undefined },
+          {
+            itemId: 'second',
+            projectedFor: new Date('2026-08-10T01:00:00.000Z'),
+          },
+        ],
+      }
+    );
 
     repository.getPipeline.mockResolvedValueOnce({
       ...(await repository.getPipeline()),
       active: false,
     });
-    await expect(service.getPipeline('org', 'pipeline')).resolves.toMatchObject({
-      nextSlot: undefined,
-      projections: [
-        { itemId: 'first', projectedFor: undefined },
-        { itemId: 'publishing', projectedFor: undefined },
-        { itemId: 'second', projectedFor: undefined },
-      ],
-    });
+    await expect(service.getPipeline('org', 'pipeline')).resolves.toMatchObject(
+      {
+        nextSlot: undefined,
+        projections: [
+          { itemId: 'first', projectedFor: undefined },
+          { itemId: 'publishing', projectedFor: undefined },
+          { itemId: 'second', projectedFor: undefined },
+        ],
+      }
+    );
     jest.useRealTimers();
   });
 
@@ -1341,7 +1397,9 @@ describe('Pipeline API boundaries', () => {
         ],
       }),
     };
-    const manager = { startScheduledPosts: jest.fn().mockResolvedValue(undefined) };
+    const manager = {
+      startScheduledPosts: jest.fn().mockResolvedValue(undefined),
+    };
     const service = new PipelineService(repository as any, manager as any);
 
     await service.publishNow('org', 'item');
@@ -1351,18 +1409,20 @@ describe('Pipeline API boundaries', () => {
       'item',
       expect.any(Date)
     );
-    expect(manager.startScheduledPosts).toHaveBeenCalledWith(
-      'org',
-      [
-        { id: 'x-root', providerIdentifier: 'x' },
-        { id: 'linkedin-root', providerIdentifier: 'linkedin' },
-      ]
-    );
+    expect(manager.startScheduledPosts).toHaveBeenCalledWith('org', [
+      { id: 'x-root', providerIdentifier: 'x' },
+      { id: 'linkedin-root', providerIdentifier: 'linkedin' },
+    ]);
   });
 
   it('queues roots and thread children together before starting each root workflow', async () => {
     const linkedPosts = [
-      { id: 'x-root', parentPostId: null, state: 'DRAFT', pipelineQueueItemId: 'item' },
+      {
+        id: 'x-root',
+        parentPostId: null,
+        state: 'DRAFT',
+        pipelineQueueItemId: 'item',
+      },
       {
         id: 'x-thread-child',
         parentPostId: 'x-root',
@@ -1425,7 +1485,9 @@ describe('Pipeline API boundaries', () => {
     );
     const scheduledFor = new Date('2026-08-10T12:00:00.000Z');
 
-    await expect(repository.scheduleItem('org', 'item', scheduledFor)).resolves.toEqual({
+    await expect(
+      repository.scheduleItem('org', 'item', scheduledFor)
+    ).resolves.toEqual({
       id: 'item',
       posts: [
         { id: 'x-root', providerIdentifier: 'x' },
@@ -1515,7 +1577,10 @@ describe('Pipeline API boundaries', () => {
     const repository = {
       getPipeline: jest.fn().mockResolvedValue({
         id: 'pipeline',
-        integrations: [{ integrationId: 'linkedin' }, { integrationId: 'twitter' }],
+        integrations: [
+          { integrationId: 'linkedin' },
+          { integrationId: 'twitter' },
+        ],
       }),
       publishQueueItem: jest.fn().mockResolvedValue({ id: 'queue-item' }),
       discardUnlinkedDraftPosts: jest.fn(),
@@ -1582,7 +1647,9 @@ describe('Pipeline API boundaries', () => {
     const body = {
       pipelineId: 'pipeline',
       post: {
-        posts: [{ integration: { id: 'linkedin' }, value: [{ content: 'Content' }] }],
+        posts: [
+          { integration: { id: 'linkedin' }, value: [{ content: 'Content' }] },
+        ],
       },
     } as any;
 
@@ -1616,9 +1683,11 @@ describe('Pipeline API boundaries', () => {
       discardUnlinkedDraftPosts: jest.fn(),
     };
     const posts = {
-      validatePosts: jest.fn().mockResolvedValue([
-        { valid: true, errors: true, emptyContent: false, tooLong: false },
-      ]),
+      validatePosts: jest
+        .fn()
+        .mockResolvedValue([
+          { valid: true, errors: true, emptyContent: false, tooLong: false },
+        ]),
       mapTypeToPost: jest.fn().mockImplementation((body) => body),
       createPost: jest.fn().mockResolvedValue([]),
     };
@@ -1631,7 +1700,10 @@ describe('Pipeline API boundaries', () => {
           type: 'schedule',
           date: '2026-08-10T10:00:00.000Z',
           posts: [
-            { integration: { id: 'linkedin' }, value: [{ content: 'LinkedIn' }] },
+            {
+              integration: { id: 'linkedin' },
+              value: [{ content: 'LinkedIn' }],
+            },
           ],
         },
       } as any)
@@ -1650,9 +1722,11 @@ describe('Pipeline API boundaries', () => {
       discardUnlinkedDraftPosts: jest.fn().mockResolvedValue({ count: 1 }),
     };
     const posts = {
-      validatePosts: jest.fn().mockResolvedValue([
-        { valid: true, errors: true, emptyContent: false, tooLong: false },
-      ]),
+      validatePosts: jest
+        .fn()
+        .mockResolvedValue([
+          { valid: true, errors: true, emptyContent: false, tooLong: false },
+        ]),
       mapTypeToPost: jest.fn().mockImplementation((body) => body),
       createPost: jest.fn().mockResolvedValue([]),
     };
@@ -1690,7 +1764,9 @@ describe('Pipeline API boundaries', () => {
               pipelineQueueItem: {
                 findFirst: jest.fn().mockResolvedValue({ id: 'item' }),
                 findMany: jest.fn().mockResolvedValue([]),
-                update: jest.fn().mockResolvedValue({ id: 'item', position: 1024 }),
+                update: jest
+                  .fn()
+                  .mockResolvedValue({ id: 'item', position: 1024 }),
               },
             })
           ),
@@ -1713,15 +1789,23 @@ describe('Pipeline API boundaries', () => {
 
   it('keeps failed items recoverable through distinct remove and delete actions', async () => {
     const repository = {
-      detachItem: jest.fn().mockResolvedValue({ id: 'failed-item', status: 'REMOVED' }),
-      deleteItem: jest.fn().mockResolvedValue({ id: 'failed-item', status: 'REMOVED' }),
+      detachItem: jest
+        .fn()
+        .mockResolvedValue({ id: 'failed-item', status: 'REMOVED' }),
+      deleteItem: jest
+        .fn()
+        .mockResolvedValue({ id: 'failed-item', status: 'REMOVED' }),
     };
     const service = new PipelineService(repository as any, {} as any);
 
-    await expect(service.detachItem('org', 'failed-item')).resolves.toMatchObject({
+    await expect(
+      service.detachItem('org', 'failed-item')
+    ).resolves.toMatchObject({
       id: 'failed-item',
     });
-    await expect(service.deleteItem('org', 'failed-item')).resolves.toMatchObject({
+    await expect(
+      service.deleteItem('org', 'failed-item')
+    ).resolves.toMatchObject({
       id: 'failed-item',
     });
     expect(repository.detachItem).toHaveBeenCalledWith('org', 'failed-item');
@@ -1756,7 +1840,9 @@ describe('Pipeline API boundaries', () => {
       transaction as any
     );
 
-    await expect(repository.deleteItem('org', 'failed-item')).resolves.toMatchObject({
+    await expect(
+      repository.deleteItem('org', 'failed-item')
+    ).resolves.toMatchObject({
       id: 'failed-item',
     });
     expect(postUpdateMany).toHaveBeenCalledWith(
@@ -1792,7 +1878,10 @@ describe('Pipeline API boundaries', () => {
     expect(create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         contextDocuments: {
-          create: [{ contextDocumentId: 'doc-a' }, { contextDocumentId: 'doc-b' }],
+          create: [
+            { contextDocumentId: 'doc-a' },
+            { contextDocumentId: 'doc-b' },
+          ],
         },
       }),
     });
@@ -1803,10 +1892,7 @@ describe('Pipeline API boundaries', () => {
     const contextDocumentFindMany = jest.fn(async ({ where }: any) =>
       (where.id?.in || []).map((id: string) => ({
         id,
-        name:
-          id === 'skill'
-            ? 'campaign-review.skill.md'
-            : `${id}.markdown`,
+        name: id === 'skill' ? 'campaign-review.skill.md' : `${id}.markdown`,
       }))
     );
     const transaction = {
@@ -1861,7 +1947,10 @@ describe('Pipeline API boundaries', () => {
       data: expect.objectContaining({
         contextDocuments: {
           deleteMany: {},
-          create: [{ contextDocumentId: 'doc-a' }, { contextDocumentId: 'doc-b' }],
+          create: [
+            { contextDocumentId: 'doc-a' },
+            { contextDocumentId: 'doc-b' },
+          ],
         },
       }),
     });
@@ -1947,7 +2036,9 @@ describe('Pipeline API boundaries', () => {
               update,
             },
             pipelineQueueItem: { findFirst: jest.fn().mockResolvedValue(null) },
-            contextDocument: { findMany: jest.fn().mockResolvedValue([{ id: 'doc-a' }]) },
+            contextDocument: {
+              findMany: jest.fn().mockResolvedValue([{ id: 'doc-a' }]),
+            },
           })
         ),
       },
@@ -1985,7 +2076,9 @@ describe('Pipeline API boundaries', () => {
   });
 
   it('does not increment schedule revision when only context documents change', async () => {
-    const update = jest.fn().mockResolvedValue({ id: 'pipeline', scheduleRevision: 3 });
+    const update = jest
+      .fn()
+      .mockResolvedValue({ id: 'pipeline', scheduleRevision: 3 });
     const transaction = {
       model: {
         $transaction: jest.fn(async (callback: any) =>

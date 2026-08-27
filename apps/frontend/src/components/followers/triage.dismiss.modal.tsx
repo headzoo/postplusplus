@@ -40,17 +40,13 @@ export const TriageDismissModal: FC<{
         )}
       </p>
       <div className="mt-[4px] flex flex-wrap gap-[12px]">
-        <Button onClick={remove}>
-          {t('yes', 'Yes')}
-        </Button>
+        <Button onClick={remove}>{t('yes', 'Yes')}</Button>
         <Button onClick={snooze}>
           {t('followers_triage_snooze', 'Snooze {{days}} days', {
             days: RELATIONSHIP_TRIAGE_SNOOZE_DAYS,
           })}
         </Button>
-        <Button onClick={cancel}>
-          {t('cancel', 'Cancel')}
-        </Button>
+        <Button onClick={cancel}>{t('cancel', 'Cancel')}</Button>
       </div>
     </div>
   );

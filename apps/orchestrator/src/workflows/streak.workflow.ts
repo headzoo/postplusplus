@@ -1,11 +1,12 @@
 import { proxyActivities, sleep } from '@temporalio/workflow';
 import { EmailActivity } from '@gitroom/orchestrator/activities/email.activity';
 
-const { sendEmailAsync, getUserOrgs, setStreak } = proxyActivities<EmailActivity>({
-  startToCloseTimeout: '10 minute',
-  taskQueue: 'main',
-  cancellationType: 'ABANDON',
-});
+const { sendEmailAsync, getUserOrgs, setStreak } =
+  proxyActivities<EmailActivity>({
+    startToCloseTimeout: '10 minute',
+    taskQueue: 'main',
+    cancellationType: 'ABANDON',
+  });
 
 export async function streakWorkflow({
   organizationId,

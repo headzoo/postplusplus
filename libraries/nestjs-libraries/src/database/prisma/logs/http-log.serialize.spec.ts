@@ -38,9 +38,7 @@ describe('HTTP log serialization', () => {
       redactHttpLogUrl(
         'https://api.example.com/post?access_token=secret&keep=1'
       )
-    ).toBe(
-      'https://api.example.com/post?access_token=%5Bredacted%5D&keep=1'
-    );
+    ).toBe('https://api.example.com/post?access_token=%5Bredacted%5D&keep=1');
   });
 
   it('omits binary and streamed bodies', () => {

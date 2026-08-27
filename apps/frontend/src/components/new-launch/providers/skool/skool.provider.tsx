@@ -1,7 +1,8 @@
 'use client';
 
 import {
-  PostComment, withProvider
+  PostComment,
+  withProvider,
 } from '@gitroom/frontend/components/new-launch/providers/high.order.provider';
 import { FC, useState } from 'react';
 import { SkoolDto } from '@gitroom/nestjs-libraries/dtos/posts/providers-settings/skool.dto';
@@ -15,7 +16,9 @@ const SkoolComponent: FC = () => {
     form.getValues().group
   );
   const groupRegister = form.register('group');
-  const onGroupChange = (event: { target: { value: string; name: string } }) => {
+  const onGroupChange = (event: {
+    target: { value: string; name: string };
+  }) => {
     setSelectedGroup(event.target.value);
     groupRegister.onChange(event);
   };

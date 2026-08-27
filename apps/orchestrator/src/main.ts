@@ -18,5 +18,4 @@ async function bootstrap() {
   console.log(`Orchestrator health check listening on port ${port}`);
 }
 
-
 bootstrap();

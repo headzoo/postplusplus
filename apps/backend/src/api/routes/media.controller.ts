@@ -179,7 +179,10 @@ export class MediaController {
 
   @Get('/gifs/trending')
   trendingGifs(@Query() query: GiphyTrendingDto) {
-    return this._mediaService.trendingGifs(query.offset || 0, query.limit || 25);
+    return this._mediaService.trendingGifs(
+      query.offset || 0,
+      query.limit || 25
+    );
   }
 
   @Get('/gifs/search')
@@ -259,10 +262,12 @@ export class MediaController {
   }
 
   @Post('/video/function')
-  videoFunction(
-    @Body() body: VideoFunctionDto
-  ) {
-    return this._mediaService.videoFunction(body.identifier, body.functionName, body.params);
+  videoFunction(@Body() body: VideoFunctionDto) {
+    return this._mediaService.videoFunction(
+      body.identifier,
+      body.functionName,
+      body.params
+    );
   }
 
   @Get('/generate-video/:type/allowed')

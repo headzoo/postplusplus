@@ -1,6 +1,4 @@
-import {
-  assertRelationshipScoringProfile,
-} from './channel-strategy.scoring';
+import { assertRelationshipScoringProfile } from './channel-strategy.scoring';
 import {
   CHANNEL_INTERACTION_SCORE_KINDS,
   CHANNEL_STRATEGY_IDS,
@@ -50,7 +48,9 @@ function isChannelInteractionScoreKind(
 ): value is ChannelInteractionScoreKind {
   return (
     typeof value === 'string' &&
-    CHANNEL_INTERACTION_SCORE_KINDS.includes(value as ChannelInteractionScoreKind)
+    CHANNEL_INTERACTION_SCORE_KINDS.includes(
+      value as ChannelInteractionScoreKind
+    )
   );
 }
 
@@ -58,9 +58,7 @@ function isFollowerMembershipState(
   value: unknown
 ): value is FollowerMembershipState {
   return (
-    value === 'NOT_FOLLOWER' ||
-    value === 'FOLLOWER' ||
-    value === 'UNKNOWN'
+    value === 'NOT_FOLLOWER' || value === 'FOLLOWER' || value === 'UNKNOWN'
   );
 }
 
@@ -75,15 +73,16 @@ function assertNonEmptyConversionType(value: string, label: string) {
 }
 
 function assertPositiveFiniteWeight(value: number, label: string) {
-  if (!Number.isFinite(value) || value <= 0 || value > CONVERSION_LIMITS.maxWeight) {
+  if (
+    !Number.isFinite(value) ||
+    value <= 0 ||
+    value > CONVERSION_LIMITS.maxWeight
+  ) {
     throw new RangeError(`Invalid ${label}`);
   }
 }
 
-function assertInteractionKindList(
-  kinds: readonly unknown[],
-  label: string
-) {
+function assertInteractionKindList(kinds: readonly unknown[], label: string) {
   if (!kinds.length) {
     throw new RangeError(`Invalid ${label}: must be non-empty`);
   }
@@ -176,7 +175,7 @@ export function assertMaterializationProfile(
     !Number.isFinite(profile.cultivate.warmGradeThreshold) ||
     profile.cultivate.warmGradeThreshold <= 0 ||
     profile.cultivate.warmGradeThreshold >
-    MATERIALIZATION_LIMITS.maxWarmGradeThreshold
+      MATERIALIZATION_LIMITS.maxWarmGradeThreshold
   ) {
     throw new RangeError('Invalid cultivate warm grade threshold');
   }
@@ -198,7 +197,10 @@ export function assertConversionProfile(profile: ChannelConversionProfile) {
 
   switch (profile.kind) {
     case 'follower_transition': {
-      assertNonEmptyConversionType(profile.conversionType, 'follower conversion type');
+      assertNonEmptyConversionType(
+        profile.conversionType,
+        'follower conversion type'
+      );
       if (
         !isFollowerMembershipState(profile.fromState) ||
         !isFollowerMembershipState(profile.toState)
@@ -206,12 +208,17 @@ export function assertConversionProfile(profile: ChannelConversionProfile) {
         throw new RangeError('Invalid follower transition state');
       }
       if (profile.fromState === profile.toState) {
-        throw new RangeError('Invalid follower transition: fromState equals toState');
+        throw new RangeError(
+          'Invalid follower transition: fromState equals toState'
+        );
       }
       break;
     }
     case 'website_goal': {
-      assertNonEmptyConversionType(profile.conversionType, 'website goal conversion type');
+      assertNonEmptyConversionType(
+        profile.conversionType,
+        'website goal conversion type'
+      );
       assertPositiveBoundedInteger(
         profile.attributionWindowDays,
         CONVERSION_LIMITS.maxAttributionWindowDays,
@@ -221,7 +228,7 @@ export function assertConversionProfile(profile: ChannelConversionProfile) {
         typeof profile.clickIdParameter !== 'string' ||
         !profile.clickIdParameter.trim() ||
         profile.clickIdParameter.length >
-        CONVERSION_LIMITS.maxClickIdParameterLength
+          CONVERSION_LIMITS.maxClickIdParameterLength
       ) {
         throw new RangeError('Invalid website goal click id parameter');
       }
@@ -308,16 +315,28 @@ export function assertConversionProfile(profile: ChannelConversionProfile) {
         CONVERSION_LIMITS.maxSlaHours,
         'customer support first-response SLA hours'
       );
-      assertInteractionKindList(profile.inboundKinds, 'customer support inbound kinds');
-      assertInteractionKindList(profile.outboundKinds, 'customer support outbound kinds');
+      assertInteractionKindList(
+        profile.inboundKinds,
+        'customer support inbound kinds'
+      );
+      assertInteractionKindList(
+        profile.outboundKinds,
+        'customer support outbound kinds'
+      );
       if (profile.conversationKeyPolicy !== 'conversation_or_actor') {
-        throw new RangeError('Invalid customer support conversation key policy');
+        throw new RangeError(
+          'Invalid customer support conversation key policy'
+        );
       }
       if (typeof profile.explicitResolutionEnabled !== 'boolean') {
-        throw new RangeError('Invalid customer support explicit resolution flag');
+        throw new RangeError(
+          'Invalid customer support explicit resolution flag'
+        );
       }
       if (typeof profile.inferredResolutionEnabled !== 'boolean') {
-        throw new RangeError('Invalid customer support inferred resolution flag');
+        throw new RangeError(
+          'Invalid customer support inferred resolution flag'
+        );
       }
       if (profile.inferredResolutionEnabled) {
         if (profile.inferredResolutionDelayHours === null) {
@@ -342,7 +361,9 @@ export function assertConversionProfile(profile: ChannelConversionProfile) {
     }
     default: {
       const exhaustive: never = profile;
-      throw new RangeError(`Unsupported conversion profile kind: ${exhaustive}`);
+      throw new RangeError(
+        `Unsupported conversion profile kind: ${exhaustive}`
+      );
     }
   }
 }
@@ -395,17 +416,25 @@ export const channelStrategyRegistry = createRegistry([
   customerSupportStrategy,
 ]);
 
-export const FALLBACK_CHANNEL_STRATEGY_ID: ChannelStrategyId = growAudienceStrategy.id;
+export const FALLBACK_CHANNEL_STRATEGY_ID: ChannelStrategyId =
+  growAudienceStrategy.id;
 
 export function listChannelStrategies(): ChannelStrategy[] {
   return CHANNEL_STRATEGY_IDS.map((id) => channelStrategyRegistry[id]);
 }
 
-export function isChannelStrategyId(value: unknown): value is ChannelStrategyId {
-  return typeof value === 'string' && CHANNEL_STRATEGY_IDS.includes(value as ChannelStrategyId);
+export function isChannelStrategyId(
+  value: unknown
+): value is ChannelStrategyId {
+  return (
+    typeof value === 'string' &&
+    CHANNEL_STRATEGY_IDS.includes(value as ChannelStrategyId)
+  );
 }
 
-export function assertChannelStrategyId(value: unknown): asserts value is ChannelStrategyId {
+export function assertChannelStrategyId(
+  value: unknown
+): asserts value is ChannelStrategyId {
   if (!isChannelStrategyId(value)) {
     throw new Error(`Unsupported channel strategy: ${String(value)}`);
   }
@@ -415,9 +444,7 @@ export function getChannelStrategy(id: ChannelStrategyId): ChannelStrategy {
   return channelStrategyRegistry[id];
 }
 
-export function resolveChannelStrategy(
-  id: unknown
-): ChannelStrategy {
+export function resolveChannelStrategy(id: unknown): ChannelStrategy {
   return isChannelStrategyId(id)
     ? getChannelStrategy(id)
     : growAudienceStrategy;

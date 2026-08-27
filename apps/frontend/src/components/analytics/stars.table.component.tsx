@@ -213,10 +213,16 @@ export const StarsTableComponent = () => {
                   <UpDown name={t('date', 'Date')} param="date" />
                 </th>
                 <th>
-                  <UpDown name={t('total_stars', 'Total Stars')} param="totalStars" />
+                  <UpDown
+                    name={t('total_stars', 'Total Stars')}
+                    param="totalStars"
+                  />
                 </th>
                 <th>
-                  <UpDown name={t('total_forks', 'Total Forks')} param="totalForks" />
+                  <UpDown
+                    name={t('total_forks', 'Total Forks')}
+                    param="totalForks"
+                  />
                 </th>
                 <th>
                   <UpDown name={t('stars', 'Stars')} param="stars" />

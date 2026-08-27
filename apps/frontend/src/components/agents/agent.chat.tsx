@@ -84,14 +84,14 @@ const AgentChatShell: FC<{ isNew: boolean }> = ({ isNew }) => {
           '--copilot-kit-background-color': 'var(--new-bg-color)',
         } as CopilotKitCSSProperties
       }
-      className={`trz agent bg-newBgColorInner flex flex-col gap-[15px] transition-all flex-1 items-center relative${showEmptyState ? ' agent--empty' : ''
-        }`}
+      className={`trz agent bg-newBgColorInner flex flex-col gap-[15px] transition-all flex-1 items-center relative${
+        showEmptyState ? ' agent--empty' : ''
+      }`}
     >
       <div
-        className={`absolute left-0 w-full h-full pb-[20px]${showEmptyState
-            ? ' flex flex-col items-center justify-center'
-            : ''
-          }`}
+        className={`absolute left-0 w-full h-full pb-[20px]${
+          showEmptyState ? ' flex flex-col items-center justify-center' : ''
+        }`}
       >
         {showEmptyState && (
           <div className="agent-empty-heading pointer-events-none z-[1] flex shrink-0 justify-center px-[24px] mb-[16px]">
@@ -210,18 +210,18 @@ const NewInput: FC<InputProps> = (props) => {
       onSend={(text) => {
         const send = props.onSend(
           text +
-          (media.length > 0
-            ? '\n[--Media--]' +
-            media
-              .map((m) =>
-                hasExtension(m.path, 'mp4')
-                  ? `Video: ${m.path}`
-                  : `Image: ${m.path}`
-              )
-              .join('\n') +
-            '\n[--Media--]'
-            : '') +
-          buildAgentTransportMetadata(properties, selectedPipeline)
+            (media.length > 0
+              ? '\n[--Media--]' +
+                media
+                  .map((m) =>
+                    hasExtension(m.path, 'mp4')
+                      ? `Video: ${m.path}`
+                      : `Image: ${m.path}`
+                  )
+                  .join('\n') +
+                '\n[--Media--]'
+              : '') +
+            buildAgentTransportMetadata(properties, selectedPipeline)
         );
         setValue('');
         setMedia([]);
@@ -367,7 +367,7 @@ const OpenModal: FC<{
                     path: a.path,
                   })),
                 }))}
-                reopenModal={() => { }}
+                reopenModal={() => {}}
                 mutate={() => res(true)}
               />
             </ExistingDataContextProvider>

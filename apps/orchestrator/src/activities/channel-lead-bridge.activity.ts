@@ -1,5 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Activity, ActivityMethod, TemporalService } from 'nestjs-temporal-core';
+import {
+  Activity,
+  ActivityMethod,
+  TemporalService,
+} from 'nestjs-temporal-core';
 import dayjs from 'dayjs';
 import { ChannelInteractionRepository } from '@gitroom/nestjs-libraries/database/prisma/channel-interactions/channel-interaction.repository';
 import { ChannelInteractionService } from '@gitroom/nestjs-libraries/database/prisma/channel-interactions/channel-interaction.service';
@@ -36,7 +40,7 @@ export class ChannelLeadBridgeActivity {
     private _refreshIntegrationService: RefreshIntegrationService,
     private _adminScheduleLogService: AdminScheduleLogService,
     private _temporalService: TemporalService
-  ) { }
+  ) {}
 
   @ActivityMethod()
   async listDueCandidatesV1(request: { after?: string } = {}) {
@@ -66,7 +70,9 @@ export class ChannelLeadBridgeActivity {
     }
     if (!candidates.length) {
       this._logger.log(
-        `Lead bridge scan found no eligible channels (scanned ${result.candidates.length}, after=${request.after ?? 'start'})`
+        `Lead bridge scan found no eligible channels (scanned ${
+          result.candidates.length
+        }, after=${request.after ?? 'start'})`
       );
       await this._adminScheduleLogService.append({
         scheduleKey: 'lead-bridge',
@@ -115,11 +121,13 @@ export class ChannelLeadBridgeActivity {
     }
     const live = await this.withRefreshedToken(integration, provider);
     const result =
-      await this._channelInteractionService.crawlLeadBridgesForIntegration(live);
+      await this._channelInteractionService.crawlLeadBridgesForIntegration(
+        live
+      );
     this._logger.log(
-      `Lead bridge crawl for integration ${live.id} (${integration.providerIdentifier}): ${JSON.stringify(
-        result
-      )}`
+      `Lead bridge crawl for integration ${live.id} (${
+        integration.providerIdentifier
+      }): ${JSON.stringify(result)}`
     );
     await this._adminScheduleLogService.append({
       scheduleKey: 'lead-bridge',
@@ -239,9 +247,9 @@ export class ChannelLeadBridgeActivity {
         }
       );
     this._logger.log(
-      `Lead discovery burst crawl for ${live.id} (${integration.providerIdentifier}): ${JSON.stringify(
-        result
-      )}`
+      `Lead discovery burst crawl for ${live.id} (${
+        integration.providerIdentifier
+      }): ${JSON.stringify(result)}`
     );
     await this._adminScheduleLogService.append({
       scheduleKey: 'lead-bridge',
@@ -328,8 +336,9 @@ export class ChannelLeadBridgeActivity {
         dayjs(liveIntegration.tokenExpiration).isBefore(dayjs()))
     ) {
       try {
-        const refreshed =
-          await this._refreshIntegrationService.refresh(liveIntegration);
+        const refreshed = await this._refreshIntegrationService.refresh(
+          liveIntegration
+        );
         if (!refreshed || !refreshed.accessToken) {
           throw new Error('Integration token refresh failed');
         }

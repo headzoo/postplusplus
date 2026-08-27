@@ -40,11 +40,13 @@ export const PipelineForm: FC<{
   const [timezoneValue, setTimezoneValue] = useState(
     pipeline?.timezone || dayjs.tz.guess()
   );
-  const [selectedIntegrations, setSelectedIntegrations] = useState<Integrations[]>(
-    pipeline?.channels?.map((channel) => ({ ...channel })) || []
-  );
+  const [selectedIntegrations, setSelectedIntegrations] = useState<
+    Integrations[]
+  >(pipeline?.channels?.map((channel) => ({ ...channel })) || []);
   const [color, setColor] = useState(pipeline?.color || PIPELINE_DEFAULT_COLOR);
-  const [selectedContextDocumentIds, setSelectedContextDocumentIds] = useState<string[]>(
+  const [selectedContextDocumentIds, setSelectedContextDocumentIds] = useState<
+    string[]
+  >(
     [
       ...(pipeline?.contextDocuments || []),
       ...(pipeline?.blockedContextDocuments || []),
@@ -53,12 +55,16 @@ export const PipelineForm: FC<{
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
   const blockedContextDocumentIds = useMemo(
-    () => new Set(pipeline?.blockedContextDocuments?.map((document) => document.id)),
+    () =>
+      new Set(
+        pipeline?.blockedContextDocuments?.map((document) => document.id)
+      ),
     [pipeline?.blockedContextDocuments]
   );
 
   const enabledIntegrations = useMemo(
-    () => integrations.filter((integration: Integrations) => !integration.disabled),
+    () =>
+      integrations.filter((integration: Integrations) => !integration.disabled),
     [integrations]
   );
 
@@ -76,9 +82,7 @@ export const PipelineForm: FC<{
       return false;
     }
     if (
-      selectedContextDocumentIds.some((id) =>
-        blockedContextDocumentIds.has(id)
-      )
+      selectedContextDocumentIds.some((id) => blockedContextDocumentIds.has(id))
     ) {
       setFormError(
         'Deselect blocked agent skill assignments before saving this Pipeline.'
@@ -283,8 +287,8 @@ export const PipelineForm: FC<{
       <div className="flex flex-col gap-[8px]">
         <div className="text-[14px] font-[600] text-textColor">Channels</div>
         <div className="text-[13px] opacity-70">
-          Queued posts use exactly these channels. Changing channels may be blocked
-          while items are queued.
+          Queued posts use exactly these channels. Changing channels may be
+          blocked while items are queued.
         </div>
         {!isLoading && !!enabledIntegrations.length && (
           <PickPlatforms

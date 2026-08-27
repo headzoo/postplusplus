@@ -34,13 +34,11 @@ export const useDashboardAnalytics = (
 
   const load = useCallback(
     async (): Promise<DashboardChannelAnalytics[]> =>
-    (
       await (
         await fetch(
           `/analytics/dashboard?date=${date}&integrationId=${integrationId}`
         )
-      ).json()
-    ),
+      ).json(),
     [date, fetch, integrationId]
   );
 

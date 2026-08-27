@@ -1,5 +1,5 @@
 # Disable the default option to open a blank issue
-blank_issues_enabled: true 
+blank_issues_enabled: true
 
 # Define your custom links
 contact_links:

@@ -72,7 +72,7 @@ export class UsersController {
     private _userService: UsersService,
     private _trackService: TrackService,
     private _adminPasskeyService: AdminPasskeyService
-  ) { }
+  ) {}
 
   @Get('/chatbase-token')
   async getChatbaseToken(
@@ -89,13 +89,13 @@ export class UsersController {
         email: user.email,
         ...(organization.paymentId
           ? {
-            stripe_accounts: [
-              {
-                label: organization.name,
-                stripe_id: organization.paymentId,
-              },
-            ],
-          }
+              stripe_accounts: [
+                {
+                  label: organization.name,
+                  stripe_id: organization.paymentId,
+                },
+              ],
+            }
           : {}),
       },
       process.env.CHATBASE_TOKEN,
@@ -140,7 +140,7 @@ export class UsersController {
       totalChannels: !process.env.STRIPE_PUBLISHABLE_KEY
         ? 10000
         : // @ts-ignore
-        organization?.subscription?.totalChannels || pricing.FREE.channel,
+          organization?.subscription?.totalChannels || pricing.FREE.channel,
       tier:
         // @ts-ignore
         organization?.subscription?.subscriptionTier ||
@@ -159,8 +159,8 @@ export class UsersController {
       publicApi:
         // @ts-ignore
         organization?.users[0]?.role === 'SUPERADMIN' ||
-          // @ts-ignore
-          organization?.users[0]?.role === 'ADMIN'
+        // @ts-ignore
+        organization?.users[0]?.role === 'ADMIN'
           ? organization?.apiKey
           : '',
     };
@@ -199,10 +199,10 @@ export class UsersController {
       domain: getCookieUrlFromDomain(process.env.FRONTEND_URL!),
       ...(!process.env.NOT_SECURED
         ? {
-          secure: true,
-          httpOnly: true,
-          sameSite: 'none',
-        }
+            secure: true,
+            httpOnly: true,
+            sameSite: 'none',
+          }
         : {}),
       expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365),
     });
@@ -381,10 +381,10 @@ export class UsersController {
       domain: getCookieUrlFromDomain(process.env.FRONTEND_URL!),
       ...(!process.env.NOT_SECURED
         ? {
-          secure: true,
-          httpOnly: true,
-          sameSite: 'none',
-        }
+            secure: true,
+            httpOnly: true,
+            sameSite: 'none',
+          }
         : {}),
       expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365),
     });
@@ -395,7 +395,6 @@ export class UsersController {
 
     response.status(200).send();
   }
-
 
   @Get('/passkey/status')
   async getPasskeyStatus(
@@ -507,10 +506,10 @@ export class UsersController {
       domain: getCookieUrlFromDomain(process.env.FRONTEND_URL!),
       ...(!process.env.NOT_SECURED
         ? {
-          secure: true,
-          httpOnly: true,
-          sameSite: 'none',
-        }
+            secure: true,
+            httpOnly: true,
+            sameSite: 'none',
+          }
         : {}),
       maxAge: -1,
       expires: new Date(0),
@@ -520,10 +519,10 @@ export class UsersController {
       domain: getCookieUrlFromDomain(process.env.FRONTEND_URL!),
       ...(!process.env.NOT_SECURED
         ? {
-          secure: true,
-          httpOnly: true,
-          sameSite: 'none',
-        }
+            secure: true,
+            httpOnly: true,
+            sameSite: 'none',
+          }
         : {}),
       maxAge: -1,
       expires: new Date(0),
@@ -533,10 +532,10 @@ export class UsersController {
       domain: getCookieUrlFromDomain(process.env.FRONTEND_URL!),
       ...(!process.env.NOT_SECURED
         ? {
-          secure: true,
-          httpOnly: true,
-          sameSite: 'none',
-        }
+            secure: true,
+            httpOnly: true,
+            sameSite: 'none',
+          }
         : {}),
       maxAge: -1,
       expires: new Date(0),
@@ -577,10 +576,10 @@ export class UsersController {
         domain: getCookieUrlFromDomain(process.env.FRONTEND_URL!),
         ...(!process.env.NOT_SECURED
           ? {
-            secure: true,
-            httpOnly: true,
-            sameSite: 'none',
-          }
+              secure: true,
+              httpOnly: true,
+              sameSite: 'none',
+            }
           : {}),
         expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365),
       });

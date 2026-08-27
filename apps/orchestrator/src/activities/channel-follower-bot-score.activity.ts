@@ -16,7 +16,7 @@ export class ChannelFollowerBotScoreActivity {
     private _repository: ChannelInteractionRepository,
     private _channelInteractionService: ChannelInteractionService,
     private _adminScheduleLogService: AdminScheduleLogService
-  ) { }
+  ) {}
 
   @ActivityMethod()
   async listDueCandidatesV1(request: { after?: string } = {}) {
@@ -52,7 +52,11 @@ export class ChannelFollowerBotScoreActivity {
       );
       await this._adminScheduleLogService.append({
         scheduleKey: 'follower-bot-scores',
-        message: `Bot score batch for channel ${request.candidate.id}: processed ${result.processed}${result.hasMore ? ' (more pending)' : ''}`,
+        message: `Bot score batch for channel ${
+          request.candidate.id
+        }: processed ${result.processed}${
+          result.hasMore ? ' (more pending)' : ''
+        }`,
         meta: {
           integrationId: request.candidate.id,
           organizationId: request.candidate.organizationId,

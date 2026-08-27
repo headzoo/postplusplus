@@ -9,18 +9,18 @@ import {
 export const UserContext = createContext<
   | undefined
   | (User & {
-    orgId: string;
-    tier: PricingInnerInterface;
-    publicApi: string;
-    role: 'USER' | 'ADMIN' | 'SUPERADMIN';
-    totalChannels: number;
-    isLifetime?: boolean;
-    admin?: boolean;
-    impersonate: boolean;
-    allowTrial: boolean;
-    isTrailing: boolean;
-    streakSince: string | null;
-  })
+      orgId: string;
+      tier: PricingInnerInterface;
+      publicApi: string;
+      role: 'USER' | 'ADMIN' | 'SUPERADMIN';
+      totalChannels: number;
+      isLifetime?: boolean;
+      admin?: boolean;
+      impersonate: boolean;
+      allowTrial: boolean;
+      isTrailing: boolean;
+      streakSince: string | null;
+    })
 >(undefined);
 export const ContextWrapper: FC<{
   user: User & {
@@ -34,9 +34,9 @@ export const ContextWrapper: FC<{
 }> = ({ user, children }) => {
   const values = user
     ? {
-      ...user,
-      tier: pricing[user.tier],
-    }
+        ...user,
+        tier: pricing[user.tier],
+      }
     : ({} as any);
   return <UserContext.Provider value={values}>{children}</UserContext.Provider>;
 };

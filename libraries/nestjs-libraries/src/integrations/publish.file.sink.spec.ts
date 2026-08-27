@@ -85,7 +85,11 @@ describe('publish.file.sink', () => {
     process.env.PUBLISH_FILE_SINK_DIR = directory;
     const initialFilename = '2026-08-12-19-47-00-x-post.json';
 
-    await writeFile(join(directory, initialFilename), '{"existing":true}', 'utf8');
+    await writeFile(
+      join(directory, initialFilename),
+      '{"existing":true}',
+      'utf8'
+    );
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2026-08-12T19:47:00.000Z'));
 
@@ -122,7 +126,8 @@ describe('publish.file.sink', () => {
       '{"existing":true}'
     );
     expect(
-      JSON.parse(await readFile(join(directory, first), 'utf8')).posts[0].message
+      JSON.parse(await readFile(join(directory, first), 'utf8')).posts[0]
+        .message
     ).toBe('first');
     expect(
       JSON.parse(await readFile(join(directory, second), 'utf8')).posts[0]

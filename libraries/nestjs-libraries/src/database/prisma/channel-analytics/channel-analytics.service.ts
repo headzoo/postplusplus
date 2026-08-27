@@ -59,7 +59,7 @@ export class ChannelAnalyticsService {
     private _repository: ChannelAnalyticsRepository,
     private _integrationManager: IntegrationManager,
     private _temporalService: TemporalService
-  ) { }
+  ) {}
 
   async persistCapturePage(
     organizationId: string,
@@ -130,16 +130,16 @@ export class ChannelAnalyticsService {
     if (coveredDay) this.validateUtcDay(coveredDay, 'coveredDay');
     return kind === 'daily'
       ? this._repository.finalizeDailyCapture(
-        organizationId,
-        integrationId,
-        snapshotAt,
-        coveredDay
-      )
+          organizationId,
+          integrationId,
+          snapshotAt,
+          coveredDay
+        )
       : this._repository.finalizePostLifetimeCapture(
-        organizationId,
-        integrationId,
-        snapshotAt
-      );
+          organizationId,
+          integrationId,
+          snapshotAt
+        );
   }
 
   recordFailure(
@@ -180,7 +180,8 @@ export class ChannelAnalyticsService {
     ) {
       throw new BadRequestException('Analytics capture is unavailable');
     }
-    const supported = this._integrationManager.getAnalyticsSnapshotIntegrations();
+    const supported =
+      this._integrationManager.getAnalyticsSnapshotIntegrations();
     if (!supported.includes(integration.providerIdentifier)) {
       throw new BadRequestException('Analytics capture is unavailable');
     }
@@ -276,9 +277,7 @@ export class ChannelAnalyticsService {
       integrationId,
       [...ACCOUNT_AUDIENCE_TOTAL_METRIC_KEYS]
     );
-    const byKey = new Map(
-      rows.map((row) => [row.metricKey, row] as const)
-    );
+    const byKey = new Map(rows.map((row) => [row.metricKey, row] as const));
     for (const metricKey of ACCOUNT_AUDIENCE_TOTAL_METRIC_KEYS) {
       const row = byKey.get(metricKey);
       if (!row) {
@@ -351,9 +350,7 @@ export class ChannelAnalyticsService {
     );
     const matched = result.contributors.flatMap((contributor) => {
       const post = postByReleaseId.get(contributor.externalPostId);
-      return post
-        ? [{ ...post, delta: contributor.delta.toNumber() }]
-        : [];
+      return post ? [{ ...post, delta: contributor.delta.toNumber() }] : [];
     });
     const matchedPostDeltaTotal = matched.reduce(
       (total, post) => total + post.delta,
@@ -464,15 +461,14 @@ export class ChannelAnalyticsService {
           (currentObservations.length > 0 && previousObservations.length > 0);
         const trend =
           !previousWindowCovered ||
-            !currentWindowCovered ||
-            !hasObservationsForTrend
+          !currentWindowCovered ||
+          !hasObservationsForTrend
             ? null
             : valueMode === 'average'
-              ? currentTotal - previousTotal
-              : previousTotal !== 0
-                ? ((currentTotal - previousTotal) / Math.abs(previousTotal)) *
-                100
-                : null;
+            ? currentTotal - previousTotal
+            : previousTotal !== 0
+            ? ((currentTotal - previousTotal) / Math.abs(previousTotal)) * 100
+            : null;
         const responsePoints =
           valueMode === 'sum' ? current : currentObservations;
         return [
@@ -509,9 +505,7 @@ export class ChannelAnalyticsService {
       label: metric.label,
       metricKey: metric.metricKey,
       drilldownSlug:
-        metric.valueMode === 'sum'
-          ? metricSlugForKey(metric.metricKey)
-          : null,
+        metric.valueMode === 'sum' ? metricSlugForKey(metric.metricKey) : null,
       valueMode: metric.valueMode,
       displayUnit: metric.displayUnit,
       data,
@@ -558,7 +552,9 @@ export class ChannelAnalyticsService {
     }
     if (
       point?.displayUnit &&
-      !['count', 'percentage', 'duration', 'decimal'].includes(point.displayUnit)
+      !['count', 'percentage', 'duration', 'decimal'].includes(
+        point.displayUnit
+      )
     ) {
       throw new BadRequestException('Unsupported analytics display unit');
     }
@@ -618,17 +614,23 @@ export class ChannelAnalyticsService {
     template: T
   ) {
     if (valueMode !== 'sum' || !covered) return points;
-    const byDay = new Map(points.map((point) => [point.day.toISOString(), point]));
+    const byDay = new Map(
+      points.map((point) => [point.day.toISOString(), point])
+    );
     const filled: T[] = [];
-    for (let day = new Date(from); day < to; day.setUTCDate(day.getUTCDate() + 1)) {
+    for (
+      let day = new Date(from);
+      day < to;
+      day.setUTCDate(day.getUTCDate() + 1)
+    ) {
       const point = byDay.get(day.toISOString());
       filled.push(
         point ||
-        ({
-          ...template,
-          day: new Date(day),
-          value: { toNumber: () => 0 },
-        } as T)
+          ({
+            ...template,
+            day: new Date(day),
+            value: { toNumber: () => 0 },
+          } as T)
       );
     }
     return filled;
@@ -673,19 +675,19 @@ export class ChannelAnalyticsService {
 }
 
 const prismaValueMode = (value: ChannelAnalyticsValueMode) =>
-({
-  sum: PrismaValueMode.SUM,
-  average: PrismaValueMode.AVERAGE,
-  latest: PrismaValueMode.LATEST,
-}[value]);
+  ({
+    sum: PrismaValueMode.SUM,
+    average: PrismaValueMode.AVERAGE,
+    latest: PrismaValueMode.LATEST,
+  }[value]);
 
 const prismaDisplayUnit = (value: ChannelAnalyticsDisplayUnit) =>
-({
-  count: 'COUNT',
-  percentage: 'PERCENTAGE',
-  duration: 'DURATION',
-  decimal: 'DECIMAL',
-}[value] as 'COUNT' | 'PERCENTAGE' | 'DURATION' | 'DECIMAL');
+  ({
+    count: 'COUNT',
+    percentage: 'PERCENTAGE',
+    duration: 'DURATION',
+    decimal: 'DECIMAL',
+  }[value] as 'COUNT' | 'PERCENTAGE' | 'DURATION' | 'DECIMAL');
 
 const mapDisplayUnit = (
   value: string | null | undefined
@@ -712,11 +714,11 @@ const resolveDisplayUnit = (
 };
 
 const mapValueMode = (value: PrismaValueMode): ChannelAnalyticsValueMode =>
-({
-  [PrismaValueMode.SUM]: 'sum',
-  [PrismaValueMode.AVERAGE]: 'average',
-  [PrismaValueMode.LATEST]: 'latest',
-}[value] as ChannelAnalyticsValueMode);
+  ({
+    [PrismaValueMode.SUM]: 'sum',
+    [PrismaValueMode.AVERAGE]: 'average',
+    [PrismaValueMode.LATEST]: 'latest',
+  }[value] as ChannelAnalyticsValueMode);
 
 const metricSlugForKey = (metricKey: string): AnalyticsMetricSlug | null =>
   (Object.entries(ANALYTICS_METRIC_SLUGS).find(
@@ -741,9 +743,9 @@ const utcDay = (value: Date) =>
 const isCoverageComplete = (
   state:
     | {
-      coverageStartDay?: Date | null;
-      coverageEndDay?: Date | null;
-    }
+        coverageStartDay?: Date | null;
+        coverageEndDay?: Date | null;
+      }
     | null
     | undefined,
   from: Date,
@@ -752,8 +754,5 @@ const isCoverageComplete = (
   if (!state?.coverageStartDay || !state.coverageEndDay) return false;
   const lastDay = new Date(to);
   lastDay.setUTCDate(lastDay.getUTCDate() - 1);
-  return (
-    state.coverageStartDay <= from &&
-    state.coverageEndDay >= lastDay
-  );
+  return state.coverageStartDay <= from && state.coverageEndDay >= lastDay;
 };

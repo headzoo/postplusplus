@@ -17,16 +17,11 @@ const MeweComponent: FC = () => {
 
   return (
     <div>
-      <Select
-        label="Post To"
-        {...form.register('postType')}
-      >
+      <Select label="Post To" {...form.register('postType')}>
         <option value="timeline">My Timeline</option>
         <option value="group">Group</option>
       </Select>
-      {postType === 'group' && (
-        <MeweGroupSelect {...form.register('group')} />
-      )}
+      {postType === 'group' && <MeweGroupSelect {...form.register('group')} />}
     </div>
   );
 };

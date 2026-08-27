@@ -8,7 +8,10 @@ import {
 describe('dashboardMetricIdentity', () => {
   it('prefers metricKey when present', () => {
     expect(
-      dashboardMetricIdentity({ metricKey: 'impressions', label: 'Impressions' })
+      dashboardMetricIdentity({
+        metricKey: 'impressions',
+        label: 'Impressions',
+      })
     ).toBe('impressions');
   });
 

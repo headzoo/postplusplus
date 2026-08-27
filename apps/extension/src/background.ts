@@ -1,4 +1,9 @@
-import { ExtensionRequest, GetCookiesResponse, ProviderInfo, StoredRefreshEntry } from './types/messages';
+import {
+  ExtensionRequest,
+  GetCookiesResponse,
+  ProviderInfo,
+  StoredRefreshEntry,
+} from './types/messages';
 import { getAllProviders, getProvider } from './providers/provider.registry';
 import { CookieProvider } from './providers/cookie-provider.interface';
 
@@ -16,7 +21,9 @@ function isOriginAllowed(origin: string | undefined): boolean {
   return ALLOWED_ORIGIN_PATTERNS.some((pattern) => pattern.test(origin));
 }
 
-async function extractCookies(provider: CookieProvider): Promise<GetCookiesResponse> {
+async function extractCookies(
+  provider: CookieProvider
+): Promise<GetCookiesResponse> {
   const allCookies = await chrome.cookies.getAll({ url: provider.url });
 
   const extracted: Record<string, string> = {};
@@ -35,7 +42,9 @@ async function extractCookies(provider: CookieProvider): Promise<GetCookiesRespo
     return {
       success: false,
       provider: provider.identifier,
-      error: `Missing required cookies: ${missingRequired.join(', ')}. User may need to log in to ${provider.name}.`,
+      error: `Missing required cookies: ${missingRequired.join(
+        ', '
+      )}. User may need to log in to ${provider.name}.`,
       missingCookies: missingRequired,
     };
   }
@@ -54,7 +63,9 @@ async function getStoredEntries(): Promise<Record<string, StoredRefreshEntry>> {
   return result[STORAGE_KEY] || {};
 }
 
-async function setStoredEntries(entries: Record<string, StoredRefreshEntry>): Promise<void> {
+async function setStoredEntries(
+  entries: Record<string, StoredRefreshEntry>
+): Promise<void> {
   await chrome.storage.local.set({ [STORAGE_KEY]: entries });
 }
 
@@ -199,7 +210,9 @@ chrome.runtime.onMessageExternal.addListener(
       }
 
       default: {
-        sendResponse({ error: `Unknown message type: ${(message as any).type}` });
+        sendResponse({
+          error: `Unknown message type: ${(message as any).type}`,
+        });
         break;
       }
     }

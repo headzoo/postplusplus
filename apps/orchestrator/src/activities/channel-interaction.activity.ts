@@ -33,7 +33,7 @@ export class ChannelInteractionActivity {
     private _integrationManager: IntegrationManager,
     private _refreshIntegrationService: RefreshIntegrationService,
     private _notificationService: NotificationService
-  ) { }
+  ) {}
 
   @ActivityMethod()
   listCandidates(after?: string) {
@@ -41,7 +41,9 @@ export class ChannelInteractionActivity {
   }
 
   @ActivityMethod()
-  async reconcileSubscriptions(candidate: ChannelInteractionMaintenanceCandidate) {
+  async reconcileSubscriptions(
+    candidate: ChannelInteractionMaintenanceCandidate
+  ) {
     const integration = await this.getIntegration(candidate);
     if (!integration) return { supported: false };
 
@@ -56,7 +58,10 @@ export class ChannelInteractionActivity {
     const capability = provider.channelInteractionWebhooks;
     if (!capability) return { supported: false };
 
-    const liveIntegration = await this.withRefreshedToken(integration, provider);
+    const liveIntegration = await this.withRefreshedToken(
+      integration,
+      provider
+    );
     if (!integration.disabled && !integration.deletedAt) {
       await this._channelInteractionService.requestReconciliation(
         liveIntegration
@@ -80,7 +85,9 @@ export class ChannelInteractionActivity {
         .map((item) => item.replace(':', ' · '))
         .join(', ');
       const channelLabel =
-        integration.profile || integration.name || integration.providerIdentifier;
+        integration.profile ||
+        integration.name ||
+        integration.providerIdentifier;
       await this._notificationService.inAppNotification(
         candidate.organizationId,
         'Interaction tracking needs attention',
@@ -96,7 +103,8 @@ export class ChannelInteractionActivity {
   @ActivityMethod()
   async beginFollowerSync(candidate: ChannelInteractionMaintenanceCandidate) {
     const integration = await this.getIntegration(candidate);
-    if (!this.isActiveSocialIntegration(integration)) return { supported: false };
+    if (!this.isActiveSocialIntegration(integration))
+      return { supported: false };
     try {
       const provider = this._integrationManager.getSocialIntegration(
         integration.providerIdentifier
@@ -147,7 +155,9 @@ export class ChannelInteractionActivity {
     );
     return {
       hasMore: page.hasMore,
-      ...(page.hasMore && page.nextCursor ? { nextCursor: page.nextCursor } : {}),
+      ...(page.hasMore && page.nextCursor
+        ? { nextCursor: page.nextCursor }
+        : {}),
     };
   }
 
@@ -219,7 +229,11 @@ export class ChannelInteractionActivity {
       forceRefresh
     );
     try {
-      return await provider.followers!(liveIntegration, liveIntegration.token, query);
+      return await provider.followers!(
+        liveIntegration,
+        liveIntegration.token,
+        query
+      );
     } catch (error) {
       if (error instanceof RefreshToken && !forceRefresh) {
         return this.getFollowerPage(integration, provider, query, true);
@@ -239,7 +253,9 @@ export class ChannelInteractionActivity {
       (!!liveIntegration.tokenExpiration &&
         dayjs(liveIntegration.tokenExpiration).isBefore(dayjs()))
     ) {
-      const refreshed = await this._refreshIntegrationService.refresh(liveIntegration);
+      const refreshed = await this._refreshIntegrationService.refresh(
+        liveIntegration
+      );
       if (!refreshed || !refreshed.accessToken) {
         throw new Error('Integration token refresh failed');
       }

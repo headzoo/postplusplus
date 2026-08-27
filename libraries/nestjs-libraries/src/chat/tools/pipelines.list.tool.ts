@@ -7,7 +7,7 @@ import { checkAuth } from '@gitroom/nestjs-libraries/chat/auth.context';
 
 @Injectable()
 export class PipelinesListTool implements AgentToolInterface {
-  constructor(private _pipelineService: PipelineService) { }
+  constructor(private _pipelineService: PipelineService) {}
   name = 'listPipelines';
 
   run() {

@@ -230,9 +230,9 @@ describe('follower list cache updates', () => {
     expect(
       isFollowerChannelCacheKey('channel-1', '/followers/channel-2?limit=24')
     ).toBe(false);
-    expect(
-      isFollowerChannelCacheKey('channel-1', '/followers/channels')
-    ).toBe(false);
+    expect(isFollowerChannelCacheKey('channel-1', '/followers/channels')).toBe(
+      false
+    );
   });
 
   it('revalidates matching channel cache keys via mutate', async () => {
@@ -240,16 +240,14 @@ describe('follower list cache updates', () => {
 
     await revalidateFollowerChannelCaches(mutateCache, 'channel-1');
 
-    expect(mutateCache).toHaveBeenCalledWith(
-      expect.any(Function),
-      undefined,
-      { revalidate: true }
-    );
+    expect(mutateCache).toHaveBeenCalledWith(expect.any(Function), undefined, {
+      revalidate: true,
+    });
     const matcher = mutateCache.mock.calls[0][0] as (key: unknown) => boolean;
     expect(matcher('/followers/channel-1?limit=24')).toBe(true);
-    expect(
-      matcher('/followers/channel-1/member?externalId=follower-1')
-    ).toBe(true);
+    expect(matcher('/followers/channel-1/member?externalId=follower-1')).toBe(
+      true
+    );
     expect(matcher(followerListsKey('channel-1'))).toBe(true);
     expect(matcher('/followers/channel-2?limit=24')).toBe(false);
   });
@@ -464,7 +462,11 @@ describe('follower list cache updates', () => {
           name: 'Alex',
           relationshipTriage: 'hot_lead' as const,
         },
-        { id: 'follower-2', name: 'Sam', relationshipTriage: 'mutual' as const },
+        {
+          id: 'follower-2',
+          name: 'Sam',
+          relationshipTriage: 'mutual' as const,
+        },
       ],
       hasMore: false,
     };
@@ -525,7 +527,12 @@ describe('follower list cache updates', () => {
       )
     ).toEqual({
       items: [
-        { id: 'follower-1', name: 'Alex', relationshipTriage: null, isHot: false },
+        {
+          id: 'follower-1',
+          name: 'Alex',
+          relationshipTriage: null,
+          isHot: false,
+        },
         { id: 'follower-2', name: 'Sam', relationshipTriage: 'hot_lead' },
       ],
       hasMore: false,

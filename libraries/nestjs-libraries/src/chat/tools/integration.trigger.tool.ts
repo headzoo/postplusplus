@@ -99,7 +99,10 @@ export class IntegrationTriggerTool implements AgentToolInterface {
             const load = await integrationProvider[inputData.methodName](
               getIntegration.token,
               inputData.dataSchema.reduce(
-                (all: Record<string, string>, current: { key: string; value: string }) => ({
+                (
+                  all: Record<string, string>,
+                  current: { key: string; value: string }
+                ) => ({
                   ...all,
                   [current.key]: current.value,
                 }),

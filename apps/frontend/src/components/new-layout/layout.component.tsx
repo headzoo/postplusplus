@@ -1,6 +1,13 @@
 'use client';
 
-import React, { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { jakartaSans } from '@gitroom/frontend/app/fonts';
 
 import clsx from 'clsx';
@@ -39,7 +46,10 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
-  const [collapseSidebar, setCollapseSidebar] = useCookie('collapseSidebar', '0');
+  const [collapseSidebar, setCollapseSidebar] = useCookie(
+    'collapseSidebar',
+    '0'
+  );
   const sidebarCollapsed = collapseSidebar === '1';
   const desktopHelpTriggerRef = useRef<HTMLButtonElement>(null);
   const mobileHelpTriggerRef = useRef<HTMLButtonElement>(null);
@@ -112,7 +122,10 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
               )}
             >
               <div>{user?.impersonate ? <ImpersonationBanner /> : <div />}</div>
-              {user.tier === 'FREE' && isGeneral && billingEnabled && !user?.impersonate ? (
+              {user.tier === 'FREE' &&
+              isGeneral &&
+              billingEnabled &&
+              !user?.impersonate ? (
                 <FirstBillingComponent />
               ) : (
                 <>

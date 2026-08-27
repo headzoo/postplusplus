@@ -46,7 +46,9 @@ export const formatMetricLabel = (metric: string): string => {
   }
 };
 
-export const formatOperatorSymbol = (operator: PostRuleConditionOperator): string => {
+export const formatOperatorSymbol = (
+  operator: PostRuleConditionOperator
+): string => {
   switch (operator) {
     case 'LT':
       return '<';
@@ -61,7 +63,9 @@ export const formatOperatorSymbol = (operator: PostRuleConditionOperator): strin
   }
 };
 
-export const formatOperatorLabel = (operator: PostRuleConditionOperator): string => {
+export const formatOperatorLabel = (
+  operator: PostRuleConditionOperator
+): string => {
   switch (operator) {
     case 'LT':
       return 'less than';
@@ -108,8 +112,8 @@ export const formatTimingPreview = (
     initialDelayHours === 0
       ? 'immediately'
       : initialDelayHours === 1
-        ? '1 hour'
-        : `${initialDelayHours} hours`;
+      ? '1 hour'
+      : `${initialDelayHours} hours`;
 
   if (action === 'REMOVE') {
     return `Evaluate ${initial} after publish`;
@@ -120,14 +124,21 @@ export const formatTimingPreview = (
   }
 
   const interval =
-    evaluationIntervalHours === 1 ? '1 hour' : `${evaluationIntervalHours} hours`;
+    evaluationIntervalHours === 1
+      ? '1 hour'
+      : `${evaluationIntervalHours} hours`;
 
   return `Evaluate ${initial} after publish, then every ${interval} (max ${maxEvaluations}×)`;
 };
 
 export const formatReschedulePreview = (
   rescheduleConfig:
-    | { mode: 'MANUAL'; daysAfterEvaluation: number; timeOfDay: string; timezone: string }
+    | {
+        mode: 'MANUAL';
+        daysAfterEvaluation: number;
+        timeOfDay: string;
+        timezone: string;
+      }
     | { mode: 'PIPELINE'; pipelineId: string }
     | null,
   maxRescheduleAttempts?: number | null
@@ -145,8 +156,8 @@ export const formatReschedulePreview = (
       rescheduleConfig.daysAfterEvaluation === 0
         ? 'same day'
         : rescheduleConfig.daysAfterEvaluation === 1
-          ? '1 day'
-          : `${rescheduleConfig.daysAfterEvaluation} days`;
+        ? '1 day'
+        : `${rescheduleConfig.daysAfterEvaluation} days`;
     return `Reschedule ${days} after evaluation at ${rescheduleConfig.timeOfDay} (${rescheduleConfig.timezone})${attemptsStr}`;
   }
 

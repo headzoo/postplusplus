@@ -85,7 +85,10 @@ export async function simpleUpload(
   _contentType: string
 ) {
   const detected = await fromBuffer(data);
-  if (!detected || !Object.values(ALLOWED_EXT_TO_MIME).includes(detected.mime)) {
+  if (
+    !detected ||
+    !Object.values(ALLOWED_EXT_TO_MIME).includes(detected.mime)
+  ) {
     throw new Error('Unsupported file type.');
   }
   const fileExtension = `.${detected.ext}`;

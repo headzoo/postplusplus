@@ -49,4 +49,4 @@ export class SetsController {
   ) {
     return this._setsService.deleteSet(org.id, id);
   }
-} 
+}

@@ -14,7 +14,8 @@ import {
   MAX_CONVERSION_QUERY_RANGE_DAYS,
 } from './conversion.shared';
 
-const IsUtcCalendarDay = (validationOptions?: ValidationOptions) =>
+const IsUtcCalendarDay =
+  (validationOptions?: ValidationOptions) =>
   (object: object, propertyName: string) =>
     registerDecorator({
       name: 'isUtcCalendarDay',
@@ -23,10 +24,7 @@ const IsUtcCalendarDay = (validationOptions?: ValidationOptions) =>
       options: validationOptions,
       validator: {
         validate(value: unknown) {
-          if (
-            typeof value !== 'string' ||
-            !/^\d{4}-\d{2}-\d{2}$/.test(value)
-          ) {
+          if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
             return false;
           }
           const date = new Date(`${value}T00:00:00.000Z`);

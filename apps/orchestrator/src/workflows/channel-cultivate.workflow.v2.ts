@@ -23,8 +23,7 @@ const { resolveSweepHourV2, listDueCandidatesV2, materializeCultivatePicksV2 } =
 export async function channelCultivateWorkflowV2(
   request: ChannelCultivateWorkflowV2Request = {}
 ): Promise<void> {
-  const hour =
-    request.hour ?? (await resolveSweepHourV2()).hour;
+  const hour = request.hour ?? (await resolveSweepHourV2()).hour;
 
   const discovered = await listDueCandidatesV2({
     hour,

@@ -81,5 +81,9 @@ export const NeynarAuthButton: FC<{
       document.removeEventListener('mousedown', handleOutsideClick);
     };
   }, [showModal, handleOutsideClick]);
-  return <div onClick={handleSignIn} className="flex-1">{children}</div>;
+  return (
+    <div onClick={handleSignIn} className="flex-1">
+      {children}
+    </div>
+  );
 };

@@ -1,17 +1,17 @@
 jest.mock('@gitroom/nestjs-libraries/integrations/integration.manager', () => ({
-  IntegrationManager: class IntegrationManager { },
+  IntegrationManager: class IntegrationManager {},
 }));
 jest.mock(
   '@gitroom/nestjs-libraries/integrations/refresh.integration.service',
-  () => ({ RefreshIntegrationService: class RefreshIntegrationService { } })
+  () => ({ RefreshIntegrationService: class RefreshIntegrationService {} })
 );
 jest.mock(
   '@gitroom/nestjs-libraries/database/prisma/posts/posts.service',
-  () => ({ PostsService: class PostsService { } })
+  () => ({ PostsService: class PostsService {} })
 );
 jest.mock(
   '@gitroom/nestjs-libraries/database/prisma/pipelines/pipeline.service',
-  () => ({ PipelineService: class PipelineService { } })
+  () => ({ PipelineService: class PipelineService {} })
 );
 
 import { PostRulesExecutionService } from './post-rules.execution.service';
@@ -33,45 +33,45 @@ const integration = {
 } as any;
 
 const rootPost = (overrides: Record<string, unknown> = {}) =>
-({
-  id: 'post-1',
-  organizationId: 'org-1',
-  integrationId: 'channel-1',
-  group: 'group-1',
-  state: 'PUBLISHED',
-  publishDate: new Date('2026-08-20T10:00:00.000Z'),
-  releaseId: 'tweet-1',
-  settings: JSON.stringify({ __type: 'x' }),
-  image: '[]',
-  content: 'hello',
-  delay: 0,
-  deletedAt: null,
-  platformDeletedAt: null,
-  parentPostId: null,
-  integration,
-  pipelineQueueItem: null,
-  ...overrides,
-} as any);
+  ({
+    id: 'post-1',
+    organizationId: 'org-1',
+    integrationId: 'channel-1',
+    group: 'group-1',
+    state: 'PUBLISHED',
+    publishDate: new Date('2026-08-20T10:00:00.000Z'),
+    releaseId: 'tweet-1',
+    settings: JSON.stringify({ __type: 'x' }),
+    image: '[]',
+    content: 'hello',
+    delay: 0,
+    deletedAt: null,
+    platformDeletedAt: null,
+    parentPostId: null,
+    integration,
+    pipelineQueueItem: null,
+    ...overrides,
+  } as any);
 
 const removeRule = (overrides: Record<string, unknown> = {}) =>
-({
-  id: 'rule-1',
-  organizationId: 'org-1',
-  name: 'Remove flops',
-  enabled: true,
-  action: 'REMOVE',
-  initialDelayHours: 24,
-  evaluationIntervalHours: null,
-  maxEvaluations: null,
-  conditionMatch: 'ANY',
-  conditions: [],
-  actionConfig: {},
-  rescheduleConfig: null,
-  maxRescheduleAttempts: null,
-  integrations: [{ integrationId: 'channel-1' }],
-  pipelines: [],
-  ...overrides,
-} as any);
+  ({
+    id: 'rule-1',
+    organizationId: 'org-1',
+    name: 'Remove flops',
+    enabled: true,
+    action: 'REMOVE',
+    initialDelayHours: 24,
+    evaluationIntervalHours: null,
+    maxEvaluations: null,
+    conditionMatch: 'ANY',
+    conditions: [],
+    actionConfig: {},
+    rescheduleConfig: null,
+    maxRescheduleAttempts: null,
+    integrations: [{ integrationId: 'channel-1' }],
+    pipelines: [],
+    ...overrides,
+  } as any);
 
 const createService = () => {
   const executionRepository = {
@@ -83,9 +83,16 @@ const createService = () => {
     finalizeEvaluation: jest.fn().mockResolvedValue({ finalized: true }),
     findSuccessorRun: jest.fn().mockResolvedValue(null),
     createSuccessorRun: jest.fn().mockResolvedValue({ id: 'run-2' }),
-    getRemovableGroupMembers: jest.fn().mockResolvedValue([
-      { id: 'post-1', parentPostId: null, releaseId: 'tweet-1', platformDeletedAt: null },
-    ]),
+    getRemovableGroupMembers: jest
+      .fn()
+      .mockResolvedValue([
+        {
+          id: 'post-1',
+          parentPostId: null,
+          releaseId: 'tweet-1',
+          platformDeletedAt: null,
+        },
+      ]),
     markPostsPlatformDeleted: jest.fn().mockResolvedValue({ updated: 1 }),
     getRootPostByGroup: jest.fn().mockResolvedValue(null),
     getReschedulePipeline: jest.fn(),
@@ -98,14 +105,16 @@ const createService = () => {
     addPlugReply: jest.fn(),
   };
   const postsService = {
-    getPostsRecursively: jest.fn().mockResolvedValue([
-      { ...rootPost(), tags: [] },
-    ]),
+    getPostsRecursively: jest
+      .fn()
+      .mockResolvedValue([{ ...rootPost(), tags: [] }]),
     mapTypeToPost: jest.fn(async (body: any) => body),
     createPost: jest.fn().mockResolvedValue([{ postId: 'post-2' }]),
     validatePosts: jest
       .fn()
-      .mockResolvedValue([{ valid: true, errors: true, emptyContent: false, tooLong: false }]),
+      .mockResolvedValue([
+        { valid: true, errors: true, emptyContent: false, tooLong: false },
+      ]),
   };
   const service = Object.create(
     PostRulesExecutionService.prototype
@@ -154,8 +163,18 @@ describe('unconditional removal', () => {
     const { service, executionRepository, capability } = createService();
     executionRepository.claimEvaluation.mockResolvedValue(claim());
     executionRepository.getRemovableGroupMembers.mockResolvedValue([
-      { id: 'post-1', parentPostId: null, releaseId: 'tweet-1', platformDeletedAt: null },
-      { id: 'post-2', parentPostId: 'post-1', releaseId: 'tweet-2', platformDeletedAt: null },
+      {
+        id: 'post-1',
+        parentPostId: null,
+        releaseId: 'tweet-1',
+        platformDeletedAt: null,
+      },
+      {
+        id: 'post-2',
+        parentPostId: 'post-1',
+        releaseId: 'tweet-2',
+        platformDeletedAt: null,
+      },
     ]);
 
     const result = await service.processEvaluation(request);
@@ -172,7 +191,10 @@ describe('unconditional removal', () => {
     );
     expect(result.status).toBe('COMPLETED');
     expect(result.terminalRun).toBe(true);
-    expect(result.actionResult?.remoteReleaseIds).toEqual(['tweet-2', 'tweet-1']);
+    expect(result.actionResult?.remoteReleaseIds).toEqual([
+      'tweet-2',
+      'tweet-1',
+    ]);
   });
 
   it('does nothing when the low-performance conditions do not match', async () => {
@@ -200,12 +222,25 @@ describe('unconditional removal', () => {
     const { service, executionRepository, capability } = createService();
     executionRepository.claimEvaluation.mockResolvedValue(claim());
     executionRepository.getRemovableGroupMembers.mockResolvedValue([
-      { id: 'post-1', parentPostId: null, releaseId: 'tweet-1', platformDeletedAt: null },
-      { id: 'post-2', parentPostId: 'post-1', releaseId: 'tweet-2', platformDeletedAt: null },
+      {
+        id: 'post-1',
+        parentPostId: null,
+        releaseId: 'tweet-1',
+        platformDeletedAt: null,
+      },
+      {
+        id: 'post-2',
+        parentPostId: 'post-1',
+        releaseId: 'tweet-2',
+        platformDeletedAt: null,
+      },
     ]);
     capability.removePost
       .mockResolvedValueOnce({ status: 'removed' })
-      .mockResolvedValueOnce({ status: 'retryable_failure', reason: 'rate limited' });
+      .mockResolvedValueOnce({
+        status: 'retryable_failure',
+        reason: 'rate limited',
+      });
 
     const result = await service.processEvaluation(request);
 
@@ -223,7 +258,12 @@ describe('unconditional removal', () => {
     const { service, executionRepository, capability } = createService();
     executionRepository.claimEvaluation.mockResolvedValue(claim());
     executionRepository.getRemovableGroupMembers.mockResolvedValue([
-      { id: 'post-1', parentPostId: null, releaseId: 'tweet-1', platformDeletedAt: null },
+      {
+        id: 'post-1',
+        parentPostId: null,
+        releaseId: 'tweet-1',
+        platformDeletedAt: null,
+      },
       {
         id: 'post-2',
         parentPostId: 'post-1',
@@ -242,7 +282,10 @@ describe('unconditional removal', () => {
       'tweet-1'
     );
     expect(result.status).toBe('COMPLETED');
-    expect(result.actionResult?.remoteReleaseIds).toEqual(['tweet-2', 'tweet-1']);
+    expect(result.actionResult?.remoteReleaseIds).toEqual([
+      'tweet-2',
+      'tweet-1',
+    ]);
   });
 });
 

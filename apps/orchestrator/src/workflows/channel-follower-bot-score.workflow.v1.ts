@@ -1,7 +1,4 @@
-import {
-  continueAsNew,
-  proxyActivities,
-} from '@temporalio/workflow';
+import { continueAsNew, proxyActivities } from '@temporalio/workflow';
 import {
   ChannelFollowerBotScoreActivity,
   ChannelFollowerBotScoreCandidate,

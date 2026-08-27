@@ -107,7 +107,9 @@ export class ImgflipService {
 
     const url = this.safeHttpsUrl(response.data?.url);
     if (!url) {
-      throw new BadGatewayException('Imgflip returned an invalid generated meme');
+      throw new BadGatewayException(
+        'Imgflip returned an invalid generated meme'
+      );
     }
 
     const pageUrl = this.safeImgflipPageUrl(response.data?.page_url);

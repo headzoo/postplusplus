@@ -28,7 +28,10 @@ const verifyHeadingSlugs = (label, headings) => {
   for (const heading of headings) {
     const baseAnchor = toAnchor(heading.title);
 
-    if (heading.anchor !== baseAnchor && !heading.anchor.startsWith(`${baseAnchor}-`)) {
+    if (
+      heading.anchor !== baseAnchor &&
+      !heading.anchor.startsWith(`${baseAnchor}-`)
+    ) {
       mismatches.push({
         title: heading.title,
         anchor: heading.anchor,
@@ -127,7 +130,10 @@ const buildRouteAnchorMap = async (canonicalPages) => {
   const routeAnchors = new Map();
 
   for (const [route, page] of canonicalPages.entries()) {
-    routeAnchors.set(route, new Set(page.headings.map((heading) => heading.anchor)));
+    routeAnchors.set(
+      route,
+      new Set(page.headings.map((heading) => heading.anchor))
+    );
   }
 
   for (const entry of docsNav) {
@@ -142,7 +148,7 @@ const buildRouteAnchorMap = async (canonicalPages) => {
         const markdown = await readFile(pagePath, 'utf8');
         routeAnchors.set(
           `/${entry.slug}/${page.name}`,
-          new Set(getHeadings(markdown).map((heading) => heading.anchor)),
+          new Set(getHeadings(markdown).map((heading) => heading.anchor))
         );
       }
     }
@@ -158,9 +164,12 @@ const buildRouteAnchorMap = async (canonicalPages) => {
     if (await pathExists(path.join(repoDir, targetDir, `${page.name}.md`))) {
       const markdown = await readFile(
         path.join(repoDir, targetDir, `${page.name}.md`),
-        'utf8',
+        'utf8'
       );
-      routeAnchors.set(route, new Set(getHeadings(markdown).map((heading) => heading.anchor)));
+      routeAnchors.set(
+        route,
+        new Set(getHeadings(markdown).map((heading) => heading.anchor))
+      );
     }
   }
 
@@ -227,7 +236,9 @@ const verifyManifestParity = async () => {
       const pagePath = path.join(docsDir, entry.slug, `${page.name}.md`);
 
       if (!(await pathExists(pagePath))) {
-        errors.push(`Missing docs/${entry.slug}/${page.name}.md for manifest group`);
+        errors.push(
+          `Missing docs/${entry.slug}/${page.name}.md for manifest group`
+        );
       }
     }
   }
@@ -243,12 +254,14 @@ const verifyManifestParity = async () => {
     const slug = entry.name.replace(/\.md$/, '');
 
     if (!manifestSlugs.has(slug)) {
-      errors.push(`Orphan canonical docs page not listed in manifest: docs/${entry.name}`);
+      errors.push(
+        `Orphan canonical docs page not listed in manifest: docs/${entry.name}`
+      );
     }
   }
 
   const manifestGroupSlugs = new Set(
-    docsNav.filter((entry) => entry.kind === 'group').map((entry) => entry.slug),
+    docsNav.filter((entry) => entry.kind === 'group').map((entry) => entry.slug)
   );
 
   for (const entry of rootEntries) {
@@ -328,12 +341,14 @@ const verifyInternalLinks = (canonicalPages, routeAnchors) => {
  */
 const verifyGfmAlerts = (label, markdown) => {
   const malformedGfmAlerts = [
-    ...markdown.matchAll(/^(?!\s*>)\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*$/gim),
+    ...markdown.matchAll(
+      /^(?!\s*>)\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*$/gim
+    ),
   ];
 
   if (malformedGfmAlerts.length > 0) {
     console.error(
-      `Malformed GitHub alerts in ${label}: the marker line must be a blockquote (\`> [!TIP]\`), not a bare \`[!TIP]\` line.`,
+      `Malformed GitHub alerts in ${label}: the marker line must be a blockquote (\`> [!TIP]\`), not a bare \`[!TIP]\` line.`
     );
     console.error(malformedGfmAlerts.map((match) => match[0]));
     process.exit(1);
@@ -353,5 +368,5 @@ for (const page of canonicalPages.values()) {
 verifyInternalLinks(canonicalPages, routeAnchors);
 
 console.log(
-  `Verified ${docsNav.length} manifest entries, ${canonicalPages.size} canonical docs routes, and ${routeAnchors.size} routable paths.`,
+  `Verified ${docsNav.length} manifest entries, ${canonicalPages.size} canonical docs routes, and ${routeAnchors.size} routable paths.`
 );

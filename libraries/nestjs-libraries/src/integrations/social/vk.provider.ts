@@ -160,10 +160,10 @@ export class VkProvider extends SocialAbstract implements SocialProvider {
           : {}),
         ...(account.screen_name
           ? {
-            profileUrl: `https://vk.com/${encodeURIComponent(
-              account.screen_name
-            )}`,
-          }
+              profileUrl: `https://vk.com/${encodeURIComponent(
+                account.screen_name
+              )}`,
+            }
           : {}),
         ...(account.status ? { bio: account.status } : {}),
         ...(Number.isFinite(Number(account.counters?.followers))
@@ -214,15 +214,15 @@ export class VkProvider extends SocialAbstract implements SocialProvider {
           : {}),
         ...(account.screen_name
           ? {
-            profileUrl: `https://vk.com/${encodeURIComponent(
-              account.screen_name
-            )}`,
-          }
+              profileUrl: `https://vk.com/${encodeURIComponent(
+                account.screen_name
+              )}`,
+            }
           : {
-            profileUrl: `https://vk.com/id${encodeURIComponent(
-              String(account.id)
-            )}`,
-          }),
+              profileUrl: `https://vk.com/id${encodeURIComponent(
+                String(account.id)
+              )}`,
+            }),
         ...(account.status ? { bio: account.status } : {}),
         ...(Number.isFinite(Number(account.counters?.followers))
           ? { followersCount: Number(account.counters.followers) }
@@ -338,9 +338,10 @@ export class VkProvider extends SocialAbstract implements SocialProvider {
         `&code_challenge_method=S256` +
         `&code_challenge=${challenge}` +
         `&redirect_uri=${encodeURIComponent(
-          `${process?.env.FRONTEND_URL?.indexOf('https') == -1
-            ? `https://redirectmeto.com/${process?.env.FRONTEND_URL}`
-            : `${process?.env.FRONTEND_URL}`
+          `${
+            process?.env.FRONTEND_URL?.indexOf('https') == -1
+              ? `https://redirectmeto.com/${process?.env.FRONTEND_URL}`
+              : `${process?.env.FRONTEND_URL}`
           }/integrations/social/vk`
         )}` +
         `&state=${state}` +
@@ -365,9 +366,10 @@ export class VkProvider extends SocialAbstract implements SocialProvider {
     formData.append('code', code);
     formData.append(
       'redirect_uri',
-      `${process?.env.FRONTEND_URL?.indexOf('https') == -1
-        ? `https://redirectmeto.com/${process?.env.FRONTEND_URL}`
-        : `${process?.env.FRONTEND_URL}`
+      `${
+        process?.env.FRONTEND_URL?.indexOf('https') == -1
+          ? `https://redirectmeto.com/${process?.env.FRONTEND_URL}`
+          : `${process?.env.FRONTEND_URL}`
       }/integrations/social/vk`
     );
 

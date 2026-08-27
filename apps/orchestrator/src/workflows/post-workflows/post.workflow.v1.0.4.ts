@@ -83,11 +83,7 @@ export async function postWorkflowV104({
 
   // in case doesn't exists for some reason, fail it
   if (!post) {
-    await changeState(
-      postId,
-      'ERROR',
-      'No Post'
-    );
+    await changeState(postId, 'ERROR', 'No Post');
     return;
   }
 

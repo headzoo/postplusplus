@@ -4,7 +4,9 @@ import { MetricDayAnalyticsComponent } from '@gitroom/frontend/components/analyt
 import { isGeneralServerSide } from '@gitroom/helpers/utils/is.general.server.side';
 
 export const metadata: Metadata = {
-  title: `${isGeneralServerSide() ? 'Metric day : Post++' : 'Gitroom Metric day'}`,
+  title: `${
+    isGeneralServerSide() ? 'Metric day : Post++' : 'Gitroom Metric day'
+  }`,
   description: '',
 };
 

@@ -6,7 +6,8 @@ jest.mock('@gitroom/react/helpers/delete.dialog', () => ({
   deleteDialog: jest.fn(),
 }));
 jest.mock('@gitroom/helpers/utils/custom.fetch', () => ({
-  FetchWrapperComponent: ({ children }: { children: React.ReactNode }) => children,
+  FetchWrapperComponent: ({ children }: { children: React.ReactNode }) =>
+    children,
 }));
 jest.mock('@gitroom/frontend/app/(app)/auth/return.url.component', () => ({
   useReturnUrl: () => ({ getAndClear: () => null }),
@@ -47,7 +48,7 @@ const responseWithHeader = (headers: Record<string, string>) =>
         ] ??
         null,
     },
-  }) as Pick<Response, 'headers'>;
+  } as Pick<Response, 'headers'>);
 
 describe('mirrorAdminAuthHeaderToCookie', () => {
   beforeEach(() => {

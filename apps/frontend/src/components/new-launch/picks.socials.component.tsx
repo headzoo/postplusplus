@@ -9,10 +9,10 @@ import { useExistingData } from '@gitroom/frontend/components/launches/helpers/u
 import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
 import ImageWithFallback from '@gitroom/react/helpers/image.with.fallback';
 
-export const PicksSocialsComponent: FC<{ toolTip?: boolean; disabled?: boolean }> = ({
-  toolTip,
-  disabled = false,
-}) => {
+export const PicksSocialsComponent: FC<{
+  toolTip?: boolean;
+  disabled?: boolean;
+}> = ({ toolTip, disabled = false }) => {
   const exising = useExistingData();
 
   const {

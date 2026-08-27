@@ -64,10 +64,10 @@ export const CustomScrollArea: FC<{
       events={
         onScroll
           ? {
-            scroll: (instance: OverlayScrollbars) => {
-              onScroll(instance.elements().viewport);
-            },
-          }
+              scroll: (instance: OverlayScrollbars) => {
+                onScroll(instance.elements().viewport);
+              },
+            }
           : undefined
       }
     >

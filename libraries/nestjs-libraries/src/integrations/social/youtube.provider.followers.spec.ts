@@ -143,7 +143,9 @@ describe('YoutubeProvider followers', () => {
   });
 
   it('fails capture when YouTube returns an error envelope', async () => {
-    reportsQuery.mockResolvedValue({ data: { errors: [{ reason: 'forbidden' }] } });
+    reportsQuery.mockResolvedValue({
+      data: { errors: [{ reason: 'forbidden' }] },
+    });
 
     await expect(
       new YoutubeProvider().analyticsSnapshot!.capture({
@@ -154,7 +156,6 @@ describe('YoutubeProvider followers', () => {
       } as any)
     ).rejects.toThrow('YouTube analytics request failed');
   });
-
 
   it('includes a latest subscriber total for the snapshot day', async () => {
     reportsQuery.mockResolvedValue({
@@ -194,5 +195,4 @@ describe('YoutubeProvider followers', () => {
       ])
     );
   });
-
 });

@@ -116,10 +116,10 @@ export const withProvider = function <T extends object>(params: {
         typeof maximumCharacters === 'number'
           ? maximumCharacters
           : maximumCharacters(
-            JSON.parse(
-              selectedIntegration.integration.additionalSettings || '[]'
+              JSON.parse(
+                selectedIntegration.integration.additionalSettings || '[]'
+              )
             )
-          )
       );
 
       if (isGlobal) {
@@ -139,10 +139,10 @@ export const withProvider = function <T extends object>(params: {
           typeof maximumCharacters === 'number'
             ? maximumCharacters
             : maximumCharacters(
-              JSON.parse(
-                selectedIntegration.integration.additionalSettings || '[]'
+                JSON.parse(
+                  selectedIntegration.integration.additionalSettings || '[]'
+                )
               )
-            )
         );
       }
     }, [
@@ -207,10 +207,10 @@ export const withProvider = function <T extends object>(params: {
               typeof maximumCharacters === 'number'
                 ? maximumCharacters
                 : maximumCharacters(
-                  JSON.parse(
-                    selectedIntegration.integration.additionalSettings || '[]'
-                  )
-                ),
+                    JSON.parse(
+                      selectedIntegration.integration.additionalSettings || '[]'
+                    )
+                  ),
             fix: () => {
               setCurrent(props.id);
               setHide(true);
@@ -278,11 +278,11 @@ export const withProvider = function <T extends object>(params: {
                       typeof maximumCharacters === 'number'
                         ? maximumCharacters
                         : maximumCharacters(
-                          JSON.parse(
-                            selectedIntegration.integration
-                              .additionalSettings || '[]'
+                            JSON.parse(
+                              selectedIntegration.integration
+                                .additionalSettings || '[]'
+                            )
                           )
-                        )
                     }
                   />
                   <ComposerOpenGraphPreview content={value[0]?.content} />
@@ -295,11 +295,11 @@ export const withProvider = function <T extends object>(params: {
                       typeof maximumCharacters === 'number'
                         ? maximumCharacters
                         : maximumCharacters(
-                          JSON.parse(
-                            selectedIntegration.integration
-                              .additionalSettings || '[]'
+                            JSON.parse(
+                              selectedIntegration.integration
+                                .additionalSettings || '[]'
+                            )
                           )
-                        )
                     }
                   />
                   <ComposerOpenGraphPreview content={value[0]?.content} />
@@ -308,7 +308,14 @@ export const withProvider = function <T extends object>(params: {
               ))}
             {(SettingsComponent || !!data?.internalPlugs?.length) &&
               createPortal(
-                <div data-id={props.id} className={isGlobal ? 'bg-newSettings pb-[12px] px-[12px]' : 'hidden bg-newSettings px-[12px] pb-[12px]'}>
+                <div
+                  data-id={props.id}
+                  className={
+                    isGlobal
+                      ? 'bg-newSettings pb-[12px] px-[12px]'
+                      : 'hidden bg-newSettings px-[12px] pb-[12px]'
+                  }
+                >
                   {(isGlobal || current) && (
                     <style>{`#composer-settings-button {display: flex !important} #social-empty {display: block !important;}`}</style>
                   )}
@@ -330,7 +337,9 @@ export const withProvider = function <T extends object>(params: {
                           src={`/icons/platforms/${selectedIntegration?.integration.identifier}.png`}
                         />
                       </div>
-                      <div className="text-[20px]">{selectedIntegration?.integration.name}</div>
+                      <div className="text-[20px]">
+                        {selectedIntegration?.integration.name}
+                      </div>
                     </div>
                   )}
                   <SettingsComponent />
@@ -339,14 +348,14 @@ export const withProvider = function <T extends object>(params: {
                   )}
                 </div>,
                 document.querySelector('#social-settings') ||
-                document.createElement('div')
+                  document.createElement('div')
               )}
             {current &&
               !SettingsComponent &&
               createPortal(
                 <style>{`#composer-settings-button {display: none !important;} #wrapper-settings {display: none !important;} #social-empty {display: block !important;}`}</style>,
                 document.querySelector('#social-settings') ||
-                document.createElement('div')
+                  document.createElement('div')
               )}
           </div>
         </FormProvider>
@@ -372,11 +381,11 @@ export const withProvider = function <T extends object>(params: {
 export const getProviderSettingsMeta = (component: unknown) => {
   return (component as any)?.__settings as
     | {
-      SettingsComponent: FC<{ values?: any }> | null;
-      CustomPreviewComponent?: FC<{ maximumCharacters?: number }>;
-      dto?: any;
-      postComment: PostComment;
-      maximumCharacters?: number | ((settings: any) => number);
-    }
+        SettingsComponent: FC<{ values?: any }> | null;
+        CustomPreviewComponent?: FC<{ maximumCharacters?: number }>;
+        dto?: any;
+        postComment: PostComment;
+        maximumCharacters?: number | ((settings: any) => number);
+      }
     | undefined;
 };

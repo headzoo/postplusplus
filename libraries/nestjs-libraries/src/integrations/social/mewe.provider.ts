@@ -288,7 +288,10 @@ export class MeweProvider extends SocialAbstract implements SocialProvider {
 
     const postId = makeId(12);
 
-    const releaseURL = postType === 'timeline' ? `https://mewe.com/${integration.profile}/posts` : `https://mewe.com/group/${firstPost.settings.group}`;
+    const releaseURL =
+      postType === 'timeline'
+        ? `https://mewe.com/${integration.profile}/posts`
+        : `https://mewe.com/group/${firstPost.settings.group}`;
 
     return [
       {

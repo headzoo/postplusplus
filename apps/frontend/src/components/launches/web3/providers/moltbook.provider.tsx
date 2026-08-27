@@ -14,7 +14,9 @@ export const MoltbookProvider: FC<Web3ProviderInterface> = (props) => {
   const { onComplete, nonce } = props;
   const fetch = useFetch();
   const stop = useRef(false);
-  const [step, setStep] = useState<'init' | 'registering' | 'waiting' | 'error'>('init');
+  const [step, setStep] = useState<
+    'init' | 'registering' | 'waiting' | 'error'
+  >('init');
   const [agentName, setAgentName] = useState('');
   const [agentDescription, setAgentDescription] = useState('');
   const [claimUrl, setClaimUrl] = useState('');
@@ -37,7 +39,8 @@ export const MoltbookProvider: FC<Web3ProviderInterface> = (props) => {
         method: 'POST',
         body: JSON.stringify({
           name: agentName.trim(),
-          description: agentDescription.trim() || 'Post Plus Plus social media scheduler',
+          description:
+            agentDescription.trim() || 'Post Plus Plus social media scheduler',
         }),
       });
 
@@ -65,7 +68,9 @@ export const MoltbookProvider: FC<Web3ProviderInterface> = (props) => {
 
     while (!stop.current) {
       try {
-        const response = await fetch(`/integrations/moltbook/status?apiKey=${encodeURIComponent(key)}`);
+        const response = await fetch(
+          `/integrations/moltbook/status?apiKey=${encodeURIComponent(key)}`
+        );
         const data = await response.json();
 
         if (data.claimed) {
@@ -96,7 +101,10 @@ export const MoltbookProvider: FC<Web3ProviderInterface> = (props) => {
       {step === 'init' && (
         <>
           <div className="text-center mb-[16px]">
-            {t('moltbook_register_description', 'Register your Moltbook agent to connect:')}
+            {t(
+              'moltbook_register_description',
+              'Register your Moltbook agent to connect:'
+            )}
           </div>
           <div className="w-full space-y-[12px]">
             <Input
@@ -131,7 +139,10 @@ export const MoltbookProvider: FC<Web3ProviderInterface> = (props) => {
       {step === 'waiting' && (
         <div className="w-full text-center">
           <div className="mb-[16px]">
-            {t('moltbook_claim_instructions', 'Please visit the claim URL to verify your agent:')}
+            {t(
+              'moltbook_claim_instructions',
+              'Please visit the claim URL to verify your agent:'
+            )}
           </div>
           <div className="flex gap-[8px]">
             <div className="flex-1">

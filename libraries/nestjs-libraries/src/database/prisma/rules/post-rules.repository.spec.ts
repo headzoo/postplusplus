@@ -15,20 +15,21 @@ describe('PostRulesRepository', () => {
     const deleteManyPipelines = jest.fn();
     const createManyIntegrations = jest.fn();
     const createManyPipelines = jest.fn();
-    const transaction = jest.fn(async (callback: (tx: any) => Promise<unknown>) =>
-      callback({
-        postRule: {
-          findFirst: findFirstRule,
-        },
-        postRuleIntegration: {
-          deleteMany: deleteManyIntegrations,
-          createMany: createManyIntegrations,
-        },
-        postRulePipeline: {
-          deleteMany: deleteManyPipelines,
-          createMany: createManyPipelines,
-        },
-      })
+    const transaction = jest.fn(
+      async (callback: (tx: any) => Promise<unknown>) =>
+        callback({
+          postRule: {
+            findFirst: findFirstRule,
+          },
+          postRuleIntegration: {
+            deleteMany: deleteManyIntegrations,
+            createMany: createManyIntegrations,
+          },
+          postRulePipeline: {
+            deleteMany: deleteManyPipelines,
+            createMany: createManyPipelines,
+          },
+        })
     );
 
     const repository = Object.create(
@@ -88,7 +89,10 @@ describe('PostRulesRepository', () => {
     const { repository } = createRepository();
 
     expect(() =>
-      repository.assertUniqueIds(['channel-1', 'channel-1'], 'channel assignments')
+      repository.assertUniqueIds(
+        ['channel-1', 'channel-1'],
+        'channel assignments'
+      )
     ).toThrow(BadRequestException);
   });
 

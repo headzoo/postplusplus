@@ -2,7 +2,8 @@ export const LEAD_FIT_FEEDBACK_SOURCES = ['lead_dismiss', 'list_add'] as const;
 export type LeadFitFeedbackSource = (typeof LEAD_FIT_FEEDBACK_SOURCES)[number];
 
 export const LEAD_FIT_FEEDBACK_VERDICTS = ['rejected', 'accepted'] as const;
-export type LeadFitFeedbackVerdict = (typeof LEAD_FIT_FEEDBACK_VERDICTS)[number];
+export type LeadFitFeedbackVerdict =
+  (typeof LEAD_FIT_FEEDBACK_VERDICTS)[number];
 
 export const LEAD_FIT_DISMISS_REASONS = [
   'wrong_topic',

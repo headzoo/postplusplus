@@ -32,8 +32,9 @@ jest.mock('@gitroom/frontend/components/layout/new-modal', () => ({
 }));
 
 jest.mock('@gitroom/frontend/components/new-launch/store', () => ({
-  useLaunchStore: (selector: (state: { setLocked: typeof setLocked }) => unknown) =>
-    selector({ setLocked }),
+  useLaunchStore: (
+    selector: (state: { setLocked: typeof setLocked }) => unknown
+  ) => selector({ setLocked }),
 }));
 
 const image = {
@@ -55,9 +56,9 @@ describe('useMediaAltPrompt', () => {
     const { result } = renderHook(() => useMediaAltPrompt());
 
     await act(async () => {
-      await expect(result.current.enrichMediaWithAlt([image])).resolves.toEqual([
-        image,
-      ]);
+      await expect(result.current.enrichMediaWithAlt([image])).resolves.toEqual(
+        [image]
+      );
     });
 
     expect(open).not.toHaveBeenCalled();
@@ -87,7 +88,7 @@ describe('useMediaAltPrompt', () => {
     const second = { id: 'media-2', path: 'https://cdn.example.com/two.jpg' };
     const { result } = renderHook(() => useMediaAltPrompt());
 
-    let enriched: typeof image[] = [];
+    let enriched: (typeof image)[] = [];
     await act(async () => {
       enriched = await result.current.enrichMediaWithAlt([image, second]);
     });
@@ -111,9 +112,9 @@ describe('useMediaAltPrompt', () => {
     const { result } = renderHook(() => useMediaAltPrompt());
 
     await act(async () => {
-      await expect(result.current.enrichMediaWithAlt([image])).resolves.toEqual([
-        image,
-      ]);
+      await expect(result.current.enrichMediaWithAlt([image])).resolves.toEqual(
+        [image]
+      );
     });
 
     expect(toasterShow).toHaveBeenCalledWith(

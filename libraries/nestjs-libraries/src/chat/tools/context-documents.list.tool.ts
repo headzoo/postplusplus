@@ -17,7 +17,7 @@ const contextDocumentMetadataSchema = z.object({
 
 @Injectable()
 export class ContextDocumentsListTool implements AgentToolInterface {
-  constructor(private _contextDocumentService: ContextDocumentService) { }
+  constructor(private _contextDocumentService: ContextDocumentService) {}
   name = 'listContextDocuments';
 
   run() {

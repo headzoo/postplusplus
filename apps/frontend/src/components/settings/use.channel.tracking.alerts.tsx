@@ -18,7 +18,9 @@ export const useChannelTrackingAlerts = () => {
   const trackedIntegrations =
     integrations?.filter((integration) => integration.identifier === 'x') || [];
   const cacheKey = trackedIntegrations.length
-    ? `channel-tracking-alerts:${trackedIntegrations.map((item) => item.id).join(',')}`
+    ? `channel-tracking-alerts:${trackedIntegrations
+        .map((item) => item.id)
+        .join(',')}`
     : null;
 
   const load = useCallback(async () => {

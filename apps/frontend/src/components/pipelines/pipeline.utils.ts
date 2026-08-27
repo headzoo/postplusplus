@@ -23,7 +23,10 @@ export const PIPELINE_DAYS = [
 export const minuteOfDayToTime = (minuteOfDay: number): string => {
   const hours = Math.floor(minuteOfDay / 60);
   const minutes = minuteOfDay % 60;
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(
+    2,
+    '0'
+  )}`;
 };
 
 export const timeToMinuteOfDay = (time: string): number | null => {
@@ -93,10 +96,14 @@ export const formatPipelineSlot = (
   if (!isoDate) {
     return '—';
   }
-  return dayjs(isoDate).tz(pipelineTimezone).format('ddd, MMM D YYYY · h:mm A z');
+  return dayjs(isoDate)
+    .tz(pipelineTimezone)
+    .format('ddd, MMM D YYYY · h:mm A z');
 };
 
-export const formatPipelineTimezoneLabel = (pipelineTimezone: string): string => {
+export const formatPipelineTimezoneLabel = (
+  pipelineTimezone: string
+): string => {
   const segment = pipelineTimezone.split('/').pop();
   return segment?.replace(/_/g, ' ') ?? pipelineTimezone;
 };
@@ -136,10 +143,7 @@ export const getPipelineScheduleWeek = (
   now = dayjs()
 ) => {
   const localNow = now.tz(viewerTimezone);
-  const startCalendarDate = formatLocalCalendarDate(
-    localNow,
-    -localNow.day()
-  );
+  const startCalendarDate = formatLocalCalendarDate(localNow, -localNow.day());
   const days = Array.from({ length: 7 }, (_, index) =>
     getLocalCalendarBoundary(
       formatLocalCalendarDate(dayjs.utc(startCalendarDate), index),
@@ -245,7 +249,11 @@ const parseHexColor = (
   };
 };
 
-const getRelativeLuminance = (red: number, green: number, blue: number): number => {
+const getRelativeLuminance = (
+  red: number,
+  green: number,
+  blue: number
+): number => {
   const toLinear = (channel: number) => {
     const normalized = channel / 255;
     return normalized <= 0.03928
@@ -327,8 +335,7 @@ export const pipelineScheduleSlotsEqual = (
   left: PipelineScheduleSlot,
   right: PipelineScheduleSlot
 ): boolean =>
-  left.dayOfWeek === right.dayOfWeek &&
-  left.minuteOfDay === right.minuteOfDay;
+  left.dayOfWeek === right.dayOfWeek && left.minuteOfDay === right.minuteOfDay;
 
 export type DisplayScheduleTargetConversionResult =
   | { ok: true; dayOfWeek: number; minuteOfDay: number }
@@ -356,7 +363,9 @@ export const convertDisplayScheduleTargetToPipelineSlot = (
 
   const hours = Math.floor(targetDisplayMinuteOfDay / 60);
   const minutes = targetDisplayMinuteOfDay % 60;
-  const wallTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
+  const wallTime = `${String(hours).padStart(2, '0')}:${String(
+    minutes
+  ).padStart(2, '0')}:00`;
   const displayInstant = dayjs.tz(
     `${displayCalendarDate}T${wallTime}`,
     displayTimezone
@@ -406,7 +415,9 @@ export const filterScheduleOccurrencesByChannel = (
   }
 
   const pipelineIds = new Set(
-    filterPipelinesByChannel(pipelines, channelId).map((pipeline) => pipeline.id)
+    filterPipelinesByChannel(pipelines, channelId).map(
+      (pipeline) => pipeline.id
+    )
   );
 
   return occurrences.filter((occurrence) =>
@@ -422,7 +433,9 @@ export const filterScheduleOccurrencesByPipeline = (
     return occurrences;
   }
 
-  return occurrences.filter((occurrence) => occurrence.pipelineId === pipelineId);
+  return occurrences.filter(
+    (occurrence) => occurrence.pipelineId === pipelineId
+  );
 };
 
 export const loadPipelineGlobalSchedule = async (

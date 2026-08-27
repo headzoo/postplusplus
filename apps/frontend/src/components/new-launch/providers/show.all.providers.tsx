@@ -207,9 +207,7 @@ export const ShowAllProviders = forwardRef((props, ref) => {
 
   const hasPreviewContent = useMemo(
     () =>
-      global?.some(
-        (item) => !!item.content?.length || !!item.media?.length
-      ),
+      global?.some((item) => !!item.content?.length || !!item.media?.length),
     [global]
   );
 

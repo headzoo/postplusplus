@@ -34,6 +34,7 @@ export const FOLLOWER_AUDIENCES = [
   'ignored',
   'cultivate',
   'hot',
+  'converted',
 ] as const;
 export type FollowerAudience = (typeof FOLLOWER_AUDIENCES)[number];
 
@@ -59,13 +60,14 @@ export const FOLLOWER_CATEGORY_DESCRIPTIONS = {
   engaged_not_yet:
     'Legacy alias of Hot: they engaged, but the channel has not reciprocated.',
   lead: 'An interacting non-follower.',
-  followed:
-    'Someone the channel followed who has not followed back yet.',
+  followed: 'Someone the channel followed who has not followed back yet.',
   unfollowed:
     'Someone the channel still follows who used to follow and no longer does.',
-  ignored: 'An organization-managed visibility state, not a relationship score.',
+  ignored:
+    'An organization-managed visibility state, not a relationship score.',
   cultivate:
     'A warm relationship that has not received outbound attention recently.',
+  converted: 'People with at least one recorded conversion on this channel.',
 } as const;
 
 export type FollowerPageKind = 'list' | 'detail' | 'timeline';
@@ -406,4 +408,7 @@ export const sortFollowers = (
   items: Follower[],
   key: string,
   direction: FollowerSortDirection
-) => [...items].sort((left, right) => compareFollowers(left, right, key, direction));
+) =>
+  [...items].sort((left, right) =>
+    compareFollowers(left, right, key, direction)
+  );

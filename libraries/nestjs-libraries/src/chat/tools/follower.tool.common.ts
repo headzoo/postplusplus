@@ -35,33 +35,31 @@ export const followerCategoriesDescription = Object.entries(
   .join(' ');
 
 const followerQueryShape = z.object({
-    limit: z.number().int().min(1).max(100).optional().default(20),
-    cursor: z.string().min(1).max(2048).optional(),
-    sort: z.string().min(1).max(64).optional(),
-    direction: z.enum(FOLLOWER_SORT_DIRECTIONS).optional(),
-    window: z.enum(FOLLOWER_INTERACTION_WINDOWS).optional(),
-    search: z
-      .string()
-      .max(64)
-      .optional()
-      .transform((value) => normalizeFollowerSearch(value)),
-    triage: z.enum(FOLLOWER_TRIAGE_FILTERS).optional(),
-    audience: z.enum(FOLLOWER_AUDIENCES).optional(),
-    listId: z.string().min(1).max(64).optional(),
-  });
+  limit: z.number().int().min(1).max(100).optional().default(20),
+  cursor: z.string().min(1).max(2048).optional(),
+  sort: z.string().min(1).max(64).optional(),
+  direction: z.enum(FOLLOWER_SORT_DIRECTIONS).optional(),
+  window: z.enum(FOLLOWER_INTERACTION_WINDOWS).optional(),
+  search: z
+    .string()
+    .max(64)
+    .optional()
+    .transform((value) => normalizeFollowerSearch(value)),
+  triage: z.enum(FOLLOWER_TRIAGE_FILTERS).optional(),
+  audience: z.enum(FOLLOWER_AUDIENCES).optional(),
+  listId: z.string().min(1).max(64).optional(),
+});
 
 const validateFollowerQueryExclusivity = (query: {
   audience?: string;
   triage?: string;
   listId?: string;
-}) =>
-  [query.audience, query.triage, query.listId].filter(Boolean).length <= 1;
+}) => [query.audience, query.triage, query.listId].filter(Boolean).length <= 1;
 
-export const followerQuerySchema = followerQueryShape
-  .refine(
-    validateFollowerQueryExclusivity,
-    'audience, triage, and listId cannot be combined'
-  );
+export const followerQuerySchema = followerQueryShape.refine(
+  validateFollowerQueryExclusivity,
+  'audience, triage, and listId cannot be combined'
+);
 
 export const followerQueryWithChannelSchema = followerQueryShape
   .extend({
@@ -73,32 +71,35 @@ export const followerQueryWithChannelSchema = followerQueryShape
   );
 
 const followerSelectorShape = z.object({
-    externalId: z.string().min(1).max(512).optional(),
-    username: z
-      .string()
-      .min(1)
-      .max(64)
-      .optional()
-      .transform((value) => normalizeFollowerSearch(value)),
-  });
+  externalId: z.string().min(1).max(512).optional(),
+  username: z
+    .string()
+    .min(1)
+    .max(64)
+    .optional()
+    .transform((value) => normalizeFollowerSearch(value)),
+});
 
 const validateFollowerSelector = (selector: {
   externalId?: string;
   username?: string;
 }) =>
-  Number(Boolean(selector.externalId)) + Number(Boolean(selector.username)) === 1;
+  Number(Boolean(selector.externalId)) + Number(Boolean(selector.username)) ===
+  1;
 
-export const followerSelectorSchema = followerSelectorShape
-  .refine(
-    validateFollowerSelector,
-    'Provide exactly one of externalId or username.'
-  );
+export const followerSelectorSchema = followerSelectorShape.refine(
+  validateFollowerSelector,
+  'Provide exactly one of externalId or username.'
+);
 
 export const followerSelectorWithChannelSchema = followerSelectorShape
   .extend({
     channelId: z.string().min(1).max(64),
   })
-  .refine(validateFollowerSelector, 'Provide exactly one of externalId or username.');
+  .refine(
+    validateFollowerSelector,
+    'Provide exactly one of externalId or username.'
+  );
 
 export type FollowerToolActor = { userId: string };
 
@@ -108,9 +109,8 @@ export const getFollowerToolContext = (inputData: unknown, context: any) => {
     context?.requestContext?.get('organization') as string
   );
   const actorValue = context?.requestContext?.get('user');
-  const actor = typeof actorValue === 'string'
-    ? JSON.parse(actorValue)
-    : actorValue;
+  const actor =
+    typeof actorValue === 'string' ? JSON.parse(actorValue) : actorValue;
 
   return {
     organization,
@@ -145,7 +145,9 @@ export const safeHttpUrl = (value: unknown) => {
   }
   try {
     const url = new URL(value);
-    return url.protocol === 'https:' || url.protocol === 'http:' ? value : undefined;
+    return url.protocol === 'https:' || url.protocol === 'http:'
+      ? value
+      : undefined;
   } catch {
     return undefined;
   }

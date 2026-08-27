@@ -42,7 +42,9 @@ describe('calculateBotGrade', () => {
     });
 
     expect(result.botFormulaVersion).toBe(BOT_FORMULA_VERSION);
-    expect(result.botConfidence).toBeGreaterThanOrEqual(BOT_CONFIDENCE_THRESHOLD);
+    expect(result.botConfidence).toBeGreaterThanOrEqual(
+      BOT_CONFIDENCE_THRESHOLD
+    );
     expect(result.botGrade).toBeGreaterThanOrEqual(4);
     expect(result.isBot).toBe(true);
   });
@@ -64,7 +66,9 @@ describe('calculateBotGrade', () => {
       now,
     });
 
-    expect(result.botConfidence).toBeGreaterThanOrEqual(BOT_CONFIDENCE_THRESHOLD);
+    expect(result.botConfidence).toBeGreaterThanOrEqual(
+      BOT_CONFIDENCE_THRESHOLD
+    );
     expect(result.botGrade).toBeLessThanOrEqual(2);
     expect(result.isBot).toBe(false);
   });

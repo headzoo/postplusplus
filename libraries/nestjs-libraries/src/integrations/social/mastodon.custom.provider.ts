@@ -89,17 +89,17 @@ export class MastodonCustomProvider extends MastodonProvider {
   }
 
   private instanceUrl(integration?: Integration) {
-    return this.resolveMastodonInstanceUrl(integration).toString().replace(
-      /\/$/,
-      ''
-    );
+    return this.resolveMastodonInstanceUrl(integration)
+      .toString()
+      .replace(/\/$/, '');
   }
 
   override profileUrl(integration: Integration) {
     return integration.profile
-      ? `${this.instanceUrl(integration).replace(/\/$/, '')}/@${encodeURIComponent(
-        integration.profile
-      )}`
+      ? `${this.instanceUrl(integration).replace(
+          /\/$/,
+          ''
+        )}/@${encodeURIComponent(integration.profile)}`
       : undefined;
   }
 

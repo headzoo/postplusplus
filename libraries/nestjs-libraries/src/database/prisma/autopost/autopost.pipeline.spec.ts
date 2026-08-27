@@ -71,7 +71,9 @@ describe('Pipeline autopost boundaries', () => {
       })
     );
     expect(errors.some((error) => error.property === 'url')).toBe(true);
-    expect(errors.some((error) => error.property === 'integrations')).toBe(false);
+    expect(errors.some((error) => error.property === 'integrations')).toBe(
+      false
+    );
     expect(errors.some((error) => error.property === 'onSlot')).toBe(false);
   });
 
@@ -138,7 +140,11 @@ describe('Pipeline autopost boundaries', () => {
 
     await service.disablePipelineAutoposts('org', 'pipeline');
 
-    expect(temporal.terminateWorkflow).toHaveBeenCalledWith('autopost-feed-one');
-    expect(temporal.terminateWorkflow).toHaveBeenCalledWith('autopost-feed-two');
+    expect(temporal.terminateWorkflow).toHaveBeenCalledWith(
+      'autopost-feed-one'
+    );
+    expect(temporal.terminateWorkflow).toHaveBeenCalledWith(
+      'autopost-feed-two'
+    );
   });
 });

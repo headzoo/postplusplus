@@ -169,7 +169,10 @@ export class PostsController {
   }
 
   @Get('/group/:group')
-  getPostsByGroup(@GetOrgFromRequest() org: Organization, @Param('group') group: string) {
+  getPostsByGroup(
+    @GetOrgFromRequest() org: Organization,
+    @Param('group') group: string
+  ) {
     return this._postsService.getPostsByGroup(org.id, group);
   }
 

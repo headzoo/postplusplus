@@ -28,7 +28,7 @@ export class FollowerBotScoreScheduleService {
   constructor(
     private _temporalService: TemporalService,
     private _adminScheduleLogService: AdminScheduleLogService
-  ) { }
+  ) {}
 
   async install() {
     try {
@@ -149,7 +149,10 @@ export class FollowerBotScoreScheduleService {
       });
     } catch (error) {
       if (!this.isAlreadyRunning(error)) {
-        this._logger.error('Failed to create follower bot score schedule', error);
+        this._logger.error(
+          'Failed to create follower bot score schedule',
+          error
+        );
         await this._adminScheduleLogService.append({
           scheduleKey: 'follower-bot-scores',
           level: 'ERROR',
@@ -169,7 +172,9 @@ export class FollowerBotScoreScheduleService {
 
   private mapStatus(
     description: Awaited<
-      ReturnType<ReturnType<FollowerBotScoreScheduleService['getHandle']>['describe']>
+      ReturnType<
+        ReturnType<FollowerBotScoreScheduleService['getHandle']>['describe']
+      >
     >,
     exists: boolean
   ): FollowerBotScoreScheduleStatus {
@@ -204,9 +209,7 @@ export class FollowerBotScoreScheduleService {
       return undefined;
     }
     if ('cadence' in value) {
-      return this.cadenceFromUnknown(
-        (value as { cadence?: unknown }).cadence
-      );
+      return this.cadenceFromUnknown((value as { cadence?: unknown }).cadence);
     }
     return value as Partial<FollowerBotScoreScheduleConfig>;
   }

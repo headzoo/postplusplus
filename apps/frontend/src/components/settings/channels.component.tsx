@@ -39,7 +39,10 @@ import {
   setLastChannelId,
 } from '@gitroom/frontend/components/launches/helpers/last-channel';
 
-const TRACKING_STATE_LABELS: Record<string, { key: string; defaultLabel: string }> = {
+const TRACKING_STATE_LABELS: Record<
+  string,
+  { key: string; defaultLabel: string }
+> = {
   active: { key: 'channel_tracking_active', defaultLabel: 'Active' },
   partial: { key: 'channel_tracking_partial', defaultLabel: 'Partial' },
   error: { key: 'channel_tracking_error', defaultLabel: 'Error' },
@@ -88,7 +91,8 @@ const FAILURE_MESSAGES: Record<
   },
   transient: {
     key: 'followers_tracking_transient',
-    defaultLabel: 'The provider is temporarily unavailable. We will retry tracking setup.',
+    defaultLabel:
+      'The provider is temporarily unavailable. We will retry tracking setup.',
   },
   unknown: {
     key: 'followers_tracking_unknown',
@@ -134,10 +138,10 @@ const DetailRow: FC<{ label: string; children: React.ReactNode }> = ({
   </div>
 );
 
-const ConnectionDetailField: FC<{ label: string; children: React.ReactNode }> = ({
-  label,
-  children,
-}) => (
+const ConnectionDetailField: FC<{
+  label: string;
+  children: React.ReactNode;
+}> = ({ label, children }) => (
   <div className="flex flex-col gap-[4px] min-w-0">
     <div className="text-[11px] uppercase tracking-wide font-[500] text-newTextColor">
       {label}
@@ -196,14 +200,17 @@ const ChannelConnectionSection: FC<{
   const fetch = useFetch();
   const { mutate } = useSWRConfig();
   const persistedSettings = useMemo(
-    () => JSON.parse(integration.additionalSettings || '[]') as Array<{
-      title: string;
-      description?: string;
-      value: boolean;
-    }>,
+    () =>
+      JSON.parse(integration.additionalSettings || '[]') as Array<{
+        title: string;
+        description?: string;
+        value: boolean;
+      }>,
     [integration.additionalSettings]
   );
-  const connectionSetting = persistedSettings.find(isConnectionAdditionalSetting);
+  const connectionSetting = persistedSettings.find(
+    isConnectionAdditionalSetting
+  );
   const [connectionEnabled, setConnectionEnabled] = useState(
     !!connectionSetting?.value
   );
@@ -230,19 +237,19 @@ const ChannelConnectionSection: FC<{
           ...otherSettings,
           { ...connectionSetting, value: nextValue },
         ];
-        const response = await fetch(`/integrations/${integration.id}/settings`, {
-          method: 'POST',
-          body: JSON.stringify({
-            additionalSettings: JSON.stringify(nextSettings),
-          }),
-        });
+        const response = await fetch(
+          `/integrations/${integration.id}/settings`,
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              additionalSettings: JSON.stringify(nextSettings),
+            }),
+          }
+        );
         if (!response.ok) {
           throw new Error('connection setting save failed');
         }
-        await Promise.all([
-          onSettingsUpdated(),
-          mutate('/integrations/list'),
-        ]);
+        await Promise.all([onSettingsUpdated(), mutate('/integrations/list')]);
         toast.show(t('settings_updated', 'Settings Updated'), 'success');
       } catch {
         setConnectionEnabled(previousValue);
@@ -291,7 +298,9 @@ const ChannelConnectionSection: FC<{
               status.badgeClassName
             )}
           >
-            <span className={clsx('size-[6px] rounded-full', status.dotClassName)} />
+            <span
+              className={clsx('size-[6px] rounded-full', status.dotClassName)}
+            />
             {status.label}
           </div>
         </div>
@@ -341,7 +350,9 @@ const ChannelConnectionSection: FC<{
           <div className="flex flex-col gap-[10px] border-t border-newBorder pt-[16px]">
             <div className="flex items-start justify-between gap-[12px]">
               <div className="min-w-0 flex flex-col gap-[4px]">
-                <div className="text-[14px] font-[500]">{connectionSetting.title}</div>
+                <div className="text-[14px] font-[500]">
+                  {connectionSetting.title}
+                </div>
                 {connectionSetting.description && (
                   <div className="text-[13px] text-newTextColor">
                     {connectionSetting.description}
@@ -454,17 +465,17 @@ const ChannelLinkTrackingSection: FC<{
     }
     setSaving(true);
     try {
-      const response = await fetch(`/integrations/${integrationId}/utm-params`, {
-        method: 'PUT',
-        body: JSON.stringify({ utmParams: value.trim() }),
-      });
+      const response = await fetch(
+        `/integrations/${integrationId}/utm-params`,
+        {
+          method: 'PUT',
+          body: JSON.stringify({ utmParams: value.trim() }),
+        }
+      );
       if (!response.ok) {
         throw new Error('utm save failed');
       }
-      await Promise.all([
-        onUtmUpdated(),
-        mutate('/integrations/list'),
-      ]);
+      await Promise.all([onUtmUpdated(), mutate('/integrations/list')]);
       toast.show(
         t('channel_utm_saved', 'Link tracking params updated.'),
         'success'
@@ -472,10 +483,7 @@ const ChannelLinkTrackingSection: FC<{
     } catch {
       setValue(persistedValue);
       toast.show(
-        t(
-          'channel_utm_save_failed',
-          'Could not update link tracking params.'
-        )
+        t('channel_utm_save_failed', 'Could not update link tracking params.')
       );
     } finally {
       setSaving(false);
@@ -541,10 +549,7 @@ const ChannelLinkTrackingSection: FC<{
         </div>
       </div>
       <div className="flex flex-col gap-[6px]">
-        <label
-          htmlFor={`channel-utm-${integrationId}`}
-          className="text-[14px]"
-        >
+        <label htmlFor={`channel-utm-${integrationId}`} className="text-[14px]">
           {t('channel_utm_params', 'UTM / tracking params')}
         </label>
         <input
@@ -560,9 +565,9 @@ const ChannelLinkTrackingSection: FC<{
               isValidUtmParamsString(next)
                 ? null
                 : t(
-                  'channel_utm_invalid',
-                  'Enter a valid query string such as utm_campaign=spring&utm_medium=social'
-                )
+                    'channel_utm_invalid',
+                    'Enter a valid query string such as utm_campaign=spring&utm_medium=social'
+                  )
             );
           }}
           className="bg-input w-full p-[12px] outline-none border border-fifth rounded-[4px] text-inputText placeholder-inputText text-[14px]"
@@ -577,7 +582,10 @@ const ChannelLinkTrackingSection: FC<{
           loading={saving}
           disabled={saving || !hasChanges || !isValid}
           onClick={saveUtmParams}
-          aria-label={t('save_link_tracking_params', 'Save link tracking params')}
+          aria-label={t(
+            'save_link_tracking_params',
+            'Save link tracking params'
+          )}
         >
           {t('save', 'Save')}
         </Button>
@@ -605,115 +613,117 @@ const ChannelDetailPanel: FC<{
   authorizing,
   onStrategyUpdated,
 }) => {
-    const t = useT();
-    const tracking = details?.tracking;
-    const stateLabel = tracking
-      ? TRACKING_STATE_LABELS[tracking.state] || TRACKING_STATE_LABELS.unsupported
-      : undefined;
-    const failure = tracking ? trackingFailureMessage(tracking, t) : undefined;
-    const showTrackingAlert =
-      tracking?.state === 'error' || tracking?.state === 'partial';
+  const t = useT();
+  const tracking = details?.tracking;
+  const stateLabel = tracking
+    ? TRACKING_STATE_LABELS[tracking.state] || TRACKING_STATE_LABELS.unsupported
+    : undefined;
+  const failure = tracking ? trackingFailureMessage(tracking, t) : undefined;
+  const showTrackingAlert =
+    tracking?.state === 'error' || tracking?.state === 'partial';
 
-    return (
-      <div className="flex flex-col gap-[20px] min-w-0">
-        <div className="flex items-start justify-between gap-[12px]">
-          <div className="min-w-0">
-            <div className="text-[20px] font-[500] truncate">{integration.name}</div>
-            <div className="text-[14px] text-newTextColor truncate">
-              {integration.display || integration.identifier}
-            </div>
+  return (
+    <div className="flex flex-col gap-[20px] min-w-0">
+      <div className="flex items-start justify-between gap-[12px]">
+        <div className="min-w-0">
+          <div className="text-[20px] font-[500] truncate">
+            {integration.name}
           </div>
-          <div className="flex gap-[8px] shrink-0">
-            {details?.trackingAuthorization && (
-              <Button
-                type="button"
-                secondary
-                loading={authorizing}
-                disabled={authorizing}
-                onClick={onAuthorizeTracking}
-              >
-                {details.trackingAuthorization.connected
-                  ? t('reauthorize_tracking', 'Reauthorize tracking')
-                  : t('authorize_tracking', 'Authorize tracking')}
-              </Button>
-            )}
+          <div className="text-[14px] text-newTextColor truncate">
+            {integration.display || integration.identifier}
+          </div>
+        </div>
+        <div className="flex gap-[8px] shrink-0">
+          {details?.trackingAuthorization && (
             <Button
               type="button"
               secondary
-              loading={refreshing}
-              disabled={refreshing}
-              onClick={onRefreshOauth}
+              loading={authorizing}
+              disabled={authorizing}
+              onClick={onAuthorizeTracking}
             >
-              {t('refresh_oauth', 'Refresh OAuth')}
+              {details.trackingAuthorization.connected
+                ? t('reauthorize_tracking', 'Reauthorize tracking')
+                : t('authorize_tracking', 'Authorize tracking')}
             </Button>
-          </div>
+          )}
+          <Button
+            type="button"
+            secondary
+            loading={refreshing}
+            disabled={refreshing}
+            onClick={onRefreshOauth}
+          >
+            {t('refresh_oauth', 'Refresh OAuth')}
+          </Button>
         </div>
+      </div>
 
-        {details?.trackingAuthorization &&
-          !details.trackingAuthorization.connected && (
-            <div className="rounded-[10px] border border-amber-500/30 bg-amber-500/10 px-[14px] py-[12px] text-[13px] text-amber-100">
-              {t(
-                'tracking_authorization_needed',
-                'Some interaction events need an extra permission grant before they can be tracked. Use Authorize tracking to give it.'
-              )}
-            </div>
+      {details?.trackingAuthorization &&
+        !details.trackingAuthorization.connected && (
+          <div className="rounded-[10px] border border-amber-500/30 bg-amber-500/10 px-[14px] py-[12px] text-[13px] text-amber-100">
+            {t(
+              'tracking_authorization_needed',
+              'Some interaction events need an extra permission grant before they can be tracked. Use Authorize tracking to give it.'
+            )}
+          </div>
+        )}
+
+      <ChannelConnectionSection
+        integration={integration}
+        details={details}
+        onSettingsUpdated={onStrategyUpdated}
+      />
+
+      {loading && !details ? (
+        <div className="flex justify-center py-[40px]">
+          <LoadingComponent />
+        </div>
+      ) : (
+        <>
+          {showTrackingAlert && (
+            <ChannelTrackingAlert
+              channelName={integration.display || integration.name}
+              tracking={tracking}
+              subscriptions={details?.subscriptions}
+            />
           )}
 
-        <ChannelConnectionSection
-          integration={integration}
-          details={details}
-          onSettingsUpdated={onStrategyUpdated}
-        />
+          <ChannelStrategySection
+            integrationId={integration.id}
+            strategyApplicable={details?.strategyApplicable}
+            strategy={details?.strategy}
+            recomputing={details?.recomputing}
+            loading={loading}
+            onStrategyUpdated={onStrategyUpdated}
+          />
 
-        {loading && !details ? (
-          <div className="flex justify-center py-[40px]">
-            <LoadingComponent />
-          </div>
-        ) : (
-          <>
-            {showTrackingAlert && (
-              <ChannelTrackingAlert
-                channelName={integration.display || integration.name}
-                tracking={tracking}
-                subscriptions={details?.subscriptions}
-              />
-            )}
+          <ChannelAdditionalSettingsForm
+            key={integration.id}
+            integration={integration}
+          />
 
-            <ChannelStrategySection
-              integrationId={integration.id}
-              strategyApplicable={details?.strategyApplicable}
-              strategy={details?.strategy}
-              recomputing={details?.recomputing}
-              loading={loading}
-              onStrategyUpdated={onStrategyUpdated}
-            />
+          <ChannelLinkTrackingSection
+            integrationId={integration.id}
+            utmParams={details?.utmParams ?? integration.utmParams ?? null}
+            loading={loading}
+            onUtmUpdated={onStrategyUpdated}
+          />
 
-            <ChannelAdditionalSettingsForm
-              key={integration.id}
-              integration={integration}
-            />
+          <InteractionTrackingSection
+            tracking={tracking}
+            stateLabel={stateLabel}
+            failure={failure}
+            t={t}
+          />
 
-            <ChannelLinkTrackingSection
-              integrationId={integration.id}
-              utmParams={details?.utmParams ?? integration.utmParams ?? null}
-              loading={loading}
-              onUtmUpdated={onStrategyUpdated}
-            />
-
-            <InteractionTrackingSection
-              tracking={tracking}
-              stateLabel={stateLabel}
-              failure={failure}
-              t={t}
-            />
-
-            <CoverageTable coverage={tracking?.coverage} />
-            <SubscriptionsTable subscriptions={details?.subscriptions || []} />
-          </>
-        )}
-      </div>
-    );
-  };
+          <CoverageTable coverage={tracking?.coverage} />
+          <SubscriptionsTable subscriptions={details?.subscriptions || []} />
+        </>
+      )}
+    </div>
+  );
+};
 
 const CoverageTable: FC<{ coverage?: ChannelInteractionKindCoverage[] }> = ({
   coverage,
@@ -744,9 +754,9 @@ const CoverageTable: FC<{ coverage?: ChannelInteractionKindCoverage[] }> = ({
   );
 };
 
-const SubscriptionsTable: FC<{ subscriptions: ChannelSubscriptionDetail[] }> = ({
-  subscriptions,
-}) => {
+const SubscriptionsTable: FC<{
+  subscriptions: ChannelSubscriptionDetail[];
+}> = ({ subscriptions }) => {
   const t = useT();
   const sortedSubscriptions = [...subscriptions].sort(
     (left, right) =>
@@ -934,9 +944,7 @@ export const ChannelsSettings: FC = () => {
 
   if (!integrations?.length) {
     return (
-      <div className="text-[14px]">
-        {t('no_channels', 'No channels yet')}
-      </div>
+      <div className="text-[14px]">{t('no_channels', 'No channels yet')}</div>
     );
   }
 

@@ -1,6 +1,13 @@
 'use client';
 
-import React, { FC, KeyboardEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import React, {
+  FC,
+  KeyboardEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import clsx from 'clsx';
 import { Button } from '@gitroom/react/form/button';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
@@ -66,7 +73,8 @@ const STRATEGY_ACCENTS: Record<ChannelStrategyId, StrategyAccent> = {
   community_retention: {
     text: 'text-emerald-600 dark:text-emerald-400',
     well: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
-    selectedCard: 'border-emerald-500 dark:border-emerald-400 bg-emerald-500/10',
+    selectedCard:
+      'border-emerald-500 dark:border-emerald-400 bg-emerald-500/10',
     ring: 'focus-visible:ring-emerald-500',
     radioBorder: 'border-emerald-500 dark:border-emerald-400',
     radioFill: 'bg-emerald-500',
@@ -144,7 +152,8 @@ const STRATEGY_PRESENTATION: Record<ChannelStrategyId, StrategyPresentation> = {
       },
       body: {
         key: 'channelStrategies.grow_audience.recommendation.body',
-        defaultValue: 'Great for building momentum and increasing your network.',
+        defaultValue:
+          'Great for building momentum and increasing your network.',
       },
     },
   },
@@ -189,7 +198,8 @@ const STRATEGY_PRESENTATION: Record<ChannelStrategyId, StrategyPresentation> = {
     recommendation: {
       title: {
         key: 'channelStrategies.lead_capture.recommendation.title',
-        defaultValue: 'Recommended for channels focused on pipeline and conversion',
+        defaultValue:
+          'Recommended for channels focused on pipeline and conversion',
       },
       body: {
         key: 'channelStrategies.lead_capture.recommendation.body',
@@ -258,7 +268,8 @@ const STRATEGY_PRESENTATION: Record<ChannelStrategyId, StrategyPresentation> = {
         },
         body: {
           key: 'channelStrategies.brand_awareness.highlights.0.body',
-          defaultValue: 'Prioritizes people resharing or talking about your brand.',
+          defaultValue:
+            'Prioritizes people resharing or talking about your brand.',
         },
       },
       {
@@ -316,7 +327,8 @@ const STRATEGY_PRESENTATION: Record<ChannelStrategyId, StrategyPresentation> = {
         },
         body: {
           key: 'channelStrategies.customer_support.highlights.1.body',
-          defaultValue: 'Highlights conversations where you have already replied.',
+          defaultValue:
+            'Highlights conversations where you have already replied.',
         },
       },
       {
@@ -326,7 +338,8 @@ const STRATEGY_PRESENTATION: Record<ChannelStrategyId, StrategyPresentation> = {
         },
         body: {
           key: 'channelStrategies.customer_support.highlights.2.body',
-          defaultValue: 'Ranks open support threads above growth opportunities.',
+          defaultValue:
+            'Ranks open support threads above growth opportunities.',
         },
       },
     ],
@@ -407,7 +420,10 @@ const StrategyDetailPanel: FC<{
         </div>
         <div className="flex flex-col gap-[12px]">
           {presentation.highlights.map((highlight) => (
-            <div key={highlight.title.key} className="flex gap-[10px] items-start">
+            <div
+              key={highlight.title.key}
+              className="flex gap-[10px] items-start"
+            >
               <div
                 className={clsx(
                   'size-5 shrink-0 rounded-full flex items-center justify-center mt-[1px]',
@@ -467,282 +483,284 @@ export const ChannelStrategySection: FC<{
   loading,
   onStrategyUpdated,
 }) => {
-    const t = useT();
-    const toast = useToaster();
-    const fetch = useFetch();
-    const { mutate } = useSWRConfig();
-    const persistedStrategyId = strategy?.id ?? FALLBACK_CHANNEL_STRATEGY_ID;
-    const [selectedId, setSelectedId] =
-      useState<ChannelStrategyId>(persistedStrategyId);
-    const [saving, setSaving] = useState(false);
-    const [recomputeNotice, setRecomputeNotice] = useState(false);
+  const t = useT();
+  const toast = useToaster();
+  const fetch = useFetch();
+  const { mutate } = useSWRConfig();
+  const persistedStrategyId = strategy?.id ?? FALLBACK_CHANNEL_STRATEGY_ID;
+  const [selectedId, setSelectedId] =
+    useState<ChannelStrategyId>(persistedStrategyId);
+  const [saving, setSaving] = useState(false);
+  const [recomputeNotice, setRecomputeNotice] = useState(false);
 
-    useEffect(() => {
-      setSelectedId(persistedStrategyId);
-    }, [persistedStrategyId]);
+  useEffect(() => {
+    setSelectedId(persistedStrategyId);
+  }, [persistedStrategyId]);
 
-    useEffect(() => {
-      if (recomputing) {
-        setRecomputeNotice(true);
-      }
-    }, [recomputing]);
+  useEffect(() => {
+    if (recomputing) {
+      setRecomputeNotice(true);
+    }
+  }, [recomputing]);
 
-    const hasChanges = selectedId !== persistedStrategyId;
-    const showRecomputeNotice = recomputeNotice || !!recomputing;
-    const isActive = selectedId === persistedStrategyId;
+  const hasChanges = selectedId !== persistedStrategyId;
+  const showRecomputeNotice = recomputeNotice || !!recomputing;
+  const isActive = selectedId === persistedStrategyId;
 
-    const selectedOption = useMemo(
-      () =>
-        channelStrategyOptions.find((option) => option.id === selectedId) ??
-        channelStrategyOptions[0],
-      [selectedId]
-    );
-    const selectedPresentation = STRATEGY_PRESENTATION[selectedId];
+  const selectedOption = useMemo(
+    () =>
+      channelStrategyOptions.find((option) => option.id === selectedId) ??
+      channelStrategyOptions[0],
+    [selectedId]
+  );
+  const selectedPresentation = STRATEGY_PRESENTATION[selectedId];
 
-    const handleOptionKeyDown = useCallback(
-      (strategyId: ChannelStrategyId) =>
-        (event: KeyboardEvent<HTMLDivElement>) => {
-          if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            if (!saving) {
-              setSelectedId(strategyId);
-            }
+  const handleOptionKeyDown = useCallback(
+    (strategyId: ChannelStrategyId) =>
+      (event: KeyboardEvent<HTMLDivElement>) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          if (!saving) {
+            setSelectedId(strategyId);
           }
-        },
-      [saving]
-    );
-
-    const cancelChanges = useCallback(() => {
-      if (!hasChanges || saving) {
-        return;
-      }
-      setSelectedId(persistedStrategyId);
-    }, [hasChanges, persistedStrategyId, saving]);
-
-    const saveStrategy = useCallback(async () => {
-      if (!strategyApplicable || saving || !hasChanges) {
-        return;
-      }
-      setSaving(true);
-      try {
-        const response = await fetch(`/integrations/${integrationId}/strategy`, {
-          method: 'PUT',
-          body: JSON.stringify({ strategyId: selectedId }),
-        });
-        if (!response.ok) {
-          throw new Error('strategy save failed');
         }
-        const body = (await response.json()) as {
-          strategy?: ChannelStrategyPublicSummary;
-          recomputeRequested?: boolean;
-        };
-        setRecomputeNotice(!!body.recomputeRequested || !!recomputing);
-        await Promise.all([
-          onStrategyUpdated(),
-          mutate('/integrations/list'),
-          mutate('/followers/channels'),
-        ]);
-        toast.show(
-          t('channel_strategy_saved', 'Channel strategy updated.'),
-          'success'
-        );
-      } catch {
-        setSelectedId(persistedStrategyId);
-        toast.show(
-          t(
-            'channel_strategy_save_failed',
-            'Could not update the channel strategy.'
-          )
-        );
-      } finally {
-        setSaving(false);
+      },
+    [saving]
+  );
+
+  const cancelChanges = useCallback(() => {
+    if (!hasChanges || saving) {
+      return;
+    }
+    setSelectedId(persistedStrategyId);
+  }, [hasChanges, persistedStrategyId, saving]);
+
+  const saveStrategy = useCallback(async () => {
+    if (!strategyApplicable || saving || !hasChanges) {
+      return;
+    }
+    setSaving(true);
+    try {
+      const response = await fetch(`/integrations/${integrationId}/strategy`, {
+        method: 'PUT',
+        body: JSON.stringify({ strategyId: selectedId }),
+      });
+      if (!response.ok) {
+        throw new Error('strategy save failed');
       }
-    }, [
-      fetch,
-      hasChanges,
-      integrationId,
-      mutate,
-      onStrategyUpdated,
-      persistedStrategyId,
-      recomputing,
-      saving,
-      selectedId,
-      strategyApplicable,
-      t,
-      toast,
-    ]);
-
-    if (loading && strategyApplicable === undefined) {
-      return (
-        <div className="flex flex-col gap-[10px] border border-newBorder rounded-[8px] p-[16px]">
-          <div className="text-[16px] font-[500]">
-            {t('channel_strategy', 'Channel strategy')}
-          </div>
-          <div className="text-[14px] text-newTextColor">
-            {t('loading', 'Loading...')}
-          </div>
-        </div>
+      const body = (await response.json()) as {
+        strategy?: ChannelStrategyPublicSummary;
+        recomputeRequested?: boolean;
+      };
+      setRecomputeNotice(!!body.recomputeRequested || !!recomputing);
+      await Promise.all([
+        onStrategyUpdated(),
+        mutate('/integrations/list'),
+        mutate('/followers/channels'),
+      ]);
+      toast.show(
+        t('channel_strategy_saved', 'Channel strategy updated.'),
+        'success'
       );
-    }
-
-    if (strategyApplicable === false) {
-      return (
-        <div className="flex flex-col gap-[10px] border border-newBorder rounded-[8px] p-[16px]">
-          <div className="text-[16px] font-[500]">
-            {t('channel_strategy', 'Channel strategy')}
-          </div>
-          <div className="text-[14px] text-newTextColor">
-            {t(
-              'channel_strategy_not_applicable',
-              'Not available for this channel because it does not expose follower identities.'
-            )}
-          </div>
-        </div>
+    } catch {
+      setSelectedId(persistedStrategyId);
+      toast.show(
+        t(
+          'channel_strategy_save_failed',
+          'Could not update the channel strategy.'
+        )
       );
+    } finally {
+      setSaving(false);
     }
+  }, [
+    fetch,
+    hasChanges,
+    integrationId,
+    mutate,
+    onStrategyUpdated,
+    persistedStrategyId,
+    recomputing,
+    saving,
+    selectedId,
+    strategyApplicable,
+    t,
+    toast,
+  ]);
 
+  if (loading && strategyApplicable === undefined) {
     return (
-      <div className="flex flex-col gap-[16px] border border-newBorder rounded-[8px] p-[16px]">
-        <div className="flex flex-col gap-[8px]">
-          <div className="flex items-start justify-between gap-[12px]">
-            <div className="flex items-center gap-[10px] min-w-0">
-              <div
-                className={clsx(
-                  'size-9 shrink-0 rounded-full flex items-center justify-center',
-                  SECTION_CHROME.well
-                )}
-              >
-                <TargetIcon size={18} />
-              </div>
-              <div className="text-[16px] font-[500]">
-                {t('channel_strategy', 'Channel strategy')}
-              </div>
-            </div>
-            {isActive && (
-              <div className="shrink-0 inline-flex items-center gap-[6px] rounded-full border border-emerald-500/30 bg-emerald-500/10 px-[10px] py-[4px] text-[12px] text-emerald-300">
-                <span className="size-[6px] rounded-full bg-emerald-400" />
-                {t('channel_strategy_active', 'Active')}
-              </div>
-            )}
-          </div>
-          <div className="text-[13px] text-newTextColor">
-            {t(
-              'channel_strategy_description',
-              'Choose how relationship grades and Followers defaults prioritize people on this channel.'
-            )}
-          </div>
-          <div className="flex items-center gap-[8px] text-[13px] text-newTextColor">
-            <ResetIcon size={14} className="shrink-0 opacity-70" />
-            <span>
-              {t(
-                'channel_strategy_switch_later',
-                'You can switch strategies later as your goals change.'
-              )}
-            </span>
-          </div>
+      <div className="flex flex-col gap-[10px] border border-newBorder rounded-[8px] p-[16px]">
+        <div className="text-[16px] font-[500]">
+          {t('channel_strategy', 'Channel strategy')}
         </div>
-
-        {showRecomputeNotice && (
-          <div className="rounded-[10px] border border-sky-500/30 bg-sky-500/10 px-[14px] py-[12px] text-[13px] text-sky-100">
-            {t(
-              'channel_strategy_recomputing',
-              'Relationship rankings are updating. Existing grades stay visible while the new strategy is applied.'
-            )}
-          </div>
-        )}
-
-        <div className="grid grid-cols-2 mobile:grid-cols-1 gap-[16px] min-w-0 items-start">
-          <div
-            className="flex flex-col gap-[10px] min-w-0"
-            role="radiogroup"
-            aria-label={t('channel_strategy', 'Channel strategy')}
-          >
-            {channelStrategyOptions.map((option) => {
-              const label = localizedStrategyCopy(option.label, t);
-              const description = localizedStrategyCopy(option.description, t);
-              const isSelected = selectedId === option.id;
-              const isDefault = option.id === FALLBACK_CHANNEL_STRATEGY_ID;
-              const optionLabel = isDefault
-                ? `${label} (${t('channel_strategy_default', 'Default')})`
-                : label;
-              const presentation = STRATEGY_PRESENTATION[option.id];
-
-              return (
-                <div
-                  key={option.id}
-                  role="radio"
-                  aria-checked={isSelected}
-                  aria-label={optionLabel}
-                  tabIndex={saving ? -1 : 0}
-                  onClick={() => {
-                    if (!saving) {
-                      setSelectedId(option.id);
-                    }
-                  }}
-                  onKeyDown={handleOptionKeyDown(option.id)}
-                  className={clsx(
-                    'flex items-center gap-[12px] rounded-[8px] border p-[12px] cursor-pointer outline-none focus-visible:ring-2',
-                    presentation.accent.ring,
-                    isSelected
-                      ? presentation.accent.selectedCard
-                      : 'border-newBorder hover:bg-boxHover',
-                    saving && 'opacity-60 cursor-not-allowed'
-                  )}
-                >
-                  <div
-                    className={clsx(
-                      'size-4 shrink-0 rounded-full border flex items-center justify-center',
-                      isSelected
-                        ? presentation.accent.radioBorder
-                        : 'border-newSep'
-                    )}
-                    aria-hidden="true"
-                  >
-                    {isSelected && (
-                      <span
-                        className={clsx(
-                          'size-2 rounded-full',
-                          presentation.accent.radioFill
-                        )}
-                      />
-                    )}
-                  </div>
-                  <StrategyIconWell presentation={presentation} />
-                  <div className="min-w-0 flex flex-col gap-[4px]">
-                    <div className="text-[14px] font-[500]">{optionLabel}</div>
-                    <div className="text-[13px] text-newTextColor">{description}</div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          <StrategyDetailPanel
-            option={selectedOption}
-            presentation={selectedPresentation}
-            t={t}
-          />
-        </div>
-
-        <div className="flex justify-end gap-[8px]">
-          <Button
-            type="button"
-            secondary
-            disabled={saving || !hasChanges}
-            onClick={cancelChanges}
-          >
-            {t('cancel', 'Cancel')}
-          </Button>
-          <Button
-            type="button"
-            loading={saving}
-            disabled={saving || !hasChanges}
-            onClick={saveStrategy}
-            aria-label={t('save_channel_strategy_aria', 'Save channel strategy')}
-          >
-            {t('save', 'Save')}
-          </Button>
+        <div className="text-[14px] text-newTextColor">
+          {t('loading', 'Loading...')}
         </div>
       </div>
     );
-  };
+  }
+
+  if (strategyApplicable === false) {
+    return (
+      <div className="flex flex-col gap-[10px] border border-newBorder rounded-[8px] p-[16px]">
+        <div className="text-[16px] font-[500]">
+          {t('channel_strategy', 'Channel strategy')}
+        </div>
+        <div className="text-[14px] text-newTextColor">
+          {t(
+            'channel_strategy_not_applicable',
+            'Not available for this channel because it does not expose follower identities.'
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-[16px] border border-newBorder rounded-[8px] p-[16px]">
+      <div className="flex flex-col gap-[8px]">
+        <div className="flex items-start justify-between gap-[12px]">
+          <div className="flex items-center gap-[10px] min-w-0">
+            <div
+              className={clsx(
+                'size-9 shrink-0 rounded-full flex items-center justify-center',
+                SECTION_CHROME.well
+              )}
+            >
+              <TargetIcon size={18} />
+            </div>
+            <div className="text-[16px] font-[500]">
+              {t('channel_strategy', 'Channel strategy')}
+            </div>
+          </div>
+          {isActive && (
+            <div className="shrink-0 inline-flex items-center gap-[6px] rounded-full border border-emerald-500/30 bg-emerald-500/10 px-[10px] py-[4px] text-[12px] text-emerald-300">
+              <span className="size-[6px] rounded-full bg-emerald-400" />
+              {t('channel_strategy_active', 'Active')}
+            </div>
+          )}
+        </div>
+        <div className="text-[13px] text-newTextColor">
+          {t(
+            'channel_strategy_description',
+            'Choose how relationship grades and Followers defaults prioritize people on this channel.'
+          )}
+        </div>
+        <div className="flex items-center gap-[8px] text-[13px] text-newTextColor">
+          <ResetIcon size={14} className="shrink-0 opacity-70" />
+          <span>
+            {t(
+              'channel_strategy_switch_later',
+              'You can switch strategies later as your goals change.'
+            )}
+          </span>
+        </div>
+      </div>
+
+      {showRecomputeNotice && (
+        <div className="rounded-[10px] border border-sky-500/30 bg-sky-500/10 px-[14px] py-[12px] text-[13px] text-sky-100">
+          {t(
+            'channel_strategy_recomputing',
+            'Relationship rankings are updating. Existing grades stay visible while the new strategy is applied.'
+          )}
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 mobile:grid-cols-1 gap-[16px] min-w-0 items-start">
+        <div
+          className="flex flex-col gap-[10px] min-w-0"
+          role="radiogroup"
+          aria-label={t('channel_strategy', 'Channel strategy')}
+        >
+          {channelStrategyOptions.map((option) => {
+            const label = localizedStrategyCopy(option.label, t);
+            const description = localizedStrategyCopy(option.description, t);
+            const isSelected = selectedId === option.id;
+            const isDefault = option.id === FALLBACK_CHANNEL_STRATEGY_ID;
+            const optionLabel = isDefault
+              ? `${label} (${t('channel_strategy_default', 'Default')})`
+              : label;
+            const presentation = STRATEGY_PRESENTATION[option.id];
+
+            return (
+              <div
+                key={option.id}
+                role="radio"
+                aria-checked={isSelected}
+                aria-label={optionLabel}
+                tabIndex={saving ? -1 : 0}
+                onClick={() => {
+                  if (!saving) {
+                    setSelectedId(option.id);
+                  }
+                }}
+                onKeyDown={handleOptionKeyDown(option.id)}
+                className={clsx(
+                  'flex items-center gap-[12px] rounded-[8px] border p-[12px] cursor-pointer outline-none focus-visible:ring-2',
+                  presentation.accent.ring,
+                  isSelected
+                    ? presentation.accent.selectedCard
+                    : 'border-newBorder hover:bg-boxHover',
+                  saving && 'opacity-60 cursor-not-allowed'
+                )}
+              >
+                <div
+                  className={clsx(
+                    'size-4 shrink-0 rounded-full border flex items-center justify-center',
+                    isSelected
+                      ? presentation.accent.radioBorder
+                      : 'border-newSep'
+                  )}
+                  aria-hidden="true"
+                >
+                  {isSelected && (
+                    <span
+                      className={clsx(
+                        'size-2 rounded-full',
+                        presentation.accent.radioFill
+                      )}
+                    />
+                  )}
+                </div>
+                <StrategyIconWell presentation={presentation} />
+                <div className="min-w-0 flex flex-col gap-[4px]">
+                  <div className="text-[14px] font-[500]">{optionLabel}</div>
+                  <div className="text-[13px] text-newTextColor">
+                    {description}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <StrategyDetailPanel
+          option={selectedOption}
+          presentation={selectedPresentation}
+          t={t}
+        />
+      </div>
+
+      <div className="flex justify-end gap-[8px]">
+        <Button
+          type="button"
+          secondary
+          disabled={saving || !hasChanges}
+          onClick={cancelChanges}
+        >
+          {t('cancel', 'Cancel')}
+        </Button>
+        <Button
+          type="button"
+          loading={saving}
+          disabled={saving || !hasChanges}
+          onClick={saveStrategy}
+          aria-label={t('save_channel_strategy_aria', 'Save channel strategy')}
+        >
+          {t('save', 'Save')}
+        </Button>
+      </div>
+    </div>
+  );
+};

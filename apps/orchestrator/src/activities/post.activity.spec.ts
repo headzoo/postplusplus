@@ -1,63 +1,66 @@
 jest.mock('nestjs-temporal-core', () => ({
   Activity: () => () => undefined,
   ActivityMethod: () => () => undefined,
-  TemporalService: class TemporalService { },
+  TemporalService: class TemporalService {},
 }));
 
-jest.mock('@gitroom/nestjs-libraries/database/prisma/posts/posts.service', () => ({
-  PostsService: class PostsService { },
-}));
+jest.mock(
+  '@gitroom/nestjs-libraries/database/prisma/posts/posts.service',
+  () => ({
+    PostsService: class PostsService {},
+  })
+);
 
 jest.mock(
   '@gitroom/nestjs-libraries/database/prisma/notifications/notification.service',
   () => ({
-    NotificationService: class NotificationService { },
+    NotificationService: class NotificationService {},
   })
 );
 
-jest.mock(
-  '@gitroom/nestjs-libraries/integrations/integration.manager',
-  () => ({
-    IntegrationManager: class IntegrationManager { },
-  })
-);
+jest.mock('@gitroom/nestjs-libraries/integrations/integration.manager', () => ({
+  IntegrationManager: class IntegrationManager {},
+}));
 
 jest.mock(
   '@gitroom/nestjs-libraries/integrations/refresh.integration.service',
   () => ({
-    RefreshIntegrationService: class RefreshIntegrationService { },
+    RefreshIntegrationService: class RefreshIntegrationService {},
   })
 );
 
 jest.mock(
   '@gitroom/nestjs-libraries/database/prisma/integrations/integration.service',
   () => ({
-    IntegrationService: class IntegrationService { },
+    IntegrationService: class IntegrationService {},
   })
 );
 
 jest.mock(
   '@gitroom/nestjs-libraries/database/prisma/webhooks/webhooks.service',
   () => ({
-    WebhooksService: class WebhooksService { },
+    WebhooksService: class WebhooksService {},
   })
 );
 
-jest.mock('@gitroom/nestjs-libraries/database/prisma/logs/logs.service', () => ({
-  LogsService: class LogsService { },
-}));
+jest.mock(
+  '@gitroom/nestjs-libraries/database/prisma/logs/logs.service',
+  () => ({
+    LogsService: class LogsService {},
+  })
+);
 
 jest.mock(
   '@gitroom/nestjs-libraries/database/prisma/subscriptions/subscription.service',
   () => ({
-    SubscriptionService: class SubscriptionService { },
+    SubscriptionService: class SubscriptionService {},
   })
 );
 
 jest.mock(
   '@gitroom/nestjs-libraries/database/prisma/pipelines/pipeline.plug.service',
   () => ({
-    PipelinePlugService: class PipelinePlugService { },
+    PipelinePlugService: class PipelinePlugService {},
   })
 );
 
@@ -65,9 +68,12 @@ jest.mock('@gitroom/helpers/utils/strip.html.validation', () => ({
   stripHtmlValidation: jest.fn(),
 }));
 
-jest.mock('@gitroom/nestjs-libraries/dtos/webhooks/ssrf.safe.dispatcher', () => ({
-  getSsrfSafeDispatcher: jest.fn(),
-}));
+jest.mock(
+  '@gitroom/nestjs-libraries/dtos/webhooks/ssrf.safe.dispatcher',
+  () => ({
+    getSsrfSafeDispatcher: jest.fn(),
+  })
+);
 
 jest.mock('@gitroom/nestjs-libraries/integrations/publish.file.sink', () => ({
   getPublishFileSinkDirectory: jest.fn(),
@@ -270,7 +276,9 @@ describe('PostActivity.editPost', () => {
 
 describe('PostActivity V108 legacy plug compatibility', () => {
   it('resolves globalPlugsV107 through PipelinePlugService', async () => {
-    const resolveGlobalPlugs = jest.fn().mockResolvedValue([{ plugId: 'plug-1' }]);
+    const resolveGlobalPlugs = jest
+      .fn()
+      .mockResolvedValue([{ plugId: 'plug-1' }]);
     const integration = {
       id: 'int-1',
       providerIdentifier: 'x',

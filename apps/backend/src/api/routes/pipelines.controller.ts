@@ -33,7 +33,7 @@ import {
 @ApiTags('Pipelines')
 @Controller('/pipelines')
 export class PipelinesController {
-  constructor(private _pipelineService: PipelineService) { }
+  constructor(private _pipelineService: PipelineService) {}
 
   @Get('/')
   getPipelines(@GetOrgFromRequest() org: Organization) {
@@ -72,10 +72,7 @@ export class PipelinesController {
   }
 
   @Post('/enqueue')
-  enqueue(
-    @GetOrgFromRequest() org: Organization,
-    @Body() rawBody: any
-  ) {
+  enqueue(@GetOrgFromRequest() org: Organization, @Body() rawBody: any) {
     // Match /posts: validate in the service layer after mapTypeToPost adds
     // settings.__type from the integration — not via controller DTO validation.
     return this._pipelineService.enqueue(org.id, rawBody);

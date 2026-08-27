@@ -10,12 +10,11 @@ export type DashboardAnalyticsMetricLike = {
   label: string;
 };
 
-export const dashboardMetricIdentity = (
-  metric: DashboardAnalyticsMetricLike
-) => metric.metricKey || metric.label;
+export const dashboardMetricIdentity = (metric: DashboardAnalyticsMetricLike) =>
+  metric.metricKey || metric.label;
 
 export const applyDashboardAnalyticsPreferences = <
-  T extends DashboardAnalyticsMetricLike,
+  T extends DashboardAnalyticsMetricLike
 >(
   metrics: T[],
   preferences: DashboardAnalyticsPreference[],
@@ -65,19 +64,19 @@ export const buildDashboardAnalyticsPreferences = (
   visibleKeys: string[],
   hiddenKeys: string[]
 ): DashboardAnalyticsPreference[] => [
-    ...visibleKeys.map((metricKey, position) => ({
-      integrationId,
-      metricKey,
-      position,
-      hidden: false,
-    })),
-    ...hiddenKeys.map((metricKey, index) => ({
-      integrationId,
-      metricKey,
-      position: visibleKeys.length + index,
-      hidden: true,
-    })),
-  ];
+  ...visibleKeys.map((metricKey, position) => ({
+    integrationId,
+    metricKey,
+    position,
+    hidden: false,
+  })),
+  ...hiddenKeys.map((metricKey, index) => ({
+    integrationId,
+    metricKey,
+    position: visibleKeys.length + index,
+    hidden: true,
+  })),
+];
 
 export const reorderVisibleKeys = (
   keys: string[],

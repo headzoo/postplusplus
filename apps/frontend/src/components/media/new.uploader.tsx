@@ -225,7 +225,11 @@ export function useUppyUploader(props: {
       if (transloadit.length > 0) {
         // @ts-ignore
         const allRes = result.transloadit[0].results;
-        const toSave = uniqBy<{ name: string; originalName: string; order: number }>(
+        const toSave = uniqBy<{
+          name: string;
+          originalName: string;
+          order: number;
+        }>(
           // @ts-ignore
           Object.values(allRes).flatMap((p: any[]) => {
             return p.flatMap((item) => ({

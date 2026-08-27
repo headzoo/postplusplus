@@ -7,7 +7,9 @@ import { PipelineScheduleOccurrence } from '@gitroom/frontend/components/pipelin
 import { loadPipelineGlobalSchedule } from '@gitroom/frontend/components/pipelines/pipeline.utils';
 
 export const pipelineGlobalScheduleKey = (startDate: string, endDate: string) =>
-  `/pipelines/schedule?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
+  `/pipelines/schedule?startDate=${encodeURIComponent(
+    startDate
+  )}&endDate=${encodeURIComponent(endDate)}`;
 
 export const usePipelineGlobalSchedule = (
   startDate?: string,

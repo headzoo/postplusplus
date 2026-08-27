@@ -31,7 +31,9 @@ const helpDestination = (href: string) => {
   try {
     const url = new URL(href, 'https://help.postiz.local');
     const match = /^\/help\/([^/]+)$/.exec(url.pathname);
-    return match ? { slug: decodeURIComponent(match[1]), hash: url.hash.slice(1) } : null;
+    return match
+      ? { slug: decodeURIComponent(match[1]), hash: url.hash.slice(1) }
+      : null;
   } catch {
     return null;
   }
@@ -58,12 +60,11 @@ export const HelpMarkdown = ({
     }
 
     const container = scrollContainerRef?.current;
-    const heading =
-      container
-        ? Array.from(container.querySelectorAll<HTMLElement>('[id]')).find(
-            (element) => element.id === hash
-          )
-        : document.getElementById(hash);
+    const heading = container
+      ? Array.from(container.querySelectorAll<HTMLElement>('[id]')).find(
+          (element) => element.id === hash
+        )
+      : document.getElementById(hash);
     if (!heading) {
       return;
     }
@@ -85,7 +86,10 @@ export const HelpMarkdown = ({
 
   let headingIndex = 0;
   const heading = (Tag: 'h2' | 'h3' | 'h4' | 'h5' | 'h6') => {
-    const Component = ({ children, ...props }: ComponentPropsWithoutRef<typeof Tag>) => {
+    const Component = ({
+      children,
+      ...props
+    }: ComponentPropsWithoutRef<typeof Tag>) => {
       const id = headingAnchors[headingIndex++];
       return (
         <Tag
@@ -139,12 +143,18 @@ export const HelpMarkdown = ({
             </div>
           ),
           th: ({ children, ...props }) => (
-            <th {...props} className="border border-newTableBorder p-2 font-semibold">
+            <th
+              {...props}
+              className="border border-newTableBorder p-2 font-semibold"
+            >
               {children}
             </th>
           ),
           td: ({ children, ...props }) => (
-            <td {...props} className="border border-newTableBorder p-2 align-top">
+            <td
+              {...props}
+              className="border border-newTableBorder p-2 align-top"
+            >
               {children}
             </td>
           ),
@@ -165,7 +175,9 @@ export const HelpMarkdown = ({
                 {...props}
                 href={href}
                 className="text-blue-500 underline"
-                {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                {...(external
+                  ? { target: '_blank', rel: 'noopener noreferrer' }
+                  : {})}
                 onClick={(event) => {
                   if (destination) {
                     event.preventDefault();

@@ -11,7 +11,7 @@ export class AutopostRepository {
   constructor(
     private _autoPost: PrismaRepository<'autoPost'>,
     private _pipeline: PrismaRepository<'pipeline'>
-  ) { }
+  ) {}
 
   getTotal(orgId: string) {
     return this._autoPost.model.autoPost.count({
@@ -93,14 +93,24 @@ export class AutopostRepository {
     };
     const existing = id
       ? await this._autoPost.model.autoPost.findFirst({
-        where: { id, organizationId: orgId, pipelineId: null, deletedAt: null },
-      })
+          where: {
+            id,
+            organizationId: orgId,
+            pipelineId: null,
+            deletedAt: null,
+          },
+        })
       : null;
     const autopost = existing
       ? await this._autoPost.model.autoPost.update({ where: { id }, data })
       : await this._autoPost.model.autoPost.create({
-        data: { id: id || uuidv4(), organizationId: orgId, pipelineId: null, ...data },
-      });
+          data: {
+            id: id || uuidv4(),
+            organizationId: orgId,
+            pipelineId: null,
+            ...data,
+          },
+        });
 
     return { id: autopost.id, active: autopost.active };
   }

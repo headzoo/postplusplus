@@ -30,7 +30,9 @@ export interface StatsResponse {
 }
 
 const sortDesc = (list: PerSocial[]) =>
-  list.sort((a, b) => b.count - a.count || a.provider.localeCompare(b.provider));
+  list.sort(
+    (a, b) => b.count - a.count || a.provider.localeCompare(b.provider)
+  );
 
 @Injectable()
 export class AdminStatsRepository {

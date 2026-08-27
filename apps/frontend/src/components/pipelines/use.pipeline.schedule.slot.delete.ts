@@ -17,14 +17,18 @@ export const useDeletePipelineScheduleSlot = (globalScheduleKey?: string) => {
 
   return useCallback(
     async (pipelineId: string, payload: DeletePipelineScheduleSlotPayload) => {
-      const response = await fetch(`${pipelineDetailKey(pipelineId)}/schedule`, {
-        method: 'DELETE',
-        body: JSON.stringify(payload),
-      });
+      const response = await fetch(
+        `${pipelineDetailKey(pipelineId)}/schedule`,
+        {
+          method: 'DELETE',
+          body: JSON.stringify(payload),
+        }
+      );
       if (!response.ok) {
         throw new Error(await parseApiError(response));
       }
-      const result = (await response.json()) as DeletePipelineScheduleSlotResult;
+      const result =
+        (await response.json()) as DeletePipelineScheduleSlotResult;
       await Promise.all([
         globalScheduleKey ? mutate(globalScheduleKey) : Promise.resolve(),
         mutate(PIPELINES_KEY),

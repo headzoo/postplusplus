@@ -25,8 +25,13 @@ describe('IntegrationService channel notices', () => {
     tokenExpiration: new Date(Date.now() + 60_000),
   };
 
-  const createService = (integrations: any[], providers: Record<string, any>) => {
-    const service = Object.create(IntegrationService.prototype) as IntegrationService;
+  const createService = (
+    integrations: any[],
+    providers: Record<string, any>
+  ) => {
+    const service = Object.create(
+      IntegrationService.prototype
+    ) as IntegrationService;
     (service as any)._integrationRepository = {
       getIntegrationsList: jest.fn().mockResolvedValue(integrations),
       getIntegrationById: jest.fn((_orgId: string, integrationId: string) =>
@@ -36,7 +41,9 @@ describe('IntegrationService channel notices', () => {
       markIntegrationNoticesRead: jest.fn().mockResolvedValue({}),
     };
     (service as any)._integrationManager = {
-      getSocialIntegration: jest.fn((identifier: string) => providers[identifier]),
+      getSocialIntegration: jest.fn(
+        (identifier: string) => providers[identifier]
+      ),
     };
     (service as any)._refreshIntegrationService = {
       refresh: jest.fn(),
@@ -56,7 +63,9 @@ describe('IntegrationService channel notices', () => {
       unreadCount: 3,
       categories: { mention: 1, like: 2 },
     });
-    const failingNotices = jest.fn().mockRejectedValue(new Error('provider failure'));
+    const failingNotices = jest
+      .fn()
+      .mockRejectedValue(new Error('provider failure'));
     const service = createService(
       [
         social,
@@ -142,7 +151,9 @@ describe('IntegrationService channel notices', () => {
         }),
       },
     });
-    expect((service as any)._refreshIntegrationService.refresh).toHaveBeenCalledTimes(1);
+    expect(
+      (service as any)._refreshIntegrationService.refresh
+    ).toHaveBeenCalledTimes(1);
     expect(channelNotices).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({ token: 'old-token' }),

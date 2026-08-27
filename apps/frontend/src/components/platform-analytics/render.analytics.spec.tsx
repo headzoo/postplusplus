@@ -25,7 +25,9 @@ jest.mock('@gitroom/react/helpers/image.with.fallback', () => ({
 }));
 
 jest.mock('@gitroom/frontend/components/analytics/chart-social', () => {
-  const actual = jest.requireActual('@gitroom/frontend/components/analytics/chart-social');
+  const actual = jest.requireActual(
+    '@gitroom/frontend/components/analytics/chart-social'
+  );
   return {
     ...actual,
     ChartSocial: ({
@@ -39,9 +41,7 @@ jest.mock('@gitroom/frontend/components/analytics/chart-social', () => {
         type="button"
         data-testid="chart-social"
         data-clickable={clickable ? 'true' : 'false'}
-        onClick={() =>
-          onPointClick?.({ date: '2026-08-20', total: 42 })
-        }
+        onClick={() => onPointClick?.({ date: '2026-08-20', total: 42 })}
       />
     ),
   };
@@ -283,9 +283,9 @@ describe('AnalyticsCard drill-down navigation', () => {
       />
     );
 
-    expect(screen.getByTestId('chart-social').getAttribute('data-clickable')).toBe(
-      'true'
-    );
+    expect(
+      screen.getByTestId('chart-social').getAttribute('data-clickable')
+    ).toBe('true');
     fireEvent.click(screen.getByTestId('chart-social'));
     expect(onBarClick).toHaveBeenCalledWith({
       integrationId: 'integration-1',
@@ -310,9 +310,9 @@ describe('AnalyticsCard drill-down navigation', () => {
       />
     );
 
-    expect(screen.getByTestId('chart-social').getAttribute('data-clickable')).toBe(
-      'false'
-    );
+    expect(
+      screen.getByTestId('chart-social').getAttribute('data-clickable')
+    ).toBe('false');
   });
 });
 

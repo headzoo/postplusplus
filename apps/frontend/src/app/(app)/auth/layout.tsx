@@ -13,7 +13,10 @@ export default async function AuthLayout({
       <ReturnUrlComponent />
       <div className="flex flex-col py-[40px] px-[20px] w-full max-w-[600px] rounded-[12px] text-white bg-[#1A1919]">
         <div className="w-full max-w-[440px] mx-auto justify-center gap-[20px] flex flex-col text-white">
-          <LogoTextComponent src="/logo-180.png" className="h-[180px] mx-auto" />
+          <LogoTextComponent
+            src="/logo-180.png"
+            className="h-[180px] mx-auto"
+          />
           <div className="flex">{children}</div>
         </div>
       </div>

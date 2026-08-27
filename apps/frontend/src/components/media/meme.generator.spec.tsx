@@ -130,10 +130,12 @@ describe('useMemeTemplates', () => {
     useFetch.mockReturnValue(fetchMock);
 
     let fetcher: (() => Promise<ImgflipTemplate[]>) | null = null;
-    useSWR.mockImplementation((_key: unknown, load: () => Promise<ImgflipTemplate[]>) => {
-      fetcher = load;
-      return { data: mockTemplates, error: undefined, isLoading: false };
-    });
+    useSWR.mockImplementation(
+      (_key: unknown, load: () => Promise<ImgflipTemplate[]>) => {
+        fetcher = load;
+        return { data: mockTemplates, error: undefined, isLoading: false };
+      }
+    );
 
     renderHook(() => useMemeTemplates(true));
     await fetcher?.();
@@ -150,14 +152,18 @@ describe('useMemeTemplates', () => {
     );
 
     let fetcher: (() => Promise<ImgflipTemplate[]>) | null = null;
-    useSWR.mockImplementation((_key: unknown, load: () => Promise<ImgflipTemplate[]>) => {
-      fetcher = load;
-      return { data: undefined, error: undefined, isLoading: true };
-    });
+    useSWR.mockImplementation(
+      (_key: unknown, load: () => Promise<ImgflipTemplate[]>) => {
+        fetcher = load;
+        return { data: undefined, error: undefined, isLoading: true };
+      }
+    );
 
     renderHook(() => useMemeTemplates(true));
 
-    await expect(fetcher?.()).rejects.toThrow('Invalid meme templates response');
+    await expect(fetcher?.()).rejects.toThrow(
+      'Invalid meme templates response'
+    );
   });
 });
 
@@ -188,7 +194,9 @@ describe('MemeGenerator', () => {
     fireEvent.change(screen.getByLabelText('Text 1'), {
       target: { value: 'hello' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Distracted Boyfriend' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Distracted Boyfriend' })
+    );
 
     expect(screen.getByLabelText('Text 1')).toHaveProperty('value', '');
     expect(screen.getByLabelText('Text 3')).toBeTruthy();
@@ -243,18 +251,21 @@ describe('MemeGenerator', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Generate meme' }));
     await waitFor(() => {
-      expect(screen.getByRole('img', { name: 'Preview of Drake Hotline Bling' })).toBeTruthy();
+      expect(
+        screen.getByRole('img', { name: 'Preview of Drake Hotline Bling' })
+      ).toBeTruthy();
     });
 
     fireEvent.change(screen.getByLabelText('Text 1'), {
       target: { value: 'changed' },
     });
 
-    expect(screen.queryByRole('img', { name: 'Preview of Drake Hotline Bling' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Save to media' })).toHaveProperty(
-      'disabled',
-      true
-    );
+    expect(
+      screen.queryByRole('img', { name: 'Preview of Drake Hotline Bling' })
+    ).toBeNull();
+    expect(
+      screen.getByRole('button', { name: 'Save to media' })
+    ).toHaveProperty('disabled', true);
   });
 
   it('discards in-flight generation when captions change before response', async () => {
@@ -287,11 +298,12 @@ describe('MemeGenerator', () => {
     });
 
     await waitFor(() => {
-      expect(screen.queryByRole('img', { name: 'Preview of Drake Hotline Bling' })).toBeNull();
-      expect(screen.getByRole('button', { name: 'Save to media' })).toHaveProperty(
-        'disabled',
-        true
-      );
+      expect(
+        screen.queryByRole('img', { name: 'Preview of Drake Hotline Bling' })
+      ).toBeNull();
+      expect(
+        screen.getByRole('button', { name: 'Save to media' })
+      ).toHaveProperty('disabled', true);
     });
   });
 
@@ -313,7 +325,9 @@ describe('MemeGenerator', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Generate meme' }));
     expect(screen.getByTestId('spinner')).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Distracted Boyfriend' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Distracted Boyfriend' })
+    );
 
     resolveGenerate!({
       ok: true,
@@ -324,10 +338,9 @@ describe('MemeGenerator', () => {
 
     await waitFor(() => {
       expect(screen.queryByRole('img', { name: /Preview of/ })).toBeNull();
-      expect(screen.getByRole('button', { name: 'Save to media' })).toHaveProperty(
-        'disabled',
-        true
-      );
+      expect(
+        screen.getByRole('button', { name: 'Save to media' })
+      ).toHaveProperty('disabled', true);
     });
 
     expect(fetchMock).not.toHaveBeenCalledWith(
@@ -347,7 +360,9 @@ describe('MemeGenerator', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Generate meme' }));
 
     await waitFor(() => {
-      expect(screen.getByText('Failed to generate meme. Please try again.')).toBeTruthy();
+      expect(
+        screen.getByText('Failed to generate meme. Please try again.')
+      ).toBeTruthy();
     });
 
     expect(screen.getByLabelText('Text 1')).toHaveProperty('value', 'retry me');
@@ -374,10 +389,9 @@ describe('MemeGenerator', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Generate meme' }));
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Save to media' })).toHaveProperty(
-        'disabled',
-        false
-      );
+      expect(
+        screen.getByRole('button', { name: 'Save to media' })
+      ).toHaveProperty('disabled', false);
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'Save to media' }));
@@ -412,18 +426,21 @@ describe('MemeGenerator', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Generate meme' }));
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Save to media' })).toHaveProperty(
-        'disabled',
-        false
-      );
+      expect(
+        screen.getByRole('button', { name: 'Save to media' })
+      ).toHaveProperty('disabled', false);
     });
     fireEvent.click(screen.getByRole('button', { name: 'Save to media' }));
 
     await waitFor(() => {
-      expect(screen.getByText('Failed to save meme. Please try again.')).toBeTruthy();
+      expect(
+        screen.getByText('Failed to save meme. Please try again.')
+      ).toBeTruthy();
     });
 
-    expect(screen.getByRole('img', { name: 'Preview of Drake Hotline Bling' })).toBeTruthy();
+    expect(
+      screen.getByRole('img', { name: 'Preview of Drake Hotline Bling' })
+    ).toBeTruthy();
     expect(closeCurrent).not.toHaveBeenCalled();
   });
 
@@ -462,9 +479,9 @@ describe('MemeComposerButton', () => {
       })
     );
 
-    expect(screen.getByRole('button', { name: 'Create meme' }).textContent).toBe(
-      'Meme'
-    );
+    expect(
+      screen.getByRole('button', { name: 'Create meme' }).textContent
+    ).toBe('Meme');
   });
 
   it('is hidden when imgflip is disabled', () => {

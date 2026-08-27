@@ -10,7 +10,9 @@ describe('admin passkey utilities', () => {
     const encoded = bufferToBase64Url(input);
 
     expect(encoded).toBe('AP_-AQ');
-    expect(Array.from(base64UrlToUint8Array(encoded))).toEqual([0, 255, 254, 1]);
+    expect(Array.from(base64UrlToUint8Array(encoded))).toEqual([
+      0, 255, 254, 1,
+    ]);
   });
 
   it.each([

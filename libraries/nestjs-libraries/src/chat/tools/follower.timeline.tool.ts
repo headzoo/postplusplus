@@ -20,23 +20,36 @@ export class FollowerTimelineTool implements AgentToolInterface {
       id: this.name,
       description:
         'Get a bounded page from a follower’s public content timeline, where the selected channel supports it. Supply exactly one follower external id or normalized username.',
-      inputSchema: followerSelectorWithChannelSchema.and(z.object({
-        limit: z.number().int().min(1).max(100).optional().default(20),
-        cursor: z.string().min(1).max(2048).optional(),
-      })),
-      mcp: { annotations: { ...followerToolAnnotations, title: 'Get follower timeline' } },
+      inputSchema: followerSelectorWithChannelSchema.and(
+        z.object({
+          limit: z.number().int().min(1).max(100).optional().default(20),
+          cursor: z.string().min(1).max(2048).optional(),
+        })
+      ),
+      mcp: {
+        annotations: {
+          ...followerToolAnnotations,
+          title: 'Get follower timeline',
+        },
+      },
       outputSchema: z.object({
         output: z.object({
-          items: z.array(z.object({
-            externalId: z.string(),
-            url: z.string().url(),
-            content: z.string(),
-            publishedAt: z.string(),
-            media: z.array(z.object({
+          items: z.array(
+            z.object({
+              externalId: z.string(),
               url: z.string().url(),
-              type: z.enum(['image', 'video']).optional(),
-            })).optional(),
-          })),
+              content: z.string(),
+              publishedAt: z.string(),
+              media: z
+                .array(
+                  z.object({
+                    url: z.string().url(),
+                    type: z.enum(['image', 'video']).optional(),
+                  })
+                )
+                .optional(),
+            })
+          ),
           hasMore: z.boolean(),
           nextCursor: z.string().optional(),
         }),
@@ -64,16 +77,16 @@ export class FollowerTimelineTool implements AgentToolInterface {
                   url,
                   ...(item.media
                     ? {
-                      media: item.media
-                        .map((media) => ({
-                          ...media,
-                          url: safeHttpUrl(media.url),
-                        }))
-                        .filter(
-                          (media): media is typeof media & { url: string } =>
-                            !!media.url
-                        ),
-                    }
+                        media: item.media
+                          .map((media) => ({
+                            ...media,
+                            url: safeHttpUrl(media.url),
+                          }))
+                          .filter(
+                            (media): media is typeof media & { url: string } =>
+                              !!media.url
+                          ),
+                      }
                     : {}),
                 };
               })

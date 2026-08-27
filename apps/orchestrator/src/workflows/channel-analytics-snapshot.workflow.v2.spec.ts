@@ -23,9 +23,16 @@ import { channelAnalyticsSnapshotWorkflowV2 } from './channel-analytics-snapshot
 
 describe('channelAnalyticsSnapshotWorkflowV2', () => {
   const candidate = { id: 'integration', organizationId: 'organization' };
-  const nextCandidate = { id: 'next-integration', organizationId: 'organization' };
+  const nextCandidate = {
+    id: 'next-integration',
+    organizationId: 'organization',
+  };
   const snapshotAt = '2026-08-15T12:00:00.000Z';
-  const batch = { candidates: [candidate, nextCandidate], index: 0, snapshotAt };
+  const batch = {
+    candidates: [candidate, nextCandidate],
+    index: 0,
+    snapshotAt,
+  };
   let signalHandler: (() => void) | undefined;
 
   beforeEach(() => {
@@ -48,7 +55,12 @@ describe('channelAnalyticsSnapshotWorkflowV2', () => {
     await channelAnalyticsSnapshotWorkflowV2({
       after: 'before',
       batch,
-      active: { candidate, snapshotAt, mode: 'post_lifetime', cursor: 'current' },
+      active: {
+        candidate,
+        snapshotAt,
+        mode: 'post_lifetime',
+        cursor: 'current',
+      },
     });
 
     expect(capturePersistPage).toHaveBeenCalledWith({
@@ -96,7 +108,10 @@ describe('channelAnalyticsSnapshotWorkflowV2', () => {
   });
 
   it('starts a bounded batch from a scan result', async () => {
-    listDueCandidates.mockResolvedValue({ asOf: snapshotAt, candidates: [candidate] });
+    listDueCandidates.mockResolvedValue({
+      asOf: snapshotAt,
+      candidates: [candidate],
+    });
 
     await channelAnalyticsSnapshotWorkflowV2({ after: 'before' });
 
@@ -111,7 +126,10 @@ describe('channelAnalyticsSnapshotWorkflowV2', () => {
 
     await channelAnalyticsSnapshotWorkflowV2({ after: 'before' });
 
-    expect(condition).toHaveBeenCalledWith(expect.any(Function), 60 * 60 * 1000);
+    expect(condition).toHaveBeenCalledWith(
+      expect.any(Function),
+      60 * 60 * 1000
+    );
     expect(setHandler).toHaveBeenCalled();
     expect(continueAsNew).toHaveBeenCalledWith({});
   });
@@ -120,7 +138,10 @@ describe('channelAnalyticsSnapshotWorkflowV2', () => {
     capturePersistPage.mockResolvedValue({ mode: 'daily', hasMore: false });
     const finalBatch = { candidates: [candidate], index: 0, snapshotAt };
 
-    await channelAnalyticsSnapshotWorkflowV2({ after: 'before', batch: finalBatch });
+    await channelAnalyticsSnapshotWorkflowV2({
+      after: 'before',
+      batch: finalBatch,
+    });
 
     expect(continueAsNew).toHaveBeenCalledWith({ after: candidate.id });
   });

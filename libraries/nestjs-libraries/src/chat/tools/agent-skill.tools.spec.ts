@@ -6,8 +6,13 @@ jest.mock(
 );
 
 let capturedAgentOptions: {
-  tools: Record<string, { id?: string; mcp?: { annotations?: Record<string, unknown> } }>;
-  instructions: (context: { requestContext: { get: (key: string) => unknown } }) => string;
+  tools: Record<
+    string,
+    { id?: string; mcp?: { annotations?: Record<string, unknown> } }
+  >;
+  instructions: (context: {
+    requestContext: { get: (key: string) => unknown };
+  }) => string;
 };
 
 jest.mock('@mastra/core/agent', () => ({
@@ -155,17 +160,25 @@ describe('agent skill tools', () => {
     it('loads the same skill tool names for the postiz agent and MCP listTools', async () => {
       const contextDocumentService = createContextDocumentService();
       const moduleRef = {
-        get: jest.fn((toolClass: (typeof SKILL_TOOL_CLASSES)[number] | { name?: string }) => {
-          if (SKILL_TOOL_CLASSES.includes(toolClass as (typeof SKILL_TOOL_CLASSES)[number])) {
-            return new (toolClass as (typeof SKILL_TOOL_CLASSES)[number])(
-              contextDocumentService as unknown as ContextDocumentService
-            );
+        get: jest.fn(
+          (
+            toolClass: (typeof SKILL_TOOL_CLASSES)[number] | { name?: string }
+          ) => {
+            if (
+              SKILL_TOOL_CLASSES.includes(
+                toolClass as (typeof SKILL_TOOL_CLASSES)[number]
+              )
+            ) {
+              return new (toolClass as (typeof SKILL_TOOL_CLASSES)[number])(
+                contextDocumentService as unknown as ContextDocumentService
+              );
+            }
+            return {
+              name: 'other-tool',
+              run: async () => ({ id: 'other-tool' }),
+            };
           }
-          return {
-            name: 'other-tool',
-            run: async () => ({ id: 'other-tool' }),
-          };
-        }),
+        ),
       };
       const service = new LoadToolsService(moduleRef as any);
       const agent = await service.agent();

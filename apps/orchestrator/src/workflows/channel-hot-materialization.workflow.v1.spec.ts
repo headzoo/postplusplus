@@ -31,10 +31,15 @@ describe('channelHotMaterializationWorkflowV1', () => {
   it('establishes the sweep hour and completes when no candidates remain', async () => {
     listDueCandidatesV1.mockResolvedValue({ candidates: [], hour });
 
-    await expect(channelHotMaterializationWorkflowV1({})).resolves.toBeUndefined();
+    await expect(
+      channelHotMaterializationWorkflowV1({})
+    ).resolves.toBeUndefined();
 
     expect(resolveSweepHourV1).toHaveBeenCalled();
-    expect(listDueCandidatesV1).toHaveBeenCalledWith({ hour, after: undefined });
+    expect(listDueCandidatesV1).toHaveBeenCalledWith({
+      hour,
+      after: undefined,
+    });
     expect(materializeHotPicksV1).not.toHaveBeenCalled();
     expect(continueAsNew).not.toHaveBeenCalled();
   });

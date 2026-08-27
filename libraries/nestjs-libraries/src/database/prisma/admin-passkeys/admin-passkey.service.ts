@@ -65,7 +65,7 @@ export function hashAdminSessionToken(token: string) {
 
 @Injectable()
 export class AdminPasskeyService {
-  constructor(private _adminPasskeyRepository: AdminPasskeyRepository) { }
+  constructor(private _adminPasskeyRepository: AdminPasskeyRepository) {}
 
   assertOperator(operator?: AdminOperator | null) {
     if (
@@ -120,7 +120,8 @@ export class AdminPasskeyService {
     // Freshness only comes from a short-lived admin step-up session.
     const freshUntil = adminSession
       ? new Date(
-          adminSession.authenticatedAt.getTime() + configuration.freshActionTtlMs
+          adminSession.authenticatedAt.getTime() +
+            configuration.freshActionTtlMs
         )
       : new Date(0);
 
@@ -214,7 +215,8 @@ export class AdminPasskeyService {
 
     const freshUntil = adminSession
       ? new Date(
-          adminSession.authenticatedAt.getTime() + configuration.freshActionTtlMs
+          adminSession.authenticatedAt.getTime() +
+            configuration.freshActionTtlMs
         )
       : new Date(0);
 
@@ -522,7 +524,11 @@ export class AdminPasskeyService {
     return this._adminPasskeyRepository.revokeSessionsForUser(userId);
   }
 
-  private async loadSession(userId: string, token: string | undefined, now: Date) {
+  private async loadSession(
+    userId: string,
+    token: string | undefined,
+    now: Date
+  ) {
     if (!token) {
       return null;
     }
@@ -553,7 +559,9 @@ export class AdminPasskeyService {
     );
   }
 
-  async issueCompanionAdminSessionForUser(userId: string): Promise<AdminVerificationIssue> {
+  async issueCompanionAdminSessionForUser(
+    userId: string
+  ): Promise<AdminVerificationIssue> {
     const configuration = getAdminWebAuthnConfiguration();
     const now = new Date();
     const issued = this.issueSessionToken(now, configuration, 'admin');
@@ -612,6 +620,9 @@ export class AdminPasskeyService {
   }
 
   private assertionRejected() {
-    return new HttpException('Passkey verification could not be completed', 400);
+    return new HttpException(
+      'Passkey verification could not be completed',
+      400
+    );
   }
 }

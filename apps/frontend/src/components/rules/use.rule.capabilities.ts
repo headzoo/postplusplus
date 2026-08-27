@@ -11,7 +11,9 @@ export const useRuleCapabilities = () => {
   const fetch = useFetch();
 
   const load = useCallback(async () => {
-    return (await fetch(CAPABILITIES_KEY)).json() as Promise<PostRuleCapabilitiesResponse>;
+    return (
+      await fetch(CAPABILITIES_KEY)
+    ).json() as Promise<PostRuleCapabilitiesResponse>;
   }, [fetch]);
 
   return useSWR<PostRuleCapabilitiesResponse>(CAPABILITIES_KEY, load, {

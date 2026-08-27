@@ -56,7 +56,7 @@ export class SkoolProvider extends SocialAbstract implements SocialProvider {
     | { type: 'refresh-token' | 'bad-body' | 'retry'; value: string }
     | undefined {
     if (body.includes('must be admin or level')) {
-      return { type: 'bad-body', value: 'You can\'t post to this channel' };
+      return { type: 'bad-body', value: "You can't post to this channel" };
     }
     if (body.includes('cannot post to this label')) {
       return { type: 'bad-body', value: 'Cannot post to this label' };
@@ -131,7 +131,12 @@ export class SkoolProvider extends SocialAbstract implements SocialProvider {
   }
 
   @Tool({ description: 'Groups', dataSchema: [] })
-  async groups(accessToken: string, params: any, id: string, integration: Integration) {
+  async groups(
+    accessToken: string,
+    params: any,
+    id: string,
+    integration: Integration
+  ) {
     try {
       const { client_id, auth_token } = this.getCookies(integration);
       const { groups } = await (
@@ -155,7 +160,12 @@ export class SkoolProvider extends SocialAbstract implements SocialProvider {
   }
 
   @Tool({ description: 'Label', dataSchema: [] })
-  async label(accessToken: string, params: any, id: string, integration: Integration) {
+  async label(
+    accessToken: string,
+    params: any,
+    id: string,
+    integration: Integration
+  ) {
     try {
       const { client_id, auth_token } = this.getCookies(integration);
       const { metadata } = await (
@@ -233,22 +243,26 @@ export class SkoolProvider extends SocialAbstract implements SocialProvider {
       const fileName = item.path.split('/').pop() || 'file';
 
       const createFileResponse = await (
-        await this.fetch('https://api2.skool.com/files', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Cookie: `auth_token=${cookies.auth_token}; client_id=${cookies.client_id}`,
+        await this.fetch(
+          'https://api2.skool.com/files',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Cookie: `auth_token=${cookies.auth_token}; client_id=${cookies.client_id}`,
+            },
+            body: JSON.stringify({
+              file_name: fileName,
+              content_type: contentType,
+              content_length: contentLength,
+              content_disposition: '',
+              ref: '',
+              owner_id: userId,
+              large_thumbnail: false,
+            }),
           },
-          body: JSON.stringify({
-            file_name: fileName,
-            content_type: contentType,
-            content_length: contentLength,
-            content_disposition: '',
-            ref: '',
-            owner_id: userId,
-            large_thumbnail: false,
-          }),
-        }, 'create file record')
+          'create file record'
+        )
       ).json();
 
       const fileResponse = await fetch(item.path, {
@@ -296,11 +310,10 @@ export class SkoolProvider extends SocialAbstract implements SocialProvider {
     const { client_id, auth_token } = this.getCookies(integration);
     const [post] = postDetails;
 
-    const attachments = await this.uploadMediaToSkool(
-      post.media || [],
-      id,
-      { client_id, auth_token }
-    );
+    const attachments = await this.uploadMediaToSkool(post.media || [], id, {
+      client_id,
+      auth_token,
+    });
 
     const { id: postId, name } = await (
       await this.fetch('https://api2.skool.com/posts?follow=true', {
@@ -346,11 +359,10 @@ export class SkoolProvider extends SocialAbstract implements SocialProvider {
     const { client_id, auth_token } = this.getCookies(integration);
     const [post] = postDetails;
 
-    const attachments = await this.uploadMediaToSkool(
-      post.media || [],
-      id,
-      { client_id, auth_token }
-    );
+    const attachments = await this.uploadMediaToSkool(post.media || [], id, {
+      client_id,
+      auth_token,
+    });
 
     const { id: postIdFinal, name } = await (
       await this.fetch('https://api2.skool.com/posts?follow=true', {

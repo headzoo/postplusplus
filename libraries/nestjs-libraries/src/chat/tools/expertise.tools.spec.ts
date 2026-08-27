@@ -70,7 +70,11 @@ describe('expertise agent tools', () => {
         })
       );
       expect(result.output[0]).not.toHaveProperty('content');
-      expect(listExpertise().map((entry) => entry.slug).sort()).toEqual(
+      expect(
+        listExpertise()
+          .map((entry) => entry.slug)
+          .sort()
+      ).toEqual(
         result.output.map((entry: { slug: string }) => entry.slug).sort()
       );
     });
@@ -83,10 +87,7 @@ describe('expertise agent tools', () => {
       const slug = 'reciprocal-mutual-deepening';
       const metadata = listExpertise().find((entry) => entry.slug === slug)!;
 
-      const result = await createReadTool().execute!(
-        { slug },
-        createContext()
-      );
+      const result = await createReadTool().execute!({ slug }, createContext());
 
       expect(result.output).toEqual({
         ...metadata,

@@ -4,7 +4,10 @@ import { FC, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
-import { CloseIconSmall, NotificationIcon } from '@gitroom/frontend/components/ui/icons';
+import {
+  CloseIconSmall,
+  NotificationIcon,
+} from '@gitroom/frontend/components/ui/icons';
 import { useDismissedAlerts } from '@gitroom/frontend/components/layout/use.dismissed.alerts';
 
 export const FOLLOWER_TRIAGE_TIP_SLUGS = [
@@ -24,7 +27,12 @@ export type FollowerTriageTipSlug = (typeof FOLLOWER_TRIAGE_TIP_SLUGS)[number];
 
 const FOLLOWER_TRIAGE_TIP_COPY: Record<
   FollowerTriageTipSlug,
-  { titleKey: string; defaultTitle: string; bodyKey: string; defaultBody: string }
+  {
+    titleKey: string;
+    defaultTitle: string;
+    bodyKey: string;
+    defaultBody: string;
+  }
 > = {
   all: {
     titleKey: 'followers_triage_tip_all_title',
@@ -107,10 +115,7 @@ export const resolveFollowerTriageTipSlug = (
   if (slug === 'engaged') {
     return 'hot';
   }
-  if (
-    slug &&
-    (FOLLOWER_TRIAGE_TIP_SLUGS as readonly string[]).includes(slug)
-  ) {
+  if (slug && (FOLLOWER_TRIAGE_TIP_SLUGS as readonly string[]).includes(slug)) {
     return slug as FollowerTriageTipSlug;
   }
   return 'all';

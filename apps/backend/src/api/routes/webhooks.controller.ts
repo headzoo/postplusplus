@@ -18,9 +18,14 @@ import { hostnameFromUrl } from '@gitroom/nestjs-libraries/database/prisma/logs/
 import { WebhookHttpLogSource } from '@prisma/client';
 import { CheckPolicies } from '@gitroom/backend/services/auth/permissions/permissions.ability';
 import {
-  OnlyURL, UpdateDto, WebhooksDto
+  OnlyURL,
+  UpdateDto,
+  WebhooksDto,
 } from '@gitroom/nestjs-libraries/dtos/webhooks/webhooks.dto';
-import { AuthorizationActions, Sections } from '@gitroom/backend/services/auth/permissions/permission.exception.class';
+import {
+  AuthorizationActions,
+  Sections,
+} from '@gitroom/backend/services/auth/permissions/permission.exception.class';
 
 @ApiTags('Webhooks')
 @Controller('/webhooks')

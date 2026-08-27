@@ -1,6 +1,9 @@
 'use client';
 
-import { useCalendar, ListStateFilter } from '@gitroom/frontend/components/launches/calendar.context';
+import {
+  useCalendar,
+  ListStateFilter,
+} from '@gitroom/frontend/components/launches/calendar.context';
 import clsx from 'clsx';
 import dayjs from 'dayjs';
 import { FormEvent, useCallback } from 'react';
@@ -435,7 +438,8 @@ export const Filters = () => {
               </div>
               <div className="min-w-[120px] mobile:min-w-0 flex-1 text-center bg-newBgColorInner h-full flex items-center justify-center px-[8px]">
                 <div className="py-[3px] px-[9px] rounded-[5px] transition-all text-[14px] truncate">
-                  {t('page', 'Page')} {calendar.listPage + 1} {t('of', 'of')} {Math.max(1, calendar.listTotalPages)}
+                  {t('page', 'Page')} {calendar.listPage + 1} {t('of', 'of')}{' '}
+                  {Math.max(1, calendar.listTotalPages)}
                 </div>
               </div>
               <div
@@ -475,7 +479,7 @@ export const Filters = () => {
                   className={clsx(
                     'pt-[6px] pb-[5px] cursor-pointer min-w-[80px] mobile:min-w-0 px-[12px] mobile:px-[8px] text-center rounded-[6px]',
                     calendar.listState === option.value &&
-                    'text-textItemFocused bg-boxFocused'
+                      'text-textItemFocused bg-boxFocused'
                   )}
                 >
                   {option.label}
@@ -531,7 +535,8 @@ export const Filters = () => {
           <div
             className={clsx(
               'pt-[6px] pb-[5px] cursor-pointer w-[74px] text-center rounded-[6px]',
-              calendar.display === 'week' && 'text-textItemFocused bg-boxFocused'
+              calendar.display === 'week' &&
+                'text-textItemFocused bg-boxFocused'
             )}
             onClick={setWeek}
           >
@@ -540,7 +545,8 @@ export const Filters = () => {
           <div
             className={clsx(
               'pt-[6px] pb-[5px] cursor-pointer w-[74px] text-center rounded-[6px]',
-              calendar.display === 'month' && 'text-textItemFocused bg-boxFocused'
+              calendar.display === 'month' &&
+                'text-textItemFocused bg-boxFocused'
             )}
             onClick={setMonth}
           >

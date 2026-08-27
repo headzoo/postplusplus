@@ -238,8 +238,8 @@ export const MediaBox: FC<{
       type == 'image'
         ? 'image/*'
         : type == 'video'
-          ? 'video/mp4'
-          : 'image/*,video/mp4',
+        ? 'video/mp4'
+        : 'image/*,video/mp4',
     onUploadSuccess: async (arr) => {
       await mutate();
       if (standalone) {
@@ -452,21 +452,24 @@ export const MediaBox: FC<{
         ) : (
           <PlusIcon size={14} />
         )}
-        <div className={loading ? 'invisible' : undefined}>{t('upload', 'Upload')}</div>
+        <div className={loading ? 'invisible' : undefined}>
+          {t('upload', 'Upload')}
+        </div>
       </button>
     );
   }, [t, loading]);
 
   return (
-    <DropFiles disabled={loading} className="flex flex-col flex-1" onDrop={dragAndDrop}>
+    <DropFiles
+      disabled={loading}
+      className="flex flex-col flex-1"
+      onDrop={dragAndDrop}
+    >
       <div className="flex flex-col flex-1">
         <div
           className={clsx(
             'flex items-center gap-[12px] mb-4',
-            !isLoading &&
-            !data?.results?.length &&
-            !debouncedSearch &&
-            'hidden'
+            !isLoading && !data?.results?.length && !debouncedSearch && 'hidden'
           )}
         >
           <input
@@ -478,11 +481,7 @@ export const MediaBox: FC<{
           />
           {btn}
           {showAiButton && (
-            <AiImage
-              value=""
-              onChange={onAiImageGenerated}
-              variant="action"
-            />
+            <AiImage value="" onChange={onAiImageGenerated} variant="action" />
           )}
           <div className="flex-1">
             <input
@@ -520,16 +519,16 @@ export const MediaBox: FC<{
           className={clsx(
             'flex-1 relative',
             !isLoading &&
-            !data?.results?.length &&
-            'bg-newTextColor/[0.02] rounded-[12px]'
+              !data?.results?.length &&
+              'bg-newTextColor/[0.02] rounded-[12px]'
           )}
         >
           <CustomScrollArea
             className={clsx(
               'absolute -left-[3px] -top-[3px] withp3 h-full',
               !isLoading &&
-              !data?.results?.length &&
-              'flex justify-center items-center gap-[20px] flex-col'
+                !data?.results?.length &&
+                'flex justify-center items-center gap-[20px] flex-col'
             )}
             contentClassName="pe-[16px]"
           >
@@ -538,14 +537,11 @@ export const MediaBox: FC<{
                 <NoMediaIcon />
                 <div className="text-[20px] font-[600]">
                   {debouncedSearch
-                    ? t(
-                      'no_media_match_search',
-                      'No media matches your search'
-                    )
+                    ? t('no_media_match_search', 'No media matches your search')
                     : t(
-                      'you_dont_have_any_media_yet',
-                      "You don't have any media yet"
-                    )}
+                        'you_dont_have_any_media_yet',
+                        "You don't have any media yet"
+                      )}
                 </div>
                 <div className="whitespace-pre-line text-newTextColor/[0.6] text-center">
                   {t(
@@ -709,7 +705,7 @@ export const MediaBox: FC<{
             </button>
             {!isLoading && !!data?.results?.length && (
               <button
-                onClick={standalone ? () => { } : addMedia}
+                onClick={standalone ? () => {} : addMedia}
                 disabled={selected.length === 0}
                 className="cursor-pointer text-white disabled:opacity-80 disabled:cursor-not-allowed h-[52px] px-[20px] items-center justify-center bg-[#eb3825] flex rounded-[10px]"
               >
@@ -790,15 +786,15 @@ export const MultiMediaComponent: FC<{
     async (
       m:
         | {
-          path: string;
-          id: string;
-          alt?: string;
-        }
+            path: string;
+            id: string;
+            alt?: string;
+          }
         | {
-          path: string;
-          id: string;
-          alt?: string;
-        }[]
+            path: string;
+            id: string;
+            alt?: string;
+          }[]
     ) => {
       const mediaArray = Array.isArray(m) ? m : [m];
       const enriched = await enrichMediaWithAlt(mediaArray);
@@ -867,7 +863,10 @@ export const MultiMediaComponent: FC<{
               handle=".dragging"
             >
               {currentMedia.map((media, index) => (
-                <div key={media.id} className="cursor-pointer rounded-[5px] w-[40px] h-[40px] border-2 border-tableBorder relative flex transition-all">
+                <div
+                  key={media.id}
+                  className="cursor-pointer rounded-[5px] w-[40px] h-[40px] border-2 border-tableBorder relative flex transition-all"
+                >
                   <DragHandleIcon className="z-[20] dragging absolute pe-[1px] pb-[3px] -start-[4px] -top-[4px] cursor-move" />
 
                   <div className="w-full h-full relative group">

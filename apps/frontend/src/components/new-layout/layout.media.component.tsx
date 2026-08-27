@@ -58,30 +58,30 @@ export const MediaLayoutComponent = () => {
       const set: any = !sets.length
         ? undefined
         : await new Promise((resolve) => {
-          modal.openModal({
-            title: t('select_set', 'Select a Set'),
-            closeOnClickOutside: true,
-            closeOnEscape: true,
-            withCloseButton: false,
-            onClose: () => resolve('exit'),
-            classNames: {
-              modal: 'text-textColor',
-            },
-            children: (
-              <SetSelectionModal
-                sets={sets}
-                onSelect={(selectedSet) => {
-                  resolve(selectedSet);
-                  modal.closeAll();
-                }}
-                onContinueWithoutSet={() => {
-                  resolve(undefined);
-                  modal.closeAll();
-                }}
-              />
-            ),
+            modal.openModal({
+              title: t('select_set', 'Select a Set'),
+              closeOnClickOutside: true,
+              closeOnEscape: true,
+              withCloseButton: false,
+              onClose: () => resolve('exit'),
+              classNames: {
+                modal: 'text-textColor',
+              },
+              children: (
+                <SetSelectionModal
+                  sets={sets}
+                  onSelect={(selectedSet) => {
+                    resolve(selectedSet);
+                    modal.closeAll();
+                  }}
+                  onContinueWithoutSet={() => {
+                    resolve(undefined);
+                    modal.closeAll();
+                  }}
+                />
+              ),
+            });
           });
-        });
 
       if (set === 'exit') return;
 
@@ -119,8 +119,8 @@ export const MediaLayoutComponent = () => {
   return (
     <div className="bg-newBgColorInner p-[20px] flex flex-1 flex-col gap-[15px] transition-all">
       <MediaBox
-        setMedia={() => { }}
-        closeModal={() => { }}
+        setMedia={() => {}}
+        closeModal={() => {}}
         standalone={true}
         onCreatePost={integrations.length > 0 ? createPostFromMedia : undefined}
       />

@@ -40,7 +40,7 @@ export class AdminController {
     private _cultivateMaterializationScheduleService: CultivateMaterializationScheduleService,
     private _adminScheduleWorkflowService: AdminScheduleWorkflowService,
     private _adminScheduleLogService: AdminScheduleLogService
-  ) { }
+  ) {}
 
   private assertSuperAdmin(user: User) {
     if (!user?.isSuperAdmin) {

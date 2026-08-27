@@ -36,7 +36,7 @@ export class PipelineService {
     private _pipelineRepository: PipelineRepository,
     private _pipelineManager: PipelineManager,
     private _autopostService: AutopostService
-  ) { }
+  ) {}
 
   async getPipelines(orgId: string) {
     const pipelines = await this._pipelineRepository.getPipelines(orgId);
@@ -45,11 +45,11 @@ export class PipelineService {
       const queueCount = pipeline._count.queueItems;
       const enqueueSlots = pipeline.active
         ? getUpcomingPipelineSlots(
-          pipeline.scheduleSlots,
-          pipeline.timezone,
-          now,
-          queueCount + 1
-        )
+            pipeline.scheduleSlots,
+            pipeline.timezone,
+            now,
+            queueCount + 1
+          )
         : [];
       return {
         id: pipeline.id,
@@ -88,9 +88,8 @@ export class PipelineService {
     const startTime = start.toDate();
     const endTime = end.toDate();
     const now = new Date();
-    const pipelines = await this._pipelineRepository.getActivePipelinesForCalendar(
-      orgId
-    );
+    const pipelines =
+      await this._pipelineRepository.getActivePipelinesForCalendar(orgId);
 
     const projected = pipelines.flatMap((pipeline) => {
       const slots = getUpcomingPipelineSlots(
@@ -134,17 +133,17 @@ export class PipelineService {
             tags: (post.tags || []).map((tag: any) => ({ tag: tag.tag })),
             integration: post.integration
               ? {
-                id: post.integration.id,
-                providerIdentifier: post.integration.providerIdentifier,
-                name: post.integration.name,
-                picture: post.integration.picture,
-                customer: post.integration.customer
-                  ? {
-                    id: post.integration.customer.id,
-                    name: post.integration.customer.name,
-                  }
-                  : undefined,
-              }
+                  id: post.integration.id,
+                  providerIdentifier: post.integration.providerIdentifier,
+                  name: post.integration.name,
+                  picture: post.integration.picture,
+                  customer: post.integration.customer
+                    ? {
+                        id: post.integration.customer.id,
+                        name: post.integration.customer.name,
+                      }
+                    : undefined,
+                }
               : post.integration,
           }));
       });
@@ -153,24 +152,27 @@ export class PipelineService {
     return projected;
   }
 
-  async getPipelineSchedule(
-    orgId: string,
-    query: GetPipelineScheduleDto
-  ) {
+  async getPipelineSchedule(orgId: string, query: GetPipelineScheduleDto) {
     const startDate = dayjs.utc(query.startDate);
     const endDate = dayjs.utc(query.endDate);
     if (!startDate.isValid() || !endDate.isValid()) {
-      throw new BadRequestException('Pipeline schedule range must use valid ISO dates');
+      throw new BadRequestException(
+        'Pipeline schedule range must use valid ISO dates'
+      );
     }
 
     const start = startDate.toDate();
     const end = endDate.toDate();
     const duration = end.getTime() - start.getTime();
     if (duration <= 0) {
-      throw new BadRequestException('Pipeline schedule endDate must be after startDate');
+      throw new BadRequestException(
+        'Pipeline schedule endDate must be after startDate'
+      );
     }
     if (duration > 8 * 24 * 60 * 60 * 1000) {
-      throw new BadRequestException('Pipeline schedule range cannot exceed eight days');
+      throw new BadRequestException(
+        'Pipeline schedule range cannot exceed eight days'
+      );
     }
 
     const pipelines = await this._pipelineRepository.getPipelinesForSchedule(
@@ -215,7 +217,12 @@ export class PipelineService {
       throw new NotFoundException('Pipeline not found');
     }
     const slots = pipeline.active
-      ? getUpcomingPipelineSlots(pipeline.scheduleSlots, pipeline.timezone, new Date(), pipeline.queueItems.length)
+      ? getUpcomingPipelineSlots(
+          pipeline.scheduleSlots,
+          pipeline.timezone,
+          new Date(),
+          pipeline.queueItems.length
+        )
       : [];
     let slotIndex = 0;
     return {
@@ -229,7 +236,9 @@ export class PipelineService {
       channels: pipeline.integrations.map(({ integration }) =>
         this.toComposerIntegration(integration)
       ),
-      contextDocuments: this.toContextDocuments(pipeline.contextDocuments || []),
+      contextDocuments: this.toContextDocuments(
+        pipeline.contextDocuments || []
+      ),
       blockedContextDocuments: this.toBlockedContextDocuments(
         pipeline.contextDocuments || []
       ),
@@ -244,15 +253,17 @@ export class PipelineService {
       nextSlot: slots[0],
       projections: pipeline.queueItems.map((item) => ({
         itemId: item.id,
-        projectedFor:
-          item.status === 'QUEUED' ? slots[slotIndex++] : undefined,
+        projectedFor: item.status === 'QUEUED' ? slots[slotIndex++] : undefined,
       })),
     };
   }
 
   async createPipeline(orgId: string, body: CreatePipelineDto) {
     this.validateMetadata(body);
-    await this.validateIntegrations(orgId, body.integrations.map((entry) => entry.id));
+    await this.validateIntegrations(
+      orgId,
+      body.integrations.map((entry) => entry.id)
+    );
     if (body.contextDocumentIds !== undefined) {
       this.validateContextDocumentIds(body.contextDocumentIds);
       await this.validateContextDocuments(orgId, body.contextDocumentIds);
@@ -262,12 +273,19 @@ export class PipelineService {
 
   async updatePipeline(orgId: string, id: string, body: UpdatePipelineDto) {
     this.validateMetadata(body);
-    await this.validateIntegrations(orgId, body.integrations.map((entry) => entry.id));
+    await this.validateIntegrations(
+      orgId,
+      body.integrations.map((entry) => entry.id)
+    );
     if (body.contextDocumentIds !== undefined) {
       this.validateContextDocumentIds(body.contextDocumentIds);
       await this.validateContextDocuments(orgId, body.contextDocumentIds);
     }
-    const pipeline = await this._pipelineRepository.updatePipeline(orgId, id, body);
+    const pipeline = await this._pipelineRepository.updatePipeline(
+      orgId,
+      id,
+      body
+    );
     if (pipeline === 'invalid-context-documents') {
       throw new BadRequestException(
         'Pipeline context documents must belong to the organization'
@@ -343,10 +361,14 @@ export class PipelineService {
       throw new NotFoundException('Pipeline not found');
     }
     if (result === 'occupied') {
-      throw new ConflictException('Pipeline schedule target is already occupied');
+      throw new ConflictException(
+        'Pipeline schedule target is already occupied'
+      );
     }
     if (result === 'stale-revision') {
-      throw new ConflictException('Pipeline schedule changed; refresh and try again');
+      throw new ConflictException(
+        'Pipeline schedule changed; refresh and try again'
+      );
     }
     if (result === 'missing-source') {
       throw new ConflictException(
@@ -384,7 +406,9 @@ export class PipelineService {
       throw new NotFoundException('Pipeline not found');
     }
     if (result === false) {
-      throw new ConflictException('Pipeline queue changed; refresh and try again');
+      throw new ConflictException(
+        'Pipeline queue changed; refresh and try again'
+      );
     }
     return result;
   }
@@ -396,7 +420,10 @@ export class PipelineService {
   }
 
   async deletePipeline(orgId: string, id: string) {
-    const existingPipeline = await this._pipelineRepository.getPipeline(orgId, id);
+    const existingPipeline = await this._pipelineRepository.getPipeline(
+      orgId,
+      id
+    );
     if (!existingPipeline) throw new NotFoundException('Pipeline not found');
     await this._autopostService.disablePipelineAutoposts(orgId, id);
     const pipeline = await this._pipelineRepository.deletePipeline(orgId, id);
@@ -410,7 +437,12 @@ export class PipelineService {
     createdBy: Parameters<PipelineManager['enqueue']>[2] = 'API',
     idempotencyKey?: string
   ) {
-    return this._pipelineManager.enqueue(orgId, body, createdBy, idempotencyKey);
+    return this._pipelineManager.enqueue(
+      orgId,
+      body,
+      createdBy,
+      idempotencyKey
+    );
   }
 
   async reorderItem(
@@ -431,7 +463,11 @@ export class PipelineService {
     return item;
   }
 
-  async moveItem(orgId: string, itemId: string, body: MovePipelineQueueItemDto) {
+  async moveItem(
+    orgId: string,
+    itemId: string,
+    body: MovePipelineQueueItemDto
+  ) {
     this.validatePlacement(body);
     const item = await this._pipelineRepository.moveItem(
       orgId,
@@ -445,7 +481,10 @@ export class PipelineService {
         'The destination Pipeline must have exactly the same integrations'
       );
     }
-    if (!item) throw new NotFoundException('Queued Pipeline item or destination not found');
+    if (!item)
+      throw new NotFoundException(
+        'Queued Pipeline item or destination not found'
+      );
     return item;
   }
 
@@ -484,9 +523,13 @@ export class PipelineService {
     try {
       Intl.DateTimeFormat(undefined, { timeZone: body.timezone });
     } catch {
-      throw new BadRequestException('Pipeline timezone must be a valid IANA timezone');
+      throw new BadRequestException(
+        'Pipeline timezone must be a valid IANA timezone'
+      );
     }
-    const integrationIds = body.integrations.map((integration) => integration.id);
+    const integrationIds = body.integrations.map(
+      (integration) => integration.id
+    );
     if (new Set(integrationIds).size !== integrationIds.length) {
       throw new BadRequestException('Pipeline integrations must be unique');
     }
@@ -494,7 +537,9 @@ export class PipelineService {
 
   private validateContextDocumentIds(documentIds: string[]) {
     if (new Set(documentIds).size !== documentIds.length) {
-      throw new BadRequestException('Pipeline context document IDs must be unique');
+      throw new BadRequestException(
+        'Pipeline context document IDs must be unique'
+      );
     }
   }
 
@@ -530,7 +575,9 @@ export class PipelineService {
     }>
   ) {
     return [...assignments]
-      .filter(({ contextDocument }) => !parseSkillFilename(contextDocument.name))
+      .filter(
+        ({ contextDocument }) => !parseSkillFilename(contextDocument.name)
+      )
       .map(({ contextDocument }) => ({
         id: contextDocument.id,
         name: contextDocument.name,
@@ -540,7 +587,8 @@ export class PipelineService {
       }))
       .sort(
         (first, second) =>
-          first.name.localeCompare(second.name) || first.id.localeCompare(second.id)
+          first.name.localeCompare(second.name) ||
+          first.id.localeCompare(second.id)
       );
   }
 
@@ -564,7 +612,8 @@ export class PipelineService {
       }))
       .sort(
         (first, second) =>
-          first.name.localeCompare(second.name) || first.id.localeCompare(second.id)
+          first.name.localeCompare(second.name) ||
+          first.id.localeCompare(second.id)
       );
   }
 
@@ -602,7 +651,9 @@ export class PipelineService {
 
   private validatePlacement(body: ReorderPipelineQueueItemDto) {
     if (body.beforeItemId && body.afterItemId) {
-      throw new BadRequestException('Specify either beforeItemId or afterItemId');
+      throw new BadRequestException(
+        'Specify either beforeItemId or afterItemId'
+      );
     }
   }
 

@@ -222,7 +222,10 @@ export const AiVideo: FC<{
           </div>
         )}
         <div
-          className={clsx('flex gap-[5px] items-center', loading && 'invisible')}
+          className={clsx(
+            'flex gap-[5px] items-center',
+            loading && 'invisible'
+          )}
         >
           <div>
             <svg

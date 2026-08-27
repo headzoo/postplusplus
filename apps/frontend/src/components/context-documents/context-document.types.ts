@@ -50,7 +50,11 @@ export type AgentSkillMetadata = {
 export const normalizeContextDocumentName = (
   originalName: string
 ): string | null => {
-  const basename = (originalName || '').replace(/\\/g, '/').split('/').pop()?.trim();
+  const basename = (originalName || '')
+    .replace(/\\/g, '/')
+    .split('/')
+    .pop()
+    ?.trim();
 
   if (!basename) {
     return null;
@@ -106,5 +110,6 @@ export const getContextDocumentSkillSlug = (
   return SKILL_SLUG_PATTERN.test(slug) ? slug : undefined;
 };
 
-export const isAttemptedContextDocumentSkillFilename = (name: string): boolean =>
-  name.endsWith(SKILL_FILENAME_SUFFIX);
+export const isAttemptedContextDocumentSkillFilename = (
+  name: string
+): boolean => name.endsWith(SKILL_FILENAME_SUFFIX);

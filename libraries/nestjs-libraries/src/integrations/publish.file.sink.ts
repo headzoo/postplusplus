@@ -47,16 +47,13 @@ export async function sinkOutboundPublish(payload: PublishFileSinkPayload) {
     2
   );
 
-  return writeExclusive(
-    directory,
-    payload.provider,
-    payload.action,
-    body
-  );
+  return writeExclusive(directory, payload.provider, payload.action, body);
 }
 
 function sanitizeSegment(value: string) {
-  const sanitized = value.replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
+  const sanitized = value
+    .replace(/[^a-zA-Z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
   return sanitized || 'unknown';
 }
 

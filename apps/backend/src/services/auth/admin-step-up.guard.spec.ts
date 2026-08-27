@@ -100,7 +100,9 @@ describe('AdminStepUpGuard', () => {
 
   it('allows a verified operator through the class-level general policy', async () => {
     await expect(
-      guard.canActivate(buildContext(GuardedController, 'read', verifiedRequest()))
+      guard.canActivate(
+        buildContext(GuardedController, 'read', verifiedRequest())
+      )
     ).resolves.toBe(true);
     expect(repository.findActiveSession).toHaveBeenCalledWith(
       createHash('sha256').update('raw-token').digest('hex'),
@@ -114,7 +116,9 @@ describe('AdminStepUpGuard', () => {
     );
 
     await expect(
-      guard.canActivate(buildContext(GuardedController, 'read', verifiedRequest()))
+      guard.canActivate(
+        buildContext(GuardedController, 'read', verifiedRequest())
+      )
     ).resolves.toBe(true);
   });
 
@@ -150,27 +154,42 @@ describe('AdminStepUpGuard', () => {
   });
 
   it.each([
-    ['a missing or expired session', () => repository.findActiveSession.mockResolvedValue(null), 'session'],
-    ['a revoked session', () => repository.findActiveSession.mockResolvedValue(null), 'session'],
-    ['no enrolled credential', () => repository.countCredentials.mockResolvedValue(0), 'enrollment'],
-  ])('returns a machine-readable 428 for %s', async (_label, arrange, reason) => {
-    arrange();
+    [
+      'a missing or expired session',
+      () => repository.findActiveSession.mockResolvedValue(null),
+      'session',
+    ],
+    [
+      'a revoked session',
+      () => repository.findActiveSession.mockResolvedValue(null),
+      'session',
+    ],
+    [
+      'no enrolled credential',
+      () => repository.countCredentials.mockResolvedValue(0),
+      'enrollment',
+    ],
+  ])(
+    'returns a machine-readable 428 for %s',
+    async (_label, arrange, reason) => {
+      arrange();
 
-    const error = await guard
-      .canActivate(buildContext(GuardedController, 'read', verifiedRequest()))
-      .catch((thrown) => thrown);
+      const error = await guard
+        .canActivate(buildContext(GuardedController, 'read', verifiedRequest()))
+        .catch((thrown) => thrown);
 
-    expect(error).toBeInstanceOf(HttpException);
-    expect(error).not.toBeInstanceOf(HttpForbiddenException);
-    expect(error.getStatus()).toBe(428);
-    expect(error.getResponse()).toEqual(
-      expect.objectContaining({
-        code: ADMIN_STEP_UP_REQUIRED,
-        policy: 'general',
-        reason,
-      })
-    );
-  });
+      expect(error).toBeInstanceOf(HttpException);
+      expect(error).not.toBeInstanceOf(HttpForbiddenException);
+      expect(error.getStatus()).toBe(428);
+      expect(error.getResponse()).toEqual(
+        expect.objectContaining({
+          code: ADMIN_STEP_UP_REQUIRED,
+          policy: 'general',
+          reason,
+        })
+      );
+    }
+  );
 
   it('rejects a session that belongs to a different operator', async () => {
     repository.findActiveSession.mockResolvedValue({
@@ -192,21 +211,24 @@ describe('AdminStepUpGuard', () => {
       'a deactivated super-admin',
       { id: 'user-1', isSuperAdmin: true, activated: false },
     ],
-  ])('returns 403 without clearing normal auth for %s', async (_label, principal) => {
-    const error = await guard
-      .canActivate(
-        buildContext(GuardedController, 'read', {
-          cookies: { [ADMIN_AUTH_COOKIE]: 'raw-token' },
-          headers: {},
-          [ORIGINAL_OPERATOR_REQUEST_KEY]: principal,
-        })
-      )
-      .catch((thrown) => thrown);
+  ])(
+    'returns 403 without clearing normal auth for %s',
+    async (_label, principal) => {
+      const error = await guard
+        .canActivate(
+          buildContext(GuardedController, 'read', {
+            cookies: { [ADMIN_AUTH_COOKIE]: 'raw-token' },
+            headers: {},
+            [ORIGINAL_OPERATOR_REQUEST_KEY]: principal,
+          })
+        )
+        .catch((thrown) => thrown);
 
-    expect(error).toBeInstanceOf(HttpException);
-    expect(error).not.toBeInstanceOf(HttpForbiddenException);
-    expect(error.getStatus()).toBe(403);
-  });
+      expect(error).toBeInstanceOf(HttpException);
+      expect(error).not.toBeInstanceOf(HttpForbiddenException);
+      expect(error.getStatus()).toBe(403);
+    }
+  );
 
   it('uses the original operator while the request user is an impersonated non-admin', async () => {
     await expect(

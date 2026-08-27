@@ -11,7 +11,9 @@ export const useRulesList = () => {
   const fetch = useFetch();
 
   const load = useCallback(async () => {
-    return (await fetch(RULES_KEY)).json() as Promise<PostRuleListItemResponse[]>;
+    return (await fetch(RULES_KEY)).json() as Promise<
+      PostRuleListItemResponse[]
+    >;
   }, [fetch]);
 
   return useSWR<PostRuleListItemResponse[]>(RULES_KEY, load, {

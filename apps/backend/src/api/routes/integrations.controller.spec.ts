@@ -1,9 +1,12 @@
 jest.mock('@gitroom/nestjs-libraries/integrations/integration.manager', () => ({
   IntegrationManager: class IntegrationManager {},
 }));
-jest.mock('@gitroom/nestjs-libraries/database/prisma/posts/posts.service', () => ({
-  PostsService: class PostsService {},
-}));
+jest.mock(
+  '@gitroom/nestjs-libraries/database/prisma/posts/posts.service',
+  () => ({
+    PostsService: class PostsService {},
+  })
+);
 
 import {
   IntegrationsController,
@@ -35,9 +38,15 @@ describe('publicProfileUrl', () => {
   });
 
   it('rejects credential-bearing URLs', () => {
-    expect(publicProfileUrl('https://user:pass@example.com/profile')).toBeUndefined();
-    expect(publicProfileUrl('https://user@example.com/profile')).toBeUndefined();
-    expect(publicProfileUrl('https://:pass@example.com/profile')).toBeUndefined();
+    expect(
+      publicProfileUrl('https://user:pass@example.com/profile')
+    ).toBeUndefined();
+    expect(
+      publicProfileUrl('https://user@example.com/profile')
+    ).toBeUndefined();
+    expect(
+      publicProfileUrl('https://:pass@example.com/profile')
+    ).toBeUndefined();
   });
 });
 
@@ -56,11 +65,9 @@ describe('IntegrationsController strategy settings', () => {
     );
 
     await expect(
-      controller.updateChannelStrategy(
-        { id: 'org-a' } as any,
-        'channel-a',
-        { strategyId: 'lead_capture' }
-      )
+      controller.updateChannelStrategy({ id: 'org-a' } as any, 'channel-a', {
+        strategyId: 'lead_capture',
+      })
     ).resolves.toEqual({
       strategy: { id: 'lead_capture', version: 1 },
       recomputeRequested: true,
@@ -85,11 +92,9 @@ describe('IntegrationsController utm params settings', () => {
     );
 
     await expect(
-      controller.updateChannelUtmParams(
-        { id: 'org-a' } as any,
-        'channel-a',
-        { utmParams: 'utm_campaign=spring' }
-      )
+      controller.updateChannelUtmParams({ id: 'org-a' } as any, 'channel-a', {
+        utmParams: 'utm_campaign=spring',
+      })
     ).resolves.toEqual({ utmParams: 'utm_campaign=spring' });
     expect(updateChannelUtmParams).toHaveBeenCalledWith('org-a', 'channel-a', {
       utmParams: 'utm_campaign=spring',
@@ -141,8 +146,8 @@ describe('IntegrationsController conversion webhook credentials', () => {
       createdAt: '2026-08-27T00:00:00.000Z',
       rotatedAt: '2026-08-27T00:00:00.000Z',
     });
-    expect(getConversionWebhookCredentialStatus.mock.results[0].value).not.toHaveProperty(
-      'token'
-    );
+    expect(
+      getConversionWebhookCredentialStatus.mock.results[0].value
+    ).not.toHaveProperty('token');
   });
 });

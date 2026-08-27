@@ -1,17 +1,17 @@
 jest.mock('@gitroom/nestjs-libraries/integrations/integration.manager', () => ({
-  IntegrationManager: class IntegrationManager { },
+  IntegrationManager: class IntegrationManager {},
 }));
 jest.mock(
   '@gitroom/nestjs-libraries/integrations/refresh.integration.service',
-  () => ({ RefreshIntegrationService: class RefreshIntegrationService { } })
+  () => ({ RefreshIntegrationService: class RefreshIntegrationService {} })
 );
 jest.mock(
   '@gitroom/nestjs-libraries/database/prisma/posts/posts.service',
-  () => ({ PostsService: class PostsService { } })
+  () => ({ PostsService: class PostsService {} })
 );
 jest.mock(
   '@gitroom/nestjs-libraries/database/prisma/pipelines/pipeline.service',
-  () => ({ PipelineService: class PipelineService { } })
+  () => ({ PipelineService: class PipelineService {} })
 );
 
 import { PostRulesExecutionService } from './post-rules.execution.service';
@@ -52,9 +52,16 @@ const createService = () => {
     finalizeEvaluation: jest.fn().mockResolvedValue({ finalized: true }),
     findSuccessorRun: jest.fn().mockResolvedValue(null),
     createSuccessorRun: jest.fn().mockResolvedValue({ id: 'run-2' }),
-    getRemovableGroupMembers: jest.fn().mockResolvedValue([
-      { id: 'post-1', parentPostId: null, releaseId: 'tweet-1', platformDeletedAt: null },
-    ]),
+    getRemovableGroupMembers: jest
+      .fn()
+      .mockResolvedValue([
+        {
+          id: 'post-1',
+          parentPostId: null,
+          releaseId: 'tweet-1',
+          platformDeletedAt: null,
+        },
+      ]),
     markPostsPlatformDeleted: jest.fn().mockResolvedValue({ updated: 1 }),
     getRootPostByGroup: jest.fn().mockResolvedValue({ id: 'post-2' }),
     getReschedulePipeline: jest.fn().mockResolvedValue({
@@ -105,7 +112,9 @@ const createService = () => {
     validatePosts: jest.fn(),
   };
   const pipelineService = {
-    enqueue: jest.fn().mockResolvedValue({ id: 'item-1', group: 'queue-group-1' }),
+    enqueue: jest
+      .fn()
+      .mockResolvedValue({ id: 'item-1', group: 'queue-group-1' }),
   };
 
   const service = Object.create(
@@ -239,7 +248,9 @@ describe('Pipeline reschedule through the Pipeline boundary', () => {
   it('surfaces a Pipeline validation rejection instead of removing the original', async () => {
     const { service, pipelineService, capability } = createService();
     pipelineService.enqueue.mockRejectedValue(
-      new Error('Pipeline content must contain exactly the Pipeline integrations')
+      new Error(
+        'Pipeline content must contain exactly the Pipeline integrations'
+      )
     );
 
     const result = await service.processEvaluation(request);

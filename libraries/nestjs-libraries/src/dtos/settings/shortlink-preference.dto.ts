@@ -5,4 +5,3 @@ export class ShortlinkPreferenceDto {
   @IsEnum(ShortLinkPreference)
   shortlink: ShortLinkPreference;
 }
-
