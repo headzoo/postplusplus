@@ -68,3 +68,5 @@ apps/frontend/public/g.js
 docs/.vitepress/cache
 docs/.vitepress/static
 graphify-out
+.eslintcache-backend
+.eslintcache-frontend
