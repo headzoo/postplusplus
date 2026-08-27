@@ -34,3 +34,4 @@ export * from './channel-cultivate.workflow.v2';
 export * from './channel-hot-materialization.workflow.v1';
 export * from './channel-analytics-snapshot.workflow.v1';
 export * from './channel-analytics-snapshot.workflow.v2';
+export * from './conversion-evaluation.workflow.v1';

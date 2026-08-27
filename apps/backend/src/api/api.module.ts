@@ -51,6 +51,8 @@ import { ChannelWebhooksController } from '@gitroom/backend/api/routes/channel-w
 import { LogsController } from '@gitroom/backend/api/routes/logs.controller';
 import { PipelineAutopostController } from '@gitroom/backend/api/routes/pipeline-autopost.controller';
 import { RulesController } from '@gitroom/backend/api/routes/rules.controller';
+import { ConversionsController } from '@gitroom/backend/api/routes/conversions.controller';
+import { ConversionWebhooksController } from '@gitroom/backend/api/routes/conversion-webhooks.controller';
 
 const authenticatedController = [
   UsersController,
@@ -79,6 +81,7 @@ const authenticatedController = [
   FollowersController,
   LogsController,
   RulesController,
+  ConversionsController,
 ];
 @Module({
   imports: [UploadModule],
@@ -92,6 +95,7 @@ const authenticatedController = [
     NoAuthIntegrationsController,
     OAuthController,
     ChannelWebhooksController,
+    ConversionWebhooksController,
     ...authenticatedController,
   ],
   providers: [

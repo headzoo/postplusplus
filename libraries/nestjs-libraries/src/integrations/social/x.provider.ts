@@ -74,11 +74,11 @@ type XPendingData = {
   message: string;
   settings: {
     who_can_reply_post?:
-    | 'everyone'
-    | 'following'
-    | 'mentionedUsers'
-    | 'subscribers'
-    | 'verified';
+      | 'everyone'
+      | 'following'
+      | 'mentionedUsers'
+      | 'subscribers'
+      | 'verified';
     community?: string;
     made_with_ai?: boolean;
     paid_partnership?: boolean;
@@ -112,15 +112,15 @@ type XWebhookUser = {
 
 type XActivitySubscriptionSpec = DesiredChannelInteractionSubscription & {
   eventType:
-  | 'like.create'
-  | 'follow.follow'
-  | 'follow.unfollow'
-  | 'post.create'
-  | 'post.delete'
-  | 'post.mention.create'
-  | 'post.repost.create'
-  | 'post.reply.create'
-  | 'post.quote.create';
+    | 'like.create'
+    | 'follow.follow'
+    | 'follow.unfollow'
+    | 'post.create'
+    | 'post.delete'
+    | 'post.mention.create'
+    | 'post.repost.create'
+    | 'post.reply.create'
+    | 'post.quote.create';
   filterDirection?: ChannelInteractionDirection;
   // Event types X only accepts with an OAuth2 user token carrying these scopes.
   scopes?: string[];
@@ -227,9 +227,10 @@ const X_ACTIVITY_SUBSCRIPTIONS: XActivitySubscriptionSpec[] = [
 ];
 
 @Rules(
-  `X can have maximum 4 pictures, or maximum one video, it can also be without attachments, it can also be published as a long-form article (draft or published) when post_type is set to article ${process.env.STRIP_LINKS_FROM_X_POSTS
-    ? 'do not add links, they will be stripped from the post'
-    : ''
+  `X can have maximum 4 pictures, or maximum one video, it can also be without attachments, it can also be published as a long-form article (draft or published) when post_type is set to article ${
+    process.env.STRIP_LINKS_FROM_X_POSTS
+      ? 'do not add links, they will be stripped from the post'
+      : ''
   }`
 )
 export class XProvider extends SocialAbstract implements SocialProvider {
@@ -363,7 +364,9 @@ export class XProvider extends SocialAbstract implements SocialProvider {
 
     return !dayjs
       .utc()
-      .isAfter(dayjs.utc(post.publishDate).add(X_EDIT_WINDOW_MINUTES, 'minute'));
+      .isAfter(
+        dayjs.utc(post.publishDate).add(X_EDIT_WINDOW_MINUTES, 'minute')
+      );
   }
 
   profileUrl(integration: Integration) {
@@ -513,20 +516,21 @@ export class XProvider extends SocialAbstract implements SocialProvider {
       // inbound; otherwise we liked someone else's post.
       const direction =
         envelope.filter.direction === 'inbound' ||
-          envelope.filter.direction === 'outbound'
+        envelope.filter.direction === 'outbound'
           ? envelope.filter.direction
           : likedAuthorId && likedAuthorId === connectedAccountId
-            ? 'inbound'
-            : 'outbound';
+          ? 'inbound'
+          : 'outbound';
       const counterpartyId =
         direction === 'outbound'
           ? likedAuthorId
           : this.xIncludedUsers(includes).find(
-            (candidate) => candidate.externalId !== connectedAccountId
-          )?.externalId;
+              (candidate) => candidate.externalId !== connectedAccountId
+            )?.externalId;
       const counterparty = this.xIncludedProfile(includes, counterpartyId);
       const relatedObjectId = this.boundedId(payload.liked_tweet_id);
-      if (!counterparty || !relatedObjectId) return this.emptyNormalizedActivity();
+      if (!counterparty || !relatedObjectId)
+        return this.emptyNormalizedActivity();
       return {
         events: [
           this.xInteractionEvent({
@@ -552,8 +556,8 @@ export class XProvider extends SocialAbstract implements SocialProvider {
         source?.externalId === connectedAccountId
           ? 'outbound'
           : target?.externalId === connectedAccountId
-            ? 'inbound'
-            : undefined;
+          ? 'inbound'
+          : undefined;
       const counterparty = direction === 'outbound' ? target : source;
       if (!direction || !counterparty) return this.emptyNormalizedActivity();
       return {
@@ -652,6 +656,9 @@ export class XProvider extends SocialAbstract implements SocialProvider {
       throw new Error('Malformed X post activity');
     }
     const eventAt = this.xEventTimestamp(tweet, receivedAt);
+    const conversationExternalId = this.boundedId(
+      tweet?.conversation_id_str ?? tweet?.conversation_id
+    );
     const events: NormalizedChannelInteractionEvent[] = [];
     const outbound =
       eventType !== 'post.mention.create' &&
@@ -685,6 +692,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
             counterparty,
             connectedAccountId,
             relatedObjectId: this.boundedId(replyReference.id),
+            conversationExternalId,
           })
         );
       }
@@ -716,6 +724,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
             counterparty,
             connectedAccountId,
             relatedObjectId: this.boundedId(repostReference.id),
+            conversationExternalId,
             metadata: { referenceType: 'repost' },
           })
         );
@@ -726,10 +735,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
       (reference: any) => reference?.type === 'quoted'
     );
     const quotedPost = this.xIncludedTweet(includes, quoteReference?.id);
-    const quotedAuthor = this.xIncludedProfile(
-      includes,
-      quotedPost?.author_id
-    );
+    const quotedAuthor = this.xIncludedProfile(includes, quotedPost?.author_id);
     const quoteIsRelevant =
       quoteReference &&
       quotedAuthor &&
@@ -748,6 +754,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
             counterparty,
             connectedAccountId,
             relatedObjectId: this.boundedId(quoteReference.id),
+            conversationExternalId,
             metadata: { referenceType: 'quote' },
           })
         );
@@ -771,6 +778,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
             counterparty: actor,
             connectedAccountId,
             relatedObjectId: tweetId,
+            conversationExternalId,
           })
         );
       } else if (outbound) {
@@ -788,6 +796,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
               counterparty,
               connectedAccountId,
               relatedObjectId: tweetId,
+              conversationExternalId,
             })
           );
         }
@@ -860,10 +869,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
   private xProfile(user: XWebhookUser | undefined) {
     const externalId = this.boundedId(user?.id_str ?? user?.id);
     if (!externalId) return undefined;
-    const username = this.boundedText(
-      user?.screen_name ?? user?.username,
-      512
-    );
+    const username = this.boundedText(user?.screen_name ?? user?.username, 512);
     const picture = this.safeHttpUrl(
       user?.profile_image_url_https || user?.profile_image_url
     );
@@ -874,9 +880,9 @@ export class XProvider extends SocialAbstract implements SocialProvider {
         : {}),
       ...(username
         ? {
-          username,
-          profileUrl: `https://x.com/${encodeURIComponent(username)}`,
-        }
+            username,
+            profileUrl: `https://x.com/${encodeURIComponent(username)}`,
+          }
         : {}),
       ...(picture ? { picture } : {}),
     };
@@ -916,7 +922,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
   private xTimestamp(primary: unknown, fallback?: unknown) {
     const value =
       typeof primary === 'number' ||
-        (typeof primary === 'string' && /^\d+$/.test(primary))
+      (typeof primary === 'string' && /^\d+$/.test(primary))
         ? new Date(Number(primary))
         : new Date(String(primary ?? fallback ?? ''));
     if (Number.isNaN(value.getTime())) {
@@ -972,6 +978,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
     counterparty: NonNullable<ReturnType<XProvider['xProfile']>>;
     connectedAccountId: string;
     relatedObjectId?: string;
+    conversationExternalId?: string;
     metadata?: Record<string, string>;
     membershipUpdate?: 'follower' | 'not_follower';
   }): NormalizedChannelInteractionEvent {
@@ -984,18 +991,18 @@ export class XProvider extends SocialAbstract implements SocialProvider {
     ].join('\n');
     const canonical = input.eventUuid
       ? [
-        X_WEBHOOK_NORMALIZATION_VERSION,
-        'event_uuid',
-        input.eventUuid,
-        semanticIdentity,
-      ].join('\n')
+          X_WEBHOOK_NORMALIZATION_VERSION,
+          'event_uuid',
+          input.eventUuid,
+          semanticIdentity,
+        ].join('\n')
       : [
-        X_WEBHOOK_NORMALIZATION_VERSION,
-        input.sourceType,
-        input.sourceId || '',
-        semanticIdentity,
-        input.eventAt,
-      ].join('\n');
+          X_WEBHOOK_NORMALIZATION_VERSION,
+          input.sourceType,
+          input.sourceId || '',
+          semanticIdentity,
+          input.eventAt,
+        ].join('\n');
     const providerEventKey = `x:v${X_WEBHOOK_NORMALIZATION_VERSION}:sha256:${createHash(
       'sha256'
     )
@@ -1010,6 +1017,9 @@ export class XProvider extends SocialAbstract implements SocialProvider {
       eventType: input.sourceType,
       ...(input.relatedObjectId
         ? { relatedObjectId: input.relatedObjectId }
+        : {}),
+      ...(input.conversationExternalId
+        ? { conversationExternalId: input.conversationExternalId }
         : {}),
       ...(input.metadata ? { metadata: input.metadata } : {}),
       normalizationVersion: X_WEBHOOK_NORMALIZATION_VERSION,
@@ -1104,11 +1114,11 @@ export class XProvider extends SocialAbstract implements SocialProvider {
       return id && created.data?.valid
         ? { state: 'active', remoteWebhookId: id }
         : {
-          state: 'error',
-          ...(id ? { remoteWebhookId: id } : {}),
-          failureCategory: 'configuration',
-          reason: 'The tracking callback could not be validated.',
-        };
+            state: 'error',
+            ...(id ? { remoteWebhookId: id } : {}),
+            failureCategory: 'configuration',
+            reason: 'The tracking callback could not be validated.',
+          };
     } catch (error) {
       return {
         state: 'error',
@@ -1133,9 +1143,9 @@ export class XProvider extends SocialAbstract implements SocialProvider {
           state: endpoint.state,
           ...(endpoint.failureCategory
             ? {
-              failureCategory: endpoint.failureCategory,
-              reason: endpoint.reason,
-            }
+                failureCategory: endpoint.failureCategory,
+                reason: endpoint.reason,
+              }
             : {}),
         })),
         coverage,
@@ -1201,7 +1211,10 @@ export class XProvider extends SocialAbstract implements SocialProvider {
           // never PATCH delivery in place. Whenever the attached webhook is
           // missing or points at a different endpoint, delete and recreate the
           // subscription with our webhook attached from the start.
-          if (!createdThisPass && attachedWebhookId !== endpoint.remoteWebhookId) {
+          if (
+            !createdThisPass &&
+            attachedWebhookId !== endpoint.remoteWebhookId
+          ) {
             if (authorizationMissing) {
               // Without the grant the subscription cannot be recreated, so
               // deleting it now would lose it entirely.
@@ -1241,10 +1254,10 @@ export class XProvider extends SocialAbstract implements SocialProvider {
         } catch (error) {
           const recovered = this.isDuplicateSubscriptionError(error)
             ? await this.recoverActivitySubscription(
-              spec,
-              integration.internalId,
-              accessToken
-            )
+                spec,
+                integration.internalId,
+                accessToken
+              )
             : undefined;
           if (recovered && this.boundedId(recovered.subscription_id)) {
             reconciled.push({
@@ -1293,7 +1306,9 @@ export class XProvider extends SocialAbstract implements SocialProvider {
   private xReconciledSubscriptionState(
     subscriptions: ChannelInteractionSubscriptionReconciliationResult['subscriptions']
   ): ChannelInteractionSubscriptionReconciliationResult['state'] {
-    if (subscriptions.every((subscription) => subscription.state === 'active')) {
+    if (
+      subscriptions.every((subscription) => subscription.state === 'active')
+    ) {
       return 'active';
     }
     if (subscriptions.some((subscription) => subscription.state === 'active')) {
@@ -1461,8 +1476,10 @@ export class XProvider extends SocialAbstract implements SocialProvider {
 
   private async xActivitySubscriptions(accessToken: string) {
     const merged = new Map<string, XActivitySubscription>();
-    const sources: Array<{ authentication: 'bearer' | 'oauth1'; token?: string }> =
-      [{ authentication: 'bearer' }];
+    const sources: Array<{
+      authentication: 'bearer' | 'oauth1';
+      token?: string;
+    }> = [{ authentication: 'bearer' }];
     if (accessToken.includes(':')) {
       sources.push({ authentication: 'oauth1', token: accessToken });
     }
@@ -1516,12 +1533,16 @@ export class XProvider extends SocialAbstract implements SocialProvider {
     );
   }
 
-  private xSubscriptionWebhookId(subscription: XActivitySubscription | undefined) {
+  private xSubscriptionWebhookId(
+    subscription: XActivitySubscription | undefined
+  ) {
     return (
       this.boundedId(subscription?.webhook_id) ||
       this.boundedId(subscription?.webhook?.id) ||
       this.boundedId(subscription?.webhook?.webhook_id) ||
-      this.boundedId((subscription as { webhookId?: unknown } | undefined)?.webhookId) ||
+      this.boundedId(
+        (subscription as { webhookId?: unknown } | undefined)?.webhookId
+      ) ||
       this.boundedId(subscription?.attached_webhook_id)
     );
   }
@@ -1536,9 +1557,9 @@ export class XProvider extends SocialAbstract implements SocialProvider {
   ) {
     const created = await this.xWebhookApi<{
       data?:
-      | XActivitySubscription
-      | XActivitySubscription[]
-      | { subscription?: XActivitySubscription };
+        | XActivitySubscription
+        | XActivitySubscription[]
+        | { subscription?: XActivitySubscription };
     }>(
       `${X_WEBHOOK_API_BASE}/activity/subscriptions`,
       {
@@ -1548,7 +1569,9 @@ export class XProvider extends SocialAbstract implements SocialProvider {
           event_type: spec.eventType,
           filter: {
             user_id: userId,
-            ...(spec.filterDirection ? { direction: spec.filterDirection } : {}),
+            ...(spec.filterDirection
+              ? { direction: spec.filterDirection }
+              : {}),
           },
           webhook_id: webhookId,
           tag,
@@ -1611,9 +1634,9 @@ export class XProvider extends SocialAbstract implements SocialProvider {
 
   private xActivitySubscriptionFromResponse(response: {
     data?:
-    | XActivitySubscription
-    | XActivitySubscription[]
-    | { subscription?: XActivitySubscription };
+      | XActivitySubscription
+      | XActivitySubscription[]
+      | { subscription?: XActivitySubscription };
   }) {
     const data = response.data;
     if (Array.isArray(data)) return data[0];
@@ -1621,7 +1644,9 @@ export class XProvider extends SocialAbstract implements SocialProvider {
     return data as XActivitySubscription | undefined;
   }
 
-  private async deleteXActivitySubscription(subscriptionId: string | undefined) {
+  private async deleteXActivitySubscription(
+    subscriptionId: string | undefined
+  ) {
     const id = this.boundedId(subscriptionId);
     if (!id) throw new XWebhookApiError('invalid_request');
     // X only allows app-only auth on subscription deletes, even for event
@@ -1634,8 +1659,9 @@ export class XProvider extends SocialAbstract implements SocialProvider {
   }
 
   private xActivityAuthorizationRedirectUri() {
-    return `${process.env.X_URL || process.env.FRONTEND_URL
-      }/integrations/tracking/x`;
+    return `${
+      process.env.X_URL || process.env.FRONTEND_URL
+    }/integrations/tracking/x`;
   }
 
   private async generateActivityAuthorizationUrl() {
@@ -1706,10 +1732,10 @@ export class XProvider extends SocialAbstract implements SocialProvider {
         // ones only send the client id in the body.
         ...(clientSecret
           ? {
-            Authorization: `Basic ${Buffer.from(
-              `${clientId}:${clientSecret}`
-            ).toString('base64')}`,
-          }
+              Authorization: `Basic ${Buffer.from(
+                `${clientId}:${clientSecret}`
+              ).toString('base64')}`,
+            }
           : {}),
       },
       body: body.toString(),
@@ -1842,10 +1868,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
 
   private sanitizeXWebhookProblem(value: string) {
     return value
-      .replace(
-        /\b(?:bearer|token|secret|oauth)[^\s]{8,}\b/gi,
-        '[redacted]'
-      )
+      .replace(/\b(?:bearer|token|secret|oauth)[^\s]{8,}\b/gi, '[redacted]')
       .replace(/\s+/g, ' ')
       .trim()
       .slice(0, 240);
@@ -1855,9 +1878,8 @@ export class XProvider extends SocialAbstract implements SocialProvider {
     failureCategory: ChannelInteractionTrackingFailureCategory;
     reason: string;
   } {
-    const category = error instanceof XWebhookApiError
-      ? error.category
-      : 'transient_failure';
+    const category =
+      error instanceof XWebhookApiError ? error.category : 'transient_failure';
     const detail = error instanceof XWebhookApiError ? error.detail : undefined;
     const status = error instanceof XWebhookApiError ? error.status : undefined;
     return {
@@ -1904,7 +1926,10 @@ export class XProvider extends SocialAbstract implements SocialProvider {
     if (category === 'auth_mode_unsupported') {
       return 'This channel authorization mode cannot create tracking subscriptions. Reconnect the channel using the supported X authorization flow.';
     }
-    if (category === 'invalid_request' && normalizedDetail.includes('duplicate')) {
+    if (
+      category === 'invalid_request' &&
+      normalizedDetail.includes('duplicate')
+    ) {
       return 'This subscription already exists on X and should be reused automatically.';
     }
     if (
@@ -1936,7 +1961,9 @@ export class XProvider extends SocialAbstract implements SocialProvider {
       return 'X is temporarily unavailable while setting up tracking. We will retry automatically.';
     }
     if (detail) {
-      return `Tracking setup could not be completed${status ? ` (HTTP ${status})` : ''}. Provider detail: ${detail}`;
+      return `Tracking setup could not be completed${
+        status ? ` (HTTP ${status})` : ''
+      }. Provider detail: ${detail}`;
     }
     return 'Tracking setup could not be completed. Check channel settings for subscription details.';
   }
@@ -2017,7 +2044,11 @@ export class XProvider extends SocialAbstract implements SocialProvider {
     const client = await this.getClient(accessToken);
     const sourceUserId = integration.internalId;
     if (!sourceUserId) {
-      throw new BadBody('X channel identity is missing', undefined, {} as BodyInit);
+      throw new BadBody(
+        'X channel identity is missing',
+        undefined,
+        {} as BodyInit
+      );
     }
     try {
       await client.v2.follow(sourceUserId, externalId);
@@ -2038,7 +2069,11 @@ export class XProvider extends SocialAbstract implements SocialProvider {
     const client = await this.getClient(accessToken);
     const sourceUserId = integration.internalId;
     if (!sourceUserId) {
-      throw new BadBody('X channel identity is missing', undefined, {} as BodyInit);
+      throw new BadBody(
+        'X channel identity is missing',
+        undefined,
+        {} as BodyInit
+      );
     }
     try {
       await client.v2.unfollow(sourceUserId, externalId);
@@ -2194,8 +2229,8 @@ export class XProvider extends SocialAbstract implements SocialProvider {
             item.type === 'video' || item.type === 'animated_gif'
               ? 'video'
               : item.type === 'photo'
-                ? 'image'
-                : undefined;
+              ? 'image'
+              : undefined;
           return mediaType ? [{ url, type: mediaType }] : [{ url }];
         }) ?? [];
 
@@ -2257,9 +2292,9 @@ export class XProvider extends SocialAbstract implements SocialProvider {
 
   override handleErrors(body: string):
     | {
-      type: 'refresh-token' | 'bad-body' | 'retry';
-      value: string;
-    }
+        type: 'refresh-token' | 'bad-body' | 'retry';
+        value: string;
+      }
     | undefined {
     if (body.includes('You are not permitted to perform this action')) {
       return {
@@ -2297,7 +2332,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
       return {
         type: 'bad-body',
         value: 'You are not allowed to create a post with duplicate content',
-      }
+      };
     }
 
     if (body.includes('usage-capped')) {
@@ -2324,8 +2359,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
     if (body.includes('Your account is not permitted to access this feature')) {
       return {
         type: 'bad-body',
-        value:
-          'X blocked your request',
+        value: 'X blocked your request',
       };
     }
     if (body.includes('The Tweet contains an invalid URL.')) {
@@ -2567,7 +2601,9 @@ export class XProvider extends SocialAbstract implements SocialProvider {
         integration.token,
         id
       );
-      return result.status === 'reposted' || result.status === 'already_reposted';
+      return (
+        result.status === 'reposted' || result.status === 'already_reposted'
+      );
     }
 
     return false;
@@ -2677,7 +2713,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
     const { url, oauth_token, oauth_token_secret } =
       await client.generateAuthLink(
         (process.env.X_URL || process.env.FRONTEND_URL) +
-        `/integrations/social/x`,
+          `/integrations/social/x`,
         {
           authAccessType: 'write',
           linkMode: 'authenticate',
@@ -2859,9 +2895,10 @@ export class XProvider extends SocialAbstract implements SocialProvider {
         this.identifier,
         JSON.stringify(processing),
         Buffer.from('{}'),
-        `X failed to process the uploaded video${(processing as any)?.error?.message
-          ? `: ${(processing as any).error.message}`
-          : ''
+        `X failed to process the uploaded video${
+          (processing as any)?.error?.message
+            ? `: ${(processing as any).error.message}`
+            : ''
         }`
       );
     }
@@ -2908,7 +2945,8 @@ export class XProvider extends SocialAbstract implements SocialProvider {
           this.identifier,
           JSON.stringify(processing),
           Buffer.from('{}'),
-          `X failed to process the uploaded video${processing?.error?.message ? `: ${processing.error.message}` : ''
+          `X failed to process the uploaded video${
+            processing?.error?.message ? `: ${processing.error.message}` : ''
           }`
         );
       }
@@ -2956,43 +2994,43 @@ export class XProvider extends SocialAbstract implements SocialProvider {
           async () =>
             hasExtension(m.path, 'mp4')
               ? this.uploadWithRateLimitRetry(() =>
-                this.uploadVideoInChunks(client, m.path)
-              )
+                  this.uploadVideoInChunks(client, m.path)
+                )
               : {
-                // Articles reject GIF media, so the tweet pipeline (which
-                // converts every image to GIF) can't be reused for them -
-                // article images are uploaded as JPEG with the tweet_image
-                // category the article references them by.
-                mediaId: await this.uploadWithRateLimitRetry(async () =>
-                  asArticleImage
-                    ? client.v2.uploadMedia(
-                      await sharp(await readOrFetch(m.path))
-                        .resize({
-                          width: 1000,
-                        })
-                        .jpeg()
-                        .toBuffer(),
-                      {
-                        media_type: 'image/jpeg' as any,
-                        media_category: 'tweet_image' as any,
-                      }
-                    )
-                    : client.v2.uploadMedia(
-                      await sharp(await readOrFetch(m.path), {
-                        animated: lookup(m.path) === 'image/gif',
-                      })
-                        .resize({
-                          width: 1000,
-                        })
-                        .gif()
-                        .toBuffer(),
-                      {
-                        media_type: (lookup(m.path) || '') as any,
-                      }
-                    )
-                ),
-                processing: false,
-              },
+                  // Articles reject GIF media, so the tweet pipeline (which
+                  // converts every image to GIF) can't be reused for them -
+                  // article images are uploaded as JPEG with the tweet_image
+                  // category the article references them by.
+                  mediaId: await this.uploadWithRateLimitRetry(async () =>
+                    asArticleImage
+                      ? client.v2.uploadMedia(
+                          await sharp(await readOrFetch(m.path))
+                            .resize({
+                              width: 1000,
+                            })
+                            .jpeg()
+                            .toBuffer(),
+                          {
+                            media_type: 'image/jpeg' as any,
+                            media_category: 'tweet_image' as any,
+                          }
+                        )
+                      : client.v2.uploadMedia(
+                          await sharp(await readOrFetch(m.path), {
+                            animated: lookup(m.path) === 'image/gif',
+                          })
+                            .resize({
+                              width: 1000,
+                            })
+                            .gif()
+                            .toBuffer(),
+                          {
+                            media_type: (lookup(m.path) || '') as any,
+                          }
+                        )
+                  ),
+                  processing: false,
+                },
           true
         );
 
@@ -3038,11 +3076,11 @@ export class XProvider extends SocialAbstract implements SocialProvider {
       thread_finisher: string;
       community?: string;
       who_can_reply_post:
-      | 'everyone'
-      | 'following'
-      | 'mentionedUsers'
-      | 'subscribers'
-      | 'verified';
+        | 'everyone'
+        | 'following'
+        | 'mentionedUsers'
+        | 'subscribers'
+        | 'verified';
       made_with_ai?: boolean;
       paid_partnership?: boolean;
       post_type?: 'post' | 'article';
@@ -3072,12 +3110,12 @@ export class XProvider extends SocialAbstract implements SocialProvider {
       : undefined;
     const coverMediaId = coverPath
       ? (
-        await this.uploadMediaEntries(
-          client,
-          [{ id: 'article-cover', media: [{ path: coverPath }] } as any],
-          true
-        )
-      ).media['article-cover']?.[0]
+          await this.uploadMediaEntries(
+            client,
+            [{ id: 'article-cover', media: [{ path: coverPath }] } as any],
+            true
+          )
+        ).media['article-cover']?.[0]
       : undefined;
 
     return [
@@ -3132,7 +3170,11 @@ export class XProvider extends SocialAbstract implements SocialProvider {
     const stillProcessing: string[] = [];
     for (const mediaId of pendingData.processingIds || []) {
       let processing:
-        | { state: string; check_after_secs?: number; error?: { message?: string } }
+        | {
+            state: string;
+            check_after_secs?: number;
+            error?: { message?: string };
+          }
         | undefined;
       try {
         processing = await this.mediaProcessingStatus(client, mediaId);
@@ -3168,7 +3210,8 @@ export class XProvider extends SocialAbstract implements SocialProvider {
           this.identifier,
           JSON.stringify(processing),
           Buffer.from('{}'),
-          `X failed to process the uploaded video${processing?.error?.message ? `: ${processing.error.message}` : ''
+          `X failed to process the uploaded video${
+            processing?.error?.message ? `: ${processing.error.message}` : ''
           }`
         );
       }
@@ -3376,12 +3419,12 @@ export class XProvider extends SocialAbstract implements SocialProvider {
         ),
         ...(coverMediaId
           ? {
-            cover_media: {
-              // Lowercase, matching the category the upload stored.
-              media_category: 'tweet_image',
-              media_id: coverMediaId,
-            },
-          }
+              cover_media: {
+                // Lowercase, matching the category the upload stored.
+                media_category: 'tweet_image',
+                media_id: coverMediaId,
+              },
+            }
           : {}),
       }),
     });
@@ -3485,16 +3528,16 @@ export class XProvider extends SocialAbstract implements SocialProvider {
     const tweetUrl = 'https://api.x.com/2/tweets';
     const tweetBody = {
       ...(!settings.who_can_reply_post ||
-        settings.who_can_reply_post === 'everyone'
+      settings.who_can_reply_post === 'everyone'
         ? {}
         : {
-          reply_settings: settings.who_can_reply_post,
-        }),
+            reply_settings: settings.who_can_reply_post,
+          }),
       ...(settings.community
         ? {
-          share_with_followers: true,
-          community_id: settings.community?.split('/').pop() || '',
-        }
+            share_with_followers: true,
+            community_id: settings.community?.split('/').pop() || '',
+          }
         : {}),
       text: this.stripLinks()
         ? removeLinks(pendingData.message)
@@ -3539,11 +3582,11 @@ export class XProvider extends SocialAbstract implements SocialProvider {
       thread_finisher: string;
       community?: string;
       who_can_reply_post:
-      | 'everyone'
-      | 'following'
-      | 'mentionedUsers'
-      | 'subscribers'
-      | 'verified';
+        | 'everyone'
+        | 'following'
+        | 'mentionedUsers'
+        | 'subscribers'
+        | 'verified';
       made_with_ai?: boolean;
       paid_partnership?: boolean;
     }>[],
@@ -3679,11 +3722,11 @@ export class XProvider extends SocialAbstract implements SocialProvider {
     postDetails: PostDetails<{
       community?: string;
       who_can_reply_post?:
-      | 'everyone'
-      | 'following'
-      | 'mentionedUsers'
-      | 'subscribers'
-      | 'verified';
+        | 'everyone'
+        | 'following'
+        | 'mentionedUsers'
+        | 'subscribers'
+        | 'verified';
       made_with_ai?: boolean;
       paid_partnership?: boolean;
       post_type?: 'post' | 'article';
@@ -3721,16 +3764,16 @@ export class XProvider extends SocialAbstract implements SocialProvider {
     const tweetBody = {
       edit_options: { previous_post_id: releaseId },
       ...(!settings.who_can_reply_post ||
-        settings.who_can_reply_post === 'everyone'
+      settings.who_can_reply_post === 'everyone'
         ? {}
         : {
-          reply_settings: settings.who_can_reply_post,
-        }),
+            reply_settings: settings.who_can_reply_post,
+          }),
       ...(settings.community
         ? {
-          share_with_followers: true,
-          community_id: settings.community?.split('/').pop() || '',
-        }
+            share_with_followers: true,
+            community_id: settings.community?.split('/').pop() || '',
+          }
         : {}),
       text: this.stripLinks() ? removeLinks(tweetText) : tweetText,
       ...(mediaIds.length ? { media: { media_ids: mediaIds } } : {}),
@@ -3798,12 +3841,12 @@ export class XProvider extends SocialAbstract implements SocialProvider {
       ...tweets.data.data,
       ...(tweets.data.data.length === 100
         ? await this.loadAllTweets(
-          client,
-          id,
-          until,
-          since,
-          tweets.meta.next_token
-        )
+            client,
+            id,
+            until,
+            since,
+            tweets.meta.next_token
+          )
         : []),
     ];
   };
@@ -3818,9 +3861,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
       accessToken,
       accessSecret,
     });
-    const until = dayjs
-      .utc(request.toDay || request.snapshotAt)
-      .endOf('day');
+    const until = dayjs.utc(request.toDay || request.snapshotAt).endOf('day');
     const since = dayjs
       .utc(
         request.fromDay || dayjs.utc(request.snapshotAt).subtract(100, 'day')
@@ -3830,22 +3871,25 @@ export class XProvider extends SocialAbstract implements SocialProvider {
     const accountPoints = request.cursor
       ? []
       : await this.captureFollowerAccountPoints(
-        client,
-        request.integration.internalId,
-        snapshotDay
-      );
-    const timeline = await client.v2.userTimeline(request.integration.internalId, {
-      'tweet.fields': ['id'],
-      'user.fields': [],
-      'poll.fields': [],
-      'place.fields': [],
-      'media.fields': [],
-      exclude: ['replies', 'retweets'],
-      start_time: since.format('YYYY-MM-DDTHH:mm:ssZ'),
-      end_time: until.format('YYYY-MM-DDTHH:mm:ssZ'),
-      max_results: Math.min(Math.max(request.pageSize, 1), 100),
-      ...(request.cursor ? { pagination_token: request.cursor } : {}),
-    });
+          client,
+          request.integration.internalId,
+          snapshotDay
+        );
+    const timeline = await client.v2.userTimeline(
+      request.integration.internalId,
+      {
+        'tweet.fields': ['id'],
+        'user.fields': [],
+        'poll.fields': [],
+        'place.fields': [],
+        'media.fields': [],
+        exclude: ['replies', 'retweets'],
+        start_time: since.format('YYYY-MM-DDTHH:mm:ssZ'),
+        end_time: until.format('YYYY-MM-DDTHH:mm:ssZ'),
+        max_results: Math.min(Math.max(request.pageSize, 1), 100),
+        ...(request.cursor ? { pagination_token: request.cursor } : {}),
+      }
+    );
     const tweetIds = timeline.data.data?.map((tweet) => tweet.id) || [];
     if (!tweetIds.length) {
       return {
@@ -3874,19 +3918,20 @@ export class XProvider extends SocialAbstract implements SocialProvider {
       kind: 'post_lifetime',
       points: (tweets.data || []).flatMap((tweet) =>
         Object.entries(metricLabels).flatMap(([metricKey, label]) => {
-          const value = tweet.public_metrics?.[
-            metricKey as keyof typeof tweet.public_metrics
-          ];
+          const value =
+            tweet.public_metrics?.[
+              metricKey as keyof typeof tweet.public_metrics
+            ];
           return typeof value === 'number'
             ? [
-              {
-                externalPostId: tweet.id,
-                metricKey,
-                label,
-                valueMode: 'sum' as const,
-                value,
-              },
-            ]
+                {
+                  externalPostId: tweet.id,
+                  metricKey,
+                  label,
+                  valueMode: 'sum' as const,
+                  value,
+                },
+              ]
             : [];
         })
       ),
@@ -4138,8 +4183,8 @@ export class XProvider extends SocialAbstract implements SocialProvider {
         : {}),
       ...(user.username
         ? {
-          profileUrl: `https://x.com/${encodeURIComponent(user.username)}`,
-        }
+            profileUrl: `https://x.com/${encodeURIComponent(user.username)}`,
+          }
         : {}),
     });
 

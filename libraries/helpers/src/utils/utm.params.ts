@@ -53,7 +53,10 @@ export function normalizeUtmParamsString(input: string): string | null {
   return normalized || null;
 }
 
-export function shouldSkipUrlForUtm(url: string, shortLinkDomain?: string): boolean {
+export function shouldSkipUrlForUtm(
+  url: string,
+  shortLinkDomain?: string
+): boolean {
   if (!shortLinkDomain || shortLinkDomain === 'empty') {
     return false;
   }
@@ -86,12 +89,55 @@ export function appendUtmParamsToUrl(
   }
 }
 
+export type ReservedUrlParams =
+  | URLSearchParams
+  | Iterable<readonly [string, string]>;
+
+export function appendReservedParamsToUrl(
+  url: string,
+  reservedParams: ReservedUrlParams,
+  shortLinkDomain?: string
+): string {
+  if (shouldSkipUrlForUtm(url, shortLinkDomain)) {
+    return url;
+  }
+
+  const hashIndex = url.indexOf('#');
+  const urlWithoutHash = hashIndex >= 0 ? url.slice(0, hashIndex) : url;
+  const hash = hashIndex >= 0 ? url.slice(hashIndex) : '';
+
+  try {
+    const parsed = new URL(urlWithoutHash);
+    for (const [key, value] of reservedParams) {
+      parsed.searchParams.set(key, value);
+    }
+    return `${parsed.toString()}${hash}`;
+  } catch {
+    return url;
+  }
+}
+
+export function appendReservedParamsToText(
+  text: string,
+  getReservedParams: (url: string) => ReservedUrlParams,
+  shortLinkDomain?: string
+): string {
+  const decoded = decodeUrlEntitiesInText(text);
+  const regex = urlRegex();
+
+  return decoded.replace(regex, (url) =>
+    appendReservedParamsToUrl(url, getReservedParams(url), shortLinkDomain)
+  );
+}
+
 export function appendUtmParamsToText(
   text: string,
   utmParamsString: string | null | undefined,
   shortLinkDomain?: string
 ): string {
-  const utmParams = utmParamsString ? parseUtmParamsString(utmParamsString) : null;
+  const utmParams = utmParamsString
+    ? parseUtmParamsString(utmParamsString)
+    : null;
   if (!utmParams) {
     return text;
   }

@@ -10,6 +10,7 @@ Use this site as a map before editing code:
 - [Architecture](/architecture) explains the monorepo shape and ownership boundaries.
 - [Backend API](/backend-api) covers authenticated NestJS controllers and the DTO/service/repository flow.
 - [Public API](/public-api) covers the token-auth `/public/v1` API surface.
+- [Strategy-Aware Conversions](/conversions) covers conversion ledger semantics, goal ingestion, webhooks, and rollout.
 - [Temporal Workflows](/workflows) covers orchestrator workflows and activity compatibility rules.
 - [Database](/database) covers Prisma schema, migrations, and repository ownership.
 - [Frontend API Clients](/frontend-api) covers the SWR and `useFetch` patterns used by the React app.

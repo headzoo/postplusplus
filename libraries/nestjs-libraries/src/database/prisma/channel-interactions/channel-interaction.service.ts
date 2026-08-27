@@ -107,6 +107,7 @@ import {
 } from '@gitroom/nestjs-libraries/temporal/lead-bridge.schedule';
 import { parseSkillFilename } from '@gitroom/nestjs-libraries/upload/context-document.upload.validation';
 import { utcDayKey } from '@gitroom/nestjs-libraries/temporal/cultivate.schedule';
+import { ConversionEvaluationTriggerService } from '@gitroom/nestjs-libraries/temporal/conversion-evaluation.trigger.service';
 
 export {
   applyPersonalRelationshipGrade,
@@ -228,8 +229,10 @@ export class ChannelInteractionService {
     private _postsRepository?: PostsRepository,
     private _openaiService?: OpenaiService,
     private _contextDocumentService?: ContextDocumentService,
-    @Optional() private _adminScheduleLogService?: AdminScheduleLogService
-  ) { }
+    @Optional() private _adminScheduleLogService?: AdminScheduleLogService,
+    @Optional()
+    private _conversionEvaluationTrigger?: ConversionEvaluationTriggerService
+  ) {}
 
   async handleChallenge(
     providerIdentifier: string,
@@ -262,9 +265,9 @@ export class ChannelInteractionService {
       : this.peekConnectedAccountId(request.rawBody);
     const matchedIntegrations = connectedAccountId
       ? await this._repository.getActiveIntegrationsForAccount(
-        providerIdentifier,
-        connectedAccountId
-      )
+          providerIdentifier,
+          connectedAccountId
+        )
       : [];
 
     if (delivery.accepted) {
@@ -466,15 +469,15 @@ export class ChannelInteractionService {
           const endpoints = firstEvent
             ? eventEndpoints(firstEvent, integration)
             : (() => {
-              const target = integrationIdentity(
-                integration.name,
-                integration.profile
-              );
-              return {
-                targetDisplayName: target.displayName,
-                targetUsername: target.username,
-              };
-            })();
+                const target = integrationIdentity(
+                  integration.name,
+                  integration.profile
+                );
+                return {
+                  targetDisplayName: target.displayName,
+                  targetUsername: target.username,
+                };
+              })();
           return this._logsService!.logInboundWebhook({
             organizationId,
             integrationId: integration.id,
@@ -594,7 +597,7 @@ export class ChannelInteractionService {
     return (
       !authorization.tokenExpiration ||
       authorization.tokenExpiration.getTime() - AUTHORIZATION_REFRESH_SKEW_MS >
-      Date.now()
+        Date.now()
     );
   }
 
@@ -699,6 +702,7 @@ export class ChannelInteractionService {
       }
     }
     if (dirtyExternalIds.size) {
+      await this._conversionEvaluationTrigger?.signal();
       try {
         await this.refreshRelationshipGradeProjections(
           organizationId,
@@ -780,13 +784,15 @@ export class ChannelInteractionService {
           await this.pauseLikerSync(integration.id, resetMs);
           rateLimited = true;
           console.log(
-            `Rate limited loading likers for ${integration.providerIdentifier
+            `Rate limited loading likers for ${
+              integration.providerIdentifier
             }; paused until ${new Date(resetMs).toISOString()}`
           );
           break;
         }
         console.log(
-          `Failed to load likers for ${integration.providerIdentifier
+          `Failed to load likers for ${
+            integration.providerIdentifier
           } post ${postId}: ${formatProviderError(error)}`
         );
         continue;
@@ -811,27 +817,27 @@ export class ChannelInteractionService {
               : {}),
             ...(liker.username
               ? {
-                username: String(liker.username).slice(
-                  0,
-                  MAX_PROFILE_TEXT_LENGTH
-                ),
-              }
+                  username: String(liker.username).slice(
+                    0,
+                    MAX_PROFILE_TEXT_LENGTH
+                  ),
+                }
               : {}),
             ...(liker.picture
               ? {
-                picture: String(liker.picture).slice(
-                  0,
-                  MAX_PROFILE_TEXT_LENGTH
-                ),
-              }
+                  picture: String(liker.picture).slice(
+                    0,
+                    MAX_PROFILE_TEXT_LENGTH
+                  ),
+                }
               : {}),
             ...(liker.profileUrl
               ? {
-                profileUrl: String(liker.profileUrl).slice(
-                  0,
-                  MAX_PROFILE_TEXT_LENGTH
-                ),
-              }
+                  profileUrl: String(liker.profileUrl).slice(
+                    0,
+                    MAX_PROFILE_TEXT_LENGTH
+                  ),
+                }
               : {}),
           },
           syncedAt
@@ -846,6 +852,7 @@ export class ChannelInteractionService {
     }
 
     if (dirtyExternalIds.size) {
+      await this._conversionEvaluationTrigger?.signal();
       try {
         await this.refreshRelationshipGradeProjections(
           integration.organizationId,
@@ -945,8 +952,10 @@ export class ChannelInteractionService {
       snooze: params.snooze,
     };
     this._logger.log(
-      `[hot-triage] Hot triage dismissed integration=${params.integrationId
-      } externalId=${params.externalId} user=${params.createdByUserId ?? 'unknown'
+      `[hot-triage] Hot triage dismissed integration=${
+        params.integrationId
+      } externalId=${params.externalId} user=${
+        params.createdByUserId ?? 'unknown'
       } snooze=${params.snooze}`
     );
     this.appendHotTriageAdminLog(
@@ -972,8 +981,10 @@ export class ChannelInteractionService {
       nextTriage: params.nextTriage,
     };
     this._logger.log(
-      `[hot-triage] Hot eligibility lost integration=${params.integrationId
-      } externalId=${params.externalId} was=${params.previousTriage ?? 'null'
+      `[hot-triage] Hot eligibility lost integration=${
+        params.integrationId
+      } externalId=${params.externalId} was=${
+        params.previousTriage ?? 'null'
       } now=${params.nextTriage ?? 'null'}`
     );
     this.appendHotTriageAdminLog(
@@ -997,8 +1008,10 @@ export class ChannelInteractionService {
       snooze: params.snooze,
     };
     this._logger.log(
-      `[follower-cultivate] Cultivate dismissed integration=${params.integrationId
-      } externalId=${params.externalId} user=${params.createdByUserId ?? 'unknown'
+      `[follower-cultivate] Cultivate dismissed integration=${
+        params.integrationId
+      } externalId=${params.externalId} user=${
+        params.createdByUserId ?? 'unknown'
       } snooze=${params.snooze}`
     );
     this.appendCultivateAdminLog(
@@ -1028,9 +1041,12 @@ export class ChannelInteractionService {
       nextGrade: params.nextGrade,
     };
     this._logger.log(
-      `[follower-cultivate] Cultivate eligibility lost integration=${params.integrationId
-      } externalId=${params.externalId} was=${params.previousTriage ?? 'null'
-      } now=${params.nextTriage ?? 'null'} grade=${params.previousGrade ?? 'null'
+      `[follower-cultivate] Cultivate eligibility lost integration=${
+        params.integrationId
+      } externalId=${params.externalId} was=${
+        params.previousTriage ?? 'null'
+      } now=${params.nextTriage ?? 'null'} grade=${
+        params.previousGrade ?? 'null'
       }->${params.nextGrade ?? 'null'}`
     );
     this.appendCultivateAdminLog(
@@ -1078,18 +1094,18 @@ export class ChannelInteractionService {
     );
     const result = options
       ? await this._repository.updateCurrentRelationshipProjections(
-        organizationId,
-        integrationId,
-        snapshotAt,
-        snapshots,
-        options
-      )
+          organizationId,
+          integrationId,
+          snapshotAt,
+          snapshots,
+          options
+        )
       : await this._repository.updateCurrentRelationshipProjections(
-        organizationId,
-        integrationId,
-        snapshotAt,
-        snapshots
-      );
+          organizationId,
+          integrationId,
+          snapshotAt,
+          snapshots
+        );
     for (const snapshot of snapshots) {
       const prior = before.get(snapshot.externalId);
       if (!prior) {
@@ -1214,6 +1230,9 @@ export class ChannelInteractionService {
         'Follower sync generation is no longer active'
       );
     }
+    if (scoredProfiles.length) {
+      await this._conversionEvaluationTrigger?.signal();
+    }
     return { applied: scoredProfiles.length };
   }
 
@@ -1235,6 +1254,7 @@ export class ChannelInteractionService {
         'Follower sync generation is no longer active'
       );
     }
+    await this._conversionEvaluationTrigger?.signal();
     return { generation, completedAt };
   }
 
@@ -1463,11 +1483,11 @@ export class ChannelInteractionService {
         : {}),
       ...(item.profileUrl
         ? {
-          profileUrl: String(item.profileUrl).slice(
-            0,
-            MAX_PROFILE_TEXT_LENGTH
-          ),
-        }
+            profileUrl: String(item.profileUrl).slice(
+              0,
+              MAX_PROFILE_TEXT_LENGTH
+            ),
+          }
         : {}),
       ...(item.bio
         ? { bio: String(item.bio).slice(0, MAX_PROFILE_TEXT_LENGTH) }
@@ -1621,25 +1641,26 @@ export class ChannelInteractionService {
     try {
       documents = this._contextDocumentService
         ? (
-          await this._contextDocumentService.listAttachedDocumentsForIntegration(
-            params.organizationId,
-            params.integrationId
+            await this._contextDocumentService.listAttachedDocumentsForIntegration(
+              params.organizationId,
+              params.integrationId
+            )
           )
-        )
-          .filter((document) => !parseSkillFilename(document.name))
-          .sort((left, right) => left.name.localeCompare(right.name))
-          .slice(0, TRIAGE_DOCUMENT_MAX_COUNT)
-          .map((document) => ({
-            name: document.name,
-            content: document.content.slice(
-              0,
-              TRIAGE_DOCUMENT_MAX_CONTENT_LENGTH
-            ),
-          }))
+            .filter((document) => !parseSkillFilename(document.name))
+            .sort((left, right) => left.name.localeCompare(right.name))
+            .slice(0, TRIAGE_DOCUMENT_MAX_COUNT)
+            .map((document) => ({
+              name: document.name,
+              content: document.content.slice(
+                0,
+                TRIAGE_DOCUMENT_MAX_CONTENT_LENGTH
+              ),
+            }))
         : [];
     } catch (error) {
       this._logger.warn(
-        `Triage context documents unavailable for ${params.integrationId}: ${error instanceof Error ? error.message : String(error)
+        `Triage context documents unavailable for ${params.integrationId}: ${
+          error instanceof Error ? error.message : String(error)
         }`
       );
     }
@@ -1652,7 +1673,8 @@ export class ChannelInteractionService {
       });
     } catch (error) {
       this._logger.warn(
-        `Triage expertise unavailable for ${params.integrationId}: ${error instanceof Error ? error.message : String(error)
+        `Triage expertise unavailable for ${params.integrationId}: ${
+          error instanceof Error ? error.message : String(error)
         }`
       );
     }
@@ -1834,21 +1856,21 @@ export class ChannelInteractionService {
           externalId: candidate.externalId,
           ...(candidate.name
             ? {
-              name: candidate.name.slice(0, TRIAGE_CANDIDATE_NAME_MAX_LENGTH),
-            }
+                name: candidate.name.slice(0, TRIAGE_CANDIDATE_NAME_MAX_LENGTH),
+              }
             : {}),
           ...(candidate.username
             ? {
-              username: candidate.username.slice(
-                0,
-                TRIAGE_CANDIDATE_USERNAME_MAX_LENGTH
-              ),
-            }
+                username: candidate.username.slice(
+                  0,
+                  TRIAGE_CANDIDATE_USERNAME_MAX_LENGTH
+                ),
+              }
             : {}),
           ...(candidate.bio
             ? {
-              bio: candidate.bio.slice(0, TRIAGE_CANDIDATE_BIO_MAX_LENGTH),
-            }
+                bio: candidate.bio.slice(0, TRIAGE_CANDIDATE_BIO_MAX_LENGTH),
+              }
             : {}),
           rulesReason: candidate.rulesReason.slice(
             0,
@@ -1891,8 +1913,10 @@ export class ChannelInteractionService {
       return { picks, source: 'ai' as const };
     } catch (error) {
       this._logger.warn(
-        `Triage AI rerank failed for ${params.integrationId}/${params.triage
-        }: ${error instanceof Error ? error.message.slice(0, 200) : 'unknown error'
+        `Triage AI rerank failed for ${params.integrationId}/${
+          params.triage
+        }: ${
+          error instanceof Error ? error.message.slice(0, 200) : 'unknown error'
         }`
       );
       return { picks: rules, source: 'rules' as const };
@@ -1949,7 +1973,7 @@ export class ChannelInteractionService {
       poolSize: config.profile.hot.candidatePoolSize,
       recentEventSince: new Date(
         now.getTime() -
-        config.profile.hot.recentEventLookbackHours * 60 * 60 * 1000
+          config.profile.hot.recentEventLookbackHours * 60 * 60 * 1000
       ),
     });
     if (refreshIds.length) {
@@ -2017,8 +2041,10 @@ export class ChannelInteractionService {
     });
     if (audit.excludedCount > 0) {
       this._logger.log(
-        `[hot-triage] Hot materialization visibility audit integration=${integrationId} hour=${hour} stored=${audit.storedCount
-        } visible=${audit.visibleCount} excluded=${audit.excludedCount
+        `[hot-triage] Hot materialization visibility audit integration=${integrationId} hour=${hour} stored=${
+          audit.storedCount
+        } visible=${audit.visibleCount} excluded=${
+          audit.excludedCount
         } ${JSON.stringify(trimHotPickAuditForLog(audit))}`
       );
     }
@@ -2046,7 +2072,7 @@ export class ChannelInteractionService {
     );
     const nearFullAt = Math.ceil(
       config.profile.cultivate.pickLimit *
-      config.profile.cultivate.nearFullRatio
+        config.profile.cultivate.nearFullRatio
     );
     const visibleCount = await this._repository.countVisibleCultivatePicks({
       organizationId,
@@ -2116,8 +2142,10 @@ export class ChannelInteractionService {
     });
     if (audit.excludedCount > 0) {
       this._logger.log(
-        `[follower-cultivate] Cultivate materialization visibility audit integration=${integrationId} hour=${hour} stored=${audit.storedCount
-        } visible=${audit.visibleCount} excluded=${audit.excludedCount
+        `[follower-cultivate] Cultivate materialization visibility audit integration=${integrationId} hour=${hour} stored=${
+          audit.storedCount
+        } visible=${audit.visibleCount} excluded=${
+          audit.excludedCount
         } ${JSON.stringify(trimCultivatePickAuditForLog(audit))}`
       );
     }
@@ -2874,6 +2902,13 @@ export class ChannelInteractionService {
         MAX_ID_LENGTH
       );
     }
+    if (event.conversationExternalId !== undefined) {
+      this.validateBoundedString(
+        event.conversationExternalId,
+        'conversationExternalId',
+        MAX_ID_LENGTH
+      );
+    }
     const metadataEntries = Object.entries(event.metadata || {});
     if (metadataEntries.length > MAX_METADATA_ENTRIES) {
       throw new BadRequestException(
@@ -2915,6 +2950,7 @@ export class ChannelInteractionService {
         ? { ...counterparty, followedAt: eventAt }
         : counterparty,
       relatedObjectId: event.relatedObjectId,
+      conversationExternalId: event.conversationExternalId,
       metadata: event.metadata,
       normalizationVersion: event.normalizationVersion,
       membershipUpdate,

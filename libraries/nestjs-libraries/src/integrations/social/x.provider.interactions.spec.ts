@@ -165,6 +165,7 @@ describe('XProvider interaction webhooks', () => {
           {
             id: 'reply-in',
             author_id: '7',
+            conversation_id: 'conversation-1',
             created_at: '2024-01-01T00:00:00.000Z',
             referenced_tweets: [{ type: 'replied_to', id: 'parent' }],
             entities: { mentions: [{ id: '42', username: 'connected' }] },
@@ -187,6 +188,7 @@ describe('XProvider interaction webhooks', () => {
           direction: 'inbound',
           counterparty: { externalId: '7' },
           relatedObjectId: 'parent',
+          conversationExternalId: 'conversation-1',
           eventType: 'post.mention.create',
         },
       ],
@@ -391,7 +393,13 @@ describe('XProvider interaction webhooks', () => {
     );
     expect(mentioned).toMatchObject({
       accepted: true,
-      events: [{ kind: 'mention', direction: 'outbound', counterparty: { externalId: '7' } }],
+      events: [
+        {
+          kind: 'mention',
+          direction: 'outbound',
+          counterparty: { externalId: '7' },
+        },
+      ],
       contentEvents: [{ type: 'post.upsert', externalId: 'mention-out' }],
     });
 
@@ -568,12 +576,13 @@ describe('XProvider interaction webhooks', () => {
       event_type: eventType,
       filter: { user_id: '42', ...(direction ? { direction } : {}) },
       webhook_id: '123',
-      tag: `postiz:42:${eventType}:${eventType === 'post.create' ||
+      tag: `postiz:42:${eventType}:${
+        eventType === 'post.create' ||
         eventType === 'post.delete' ||
         direction === 'outbound'
-        ? 'outbound'
-        : 'inbound'
-        }`,
+          ? 'outbound'
+          : 'inbound'
+      }`,
     }));
     const fetchMock = jest
       .spyOn(global, 'fetch')
@@ -581,8 +590,8 @@ describe('XProvider interaction webhooks', () => {
         String(url).endsWith('/2/webhooks')
           ? endpointResponse()
           : new Response(JSON.stringify({ data: subscriptions, meta: {} }), {
-            status: 200,
-          })
+              status: 200,
+            })
       );
 
     await expect(
@@ -776,8 +785,9 @@ describe('XProvider interaction webhooks', () => {
 
   it('recreates stream-only subscriptions with the Postiz webhook instead of a tag PUT', async () => {
     const provider = new XProvider();
-    const fetchMock = jest.spyOn(global, 'fetch').mockImplementation(
-      async (url, options) => {
+    const fetchMock = jest
+      .spyOn(global, 'fetch')
+      .mockImplementation(async (url, options) => {
         const value = String(url);
         const method = options?.method || 'GET';
         if (value.endsWith('/2/webhooks')) return endpointResponse();
@@ -801,8 +811,7 @@ describe('XProvider interaction webhooks', () => {
         return new Response(JSON.stringify({ data: { deleted: true } }), {
           status: 200,
         });
-      }
-    );
+      });
 
     await expect(
       provider.channelInteractionWebhooks.reconcileSubscriptions(
@@ -843,35 +852,39 @@ describe('XProvider interaction webhooks', () => {
 
   it('creates follow subscriptions with user OAuth credentials', async () => {
     const provider = new XProvider();
-    const fetchMock = jest.spyOn(global, 'fetch').mockImplementation(async (url, options) => {
-      const value = String(url);
-      const method = options?.method || 'GET';
-      if (value.endsWith('/2/webhooks')) return endpointResponse();
-      if (method === 'GET') {
-        return new Response(JSON.stringify({ data: [] }), { status: 200 });
-      }
-      if (method === 'POST') {
-        const body = JSON.parse(String(options?.body || '{}'));
-        if (body.event_type === 'follow.follow') {
-          expect((options as RequestInit).headers).toEqual(
-            expect.objectContaining({
-              Authorization: expect.stringMatching(/^OAuth /),
-            })
-          );
+    const fetchMock = jest
+      .spyOn(global, 'fetch')
+      .mockImplementation(async (url, options) => {
+        const value = String(url);
+        const method = options?.method || 'GET';
+        if (value.endsWith('/2/webhooks')) return endpointResponse();
+        if (method === 'GET') {
+          return new Response(JSON.stringify({ data: [] }), { status: 200 });
+        }
+        if (method === 'POST') {
+          const body = JSON.parse(String(options?.body || '{}'));
+          if (body.event_type === 'follow.follow') {
+            expect((options as RequestInit).headers).toEqual(
+              expect.objectContaining({
+                Authorization: expect.stringMatching(/^OAuth /),
+              })
+            );
+            return new Response(
+              JSON.stringify({ data: { subscription_id: 'follow-1' } }),
+              { status: 200 }
+            );
+          }
           return new Response(
-            JSON.stringify({ data: { subscription_id: 'follow-1' } }),
+            JSON.stringify({
+              data: { subscription_id: `sub-${body.event_type}` },
+            }),
             { status: 200 }
           );
         }
-        return new Response(
-          JSON.stringify({ data: { subscription_id: `sub-${body.event_type}` } }),
-          { status: 200 }
-        );
-      }
-      return new Response(JSON.stringify({ data: { deleted: true } }), {
-        status: 200,
+        return new Response(JSON.stringify({ data: { deleted: true } }), {
+          status: 200,
+        });
       });
-    });
 
     await expect(
       provider.channelInteractionWebhooks.reconcileSubscriptions(
@@ -907,7 +920,9 @@ describe('XProvider interaction webhooks', () => {
         }
         const body = JSON.parse(String(options?.body || '{}'));
         return new Response(
-          JSON.stringify({ data: { subscription_id: `sub-${body.event_type}` } }),
+          JSON.stringify({
+            data: { subscription_id: `sub-${body.event_type}` },
+          }),
           { status: 200 }
         );
       });
@@ -950,7 +965,9 @@ describe('XProvider interaction webhooks', () => {
         }
         const body = JSON.parse(String(options?.body || '{}'));
         return new Response(
-          JSON.stringify({ data: { subscription_id: `sub-${body.event_type}` } }),
+          JSON.stringify({
+            data: { subscription_id: `sub-${body.event_type}` },
+          }),
           { status: 200 }
         );
       });
@@ -1017,9 +1034,12 @@ describe('XProvider interaction webhooks', () => {
       .mockImplementationOnce(async () => endpointResponse())
       .mockImplementationOnce(
         async () =>
-          new Response('OAuth token requires follows.read scope: secret-token', {
-            status: 403,
-          })
+          new Response(
+            'OAuth token requires follows.read scope: secret-token',
+            {
+              status: 403,
+            }
+          )
       );
     await expect(
       provider.channelInteractionWebhooks.reconcileSubscriptions(
@@ -1043,7 +1063,8 @@ describe('XProvider interaction webhooks', () => {
       .spyOn(global, 'fetch')
       .mockImplementationOnce(async () => endpointResponse())
       .mockImplementationOnce(
-        async () => new Response('usage-capped: private detail', { status: 429 })
+        async () =>
+          new Response('usage-capped: private detail', { status: 429 })
       );
     await expect(
       provider.channelInteractionWebhooks.reconcileSubscriptions(
@@ -1231,8 +1252,9 @@ describe('XProvider interaction webhooks', () => {
 
   it('reuses an existing directionless like subscription without recreating it', async () => {
     const provider = new XProvider();
-    const fetchMock = jest.spyOn(global, 'fetch').mockImplementation(
-      async (url, options) => {
+    const fetchMock = jest
+      .spyOn(global, 'fetch')
+      .mockImplementation(async (url, options) => {
         const value = String(url);
         const method = options?.method || 'GET';
         if (value.endsWith('/2/webhooks')) return endpointResponse();
@@ -1252,8 +1274,7 @@ describe('XProvider interaction webhooks', () => {
           );
         }
         return new Response(JSON.stringify({ data: {} }), { status: 200 });
-      }
-    );
+      });
 
     await expect(
       provider.channelInteractionWebhooks.reconcileSubscriptions(

@@ -1,5 +1,9 @@
 import { RelationshipScoringProfile } from '../channel-strategy.types';
-import { createStrategy, GROW_AUDIENCE_PROFILE } from './strategy.shared';
+import {
+  createStrategy,
+  CUSTOMER_SUPPORT_CONVERSION_PROFILE,
+  GROW_AUDIENCE_PROFILE,
+} from './strategy.shared';
 
 const customerSupportProfile: RelationshipScoringProfile = {
   ...GROW_AUDIENCE_PROFILE,
@@ -18,6 +22,7 @@ export const customerSupportStrategy = createStrategy(
   'Support customers',
   'Prioritize incoming support conversations while recognizing replies.',
   customerSupportProfile,
+  CUSTOMER_SUPPORT_CONVERSION_PROFILE,
   {
     defaultFilter: 'costly',
     defaultSort: 'recent',

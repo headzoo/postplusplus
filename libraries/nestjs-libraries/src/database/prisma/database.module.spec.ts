@@ -5,7 +5,7 @@ jest.mock('@gitroom/nestjs-libraries/redis/redis.service', () => ({
   },
 }));
 jest.mock('@gitroom/nestjs-libraries/integrations/integration.manager', () => ({
-  IntegrationManager: class IntegrationManager { },
+  IntegrationManager: class IntegrationManager {},
 }));
 
 import { Test } from '@nestjs/testing';
@@ -27,11 +27,19 @@ import { RelationshipGradeScheduleService } from '@gitroom/nestjs-libraries/temp
 import { HotMaterializationScheduleService } from '@gitroom/nestjs-libraries/temporal/hot-triage.schedule.service';
 import { CultivateMaterializationScheduleService } from '@gitroom/nestjs-libraries/temporal/cultivate.schedule.service';
 import { InfiniteWorkflowRegisterModule } from '@gitroom/nestjs-libraries/temporal/infinite.workflow.register';
+import { DatabaseModule } from './database.module';
+import { ConversionRepository } from './conversions/conversion.repository';
+import { ConversionService } from './conversions/conversion.service';
 
 const moduleProviders = (module: object) =>
   (Reflect.getMetadata(MODULE_METADATA.PROVIDERS, module) ?? []) as unknown[];
 
 describe('DatabaseModule dependency wiring', () => {
+  it('registers conversion persistence and evaluation services', () => {
+    expect(moduleProviders(DatabaseModule)).toContain(ConversionRepository);
+    expect(moduleProviders(DatabaseModule)).toContain(ConversionService);
+  });
+
   it('does not register RelationshipGradeScheduleService in InfiniteWorkflowRegisterModule', () => {
     expect(moduleProviders(InfiniteWorkflowRegisterModule)).not.toContain(
       RelationshipGradeScheduleService
@@ -70,10 +78,12 @@ describe('DatabaseModule dependency wiring', () => {
       ],
     }).compile();
 
-    expect(moduleRef.get(IntegrationService)).toBeInstanceOf(IntegrationService);
-    expect(
-      moduleRef.get(RelationshipGradeScheduleService)
-    ).toBeInstanceOf(RelationshipGradeScheduleService);
+    expect(moduleRef.get(IntegrationService)).toBeInstanceOf(
+      IntegrationService
+    );
+    expect(moduleRef.get(RelationshipGradeScheduleService)).toBeInstanceOf(
+      RelationshipGradeScheduleService
+    );
 
     await moduleRef.close();
   });

@@ -1,5 +1,9 @@
 import { RelationshipScoringProfile } from '../channel-strategy.types';
-import { createStrategy, GROW_AUDIENCE_PROFILE } from './strategy.shared';
+import {
+  createStrategy,
+  FOLLOWER_TRANSITION_CONVERSION_PROFILE,
+  GROW_AUDIENCE_PROFILE,
+} from './strategy.shared';
 
 const communityRetentionProfile: RelationshipScoringProfile = {
   ...GROW_AUDIENCE_PROFILE,
@@ -20,6 +24,7 @@ export const communityRetentionStrategy = createStrategy(
   'Retain community',
   'Strengthen useful two-way interactions with your community.',
   communityRetentionProfile,
+  FOLLOWER_TRANSITION_CONVERSION_PROFILE,
   {
     defaultFilter: 'cultivate',
     defaultSort: 'recent',

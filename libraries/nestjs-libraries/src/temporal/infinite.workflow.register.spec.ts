@@ -108,6 +108,14 @@ describe('InfiniteWorkflowRegister', () => {
         args: [{}],
       })
     );
+    expect(workflow.start).toHaveBeenCalledWith(
+      'conversionEvaluationWorkflowV1',
+      expect.objectContaining({
+        workflowId: 'conversion-evaluation-workflow-v1',
+        taskQueue: 'main',
+        args: [{}],
+      })
+    );
     expect(workflow.getHandle).toHaveBeenCalledWith(
       'channel-analytics-snapshot-workflow-v2'
     );
@@ -119,6 +127,12 @@ describe('InfiniteWorkflowRegister', () => {
     );
     expect(workflow.getHandle().signal).toHaveBeenCalledWith(
       'channelLeadBridge'
+    );
+    expect(workflow.getHandle).toHaveBeenCalledWith(
+      'conversion-evaluation-workflow-v1'
+    );
+    expect(workflow.getHandle().signal).toHaveBeenCalledWith(
+      'conversionEvaluation'
     );
   });
 
@@ -150,6 +164,27 @@ describe('InfiniteWorkflowRegister', () => {
       expect.objectContaining({
         workflowId: 'channel-analytics-snapshot-workflow-v2',
       })
+    );
+  });
+
+  it('treats an already-started conversion workflow as steady state', async () => {
+    const workflow = steadyStateWorkflow();
+    workflow.start.mockImplementation(async (type: string) => {
+      if (type === 'conversionEvaluationWorkflowV1') {
+        throw Object.assign(new Error('workflow already started'), {
+          name: 'WorkflowExecutionAlreadyStartedError',
+        });
+      }
+    });
+    const register = createRegister(workflow);
+    process.env.RUN_CRON = '1';
+
+    await expect(register.onModuleInit()).resolves.toBeUndefined();
+    expect(workflow.getHandle).toHaveBeenCalledWith(
+      'conversion-evaluation-workflow-v1'
+    );
+    expect(workflow.getHandle().signal).toHaveBeenCalledWith(
+      'conversionEvaluation'
     );
   });
 

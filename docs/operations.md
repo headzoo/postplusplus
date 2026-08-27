@@ -84,3 +84,14 @@ Review these areas carefully before merging:
 - Public API request/response shapes under `/public/v1`.
 - Auth middleware and authorization guards.
 - Provider interface changes that affect multiple social integrations.
+- Strategy-aware conversion rollout — see [Strategy-Aware Conversions](/conversions#deployment-and-rollback).
+
+### Conversion Rollout Checklist
+
+1. Apply the additive Prisma migration with `pnpm run prisma-migrate-deploy`.
+2. Deploy backend and orchestrator in the same release window.
+3. Verify `conversionEvaluationWorkflowV1` is registered and running in Temporal.
+4. Rotate conversion webhook credentials per integration before sending webhook traffic; store the returned token immediately because it is shown only once.
+5. Enable public API or webhook clients only after steps 1–3 succeed.
+
+Rollback: stop new ingestion and the conversion worker if needed, but keep additive tables and ledger data intact. Do not delete production conversion rows during rollback.

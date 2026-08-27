@@ -19,7 +19,7 @@ Only channels that expose follower identities show in the left sidebar—not eve
 ## Browse, search, and sort
 
 1. Select a channel in the left list.
-2. On **All**, review the summary cards and five-column board (**Leads**, **Hot**, **Mutual**, **Cultivate**, **Quiet**). Each column lists people in that segment (scroll within a column when needed); **View all** opens the full card grid for that segment.
+2. On **All**, review the summary cards and board columns (**Leads**, **Hot**, **Mutual**, **Cultivate**, **Followed**, **Quiet**, **Costly**, **Ignored**, **Unfollowed**, **Bots**). Each column lists people in that segment (scroll within a column when needed); **View all** opens the full card grid for that segment.
 3. Use **Search** for username or display name (searching on All switches from the board to the card grid).
 4. Open **Filters** for **Sort by**, **Direction**, **Time window** (**Week**, **Month**, **90 Day**, **Year**), and **Per page** (12 / 24 / 48).
 5. On a filtered tab or after **View all**, move with **Previous** / **Next**.
@@ -32,27 +32,33 @@ Empty search: **No followers match this search**.
 
 Use the pill tabs above the board or grid:
 
-| Filter        | Meaning                                                |
-| ------------- | ------------------------------------------------------ |
-| **All**       | Overview board plus everyone when searching            |
-| **Leads**     | Interacting non-followers (and warm-network prospects) |
-| **Hot**       | Their effort exceeds the channel’s (hourly picks)      |
-| **Mutual**    | Effort is balanced                                     |
-| **Cultivate** | Warm relationship that needs outbound attention        |
-| **Quiet**     | Little activity either way                             |
-| **Ignored**   | People you’ve hidden from other views                  |
-| **Costly**    | The channel’s effort exceeds theirs                    |
-| **Bots**      | Likely automated accounts                              |
+| Filter         | Meaning                                                             |
+| -------------- | ------------------------------------------------------------------- |
+| **All**        | Overview board plus everyone when searching                         |
+| **Leads**      | Interacting non-followers (and warm-network prospects)              |
+| **Followed**   | People you followed who have not followed back yet                  |
+| **Hot**        | Hourly materialized picks for relationships that need reciprocation |
+| **Mutual**     | Effort is balanced                                                  |
+| **Cultivate**  | Warm relationship that needs outbound attention                     |
+| **Quiet**      | Little activity either way                                          |
+| **Ignored**    | People you’ve hidden from other views                               |
+| **Unfollowed** | People you still follow who used to follow you and no longer do     |
+| **Costly**     | The channel’s effort exceeds theirs                                 |
+| **Bots**       | Likely automated accounts                                           |
 
-Summary cards show counts for **All Followers**, **Leads**, **Mutual**, **Hot**, **Cultivate**, **Quiet**, and **Ignored**. Category counts are CRM segments—not a sum of platform followers.
+Summary cards show counts for **All Followers**, **Leads**, **Mutual**, **Hot**, **Cultivate**, **Followed**, **Quiet**, and **Ignored**. Category counts are CRM segments—not a sum of platform followers.
 
-**Hot** uses hourly materialized picks. Empty triage: **No followers match this triage filter**.
+**Hot** uses hourly materialized picks (not live net-gap sorting). Cards can show a reason and suggested action when available. Empty Hot view: **No hot picks right now**. Other triage filters still use live relationship scores.
 
-## Leads and Cultivate
+## Leads, Hot, and Cultivate
+
+### Hot
+
+Hot refreshes about once per hour with a bounded set of relationships that need reciprocation. Ordering comes from the latest completed hourly batch, so new picks can take up to an hour to appear after activity changes. Cards may show a reason and suggested action from rules or optional AI reranking—rules-only reasons are not labeled as AI-generated. Dismissing Hot removes the card immediately even though the underlying pick row may remain until the next batch.
 
 ### Leads
 
-Leads are people who interact but may not follow you yet (including “Via @handle” bridges). Cards can show a **Fit** score. Dismiss a lead when it isn’t a fit—you’ll choose a reason (audience mismatch, bio claims, spam, competitor, not a customer, and similar). Dismissing removes them from the Leads view when that filter is active. Empty: **No leads on this channel**.
+Leads are people who interact but may not follow you yet (including “Via @handle” bridges). Cards can show a **Fit** score. Click the **Lead** badge to follow them through the channel (when supported), move them to a custom list, remove them with a reason, or snooze for 7 days. Dismissing removes them from the Leads view when that filter is active. Empty: **No leads on this channel**.
 
 ### Cultivate
 
@@ -127,3 +133,5 @@ To return to shipped defaults, re-select **Grow audience** in Settings.
 ## Followers assistant
 
 A floating chat helper can answer questions using the page you’re on. Its opening copy and suggested question chips follow the selected channel’s strategy. Server-side guidance uses trusted strategy directives; it never overrides confirmation rules or authorization boundaries. Prefer refreshing or re-checking the list for authoritative counts after changes.
+
+The assistant can also consult built-in Post++ engagement playbooks on demand. It first discovers short summaries with `listExpertise`, then reads only the playbooks that seem relevant with `readExpertise`. Those playbooks are optional craft guidance—they do not replace live follower data, your channel strategy, or confirmation before writes.

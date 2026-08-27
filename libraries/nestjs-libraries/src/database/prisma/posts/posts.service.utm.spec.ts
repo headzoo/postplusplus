@@ -23,9 +23,12 @@ jest.mock('nestjs-temporal-core', () => ({
   TemporalService: class TemporalService {},
 }));
 
-jest.mock('@gitroom/nestjs-libraries/database/prisma/media/media.service', () => ({
-  MediaService: class MediaService {},
-}));
+jest.mock(
+  '@gitroom/nestjs-libraries/database/prisma/media/media.service',
+  () => ({
+    MediaService: class MediaService {},
+  })
+);
 
 jest.mock('@gitroom/nestjs-libraries/openai/openai.service', () => ({
   OpenaiService: class OpenaiService {},
@@ -54,11 +57,13 @@ const createService = ({
   shortLinkService,
   integrationManager,
   repository,
+  conversionService,
 }: {
   integrationService?: Record<string, jest.Mock>;
   shortLinkService?: Record<string, jest.Mock>;
   integrationManager?: Record<string, jest.Mock>;
   repository?: Record<string, jest.Mock>;
+  conversionService?: Record<string, jest.Mock>;
 }) =>
   new PostsService(
     {
@@ -76,6 +81,8 @@ const createService = ({
     {
       getIntegrationById: jest.fn().mockResolvedValue({
         utmParams: 'utm_campaign=spring&utm_track=33ed',
+        strategyId: 'grow_audience',
+        strategyVersion: 1,
       }),
       ...integrationService,
     } as any,
@@ -94,7 +101,14 @@ const createService = ({
     {} as any,
     { start: jest.fn().mockResolvedValue(undefined) } as any,
     {} as any,
-    {} as any
+    {} as any,
+    {
+      prepareLeadCaptureLinks: jest.fn(
+        async ({ values }: { values: { content: string }[] }) =>
+          values.map(({ content }) => content)
+      ),
+      ...conversionService,
+    } as any
   );
 
 describe('PostsService channel utm params', () => {
@@ -106,10 +120,13 @@ describe('PostsService channel utm params', () => {
   });
 
   it('appends channel utm params before shortlinking', async () => {
-    const convertTextToShortLinks = jest.fn(async (_orgId, messages: string[]) =>
-      messages.map(() => 'https://short.test/abc')
+    const convertTextToShortLinks = jest.fn(
+      async (_orgId, messages: string[]) =>
+        messages.map(() => 'https://short.test/abc')
     );
-    const service = createService({ shortLinkService: { convertTextToShortLinks } });
+    const service = createService({
+      shortLinkService: { convertTextToShortLinks },
+    });
 
     await service.createPost(
       'org-a',
@@ -134,8 +151,8 @@ describe('PostsService channel utm params', () => {
   });
 
   it('skips utm when the provider strips links', async () => {
-    const convertTextToShortLinks = jest.fn(async (_orgId, messages: string[]) =>
-      messages
+    const convertTextToShortLinks = jest.fn(
+      async (_orgId, messages: string[]) => messages
     );
     const service = createService({
       integrationManager: {
@@ -168,9 +185,64 @@ describe('PostsService channel utm params', () => {
     ]);
   });
 
+  it('prepares lead attribution after UTM and before shortlinking', async () => {
+    const prepareLeadCaptureLinks = jest.fn(
+      async ({ values }: { values: { content: string }[] }) =>
+        values.map(({ content }) => `${content}&pp_click_id=click-1`)
+    );
+    const convertTextToShortLinks = jest.fn(
+      async (_orgId, messages: string[]) =>
+        messages.map(() => 'https://short.test/abc')
+    );
+    const service = createService({
+      integrationService: {
+        getIntegrationById: jest.fn().mockResolvedValue({
+          utmParams: 'utm_campaign=spring',
+          strategyId: 'lead_capture',
+          strategyVersion: 1,
+        }),
+      },
+      conversionService: { prepareLeadCaptureLinks },
+      shortLinkService: { convertTextToShortLinks },
+    });
+
+    await service.createPost(
+      'org-a',
+      {
+        type: 'schedule',
+        date: '2026-08-26T12:00:00',
+        shortLink: true,
+        posts: [
+          {
+            integration: { id: 'channel-a' },
+            value: [{ content: 'Visit https://example.com/page today' }],
+            settings: { __type: 'x-now' },
+          },
+        ],
+      } as any,
+      'WEB'
+    );
+
+    expect(prepareLeadCaptureLinks).toHaveBeenCalledWith(
+      expect.objectContaining({
+        values: [
+          expect.objectContaining({
+            id: expect.stringMatching(
+              /^[0-9a-f]{8}-[0-9a-f]{4}-[4-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+            ),
+            content: 'Visit https://example.com/page?utm_campaign=spring today',
+          }),
+        ],
+      })
+    );
+    expect(prepareLeadCaptureLinks.mock.invocationCallOrder[0]).toBeLessThan(
+      convertTextToShortLinks.mock.invocationCallOrder[0]
+    );
+  });
+
   it('skips utm when the channel has no params configured', async () => {
-    const convertTextToShortLinks = jest.fn(async (_orgId, messages: string[]) =>
-      messages
+    const convertTextToShortLinks = jest.fn(
+      async (_orgId, messages: string[]) => messages
     );
     const service = createService({
       integrationService: {

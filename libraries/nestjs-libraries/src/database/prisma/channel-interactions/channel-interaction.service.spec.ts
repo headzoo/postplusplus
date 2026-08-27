@@ -20,7 +20,7 @@ import { ChannelStrategyId } from '@gitroom/nestjs-libraries/channel-strategies/
 import { growAudienceStrategy } from '@gitroom/nestjs-libraries/channel-strategies/strategies/grow-audience.strategy';
 
 jest.mock('@gitroom/nestjs-libraries/integrations/integration.manager', () => ({
-  IntegrationManager: class IntegrationManager { },
+  IntegrationManager: class IntegrationManager {},
 }));
 
 jest.mock('@gitroom/nestjs-libraries/redis/redis.service', () => ({
@@ -948,6 +948,26 @@ describe('ChannelInteractionService', () => {
     );
   });
 
+  it('validates and forwards optional conversation identity', async () => {
+    const repository = createRepository();
+    const service = new ChannelInteractionService(repository as any);
+
+    await service.recordNormalizedDelivery('org', 'integration', [
+      interaction({ conversationExternalId: 'thread-1' }),
+    ] as any);
+
+    expect(repository.recordNormalizedEvent).toHaveBeenCalledWith(
+      'org',
+      'integration',
+      expect.objectContaining({ conversationExternalId: 'thread-1' })
+    );
+    await expect(
+      service.recordNormalizedDelivery('org', 'integration', [
+        interaction({ conversationExternalId: 'x'.repeat(513) }),
+      ] as any)
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
   it('does not let an unknown membership signal demote a known follower', async () => {
     const repository = createRepository();
     const service = new ChannelInteractionService(repository as any);
@@ -1865,8 +1885,7 @@ describe('ChannelInteractionService', () => {
     expect(adminScheduleLogService.append).toHaveBeenCalledWith(
       expect.objectContaining({
         scheduleKey: 'follower-cultivate',
-        message:
-          'Cultivate dismissed for follower-a on channel integration',
+        message: 'Cultivate dismissed for follower-a on channel integration',
       })
     );
   });

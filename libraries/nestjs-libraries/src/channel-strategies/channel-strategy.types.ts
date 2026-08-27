@@ -121,6 +121,67 @@ export type ResolvedMaterializationConfig = {
   profile: StrategyMaterializationProfile;
 };
 
+export const FOLLOWER_MEMBERSHIP_STATES = [
+  'NOT_FOLLOWER',
+  'FOLLOWER',
+  'UNKNOWN',
+] as const;
+
+export type FollowerMembershipState =
+  (typeof FOLLOWER_MEMBERSHIP_STATES)[number];
+
+export type FollowerTransitionConversionProfile = {
+  kind: 'follower_transition';
+  profileVersion: number;
+  conversionType: string;
+  fromState: FollowerMembershipState;
+  toState: FollowerMembershipState;
+};
+
+export type WebsiteGoalConversionProfile = {
+  kind: 'website_goal';
+  profileVersion: number;
+  conversionType: string;
+  attributionWindowDays: number;
+  clickIdParameter: string;
+};
+
+export type AmplificationConversionProfile = {
+  kind: 'amplification';
+  profileVersion: number;
+  conversionType: string;
+  windowDays: number;
+  acceptedInboundKinds: readonly ChannelInteractionScoreKind[];
+  inboundKindWeights: Readonly<
+    Partial<Record<ChannelInteractionScoreKind, number>>
+  >;
+  threshold: number;
+  minimumActiveUtcDays: number;
+  cooldownDays: number;
+};
+
+export type SupportConversationKeyPolicy = 'conversation_or_actor';
+
+export type CustomerSupportConversionProfile = {
+  kind: 'customer_support';
+  profileVersion: number;
+  slaConversionType: string;
+  resolutionConversionType: string;
+  inboundKinds: readonly ChannelInteractionScoreKind[];
+  outboundKinds: readonly ChannelInteractionScoreKind[];
+  firstResponseSlaHours: number;
+  conversationKeyPolicy: SupportConversationKeyPolicy;
+  explicitResolutionEnabled: boolean;
+  inferredResolutionEnabled: boolean;
+  inferredResolutionDelayHours: number | null;
+};
+
+export type ChannelConversionProfile =
+  | FollowerTransitionConversionProfile
+  | WebsiteGoalConversionProfile
+  | AmplificationConversionProfile
+  | CustomerSupportConversionProfile;
+
 export type ChannelStrategy = {
   readonly id: ChannelStrategyId;
   readonly version: number;
@@ -130,6 +191,7 @@ export type ChannelStrategy = {
   readonly agent: ChannelStrategyAgent;
   getScoringProfile(): RelationshipScoringProfile;
   getMaterializationProfile(): StrategyMaterializationProfile;
+  getConversionProfile(): ChannelConversionProfile;
   prepare?: (input: unknown) => unknown;
   scoreRelationship?: (input: StrategyScoringInput) => StrategyScoreResult;
   triage?: (input: StrategyScoringInput) => RelationshipTriage;

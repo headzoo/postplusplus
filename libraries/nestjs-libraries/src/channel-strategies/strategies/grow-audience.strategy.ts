@@ -1,10 +1,15 @@
-import { createStrategy, GROW_AUDIENCE_PROFILE } from './strategy.shared';
+import {
+  createStrategy,
+  FOLLOWER_TRANSITION_CONVERSION_PROFILE,
+  GROW_AUDIENCE_PROFILE,
+} from './strategy.shared';
 
 export const growAudienceStrategy = createStrategy(
   'grow_audience',
   'Grow audience',
   'Prioritize reciprocal relationships that can expand your audience.',
   GROW_AUDIENCE_PROFILE,
+  FOLLOWER_TRANSITION_CONVERSION_PROFILE,
   {
     assistantInitialCopy: {
       key: 'channelStrategies.grow_audience.assistantInitialCopy',

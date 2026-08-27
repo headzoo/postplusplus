@@ -15,6 +15,12 @@ import {
 } from './lead-bridge.schedule';
 import { HotMaterializationScheduleService } from './hot-triage.schedule.service';
 import { CultivateMaterializationScheduleService } from './cultivate.schedule.service';
+import {
+  CONVERSION_EVALUATION_SIGNAL,
+  CONVERSION_EVALUATION_WORKFLOW_ID,
+  CONVERSION_EVALUATION_WORKFLOW_TYPE,
+} from './conversion-evaluation.workflow';
+import { ConversionEvaluationTriggerService } from './conversion-evaluation.trigger.service';
 
 @Injectable()
 export class InfiniteWorkflowRegister implements OnModuleInit {
@@ -26,7 +32,7 @@ export class InfiniteWorkflowRegister implements OnModuleInit {
     private _followerBotScoreScheduleService: FollowerBotScoreScheduleService,
     private _hotMaterializationScheduleService: HotMaterializationScheduleService,
     private _cultivateMaterializationScheduleService: CultivateMaterializationScheduleService
-  ) { }
+  ) {}
 
   async onModuleInit(): Promise<void> {
     if (!!process.env.RUN_CRON) {
@@ -37,7 +43,7 @@ export class InfiniteWorkflowRegister implements OnModuleInit {
             workflowId: 'missing-post-workflow',
             taskQueue: 'main',
           });
-      } catch (err) { }
+      } catch (err) {}
       await this.handoffPipelineScheduler();
       await this.startChannelInteractionMaintenance();
       await this.startChannelRelationshipGrade();
@@ -46,13 +52,16 @@ export class InfiniteWorkflowRegister implements OnModuleInit {
       await this.startChannelCultivate();
       await this.startChannelAnalyticsSnapshot();
       await this.startChannelHotMaterialization();
+      await this.startConversionEvaluation();
     }
   }
 
   private async handoffPipelineScheduler() {
     const workflow = this._temporalService.client?.getRawClient()?.workflow;
     if (!workflow) {
-      throw new Error('Temporal workflow client unavailable during scheduler handoff');
+      throw new Error(
+        'Temporal workflow client unavailable during scheduler handoff'
+      );
     }
 
     try {
@@ -85,17 +94,24 @@ export class InfiniteWorkflowRegister implements OnModuleInit {
   private async startChannelInteractionMaintenance() {
     const workflow = this._temporalService.client?.getRawClient()?.workflow;
     if (!workflow) {
-      throw new Error('Temporal workflow client unavailable during maintenance start');
+      throw new Error(
+        'Temporal workflow client unavailable during maintenance start'
+      );
     }
     try {
-      const v1 = workflow.getHandle('channel-interaction-maintenance-workflow-v1');
+      const v1 = workflow.getHandle(
+        'channel-interaction-maintenance-workflow-v1'
+      );
       const description = await v1.describe();
       if (description.status.name === 'RUNNING') {
         await v1.terminate('Migrating Channel interaction maintenance to V2');
       }
     } catch (error) {
       if (!this.isMissingOrClosed(error)) {
-        this._logger.error('Failed to stop Channel interaction maintenance V1', error);
+        this._logger.error(
+          'Failed to stop Channel interaction maintenance V1',
+          error
+        );
         throw error;
       }
     }
@@ -108,7 +124,10 @@ export class InfiniteWorkflowRegister implements OnModuleInit {
       });
     } catch (error) {
       if (!this.isAlreadyStarted(error)) {
-        this._logger.error('Failed to start Channel interaction maintenance', error);
+        this._logger.error(
+          'Failed to start Channel interaction maintenance',
+          error
+        );
         throw error;
       }
     }
@@ -186,7 +205,10 @@ export class InfiniteWorkflowRegister implements OnModuleInit {
       }
     } catch (error) {
       if (!this.isMissingOrClosed(error)) {
-        this._logger.error('Failed to stop Channel analytics snapshot V1', error);
+        this._logger.error(
+          'Failed to stop Channel analytics snapshot V1',
+          error
+        );
         throw error;
       }
     }
@@ -210,6 +232,37 @@ export class InfiniteWorkflowRegister implements OnModuleInit {
     } catch (error) {
       this._logger.warn(
         'Channel analytics snapshot was not poked after start',
+        error
+      );
+    }
+  }
+
+  private async startConversionEvaluation() {
+    const workflow = this._temporalService.client?.getRawClient()?.workflow;
+    if (!workflow) {
+      throw new Error(
+        'Temporal workflow client unavailable during conversion evaluation start'
+      );
+    }
+    try {
+      await workflow.start(CONVERSION_EVALUATION_WORKFLOW_TYPE, {
+        workflowId: CONVERSION_EVALUATION_WORKFLOW_ID,
+        taskQueue: 'main',
+        args: [{}],
+      });
+    } catch (error) {
+      if (!this.isAlreadyStarted(error)) {
+        this._logger.error('Failed to start Conversion evaluation', error);
+        throw error;
+      }
+    }
+    try {
+      await workflow
+        .getHandle(CONVERSION_EVALUATION_WORKFLOW_ID)
+        .signal(CONVERSION_EVALUATION_SIGNAL);
+    } catch (error) {
+      this._logger.warn(
+        'Conversion evaluation was not poked after start',
         error
       );
     }
@@ -246,9 +299,10 @@ export class InfiniteWorkflowRegister implements OnModuleInit {
     HotMaterializationScheduleService,
     CultivateMaterializationScheduleService,
     AdminScheduleWorkflowService,
+    ConversionEvaluationTriggerService,
   ],
   get exports() {
     return this.providers;
   },
 })
-export class InfiniteWorkflowRegisterModule { }
+export class InfiniteWorkflowRegisterModule {}

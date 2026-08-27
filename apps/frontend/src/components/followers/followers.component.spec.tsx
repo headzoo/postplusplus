@@ -13,12 +13,11 @@ import {
   resolveFollowerStrategyDefaults,
 } from './followers.component';
 import { getChannelStrategy } from '@gitroom/nestjs-libraries/channel-strategies/channel-strategy.registry';
+import { Follower, FollowerChannel, UseFollowersParams } from './use.followers';
 import {
-  Follower,
-  FollowerChannel,
-  UseFollowersParams,
-} from './use.followers';
-import { FOLLOWER_BOARD_PREVIEW_LIMIT } from './follower.segments';
+  FOLLOWER_BOARD_PREVIEW_LIMIT,
+  FOLLOWER_BOARD_SEGMENTS,
+} from './follower.segments';
 
 const openModal = jest.fn();
 const closeById = jest.fn();
@@ -96,7 +95,7 @@ const strategyWithDefaults = (
       compactMetrics: [],
       emptyState: { key: 'empty', defaultValue: 'Empty' },
     },
-  }) as FollowerChannel['strategy'];
+  } as FollowerChannel['strategy']);
 
 const publicStrategy = (
   id: Parameters<typeof getChannelStrategy>[0]
@@ -118,7 +117,6 @@ const publicStrategy = (
     },
   };
 };
-
 
 const isBoardPreviewParams = (params: UseFollowersParams) =>
   params.limit === FOLLOWER_BOARD_PREVIEW_LIMIT &&
@@ -147,7 +145,6 @@ const mainFollowersParams = () => {
   return withIntegration;
 };
 
-
 jest.mock('@mantine/hooks', () => ({
   useClickOutside: () => ({ current: null }),
 }));
@@ -162,9 +159,12 @@ jest.mock('@copilotkit/react-core', () => ({
   useCopilotReadable: (value: unknown) => useCopilotReadableMock(value),
 }));
 
-jest.mock('@gitroom/frontend/components/followers/use.copilot.follower.page', () => ({
-  useCopilotFollowerPageProperties: jest.fn(),
-}));
+jest.mock(
+  '@gitroom/frontend/components/followers/use.copilot.follower.page',
+  () => ({
+    useCopilotFollowerPageProperties: jest.fn(),
+  })
+);
 
 const dismissAlertMock = jest.fn();
 let dismissedAlertKeys: string[] = [];
@@ -172,9 +172,7 @@ let dismissedAlertsLoading = false;
 
 jest.mock('@gitroom/frontend/components/layout/use.dismissed.alerts', () => ({
   useDismissedAlerts: () => ({
-    data: dismissedAlertsLoading
-      ? undefined
-      : { keys: dismissedAlertKeys },
+    data: dismissedAlertsLoading ? undefined : { keys: dismissedAlertKeys },
     isLoading: dismissedAlertsLoading,
     dismissAlert: dismissAlertMock,
   }),
@@ -199,16 +197,17 @@ jest.mock('next/link', () => ({
 }));
 
 jest.mock('@gitroom/react/translation/get.transation.service.client', () => ({
-  useT: () => (key: string, fallback: string, params?: Record<string, unknown>) => {
-    if (!params) {
-      return fallback;
-    }
-    return Object.entries(params).reduce(
-      (result, [name, value]) =>
-        result.replace(new RegExp(`{{${name}}}`, 'g'), String(value)),
-      fallback
-    );
-  },
+  useT:
+    () => (key: string, fallback: string, params?: Record<string, unknown>) => {
+      if (!params) {
+        return fallback;
+      }
+      return Object.entries(params).reduce(
+        (result, [name, value]) =>
+          result.replace(new RegExp(`{{${name}}}`, 'g'), String(value)),
+        fallback
+      );
+    },
 }));
 
 jest.mock('@gitroom/frontend/components/layout/new-modal', () => ({
@@ -288,16 +287,25 @@ jest.mock('@gitroom/frontend/components/followers/follower.card', () => ({
       {follower.name}
     </button>
   ),
+  useRelationshipTriageDismiss: () => ({
+    dismiss: jest.fn(),
+    displayLabel: 'Lead',
+  }),
 }));
 
-jest.mock('@gitroom/frontend/components/followers/follower.detail.modal', () => ({
-  FollowerDetailModal: () => <div>Follower detail</div>,
-}));
+jest.mock(
+  '@gitroom/frontend/components/followers/follower.detail.modal',
+  () => ({
+    FollowerDetailModal: () => <div>Follower detail</div>,
+  })
+);
 
 jest.mock('@gitroom/frontend/components/launches/channels.sidebar', () => ({
-  ChannelsSidebar: ({ children }: { children: (collapsed: boolean) => React.ReactNode }) => (
-    <div>{children(false)}</div>
-  ),
+  ChannelsSidebar: ({
+    children,
+  }: {
+    children: (collapsed: boolean) => React.ReactNode;
+  }) => <div>{children(false)}</div>,
   ChannelMenu: ({
     integrations,
     onSelect,
@@ -322,12 +330,15 @@ jest.mock('@gitroom/frontend/components/launches/channels.sidebar', () => ({
   ],
 }));
 
-jest.mock('@gitroom/frontend/components/launches/helpers/use.integration.list', () => ({
-  useIntegrationList: () => ({
-    data: mockIntegrations,
-    isLoading: false,
-  }),
-}));
+jest.mock(
+  '@gitroom/frontend/components/launches/helpers/use.integration.list',
+  () => ({
+    useIntegrationList: () => ({
+      data: mockIntegrations,
+      isLoading: false,
+    }),
+  })
+);
 
 jest.mock('@gitroom/frontend/components/followers/use.followers', () => {
   const actual = jest.requireActual('./use.followers');
@@ -471,6 +482,12 @@ describe('follower page href helpers', () => {
       audience: undefined,
       isBot: undefined,
     });
+    expect(parseFollowerViewPath('/followers/all')).toEqual({
+      slug: 'all',
+      triage: undefined,
+      audience: undefined,
+      isBot: undefined,
+    });
     expect(parseFollowerViewPath('/followers/hot')).toEqual({
       slug: 'hot',
       triage: undefined,
@@ -534,10 +551,13 @@ describe('follower page href helpers', () => {
       })
     ).toBe('/followers?search=alex&listId=list-1');
     expect(buildFollowersPageHref({ slug: 'bots' })).toBe('/followers/bots');
+    expect(buildFollowersPageHref({ slug: 'all' })).toBe('/followers/all');
   });
 
   it('maps follower detail paths and hrefs', () => {
-    expect(parseFollowerPath('/followers/@SummerYule')).toEqual({ type: 'list' });
+    expect(parseFollowerPath('/followers/@SummerYule')).toEqual({
+      type: 'list',
+    });
     expect(parseFollowerPath('/followers/channel-1/@SummerYule')).toEqual({
       type: 'follower',
       integrationId: 'channel-1',
@@ -553,6 +573,13 @@ describe('follower page href helpers', () => {
       slug: 'hot',
       triage: undefined,
       audience: 'hot',
+      isBot: undefined,
+    });
+    expect(parseFollowerPath('/followers/all')).toEqual({
+      type: 'list',
+      slug: 'all',
+      triage: undefined,
+      audience: undefined,
       isBot: undefined,
     });
     expect(parseFollowerPath('/followers/cultivate')).toEqual({
@@ -629,11 +656,15 @@ describe('FollowersComponent', () => {
       error: undefined,
       mutate: jest.fn(),
     }));
-    pushState = jest.spyOn(globalThis.history, 'pushState').mockImplementation(() => { });
-    historyBack = jest.spyOn(globalThis.history, 'back').mockImplementation(() => { });
+    pushState = jest
+      .spyOn(globalThis.history, 'pushState')
+      .mockImplementation(() => {});
+    historyBack = jest
+      .spyOn(globalThis.history, 'back')
+      .mockImplementation(() => {});
     replaceState = jest
       .spyOn(globalThis.history, 'replaceState')
-      .mockImplementation(() => { });
+      .mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -690,7 +721,11 @@ describe('FollowersComponent', () => {
   });
 
   it('applies strategy defaults only once for each channel', () => {
-    channel.strategy = strategyWithDefaults('community_retention', 'cultivate', 'recent');
+    channel.strategy = strategyWithDefaults(
+      'community_retention',
+      'cultivate',
+      'recent'
+    );
     const { rerender } = render(<FollowersComponent />);
 
     expect(replace).toHaveBeenCalledWith('/followers/cultivate');
@@ -704,7 +739,11 @@ describe('FollowersComponent', () => {
   });
 
   it('does not apply a strategy default after entering on a non-bare route', () => {
-    channel.strategy = strategyWithDefaults('community_retention', 'cultivate', 'recent');
+    channel.strategy = strategyWithDefaults(
+      'community_retention',
+      'cultivate',
+      'recent'
+    );
     mockPathname = '/followers/hot';
     const { rerender } = render(<FollowersComponent />);
 
@@ -757,76 +796,58 @@ describe('FollowersComponent', () => {
     const filterBar = screen.getByTestId('followers-filter-bar');
     expect(filterBar.getAttribute('data-filter-group')).toBe('lists');
 
+    const allFollowersChip = screen.getByRole('link', {
+      name: 'All followers',
+    });
+    expect(allFollowersChip.getAttribute('href')).toBe('/followers/all');
+    expect(filterBar.contains(allFollowersChip)).toBe(true);
+
     const vipChip = screen.getByRole('link', { name: 'VIP' });
-    expect(vipChip.className).toContain('border-newBorder');
+    expect(vipChip.className).toContain('border-orange-500/50');
     expect(filterBar.contains(vipChip)).toBe(true);
+    expect(
+      allFollowersChip.compareDocumentPosition(vipChip) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Create list' })).toBeTruthy();
   });
 
-  it('shows the summary cards and board on All with no search', () => {
+  it('shows the board on All with no search', () => {
     render(<FollowersComponent />);
 
-    expect(screen.getByTestId('followers-summary-cards')).toBeTruthy();
     expect(screen.getByTestId('followers-board')).toBeTruthy();
     const segmentColumns = screen
       .getAllByTestId('followers-board-column')
       .filter((column) => column.hasAttribute('data-board-segment'));
-    expect(segmentColumns).toHaveLength(9);
+    expect(segmentColumns).toHaveLength(FOLLOWER_BOARD_SEGMENTS.length);
     expect(segmentColumns[0].getAttribute('data-board-segment')).toBe('leads');
     expect(segmentColumns[1].getAttribute('data-board-segment')).toBe('hot');
-    expect(segmentColumns[2].getAttribute('data-board-segment')).toBe('cultivate');
-    expect(segmentColumns[3].getAttribute('data-board-segment')).toBe('followed');
+    expect(segmentColumns[2].getAttribute('data-board-segment')).toBe(
+      'cultivate'
+    );
+    expect(segmentColumns[3].getAttribute('data-board-segment')).toBe(
+      'followed'
+    );
     expect(
       screen
         .getAllByTestId('followers-board-column')
         .some((column) => column.getAttribute('data-board-list') === 'list-1')
     ).toBe(true);
-
-    const summaryCards = screen
-      .getByTestId('followers-summary-cards')
-      .querySelectorAll('[data-summary-segment]');
-    expect(
-      Array.from(summaryCards).map((card) =>
-        card.getAttribute('data-summary-segment')
-      )
-    ).toEqual([
-      'all',
-      'leads',
-      'hot',
-      'cultivate',
-      'followed',
-      'mutual',
-      'quiet',
-      'costly',
-      'ignored',
-      'unfollowed',
-      'bots',
-    ]);
   });
 
-  it('hides summary cards and board columns for hidden triages', () => {
+  it('hides board columns for hidden triages', () => {
     localStorage.setItem(
       'followers.triage.visibility.channel-1',
       JSON.stringify({ hiddenSlugs: ['bots', 'ignored', 'hot'] })
     );
     render(<FollowersComponent />);
 
-    const summarySegments = Array.from(
-      screen
-        .getByTestId('followers-summary-cards')
-        .querySelectorAll('[data-summary-segment]')
-    ).map((card) => card.getAttribute('data-summary-segment'));
-    expect(summarySegments).not.toContain('bots');
-    expect(summarySegments).not.toContain('ignored');
-    expect(summarySegments).not.toContain('hot');
-    expect(summarySegments).toContain('all');
-
     const boardSegments = screen
       .getAllByTestId('followers-board-column')
       .map((column) => column.getAttribute('data-board-segment'))
       .filter(Boolean);
     expect(boardSegments).not.toContain('hot');
-    expect(boardSegments).toHaveLength(9);
+    expect(boardSegments).toHaveLength(FOLLOWER_BOARD_SEGMENTS.length - 3);
   });
 
   it('keeps visible triage routes instead of redirecting to All', () => {
@@ -857,12 +878,58 @@ describe('FollowersComponent', () => {
     expect(replace).toHaveBeenCalledWith('/followers');
   });
 
-  it('hides the summary cards and board when a filtered tab is active', () => {
+  it('hides the board when a filtered tab is active', () => {
     mockPathname = '/followers/hot';
     render(<FollowersComponent />);
 
-    expect(screen.queryByTestId('followers-summary-cards')).toBeNull();
     expect(screen.queryByTestId('followers-board')).toBeNull();
+  });
+
+  it('shows the card grid on /followers/all instead of the board', () => {
+    mockPathname = '/followers/all';
+    followersPage = {
+      items: [
+        {
+          id: 'follower-1',
+          name: 'Alex Example',
+          username: 'alex',
+        },
+      ],
+      hasMore: false,
+      total: 1,
+    };
+    render(<FollowersComponent />);
+
+    expect(screen.queryByTestId('followers-board')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Alex Example' })).toBeTruthy();
+    expect(mainFollowersParams().at(-1)).toEqual(
+      expect.objectContaining({
+        audience: undefined,
+        triage: undefined,
+        listId: undefined,
+      })
+    );
+  });
+
+  it('does not select the All followers chip on the board overview', () => {
+    render(<FollowersComponent />);
+
+    expect(
+      screen
+        .getByRole('link', { name: 'All followers' })
+        .getAttribute('aria-pressed')
+    ).toBe('false');
+  });
+
+  it('selects the All followers chip on /followers/all', () => {
+    mockPathname = '/followers/all';
+    render(<FollowersComponent />);
+
+    expect(
+      screen
+        .getByRole('link', { name: 'All followers' })
+        .getAttribute('aria-pressed')
+    ).toBe('true');
   });
 
   it('publishes bounded effective follower list context', () => {
@@ -877,9 +944,16 @@ describe('FollowersComponent', () => {
       value: expect.objectContaining({
         kind: 'list',
         route: '/followers/hot',
-        channel: expect.objectContaining({ id: 'channel-1', name: 'Acme Channel' }),
+        channel: expect.objectContaining({
+          id: 'channel-1',
+          name: 'Acme Channel',
+        }),
         search: 'alex',
-        list: expect.objectContaining({ id: 'list-1', name: 'VIP', status: 'current' }),
+        list: expect.objectContaining({
+          id: 'list-1',
+          name: 'VIP',
+          status: 'current',
+        }),
         availableLists: expect.arrayContaining([
           expect.objectContaining({ id: 'list-1', name: 'VIP' }),
         ]),
@@ -907,7 +981,11 @@ describe('FollowersComponent', () => {
     render(<FollowersComponent />);
 
     expect(mainFollowersParams().at(-1)).toEqual(
-      expect.objectContaining({ audience: 'hot', triage: undefined, sort: undefined })
+      expect.objectContaining({
+        audience: 'hot',
+        triage: undefined,
+        sort: undefined,
+      })
     );
   });
 
@@ -916,7 +994,11 @@ describe('FollowersComponent', () => {
     render(<FollowersComponent />);
 
     expect(mainFollowersParams().at(-1)).toEqual(
-      expect.objectContaining({ isBot: true, triage: undefined, audience: undefined })
+      expect.objectContaining({
+        isBot: true,
+        triage: undefined,
+        audience: undefined,
+      })
     );
   });
 
@@ -992,9 +1074,9 @@ describe('FollowersComponent', () => {
     expect((screen.getByLabelText('Sort by') as HTMLSelectElement).value).toBe(
       'their_effort'
     );
-    expect((screen.getByLabelText('Direction') as HTMLSelectElement).value).toBe(
-      'asc'
-    );
+    expect(
+      (screen.getByLabelText('Direction') as HTMLSelectElement).value
+    ).toBe('asc');
     expect(mainFollowersParams().at(-1)).toEqual(
       expect.objectContaining({
         search: 'alex',

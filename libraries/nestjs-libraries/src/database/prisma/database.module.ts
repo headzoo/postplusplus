@@ -76,6 +76,8 @@ import { PostRulesService } from '@gitroom/nestjs-libraries/database/prisma/rule
 import { PostRulesExecutionRepository } from '@gitroom/nestjs-libraries/database/prisma/rules/post-rules.execution.repository';
 import { PostRulesExecutionService } from '@gitroom/nestjs-libraries/database/prisma/rules/post-rules.execution.service';
 import { RelationshipGradeScheduleService } from '@gitroom/nestjs-libraries/temporal/relationship-grade.schedule.service';
+import { ConversionRepository } from '@gitroom/nestjs-libraries/database/prisma/conversions/conversion.repository';
+import { ConversionService } from '@gitroom/nestjs-libraries/database/prisma/conversions/conversion.service';
 
 @Global()
 @Module({
@@ -156,10 +158,12 @@ import { RelationshipGradeScheduleService } from '@gitroom/nestjs-libraries/temp
     PostRulesService,
     PostRulesExecutionRepository,
     PostRulesExecutionService,
+    ConversionRepository,
+    ConversionService,
     RelationshipGradeScheduleService,
   ],
   get exports() {
     return this.providers;
   },
 })
-export class DatabaseModule { }
+export class DatabaseModule {}

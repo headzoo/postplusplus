@@ -1,4 +1,6 @@
 import {
+  appendReservedParamsToText,
+  appendReservedParamsToUrl,
   appendUtmParamsToText,
   appendUtmParamsToUrl,
   isValidUtmParamsString,
@@ -10,12 +12,12 @@ import {
 describe('utm.params', () => {
   describe('parseUtmParamsString', () => {
     it('parses a query string with optional leading question mark', () => {
-      expect(parseUtmParamsString('utm_campaign=spring')?.get('utm_campaign')).toBe(
-        'spring'
-      );
-      expect(parseUtmParamsString('?utm_campaign=spring')?.get('utm_campaign')).toBe(
-        'spring'
-      );
+      expect(
+        parseUtmParamsString('utm_campaign=spring')?.get('utm_campaign')
+      ).toBe('spring');
+      expect(
+        parseUtmParamsString('?utm_campaign=spring')?.get('utm_campaign')
+      ).toBe('spring');
     });
 
     it('rejects hash fragments and empty keys', () => {
@@ -37,9 +39,9 @@ describe('utm.params', () => {
 
   describe('normalizeUtmParamsString', () => {
     it('returns canonical query string', () => {
-      expect(normalizeUtmParamsString('?utm_campaign=spring&utm_track=33ed')).toBe(
-        'utm_campaign=spring&utm_track=33ed'
-      );
+      expect(
+        normalizeUtmParamsString('?utm_campaign=spring&utm_track=33ed')
+      ).toBe('utm_campaign=spring&utm_track=33ed');
     });
   });
 
@@ -60,9 +62,9 @@ describe('utm.params', () => {
 
     it('skips shortlink domain URLs', () => {
       const params = parseUtmParamsString('utm_campaign=spring')!;
-      expect(
-        appendUtmParamsToUrl('https://dub.sh/abc', params, 'dub.sh')
-      ).toBe('https://dub.sh/abc');
+      expect(appendUtmParamsToUrl('https://dub.sh/abc', params, 'dub.sh')).toBe(
+        'https://dub.sh/abc'
+      );
       expect(shouldSkipUrlForUtm('https://dub.sh/abc', 'dub.sh')).toBe(true);
     });
   });
@@ -82,6 +84,42 @@ describe('utm.params', () => {
     it('returns original text when params are empty', () => {
       expect(appendUtmParamsToText('https://example.com', '')).toBe(
         'https://example.com'
+      );
+    });
+  });
+
+  describe('appendReservedParamsToUrl', () => {
+    it('replaces reserved params while preserving queries and fragments', () => {
+      expect(
+        appendReservedParamsToUrl(
+          'https://example.com/page?utm_source=post&pp_click_id=spoofed#section',
+          [['pp_click_id', 'generated']]
+        )
+      ).toBe(
+        'https://example.com/page?utm_source=post&pp_click_id=generated#section'
+      );
+    });
+
+    it('skips configured short-link domains', () => {
+      expect(
+        appendReservedParamsToUrl(
+          'https://short.test/abc',
+          [['pp_click_id', 'generated']],
+          'short.test'
+        )
+      ).toBe('https://short.test/abc');
+    });
+  });
+
+  describe('appendReservedParamsToText', () => {
+    it('uses independently generated reserved params for every URL', () => {
+      expect(
+        appendReservedParamsToText(
+          'https://example.com/a and https://example.com/b',
+          (url) => [['pp_click_id', url.endsWith('/a') ? 'a' : 'b']]
+        )
+      ).toBe(
+        'https://example.com/a?pp_click_id=a and https://example.com/b?pp_click_id=b'
       );
     });
   });

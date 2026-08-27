@@ -2,9 +2,13 @@ import {
   assertRelationshipScoringProfile,
 } from './channel-strategy.scoring';
 import {
+  CHANNEL_INTERACTION_SCORE_KINDS,
   CHANNEL_STRATEGY_IDS,
+  ChannelConversionProfile,
+  ChannelInteractionScoreKind,
   ChannelStrategy,
   ChannelStrategyId,
+  FollowerMembershipState,
   ResolvedMaterializationConfig,
   StrategyMaterializationProfile,
 } from './channel-strategy.types';
@@ -26,6 +30,74 @@ const MATERIALIZATION_LIMITS = {
   maxWarmGradeThreshold: 5,
   maxFitMinScore: 100,
 } as const;
+
+const CONVERSION_LIMITS = {
+  maxProfileVersion: 1000,
+  maxAttributionWindowDays: 365,
+  maxWindowDays: 90,
+  maxCooldownDays: 90,
+  maxMinimumActiveUtcDays: 30,
+  maxThreshold: 10000,
+  maxWeight: 1000,
+  maxSlaHours: 168,
+  maxInferredResolutionDelayHours: 720,
+  maxConversionTypeLength: 64,
+  maxClickIdParameterLength: 32,
+} as const;
+
+function isChannelInteractionScoreKind(
+  value: unknown
+): value is ChannelInteractionScoreKind {
+  return (
+    typeof value === 'string' &&
+    CHANNEL_INTERACTION_SCORE_KINDS.includes(value as ChannelInteractionScoreKind)
+  );
+}
+
+function isFollowerMembershipState(
+  value: unknown
+): value is FollowerMembershipState {
+  return (
+    value === 'NOT_FOLLOWER' ||
+    value === 'FOLLOWER' ||
+    value === 'UNKNOWN'
+  );
+}
+
+function assertNonEmptyConversionType(value: string, label: string) {
+  if (
+    typeof value !== 'string' ||
+    !value.trim() ||
+    value.length > CONVERSION_LIMITS.maxConversionTypeLength
+  ) {
+    throw new RangeError(`Invalid ${label}`);
+  }
+}
+
+function assertPositiveFiniteWeight(value: number, label: string) {
+  if (!Number.isFinite(value) || value <= 0 || value > CONVERSION_LIMITS.maxWeight) {
+    throw new RangeError(`Invalid ${label}`);
+  }
+}
+
+function assertInteractionKindList(
+  kinds: readonly unknown[],
+  label: string
+) {
+  if (!kinds.length) {
+    throw new RangeError(`Invalid ${label}: must be non-empty`);
+  }
+  const seen = new Set<string>();
+  for (const kind of kinds) {
+    if (!isChannelInteractionScoreKind(kind)) {
+      throw new RangeError(`Invalid ${label}: unsupported interaction kind`);
+    }
+    if (seen.has(kind)) {
+      throw new RangeError(`Invalid ${label}: duplicate interaction kind`);
+    }
+    seen.add(kind);
+  }
+}
 
 function assertPositiveBoundedInteger(
   value: number,
@@ -115,6 +187,166 @@ export function assertMaterializationProfile(
   );
 }
 
+export function assertConversionProfile(profile: ChannelConversionProfile) {
+  if (
+    !Number.isSafeInteger(profile.profileVersion) ||
+    profile.profileVersion < 1 ||
+    profile.profileVersion > CONVERSION_LIMITS.maxProfileVersion
+  ) {
+    throw new RangeError('Invalid conversion profile version');
+  }
+
+  switch (profile.kind) {
+    case 'follower_transition': {
+      assertNonEmptyConversionType(profile.conversionType, 'follower conversion type');
+      if (
+        !isFollowerMembershipState(profile.fromState) ||
+        !isFollowerMembershipState(profile.toState)
+      ) {
+        throw new RangeError('Invalid follower transition state');
+      }
+      if (profile.fromState === profile.toState) {
+        throw new RangeError('Invalid follower transition: fromState equals toState');
+      }
+      break;
+    }
+    case 'website_goal': {
+      assertNonEmptyConversionType(profile.conversionType, 'website goal conversion type');
+      assertPositiveBoundedInteger(
+        profile.attributionWindowDays,
+        CONVERSION_LIMITS.maxAttributionWindowDays,
+        'website goal attribution window days'
+      );
+      if (
+        typeof profile.clickIdParameter !== 'string' ||
+        !profile.clickIdParameter.trim() ||
+        profile.clickIdParameter.length >
+        CONVERSION_LIMITS.maxClickIdParameterLength
+      ) {
+        throw new RangeError('Invalid website goal click id parameter');
+      }
+      break;
+    }
+    case 'amplification': {
+      assertNonEmptyConversionType(
+        profile.conversionType,
+        'amplification conversion type'
+      );
+      assertPositiveBoundedInteger(
+        profile.windowDays,
+        CONVERSION_LIMITS.maxWindowDays,
+        'amplification window days'
+      );
+      assertPositiveBoundedInteger(
+        profile.minimumActiveUtcDays,
+        CONVERSION_LIMITS.maxMinimumActiveUtcDays,
+        'amplification minimum active UTC days'
+      );
+      assertPositiveBoundedInteger(
+        profile.cooldownDays,
+        CONVERSION_LIMITS.maxCooldownDays,
+        'amplification cooldown days'
+      );
+      if (
+        !Number.isFinite(profile.threshold) ||
+        profile.threshold <= 0 ||
+        profile.threshold > CONVERSION_LIMITS.maxThreshold
+      ) {
+        throw new RangeError('Invalid amplification threshold');
+      }
+      assertInteractionKindList(
+        profile.acceptedInboundKinds,
+        'amplification accepted inbound kinds'
+      );
+      for (const kind of profile.acceptedInboundKinds) {
+        const weight = profile.inboundKindWeights[kind];
+        if (weight === undefined) {
+          throw new RangeError(
+            'Invalid amplification inbound kind weights: missing accepted kind'
+          );
+        }
+        assertPositiveFiniteWeight(
+          weight,
+          `amplification inbound kind weight for ${kind}`
+        );
+      }
+      for (const [kind, weight] of Object.entries(profile.inboundKindWeights)) {
+        if (!isChannelInteractionScoreKind(kind)) {
+          throw new RangeError('Invalid amplification inbound kind weights');
+        }
+        if (!profile.acceptedInboundKinds.includes(kind)) {
+          throw new RangeError(
+            'Invalid amplification inbound kind weights: unexpected kind'
+          );
+        }
+        if (weight === undefined) {
+          continue;
+        }
+        assertPositiveFiniteWeight(
+          weight,
+          `amplification inbound kind weight for ${kind}`
+        );
+      }
+      if (profile.minimumActiveUtcDays > profile.windowDays) {
+        throw new RangeError(
+          'Invalid amplification minimum active UTC days: exceeds window'
+        );
+      }
+      break;
+    }
+    case 'customer_support': {
+      assertNonEmptyConversionType(
+        profile.slaConversionType,
+        'customer support SLA conversion type'
+      );
+      assertNonEmptyConversionType(
+        profile.resolutionConversionType,
+        'customer support resolution conversion type'
+      );
+      assertPositiveBoundedInteger(
+        profile.firstResponseSlaHours,
+        CONVERSION_LIMITS.maxSlaHours,
+        'customer support first-response SLA hours'
+      );
+      assertInteractionKindList(profile.inboundKinds, 'customer support inbound kinds');
+      assertInteractionKindList(profile.outboundKinds, 'customer support outbound kinds');
+      if (profile.conversationKeyPolicy !== 'conversation_or_actor') {
+        throw new RangeError('Invalid customer support conversation key policy');
+      }
+      if (typeof profile.explicitResolutionEnabled !== 'boolean') {
+        throw new RangeError('Invalid customer support explicit resolution flag');
+      }
+      if (typeof profile.inferredResolutionEnabled !== 'boolean') {
+        throw new RangeError('Invalid customer support inferred resolution flag');
+      }
+      if (profile.inferredResolutionEnabled) {
+        if (profile.inferredResolutionDelayHours === null) {
+          throw new RangeError(
+            'Invalid customer support inferred resolution delay: required when inference enabled'
+          );
+        }
+        assertPositiveBoundedInteger(
+          profile.inferredResolutionDelayHours,
+          CONVERSION_LIMITS.maxInferredResolutionDelayHours,
+          'customer support inferred resolution delay hours'
+        );
+      } else if (
+        profile.inferredResolutionDelayHours !== null &&
+        profile.inferredResolutionDelayHours !== undefined
+      ) {
+        throw new RangeError(
+          'Invalid customer support inferred resolution delay: must be null when inference disabled'
+        );
+      }
+      break;
+    }
+    default: {
+      const exhaustive: never = profile;
+      throw new RangeError(`Unsupported conversion profile kind: ${exhaustive}`);
+    }
+  }
+}
+
 function assertValidStrategy(strategy: ChannelStrategy) {
   if (!CHANNEL_STRATEGY_IDS.includes(strategy.id)) {
     throw new Error(`Unsupported channel strategy: ${strategy.id}`);
@@ -134,6 +366,7 @@ function assertValidStrategy(strategy: ChannelStrategy) {
   }
   assertRelationshipScoringProfile(strategy.getScoringProfile());
   assertMaterializationProfile(strategy.getMaterializationProfile());
+  assertConversionProfile(strategy.getConversionProfile());
 }
 
 function createRegistry(strategies: readonly ChannelStrategy[]) {

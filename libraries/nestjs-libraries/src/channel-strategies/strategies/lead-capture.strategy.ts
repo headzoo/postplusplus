@@ -1,5 +1,9 @@
 import { RelationshipScoringProfile } from '../channel-strategy.types';
-import { createStrategy, GROW_AUDIENCE_PROFILE } from './strategy.shared';
+import {
+  createStrategy,
+  GROW_AUDIENCE_PROFILE,
+  WEBSITE_GOAL_CONVERSION_PROFILE,
+} from './strategy.shared';
 
 const leadCaptureProfile: RelationshipScoringProfile = {
   ...GROW_AUDIENCE_PROFILE,
@@ -18,6 +22,7 @@ export const leadCaptureStrategy = createStrategy(
   'Capture leads',
   'Surface high-intent inbound conversations and follows.',
   leadCaptureProfile,
+  WEBSITE_GOAL_CONVERSION_PROFILE,
   {
     defaultFilter: 'leads',
     defaultSort: 'fit',

@@ -157,6 +157,83 @@ export const sidebar: DefaultTheme.SidebarItem[] =
     "collapsed": false
   },
   {
+    "text": "Strategy-Aware Conversions",
+    "link": "/conversions",
+    "items": [
+      {
+        "text": "Strategy Meanings",
+        "link": "/conversions#strategy-meanings"
+      },
+      {
+        "text": "HTTP Surfaces",
+        "link": "/conversions#http-surfaces",
+        "items": [
+          {
+            "text": "Authenticated app API",
+            "link": "/conversions#authenticated-app-api"
+          },
+          {
+            "text": "Public API (/public/v1)",
+            "link": "/conversions#public-api-publicv1"
+          },
+          {
+            "text": "Conversion webhooks",
+            "link": "/conversions#conversion-webhooks"
+          }
+        ],
+        "collapsed": false
+      },
+      {
+        "text": "Goal Ingestion Examples",
+        "link": "/conversions#goal-ingestion-examples",
+        "items": [
+          {
+            "text": "Public API with click attribution",
+            "link": "/conversions#public-api-with-click-attribution"
+          },
+          {
+            "text": "Webhook goal ingestion",
+            "link": "/conversions#webhook-goal-ingestion"
+          },
+          {
+            "text": "UTM fallback (no click ID)",
+            "link": "/conversions#utm-fallback-no-click-id"
+          }
+        ],
+        "collapsed": false
+      },
+      {
+        "text": "Click Over UTM Precedence",
+        "link": "/conversions#click-over-utm-precedence"
+      },
+      {
+        "text": "Explicit Support Resolution",
+        "link": "/conversions#explicit-support-resolution"
+      },
+      {
+        "text": "List And Summary Filters",
+        "link": "/conversions#list-and-summary-filters"
+      },
+      {
+        "text": "Idempotency And Safe Retries",
+        "link": "/conversions#idempotency-and-safe-retries"
+      },
+      {
+        "text": "Attribution Expiry",
+        "link": "/conversions#attribution-expiry"
+      },
+      {
+        "text": "Background Evaluation",
+        "link": "/conversions#background-evaluation"
+      },
+      {
+        "text": "Deployment And Rollback",
+        "link": "/conversions#deployment-and-rollback"
+      }
+    ],
+    "collapsed": false
+  },
+  {
     "text": "Temporal Workflows",
     "link": "/workflows",
     "items": [
@@ -214,6 +291,10 @@ export const sidebar: DefaultTheme.SidebarItem[] =
           {
             "text": "Existing Database Previously Managed By prisma db push",
             "link": "/database#existing-database-previously-managed-by-prisma-db-push"
+          },
+          {
+            "text": "Channel strategy migration (20260823130000channelstrategy)",
+            "link": "/database#channel-strategy-migration-20260823130000channelstrategy"
           }
         ],
         "collapsed": false
@@ -286,7 +367,14 @@ export const sidebar: DefaultTheme.SidebarItem[] =
       },
       {
         "text": "Deployment-Sensitive Areas",
-        "link": "/operations#deployment-sensitive-areas"
+        "link": "/operations#deployment-sensitive-areas",
+        "items": [
+          {
+            "text": "Conversion Rollout Checklist",
+            "link": "/operations#conversion-rollout-checklist"
+          }
+        ],
+        "collapsed": false
       }
     ],
     "collapsed": false

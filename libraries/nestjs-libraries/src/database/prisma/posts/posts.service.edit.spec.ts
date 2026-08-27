@@ -1,5 +1,5 @@
 jest.mock('@gitroom/nestjs-libraries/integrations/integration.manager', () => ({
-  IntegrationManager: class IntegrationManager { },
+  IntegrationManager: class IntegrationManager {},
   socialIntegrationList: [],
 }));
 
@@ -8,7 +8,7 @@ jest.mock('@sentry/nestjs', () => ({
 }));
 
 jest.mock('@gitroom/nestjs-libraries/dtos/posts/create.post.dto', () => ({
-  CreatePostDto: class CreatePostDto { },
+  CreatePostDto: class CreatePostDto {},
 }));
 
 jest.mock('@gitroom/helpers/utils/strip.html.validation', () => ({
@@ -20,19 +20,22 @@ jest.mock('@gitroom/helpers/utils/count.length', () => ({
 }));
 
 jest.mock('nestjs-temporal-core', () => ({
-  TemporalService: class TemporalService { },
+  TemporalService: class TemporalService {},
 }));
 
-jest.mock('@gitroom/nestjs-libraries/database/prisma/media/media.service', () => ({
-  MediaService: class MediaService { },
-}));
+jest.mock(
+  '@gitroom/nestjs-libraries/database/prisma/media/media.service',
+  () => ({
+    MediaService: class MediaService {},
+  })
+);
 
 jest.mock('@gitroom/nestjs-libraries/openai/openai.service', () => ({
-  OpenaiService: class OpenaiService { },
+  OpenaiService: class OpenaiService {},
 }));
 
 jest.mock('@gitroom/nestjs-libraries/short-linking/short.link.service', () => ({
-  ShortLinkService: class ShortLinkService { },
+  ShortLinkService: class ShortLinkService {},
 }));
 
 jest.mock('@gitroom/nestjs-libraries/upload/upload.factory', () => ({
@@ -42,7 +45,7 @@ jest.mock('@gitroom/nestjs-libraries/upload/upload.factory', () => ({
 jest.mock(
   '@gitroom/nestjs-libraries/integrations/refresh.integration.service',
   () => ({
-    RefreshIntegrationService: class RefreshIntegrationService { },
+    RefreshIntegrationService: class RefreshIntegrationService {},
   })
 );
 
@@ -88,6 +91,12 @@ const createService = ({
     {} as any,
     {
       isLikerSyncPausedForIntegration: jest.fn().mockResolvedValue(false),
+    } as any,
+    {
+      prepareLeadCaptureLinks: jest.fn(
+        async ({ values }: { values: { content: string }[] }) =>
+          values.map(({ content }) => content)
+      ),
     } as any
   );
 };

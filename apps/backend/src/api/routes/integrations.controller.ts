@@ -39,6 +39,7 @@ import { RenameCustomerDto } from '@gitroom/nestjs-libraries/dtos/integrations/c
 import { ChannelTrackingAuthorizationDto } from '@gitroom/nestjs-libraries/dtos/integrations/channel.tracking.authorization.dto';
 import { UpdateChannelStrategyDto } from '@gitroom/nestjs-libraries/dtos/integrations/channel-strategy.dto';
 import { UpdateChannelUtmParamsDto } from '@gitroom/nestjs-libraries/dtos/integrations/channel-utm-params.dto';
+import { ConversionService } from '@gitroom/nestjs-libraries/database/prisma/conversions/conversion.service';
 
 export const publicProfileUrl = (value: string | undefined) => {
   if (!value) {
@@ -66,7 +67,8 @@ export class IntegrationsController {
     private _integrationManager: IntegrationManager,
     private _integrationService: IntegrationService,
     private _postService: PostsService,
-    private _refreshIntegrationService: RefreshIntegrationService
+    private _refreshIntegrationService: RefreshIntegrationService,
+    private _conversionService: ConversionService
   ) { }
 
   @Post('/provider/:id/connect')
@@ -624,5 +626,28 @@ export class IntegrationsController {
     } catch (err) {
       return { claimed: false };
     }
+  }
+
+  @Post('/:id/conversion-webhook-credential')
+  @CheckPolicies([AuthorizationActions.Update, Sections.CHANNEL])
+  async rotateConversionWebhookCredential(
+    @GetOrgFromRequest() org: Organization,
+    @Param('id') id: string
+  ) {
+    return this._conversionService.rotateConversionWebhookCredential(
+      org.id,
+      id
+    );
+  }
+
+  @Get('/:id/conversion-webhook-credential')
+  async getConversionWebhookCredentialStatus(
+    @GetOrgFromRequest() org: Organization,
+    @Param('id') id: string
+  ) {
+    return this._conversionService.getConversionWebhookCredentialStatus(
+      org.id,
+      id
+    );
   }
 }

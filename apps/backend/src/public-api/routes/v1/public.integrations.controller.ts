@@ -64,6 +64,11 @@ import { PostValidationException } from '@gitroom/backend/api/routes/posts.valid
 import { timer } from '@gitroom/helpers/utils/timer';
 import { ioRedis } from '@gitroom/nestjs-libraries/redis/redis.service';
 import { isXPremium } from '@gitroom/helpers/utils/count.length';
+import { ConversionService } from '@gitroom/nestjs-libraries/database/prisma/conversions/conversion.service';
+import { IngestGoalDto } from '@gitroom/nestjs-libraries/dtos/conversions/ingest-goal.dto';
+import { ResolveSupportConversionDto } from '@gitroom/nestjs-libraries/dtos/conversions/resolve-support.dto';
+import { STANDARD_UTM_FIELDS } from '@gitroom/nestjs-libraries/dtos/conversions/conversion.shared';
+import { ConversionSource } from '@prisma/client';
 
 @ApiTags('Public API')
 @Controller('/public/v1')
@@ -76,7 +81,8 @@ export class PublicIntegrationsController {
     private _mediaService: MediaService,
     private _notificationService: NotificationService,
     private _integrationManager: IntegrationManager,
-    private _refreshIntegrationService: RefreshIntegrationService
+    private _refreshIntegrationService: RefreshIntegrationService,
+    private _conversionService: ConversionService
   ) {}
 
   @Post('/upload')
@@ -609,6 +615,64 @@ export class PublicIntegrationsController {
         }
         throw new HttpException({ msg: 'Unexpected error' }, 500);
       }
+    }
+  }
+
+  @Post('/conversions')
+  async ingestConversionGoal(
+    @GetOrgFromRequest() org: Organization,
+    @Body() body: IngestGoalDto
+  ) {
+    Sentry.metrics.count('public_api-request', 1);
+    if (!body.integrationId) {
+      throw new HttpException(
+        { msg: 'integrationId is required for public goal ingestion' },
+        400
+      );
+    }
+    try {
+      return await this._conversionService.ingestGoal({
+        organizationId: org.id,
+        source: ConversionSource.API,
+        integrationId: body.integrationId,
+        eventId: body.eventId,
+        goal: body.goal,
+        occurredAt: body.occurredAt ? new Date(body.occurredAt) : undefined,
+        ppClickId: body.attribution.ppClickId,
+        utm: Object.fromEntries(
+          STANDARD_UTM_FIELDS.map((field) => [field, body.attribution[field]])
+        ),
+        actorExternalId: body.actorExternalId,
+        userProperties: body.userProperties,
+        metadata: body.metadata,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Conversion request failed';
+      throw new HttpException({ msg: message }, 400);
+    }
+  }
+
+  @Post('/conversions/support-resolution')
+  async resolveSupportConversion(
+    @GetOrgFromRequest() org: Organization,
+    @Body() body: ResolveSupportConversionDto
+  ) {
+    Sentry.metrics.count('public_api-request', 1);
+    try {
+      return await this._conversionService.resolveSupportCasePublic({
+        organizationId: org.id,
+        integrationId: body.integrationId,
+        caseId: body.caseId,
+        externalCaseKey: body.externalCaseKey,
+        eventId: body.eventId,
+        resolvedAt: body.occurredAt ? new Date(body.occurredAt) : undefined,
+        metadata: body.metadata,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Support resolution failed';
+      throw new HttpException({ msg: message }, 400);
     }
   }
 }

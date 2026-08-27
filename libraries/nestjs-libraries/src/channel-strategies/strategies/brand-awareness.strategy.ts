@@ -1,5 +1,9 @@
 import { RelationshipScoringProfile } from '../channel-strategy.types';
-import { createStrategy, GROW_AUDIENCE_PROFILE } from './strategy.shared';
+import {
+  AMPLIFICATION_CONVERSION_PROFILE,
+  createStrategy,
+  GROW_AUDIENCE_PROFILE,
+} from './strategy.shared';
 
 const brandAwarenessProfile: RelationshipScoringProfile = {
   ...GROW_AUDIENCE_PROFILE,
@@ -16,6 +20,7 @@ export const brandAwarenessStrategy = createStrategy(
   'Build awareness',
   'Prioritize people amplifying and mentioning your brand.',
   brandAwarenessProfile,
+  AMPLIFICATION_CONVERSION_PROFILE,
   {
     defaultFilter: 'all',
     defaultSort: 'interactions',

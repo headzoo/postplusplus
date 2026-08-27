@@ -43,7 +43,10 @@ import {
   organizationId,
   postId as postIdSearchParam,
 } from '@gitroom/nestjs-libraries/temporal/temporal.search.attribute';
-import { AnalyticsData, PostLiker } from '@gitroom/nestjs-libraries/integrations/social/social.integrations.interface';
+import {
+  AnalyticsData,
+  PostLiker,
+} from '@gitroom/nestjs-libraries/integrations/social/social.integrations.interface';
 import { timer } from '@gitroom/helpers/utils/timer';
 import { ioRedis } from '@gitroom/nestjs-libraries/redis/redis.service';
 import { RefreshToken } from '@gitroom/nestjs-libraries/integrations/social.abstract';
@@ -52,10 +55,12 @@ import { ChannelInteractionService } from '@gitroom/nestjs-libraries/database/pr
 import { hasExtension } from '@gitroom/helpers/utils/has.extension';
 import { stripLinks } from '@gitroom/helpers/utils/strip.links';
 import { appendUtmParamsToText } from '@gitroom/helpers/utils/utm.params';
+import { ConversionService } from '@gitroom/nestjs-libraries/database/prisma/conversions/conversion.service';
 import { validate } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
 import { stripHtmlValidation } from '@gitroom/helpers/utils/strip.html.validation';
 import { weightedLength } from '@gitroom/helpers/utils/count.length';
+import { randomUUID } from 'crypto';
 
 type PostWithConditionals = Post & {
   integration?: Integration;
@@ -74,8 +79,9 @@ export class PostsService {
     private _openaiService: OpenaiService,
     private _temporalService: TemporalService,
     private _refreshIntegrationService: RefreshIntegrationService,
-    private _channelInteractionService: ChannelInteractionService
-  ) { }
+    private _channelInteractionService: ChannelInteractionService,
+    private _conversionService: ConversionService
+  ) {}
 
   searchForMissingThreeHoursPosts() {
     return this._postRepository.searchForMissingThreeHoursPosts();
@@ -91,37 +97,37 @@ export class PostsService {
     providerIdentifier: string,
     events: Array<
       | {
-        type: 'post.upsert';
-        externalId: string;
-        url: string;
-        content: string;
-        publishedAt: Date;
-      }
+          type: 'post.upsert';
+          externalId: string;
+          url: string;
+          content: string;
+          publishedAt: Date;
+        }
       | {
-        type: 'post.delete';
-        externalId: string;
-        deletedAt: Date;
-      }
+          type: 'post.delete';
+          externalId: string;
+          deletedAt: Date;
+        }
     >
   ) {
     return Promise.all(
       events.map((event) =>
         event.type === 'post.upsert'
           ? this._postRepository.importPlatformPost({
-            organizationId,
-            integrationId,
-            providerIdentifier,
-            externalId: event.externalId,
-            url: event.url,
-            content: event.content,
-            publishedAt: event.publishedAt,
-          })
+              organizationId,
+              integrationId,
+              providerIdentifier,
+              externalId: event.externalId,
+              url: event.url,
+              content: event.content,
+              publishedAt: event.publishedAt,
+            })
           : this._postRepository.markPlatformDeleted(
-            organizationId,
-            integrationId,
-            event.externalId,
-            event.deletedAt
-          )
+              organizationId,
+              integrationId,
+              event.externalId,
+              event.deletedAt
+            )
       )
     );
   }
@@ -271,7 +277,11 @@ export class PostsService {
         (entry) => entry.label === 'Likes'
       );
       const likesTotal = likesSeries?.data?.[0]?.total;
-      if (likesTotal !== undefined && likesTotal !== null && likesTotal !== '') {
+      if (
+        likesTotal !== undefined &&
+        likesTotal !== null &&
+        likesTotal !== ''
+      ) {
         const likesCount = Math.max(0, Math.trunc(Number(likesTotal)));
         if (Number.isFinite(likesCount)) {
           await this._postRepository.updateLikesCountByPostId(
@@ -329,8 +339,7 @@ export class PostsService {
       return {
         supported: true,
         users: [],
-        error:
-          'Liker sync is temporarily paused due to provider rate limits',
+        error: 'Liker sync is temporarily paused due to provider rate limits',
       };
     }
 
@@ -376,8 +385,9 @@ export class PostsService {
       return { supported: true, users };
     } catch (e) {
       console.log(
-        `Failed to load likers for ${getIntegration.providerIdentifier} post ${post.releaseId}: ${e instanceof Error ? e.message : 'unknown error'
-        }`
+        `Failed to load likers for ${getIntegration.providerIdentifier} post ${
+          post.releaseId
+        }: ${e instanceof Error ? e.message : 'unknown error'}`
       );
       if (e instanceof RefreshToken) {
         return this.getPostLikers(orgId, postId, true);
@@ -474,11 +484,11 @@ export class PostsService {
       post!,
       ...(post?.childrenPost?.length
         ? await this.getPostsRecursively(
-          post?.childrenPost?.[0]?.id,
-          false,
-          orgId,
-          false
-        )
+            post?.childrenPost?.[0]?.id,
+            false,
+            orgId,
+            false
+          )
         : []),
     ];
   }
@@ -521,9 +531,9 @@ export class PostsService {
               url:
                 m.path.indexOf('http') === -1
                   ? process.env.FRONTEND_URL +
-                  '/' +
-                  process.env.NEXT_PUBLIC_UPLOAD_STATIC_DIRECTORY +
-                  m.path
+                    '/' +
+                    process.env.NEXT_PUBLIC_UPLOAD_STATIC_DIRECTORY +
+                    m.path
                   : m.path,
               type: 'image',
               path:
@@ -569,9 +579,9 @@ export class PostsService {
                 url:
                   path.indexOf('http') === -1
                     ? process.env.FRONTEND_URL +
-                    '/' +
-                    process.env.NEXT_PUBLIC_UPLOAD_STATIC_DIRECTORY +
-                    path
+                      '/' +
+                      process.env.NEXT_PUBLIC_UPLOAD_STATIC_DIRECTORY +
+                      path
                     : path,
                 type: 'image',
                 path:
@@ -835,9 +845,9 @@ export class PostsService {
             ) {
               await workflow.terminate();
             }
-          } catch (err) { }
+          } catch (err) {}
         }
-      } catch (err) { }
+      } catch (err) {}
     }
 
     return { error: true };
@@ -876,9 +886,9 @@ export class PostsService {
           ) {
             await workflow.terminate();
           }
-        } catch (err) { }
+        } catch (err) {}
       }
-    } catch (err) { }
+    } catch (err) {}
 
     if (state === 'DRAFT') {
       return;
@@ -1045,7 +1055,10 @@ export class PostsService {
           errors = err?.message || 'Invalid media';
         }
 
-        const maximumCharacters = provider.maxLength(additionalSettings, settings);
+        const maximumCharacters = provider.maxLength(
+          additionalSettings,
+          settings
+        );
         const isX = integration.providerIdentifier === 'x';
 
         const emptyContent = (post.value || []).some((a) => {
@@ -1097,7 +1110,11 @@ export class PostsService {
   // the platform: require the explicit `republish` opt-in instead. The message
   // doubles as the confirmation dialog for API/MCP automation.
   private guardAgainstRepublish(
-    post: { state: State; publishDate: Date; integration?: { providerIdentifier: string } } | null,
+    post: {
+      state: State;
+      publishDate: Date;
+      integration?: { providerIdentifier: string };
+    } | null,
     source: 'createPost' | 'changeDate'
   ) {
     if (post?.state !== 'PUBLISHED') {
@@ -1110,7 +1127,10 @@ export class PostsService {
     throw new BadRequestException(
       `This post was already published on ${dayjs
         .utc(post.publishDate)
-        .format('YYYY-MM-DD HH:mm')} UTC. Saving it this way would publish it again to ${post.integration?.providerIdentifier || 'the channel'
+        .format(
+          'YYYY-MM-DD HH:mm'
+        )} UTC. Saving it this way would publish it again to ${
+        post.integration?.providerIdentifier || 'the channel'
       }. To edit without republishing, ${howToUpdate}. To intentionally publish again, pass republish: true.`
     );
   }
@@ -1125,9 +1145,9 @@ export class PostsService {
     for (const post of body.posts) {
       const queuedPipelineItem = post.group
         ? await this._postRepository.getPipelineQueueItemForGroup(
-          orgId,
-          post.group
-        )
+            orgId,
+            post.group
+          )
         : null;
       const pipelineQueueItem = queuedPipelineItem?.pipelineQueueItem;
       if (pipelineQueueItem?.status === 'PUBLISHING') {
@@ -1136,8 +1156,7 @@ export class PostsService {
         );
       }
       const pipelineQueueItemId =
-        pipelineQueueItem?.status === 'QUEUED' &&
-          !pipelineQueueItem.deletedAt
+        pipelineQueueItem?.status === 'QUEUED' && !pipelineQueueItem.deletedAt
           ? pipelineQueueItem.id
           : undefined;
       if (
@@ -1155,7 +1174,10 @@ export class PostsService {
           post.value[0].id,
           orgId
         );
-        if (existing?.state === 'PUBLISHED' && !this.publishedPostCanEdit(existing)) {
+        if (
+          existing?.state === 'PUBLISHED' &&
+          !this.publishedPostCanEdit(existing)
+        ) {
           throw new BadRequestException(
             'This channel does not support editing published posts'
           );
@@ -1166,6 +1188,10 @@ export class PostsService {
       );
       const removeLinks = !!provider?.stripLinks?.();
 
+      post.value = (post.value || []).map((value) => ({
+        ...value,
+        id: value.id || randomUUID(),
+      }));
       let messages = (post.value || []).map((p) => p.content);
       if (!removeLinks) {
         const integration = await this._integrationService.getIntegrationById(
@@ -1182,6 +1208,18 @@ export class PostsService {
             )
           );
         }
+        messages = await this._conversionService.prepareLeadCaptureLinks({
+          organizationId: orgId,
+          integrationId: post.integration.id,
+          strategyId: integration.strategyId,
+          strategyVersion: integration.strategyVersion,
+          utmParams: integration.utmParams,
+          shortLinkDomain: ShortLinkService.provider?.shortLinkDomain,
+          values: post.value.map((value, index) => ({
+            id: value.id,
+            content: messages[index],
+          })),
+        });
       }
 
       // No point shortlinking links on platforms that strip them out anyway
@@ -1189,9 +1227,9 @@ export class PostsService {
         !body.shortLink || removeLinks
           ? messages
           : await this._shortLinkService.convertTextToShortLinks(
-            orgId,
-            messages
-          );
+              orgId,
+              messages
+            );
 
       post.value = (post.value || []).map((p, i) => ({
         ...p,
@@ -1220,13 +1258,13 @@ export class PostsService {
           posts[0].id,
           orgId,
           posts[0].state
-        ).catch((err) => { });
+        ).catch((err) => {});
       } else if (posts[0].state === 'PUBLISHED') {
         this.startEditWorkflow(
           post.settings.__type.split('-')[0].toLowerCase(),
           posts[0].id,
           orgId
-        ).catch((err) => { });
+        ).catch((err) => {});
       }
 
       Sentry.metrics.count('post_created', 1);
@@ -1301,7 +1339,7 @@ export class PostsService {
       let image = [];
       try {
         image = JSON.parse(p.image || '[]');
-      } catch (err) { }
+      } catch (err) {}
       return {
         id: p.id,
         content: p.content,
@@ -1328,7 +1366,8 @@ export class PostsService {
     if (root.state !== 'DRAFT') {
       if (!validation.valid) {
         throw new BadRequestException(
-          `${validation.name}: ${validation.settingsError || 'Please fix your settings'
+          `${validation.name}: ${
+            validation.settingsError || 'Please fix your settings'
           }`
         );
       }
@@ -1413,7 +1452,7 @@ export class PostsService {
         orgId,
         state
       );
-    } catch (err) { }
+    } catch (err) {}
 
     return { id, state };
   }
@@ -1451,7 +1490,7 @@ export class PostsService {
           orgId,
           getPostById.state === 'DRAFT' ? 'DRAFT' : 'QUEUE'
         );
-      } catch (err) { }
+      } catch (err) {}
     }
 
     return newDate;
@@ -1527,8 +1566,9 @@ export class PostsService {
                   {
                     id: '',
                     delay: 0,
-                    content: `Check out the full story here:\n${body.postId || body.url
-                      }`,
+                    content: `Check out the full story here:\n${
+                      body.postId || body.url
+                    }`,
                     image: [],
                   },
                 ],

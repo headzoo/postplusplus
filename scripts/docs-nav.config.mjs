@@ -12,7 +12,7 @@ const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoDir = path.resolve(scriptDir, '..');
 const helpManifestPath = path.join(
   repoDir,
-  'apps/frontend/src/help/help-manifest.generated.json',
+  'apps/frontend/src/help/help-manifest.generated.json'
 );
 const helpManifest = JSON.parse(readFileSync(helpManifestPath, 'utf8'));
 
@@ -41,6 +41,12 @@ export const docsNav = [
   { kind: 'page', slug: 'architecture', title: 'Architecture', maxDepth: 3 },
   { kind: 'page', slug: 'backend-api', title: 'Backend API', maxDepth: 3 },
   { kind: 'page', slug: 'public-api', title: 'Public API', maxDepth: 3 },
+  {
+    kind: 'page',
+    slug: 'conversions',
+    title: 'Strategy-Aware Conversions',
+    maxDepth: 3,
+  },
   { kind: 'page', slug: 'workflows', title: 'Temporal Workflows', maxDepth: 3 },
   { kind: 'page', slug: 'database', title: 'Database', maxDepth: 3 },
   {

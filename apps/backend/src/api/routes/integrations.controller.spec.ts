@@ -51,6 +51,7 @@ describe('IntegrationsController strategy settings', () => {
       {} as any,
       { updateChannelStrategy } as any,
       {} as any,
+      {} as any,
       {} as any
     );
 
@@ -79,6 +80,7 @@ describe('IntegrationsController utm params settings', () => {
       {} as any,
       { updateChannelUtmParams } as any,
       {} as any,
+      {} as any,
       {} as any
     );
 
@@ -92,5 +94,55 @@ describe('IntegrationsController utm params settings', () => {
     expect(updateChannelUtmParams).toHaveBeenCalledWith('org-a', 'channel-a', {
       utmParams: 'utm_campaign=spring',
     });
+  });
+});
+
+describe('IntegrationsController conversion webhook credentials', () => {
+  it('returns the plaintext token only from rotation', async () => {
+    const rotateConversionWebhookCredential = jest
+      .fn()
+      .mockResolvedValue({ token: 'one-time-token' });
+    const getConversionWebhookCredentialStatus = jest.fn().mockResolvedValue({
+      configured: true,
+      lastFour: 'oken',
+      createdAt: '2026-08-27T00:00:00.000Z',
+      rotatedAt: '2026-08-27T00:00:00.000Z',
+    });
+    const controller = new IntegrationsController(
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {
+        rotateConversionWebhookCredential,
+        getConversionWebhookCredentialStatus,
+      } as any
+    );
+
+    await expect(
+      controller.rotateConversionWebhookCredential(
+        { id: 'org-a' } as any,
+        'channel-a'
+      )
+    ).resolves.toEqual({ token: 'one-time-token' });
+    expect(rotateConversionWebhookCredential).toHaveBeenCalledWith(
+      'org-a',
+      'channel-a'
+    );
+
+    await expect(
+      controller.getConversionWebhookCredentialStatus(
+        { id: 'org-a' } as any,
+        'channel-a'
+      )
+    ).resolves.toEqual({
+      configured: true,
+      lastFour: 'oken',
+      createdAt: '2026-08-27T00:00:00.000Z',
+      rotatedAt: '2026-08-27T00:00:00.000Z',
+    });
+    expect(getConversionWebhookCredentialStatus.mock.results[0].value).not.toHaveProperty(
+      'token'
+    );
   });
 });

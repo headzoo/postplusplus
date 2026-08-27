@@ -28,6 +28,9 @@ The current public API surface includes:
 - Post maintenance: `GET /posts/:id/missing`, `PUT /posts/:id/settings`, `PUT /posts/:id/status`, `PUT /posts/:id/release-id`.
 - Analytics: `GET /analytics/:integration`, `GET /analytics/post/:postId`.
 - Integration triggers: `POST /integration-trigger/:id`.
+- Conversions: `POST /conversions`, `POST /conversions/support-resolution`.
+
+See [Strategy-Aware Conversions](/conversions) for goal ingestion, attribution precedence, idempotency, and webhook details.
 
 Use route decorator search to refresh this list:
 

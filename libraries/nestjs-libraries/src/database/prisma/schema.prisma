@@ -77,6 +77,12 @@ model Organization {
   postRulePipelines                   PostRulePipeline[]
   postRuleRuns                        PostRuleRun[]
   postRuleEvaluations                 PostRuleEvaluation[]
+  conversionEvents                    ConversionEvent[]
+  conversionClickAttributions         ConversionClickAttribution[]
+  conversionEvaluationJobs            ConversionEvaluationJob[]
+  conversionDerivationStates          ConversionDerivationState[]
+  conversionSupportCases              ConversionSupportCase[]
+  conversionWebhookCredentials        ConversionWebhookCredential[]
 
   @@index([apiKey])
   @@index([streakSince])
@@ -482,6 +488,12 @@ model Integration {
   contextDocuments                    IntegrationContextDocument[]
   dashboardAnalyticsPreferences       DashboardAnalyticsPreference[]
   postRuleIntegrations                PostRuleIntegration[]
+  conversionEvents                    ConversionEvent[]
+  conversionClickAttributions         ConversionClickAttribution[]
+  conversionEvaluationJobs            ConversionEvaluationJob[]
+  conversionDerivationStates          ConversionDerivationState[]
+  conversionSupportCases              ConversionSupportCase[]
+  conversionWebhookCredential         ConversionWebhookCredential?
 
   @@unique([organizationId, internalId])
   @@index([rootInternalId])
@@ -1601,15 +1613,164 @@ model ChannelInteractionEvent {
   direction              ChannelInteractionDirection
   eventAt                DateTime
   relatedObjectId        String?
+  conversationExternalId String?
   metadata               Json?
   normalizationVersion   Int                         @default(1)
   createdAt              DateTime                    @default(now())
   organization           Organization                @relation(fields: [organizationId], references: [id])
   integration            Integration                 @relation(fields: [integrationId], references: [id])
+  conversionEvents       ConversionEvent[]           @relation("ConversionInteractionEvidence")
 
   @@unique([integrationId, providerEventKey])
   @@index([integrationId, counterpartyExternalId, eventAt])
   @@index([integrationId, kind, direction, eventAt])
+  @@index([integrationId, conversationExternalId, eventAt])
+  @@index([organizationId])
+}
+
+model ConversionEvent {
+  id                     String                      @id @default(cuid())
+  organizationId         String
+  integrationId          String
+  strategyId             String
+  strategyVersion        Int
+  conversionType         String
+  source                 ConversionSource
+  sourceEventId          String?
+  dedupeKey              String
+  actorExternalId        String?
+  clickAttributionId     String?
+  interactionEventId     String?
+  supportCaseId          String?
+  occurredAt             DateTime
+  ingestedAt             DateTime                    @default(now())
+  attributionWindowStart DateTime?
+  attributionWindowEnd   DateTime?
+  attributionMethod      ConversionAttributionMethod @default(NONE)
+  value                  Decimal?                    @db.Decimal(18, 4)
+  dimensions             Json?
+  metadata               Json?
+  organization           Organization                @relation(fields: [organizationId], references: [id])
+  integration            Integration                 @relation(fields: [integrationId], references: [id])
+  clickAttribution       ConversionClickAttribution? @relation(fields: [clickAttributionId], references: [id])
+  interactionEvent       ChannelInteractionEvent?    @relation("ConversionInteractionEvidence", fields: [interactionEventId], references: [id])
+  supportCase            ConversionSupportCase?      @relation(fields: [supportCaseId], references: [id])
+
+  @@unique([integrationId, dedupeKey])
+  @@index([organizationId, occurredAt])
+  @@index([integrationId, occurredAt])
+  @@index([integrationId, strategyId, strategyVersion, conversionType, occurredAt])
+  @@index([integrationId, actorExternalId, occurredAt])
+  @@index([clickAttributionId])
+  @@index([interactionEventId])
+  @@index([supportCaseId])
+}
+
+model ConversionClickAttribution {
+  id               String            @id @default(cuid())
+  clickId          String            @unique
+  organizationId   String
+  integrationId    String
+  sourcePostItemId String
+  destinationHash  String
+  strategyId       String
+  strategyVersion  Int
+  utmFingerprint   String?
+  utmSnapshot      String?
+  createdAt        DateTime          @default(now())
+  expiresAt        DateTime
+  organization     Organization      @relation(fields: [organizationId], references: [id])
+  integration      Integration       @relation(fields: [integrationId], references: [id])
+  conversionEvents ConversionEvent[]
+
+  @@index([organizationId, integrationId, utmFingerprint, createdAt])
+  @@index([integrationId, expiresAt])
+}
+
+model ConversionEvaluationJob {
+  id              String              @id @default(cuid())
+  organizationId  String
+  integrationId   String
+  strategyId      String
+  strategyVersion Int
+  kind            ConversionJobKind
+  status          ConversionJobStatus @default(PENDING)
+  dedupeKey       String
+  payload         Json
+  eventAt         DateTime
+  availableAt     DateTime
+  claimedAt       DateTime?
+  claimToken      String?
+  completedAt     DateTime?
+  attempts        Int                 @default(0)
+  lastError       String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  organization    Organization        @relation(fields: [organizationId], references: [id])
+  integration     Integration         @relation(fields: [integrationId], references: [id])
+
+  @@unique([integrationId, dedupeKey])
+  @@index([status, availableAt])
+  @@index([status, claimedAt])
+  @@index([organizationId, integrationId, status, availableAt])
+}
+
+model ConversionDerivationState {
+  id              String       @id @default(cuid())
+  organizationId  String
+  integrationId   String
+  strategyId      String
+  strategyVersion Int
+  conversionType  String
+  subjectKey      String
+  lastEmittedAt   DateTime?
+  lastEventAt     DateTime?
+  state           Json?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  integration     Integration  @relation(fields: [integrationId], references: [id])
+
+  @@unique([integrationId, strategyId, strategyVersion, conversionType, subjectKey])
+  @@index([organizationId, integrationId])
+}
+
+model ConversionSupportCase {
+  id               String            @id @default(cuid())
+  organizationId   String
+  integrationId    String
+  externalCaseKey  String
+  strategyId       String
+  strategyVersion  Int
+  actorExternalId  String?
+  openedAt         DateTime
+  lastInboundAt    DateTime?
+  firstOutboundAt  DateTime?
+  resolvedAt       DateTime?
+  resolutionSource String?
+  metadata         Json?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  organization     Organization      @relation(fields: [organizationId], references: [id])
+  integration      Integration       @relation(fields: [integrationId], references: [id])
+  conversionEvents ConversionEvent[]
+
+  @@unique([integrationId, externalCaseKey])
+  @@index([organizationId, integrationId, resolvedAt])
+  @@index([integrationId, actorExternalId, updatedAt])
+}
+
+model ConversionWebhookCredential {
+  id             String       @id @default(cuid())
+  organizationId String
+  integrationId  String       @unique
+  tokenHash      String
+  lastFour       String
+  createdAt      DateTime     @default(now())
+  rotatedAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  integration    Integration  @relation(fields: [integrationId], references: [id])
+
   @@index([organizationId])
 }
 
@@ -1735,6 +1896,31 @@ model ProviderWebhookEndpoint {
 
   @@unique([providerIdentifier, callbackIdentity])
   @@index([providerIdentifier, state])
+}
+
+enum ConversionSource {
+  API
+  WEBHOOK
+  DERIVED
+}
+
+enum ConversionAttributionMethod {
+  CLICK_ID
+  UTM
+  NONE
+}
+
+enum ConversionJobKind {
+  INTERACTION
+  MEMBERSHIP_TRANSITION
+  INFERRED_RESOLUTION
+}
+
+enum ConversionJobStatus {
+  PENDING
+  PROCESSING
+  COMPLETE
+  FAILED
 }
 
 enum ChannelInteractionKind {

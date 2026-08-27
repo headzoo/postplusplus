@@ -15,6 +15,7 @@ import { ChannelCultivateActivity } from '@gitroom/orchestrator/activities/chann
 import { ChannelHotMaterializationActivity } from '@gitroom/orchestrator/activities/channel-hot-materialization.activity';
 import { ChannelAnalyticsSnapshotActivity } from '@gitroom/orchestrator/activities/channel-analytics-snapshot.activity';
 import { AutopostActivity } from '@gitroom/orchestrator/activities/autopost.activity';
+import { ConversionEvaluationActivity } from '@gitroom/orchestrator/activities/conversion-evaluation.activity';
 
 const activities = [
   PostActivity,
@@ -29,6 +30,7 @@ const activities = [
   ChannelCultivateActivity,
   ChannelHotMaterializationActivity,
   ChannelAnalyticsSnapshotActivity,
+  ConversionEvaluationActivity,
 ];
 @Module({
   imports: [
@@ -41,4 +43,4 @@ const activities = [
     return [...this.providers, ...this.imports];
   },
 })
-export class AppModule { }
+export class AppModule {}
