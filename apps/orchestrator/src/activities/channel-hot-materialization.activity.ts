@@ -8,6 +8,7 @@ import { ChannelInteractionService } from '@gitroom/nestjs-libraries/database/pr
 import { IntegrationService } from '@gitroom/nestjs-libraries/database/prisma/integrations/integration.service';
 import { AdminScheduleLogService } from '@gitroom/nestjs-libraries/database/prisma/admin-schedule-logs/admin-schedule-log.service';
 import { HOT_MATERIALIZATION_LIST_SCAN } from '@gitroom/nestjs-libraries/temporal/hot-triage.schedule';
+import { trimHotPickAuditForLog } from '@gitroom/nestjs-libraries/database/prisma/channel-interactions/hot-pick-audit';
 
 export type ChannelHotMaterializationCandidate = {
   id: string;
@@ -31,9 +32,11 @@ export class ChannelHotMaterializationActivity {
   }
 
   @ActivityMethod()
-  async listDueCandidatesV1(request: { hour: string; after?: string } = {
-    hour: utcHourKey(),
-  }) {
+  async listDueCandidatesV1(
+    request: { hour: string; after?: string } = {
+      hour: utcHourKey(),
+    }
+  ) {
     const result = await this._repository.listHotMaterializeCandidates(
       request.after,
       HOT_MATERIALIZATION_LIST_SCAN,
@@ -123,20 +126,39 @@ export class ChannelHotMaterializationActivity {
       }
       await this._adminScheduleLogService.append({
         scheduleKey: 'hot-triage',
-        message: `Hot picks for channel ${request.candidate.id}: ${result.pickCount} picks from ${result.candidateCount} candidates`,
+        message: `Hot picks for channel ${request.candidate.id}: stored=${result.pickCount
+          } candidates=${result.candidateCount} visible=${result.visibleCount ?? result.pickCount
+          }`,
         meta: {
           hour: result.hour,
           organizationId: request.candidate.organizationId,
           integrationId: request.candidate.id,
           pickCount: result.pickCount,
+          storedCount: result.storedCount ?? result.pickCount,
           candidateCount: result.candidateCount,
+          visibleCount: result.visibleCount ?? result.pickCount,
+          excludedCount: result.excludedCount ?? 0,
         },
       });
+      if (result.audit && result.audit.excludedCount > 0) {
+        await this._adminScheduleLogService.append({
+          scheduleKey: 'hot-triage',
+          message: `Hot visibility audit for channel ${request.candidate.id}: stored=${result.audit.storedCount} visible=${result.audit.visibleCount} excluded=${result.audit.excludedCount}`,
+          meta: {
+            hour: result.hour,
+            organizationId: request.candidate.organizationId,
+            integrationId: request.candidate.id,
+            ...trimHotPickAuditForLog(result.audit),
+          },
+        });
+      }
       return {
         skipped: false as const,
         hour: result.hour,
         candidateCount: result.candidateCount,
         pickCount: result.pickCount,
+        visibleCount: result.visibleCount,
+        excludedCount: result.excludedCount,
       };
     } catch (error) {
       await this._adminScheduleLogService.append({

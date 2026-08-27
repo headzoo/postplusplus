@@ -6,6 +6,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import {
   ChannelAudienceMembership as PrismaAudienceMembership,
@@ -54,6 +55,17 @@ import {
   RelationshipGradeStrategySelection,
   utcHourKey,
 } from './channel-interaction.repository';
+import {
+  classifyHotPickVisibility,
+  HotPickAuditMember,
+  trimHotPickAuditForLog,
+} from './hot-pick-audit';
+import {
+  classifyCultivatePickVisibility,
+  CultivatePickAuditMember,
+  trimCultivatePickAuditForLog,
+} from './cultivate-pick-audit';
+import { AdminScheduleLogService } from '@gitroom/nestjs-libraries/database/prisma/admin-schedule-logs/admin-schedule-log.service';
 import {
   applyPersonalRelationshipGrade,
   applyHotTriageMembershipGate,
@@ -192,10 +204,13 @@ const MEMBERSHIP_MAP = {
   unknown: PrismaAudienceMembership.UNKNOWN,
 } as const;
 
-const WINDOW_MAP: Record<ChannelInteractionWindow, {
-  prisma: PrismaInteractionWindow;
-  days: number;
-}> = {
+const WINDOW_MAP: Record<
+  ChannelInteractionWindow,
+  {
+    prisma: PrismaInteractionWindow;
+    days: number;
+  }
+> = {
   week: { prisma: PrismaInteractionWindow.WEEK, days: 7 },
   month: { prisma: PrismaInteractionWindow.MONTH, days: 30 },
   '90_day': { prisma: PrismaInteractionWindow.NINETY_DAY, days: 90 },
@@ -212,7 +227,8 @@ export class ChannelInteractionService {
     private _logsService?: LogsService,
     private _postsRepository?: PostsRepository,
     private _openaiService?: OpenaiService,
-    private _contextDocumentService?: ContextDocumentService
+    private _contextDocumentService?: ContextDocumentService,
+    @Optional() private _adminScheduleLogService?: AdminScheduleLogService
   ) { }
 
   async handleChallenge(
@@ -487,8 +503,9 @@ export class ChannelInteractionService {
     if (!capability || integration.type !== 'social') {
       return false;
     }
-    const desiredSubscriptions: DesiredInteractionSubscription[] =
-      capability.getDesiredSubscriptions(integration).map((subscription) => ({
+    const desiredSubscriptions: DesiredInteractionSubscription[] = capability
+      .getDesiredSubscriptions(integration)
+      .map((subscription) => ({
         eventKey: subscription.eventKey,
         direction: DIRECTION_MAP[subscription.direction],
       }));
@@ -571,7 +588,9 @@ export class ChannelInteractionService {
     }
   }
 
-  private isUsableAuthorization(authorization: { tokenExpiration: Date | null }) {
+  private isUsableAuthorization(authorization: {
+    tokenExpiration: Date | null;
+  }) {
     return (
       !authorization.tokenExpiration ||
       authorization.tokenExpiration.getTime() - AUTHORIZATION_REFRESH_SKEW_MS >
@@ -581,7 +600,9 @@ export class ChannelInteractionService {
 
   async hasInteractionAuthorization(integration: Integration) {
     if (
-      !this.getInteractionAuthorizationCapability(integration.providerIdentifier)
+      !this.getInteractionAuthorizationCapability(
+        integration.providerIdentifier
+      )
     ) {
       return false;
     }
@@ -759,12 +780,14 @@ export class ChannelInteractionService {
           await this.pauseLikerSync(integration.id, resetMs);
           rateLimited = true;
           console.log(
-            `Rate limited loading likers for ${integration.providerIdentifier}; paused until ${new Date(resetMs).toISOString()}`
+            `Rate limited loading likers for ${integration.providerIdentifier
+            }; paused until ${new Date(resetMs).toISOString()}`
           );
           break;
         }
         console.log(
-          `Failed to load likers for ${integration.providerIdentifier} post ${postId}: ${formatProviderError(error)}`
+          `Failed to load likers for ${integration.providerIdentifier
+          } post ${postId}: ${formatProviderError(error)}`
         );
         continue;
       }
@@ -849,12 +872,7 @@ export class ChannelInteractionService {
 
   private async pauseLikerSync(integrationId: string, resetMs: number) {
     const ttlSeconds = Math.max(1, Math.ceil((resetMs - Date.now()) / 1000));
-    await ioRedis.set(
-      likerSyncPauseKey(integrationId),
-      '1',
-      'EX',
-      ttlSeconds
-    );
+    await ioRedis.set(likerSyncPauseKey(integrationId), '1', 'EX', ttlSeconds);
   }
 
   private async refreshRelationshipGradeProjections(
@@ -874,12 +892,255 @@ export class ChannelInteractionService {
       snapshotAt
     );
     const snapshots = await this.scoreRelationshipBatch(batch);
-    await this._repository.updateCurrentRelationshipProjections(
+    await this.updateRelationshipProjectionsWithHotLogging(
       organizationId,
       integrationId,
       snapshotAt,
       snapshots
     );
+  }
+
+  private appendHotTriageAdminLog(
+    message: string,
+    meta: Record<string, unknown>
+  ) {
+    void this._adminScheduleLogService
+      ?.append({
+        scheduleKey: 'hot-triage',
+        message,
+        meta,
+      })
+      .catch(() => {
+        /** logging must never break follower flows */
+      });
+  }
+
+  private appendCultivateAdminLog(
+    message: string,
+    meta: Record<string, unknown>
+  ) {
+    void this._adminScheduleLogService
+      ?.append({
+        scheduleKey: 'follower-cultivate',
+        message,
+        meta,
+      })
+      .catch(() => {
+        /** logging must never break follower flows */
+      });
+  }
+
+  private logHotTriageDismissed(params: {
+    organizationId: string;
+    integrationId: string;
+    externalId: string;
+    createdByUserId?: string;
+    snooze: boolean;
+  }) {
+    const meta = {
+      organizationId: params.organizationId,
+      integrationId: params.integrationId,
+      externalId: params.externalId,
+      userId: params.createdByUserId ?? null,
+      snooze: params.snooze,
+    };
+    this._logger.log(
+      `[hot-triage] Hot triage dismissed integration=${params.integrationId
+      } externalId=${params.externalId} user=${params.createdByUserId ?? 'unknown'
+      } snooze=${params.snooze}`
+    );
+    this.appendHotTriageAdminLog(
+      `Hot triage dismissed for ${params.externalId} on channel ${params.integrationId}`,
+      meta
+    );
+  }
+
+  private logHotEligibilityLost(params: {
+    organizationId: string;
+    integrationId: string;
+    externalId: string;
+    username: string | null;
+    previousTriage: string | null;
+    nextTriage: string | null;
+  }) {
+    const meta = {
+      organizationId: params.organizationId,
+      integrationId: params.integrationId,
+      externalId: params.externalId,
+      username: params.username,
+      previousTriage: params.previousTriage,
+      nextTriage: params.nextTriage,
+    };
+    this._logger.log(
+      `[hot-triage] Hot eligibility lost integration=${params.integrationId
+      } externalId=${params.externalId} was=${params.previousTriage ?? 'null'
+      } now=${params.nextTriage ?? 'null'}`
+    );
+    this.appendHotTriageAdminLog(
+      `Hot eligibility lost for ${params.externalId} on channel ${params.integrationId}`,
+      meta
+    );
+  }
+
+  private logCultivateDismissed(params: {
+    organizationId: string;
+    integrationId: string;
+    externalId: string;
+    createdByUserId?: string;
+    snooze: boolean;
+  }) {
+    const meta = {
+      organizationId: params.organizationId,
+      integrationId: params.integrationId,
+      externalId: params.externalId,
+      userId: params.createdByUserId ?? null,
+      snooze: params.snooze,
+    };
+    this._logger.log(
+      `[follower-cultivate] Cultivate dismissed integration=${params.integrationId
+      } externalId=${params.externalId} user=${params.createdByUserId ?? 'unknown'
+      } snooze=${params.snooze}`
+    );
+    this.appendCultivateAdminLog(
+      `Cultivate dismissed for ${params.externalId} on channel ${params.integrationId}`,
+      meta
+    );
+  }
+
+  private logCultivateEligibilityLost(params: {
+    organizationId: string;
+    integrationId: string;
+    externalId: string;
+    username: string | null;
+    previousTriage: string | null;
+    nextTriage: string | null;
+    previousGrade: number | null;
+    nextGrade: number | null;
+  }) {
+    const meta = {
+      organizationId: params.organizationId,
+      integrationId: params.integrationId,
+      externalId: params.externalId,
+      username: params.username,
+      previousTriage: params.previousTriage,
+      nextTriage: params.nextTriage,
+      previousGrade: params.previousGrade,
+      nextGrade: params.nextGrade,
+    };
+    this._logger.log(
+      `[follower-cultivate] Cultivate eligibility lost integration=${params.integrationId
+      } externalId=${params.externalId} was=${params.previousTriage ?? 'null'
+      } now=${params.nextTriage ?? 'null'} grade=${params.previousGrade ?? 'null'
+      }->${params.nextGrade ?? 'null'}`
+    );
+    this.appendCultivateAdminLog(
+      `Cultivate eligibility lost for ${params.externalId} on channel ${params.integrationId}`,
+      meta
+    );
+  }
+
+  private toCultivateAuditMember(
+    member: HotPickAuditMember
+  ): CultivatePickAuditMember {
+    return {
+      externalId: member.externalId,
+      username: member.username,
+      membershipState: member.membershipState,
+      ignoredAt: member.ignoredAt,
+      isBot: member.isBot,
+      relationshipTriage: member.relationshipTriage,
+      relationshipGrade: member.relationshipGrade ?? null,
+      lastOutboundAt: member.lastOutboundAt ?? null,
+      triageIgnores: member.triageIgnores,
+    };
+  }
+
+  private async updateRelationshipProjectionsWithHotLogging(
+    organizationId: string,
+    integrationId: string,
+    snapshotAt: Date,
+    snapshots: RelationshipGradeSnapshotInput[],
+    options?: { force?: boolean }
+  ) {
+    if (!snapshots.length) {
+      return this._repository.updateCurrentRelationshipProjections(
+        organizationId,
+        integrationId,
+        snapshotAt,
+        snapshots,
+        options
+      );
+    }
+    const before = await this._repository.getHotPickAuditMembers(
+      organizationId,
+      integrationId,
+      snapshots.map((snapshot) => snapshot.externalId)
+    );
+    const result = options
+      ? await this._repository.updateCurrentRelationshipProjections(
+        organizationId,
+        integrationId,
+        snapshotAt,
+        snapshots,
+        options
+      )
+      : await this._repository.updateCurrentRelationshipProjections(
+        organizationId,
+        integrationId,
+        snapshotAt,
+        snapshots
+      );
+    for (const snapshot of snapshots) {
+      const prior = before.get(snapshot.externalId);
+      if (!prior) {
+        continue;
+      }
+      const wasHotVisible = classifyHotPickVisibility(prior) === 'visible';
+      const afterHotMember: HotPickAuditMember = {
+        ...prior,
+        relationshipTriage: snapshot.triage,
+        relationshipReciprocationScore: snapshot.reciprocationScore,
+        relationshipEffortScore: snapshot.effortScore,
+      };
+      if (
+        wasHotVisible &&
+        classifyHotPickVisibility(afterHotMember) !== 'visible'
+      ) {
+        this.logHotEligibilityLost({
+          organizationId,
+          integrationId,
+          externalId: snapshot.externalId,
+          username: prior.username,
+          previousTriage: prior.relationshipTriage,
+          nextTriage: snapshot.triage,
+        });
+      }
+
+      const priorCultivate = this.toCultivateAuditMember(prior);
+      const wasCultivateVisible =
+        classifyCultivatePickVisibility(priorCultivate) === 'visible';
+      const afterCultivate: CultivatePickAuditMember = {
+        ...priorCultivate,
+        relationshipTriage: snapshot.triage,
+        relationshipGrade: snapshot.grade,
+      };
+      if (
+        wasCultivateVisible &&
+        classifyCultivatePickVisibility(afterCultivate) !== 'visible'
+      ) {
+        this.logCultivateEligibilityLost({
+          organizationId,
+          integrationId,
+          externalId: snapshot.externalId,
+          username: prior.username,
+          previousTriage: prior.relationshipTriage,
+          nextTriage: snapshot.triage,
+          previousGrade: prior.relationshipGrade ?? null,
+          nextGrade: snapshot.grade,
+        });
+      }
+    }
+    return result;
   }
 
   async beginFollowerSync(organizationId: string, integrationId: string) {
@@ -904,13 +1165,14 @@ export class ChannelInteractionService {
         `A follower sync page may contain at most ${MAX_DELIVERY_EVENTS} followers`
       );
     }
-    const profiles = followers.map((follower) => this.validateFollower(follower));
-    const engagementById =
-      await this._repository.getAudienceBotScoreInputs(
-        organizationId,
-        integrationId,
-        profiles.map((profile) => profile.externalId)
-      );
+    const profiles = followers.map((follower) =>
+      this.validateFollower(follower)
+    );
+    const engagementById = await this._repository.getAudienceBotScoreInputs(
+      organizationId,
+      integrationId,
+      profiles.map((profile) => profile.externalId)
+    );
     const gradedAt = new Date();
     const scoredProfiles = profiles.map((profile) => {
       const existing = engagementById.get(profile.externalId);
@@ -948,7 +1210,9 @@ export class ChannelInteractionService {
       scoredProfiles
     );
     if (!applied) {
-      throw new ConflictException('Follower sync generation is no longer active');
+      throw new ConflictException(
+        'Follower sync generation is no longer active'
+      );
     }
     return { applied: scoredProfiles.length };
   }
@@ -967,7 +1231,9 @@ export class ChannelInteractionService {
       completedAt
     );
     if (!completed) {
-      throw new ConflictException('Follower sync generation is no longer active');
+      throw new ConflictException(
+        'Follower sync generation is no longer active'
+      );
     }
     return { generation, completedAt };
   }
@@ -1145,7 +1411,12 @@ export class ChannelInteractionService {
     const countKey = leadBridgeDailyCountKey(integration.id, day);
     const used = Number((await ioRedis.get(countKey)) || '0');
     if (!options.ignoreDailyLimit && used >= LEAD_BRIDGE_DAILY_LIMIT) {
-      return { skipped: true as const, processed: 0, applied: 0, rateLimited: true };
+      return {
+        skipped: true as const,
+        processed: 0,
+        applied: 0,
+        rateLimited: true,
+      };
     }
 
     const cursorKey = leadBridgeCursorKey(integration.id);
@@ -1159,7 +1430,9 @@ export class ChannelInteractionService {
       return { skipped: true as const, processed: 0, applied: 0 };
     }
 
-    let page: Awaited<ReturnType<NonNullable<SocialProvider['memberFollowers']>>>;
+    let page: Awaited<
+      ReturnType<NonNullable<SocialProvider['memberFollowers']>>
+    >;
     try {
       page = await provider.memberFollowers(
         integration,
@@ -1169,12 +1442,19 @@ export class ChannelInteractionService {
       );
     } catch {
       await ioRedis.set(cursorKey, warm.externalId);
-      return { skipped: false as const, processed: 0, applied: 0, failed: true };
+      return {
+        skipped: false as const,
+        processed: 0,
+        applied: 0,
+        failed: true,
+      };
     }
 
     const leads = (page.items || []).map((item) => ({
       externalId: String(item.id).slice(0, MAX_ID_LENGTH),
-      ...(item.name ? { name: String(item.name).slice(0, MAX_PROFILE_TEXT_LENGTH) } : {}),
+      ...(item.name
+        ? { name: String(item.name).slice(0, MAX_PROFILE_TEXT_LENGTH) }
+        : {}),
       ...(item.username
         ? { username: String(item.username).slice(0, MAX_PROFILE_TEXT_LENGTH) }
         : {}),
@@ -1182,9 +1462,16 @@ export class ChannelInteractionService {
         ? { picture: String(item.picture).slice(0, MAX_PROFILE_TEXT_LENGTH) }
         : {}),
       ...(item.profileUrl
-        ? { profileUrl: String(item.profileUrl).slice(0, MAX_PROFILE_TEXT_LENGTH) }
+        ? {
+          profileUrl: String(item.profileUrl).slice(
+            0,
+            MAX_PROFILE_TEXT_LENGTH
+          ),
+        }
         : {}),
-      ...(item.bio ? { bio: String(item.bio).slice(0, MAX_PROFILE_TEXT_LENGTH) } : {}),
+      ...(item.bio
+        ? { bio: String(item.bio).slice(0, MAX_PROFILE_TEXT_LENGTH) }
+        : {}),
       ...(Number.isSafeInteger(item.followersCount)
         ? { followersCount: item.followersCount! }
         : {}),
@@ -1333,21 +1620,27 @@ export class ChannelInteractionService {
     let documents: Array<{ name: string; content: string }> = [];
     try {
       documents = this._contextDocumentService
-        ? (await this._contextDocumentService.listAttachedDocumentsForIntegration(
-          params.organizationId,
-          params.integrationId
-        ))
+        ? (
+          await this._contextDocumentService.listAttachedDocumentsForIntegration(
+            params.organizationId,
+            params.integrationId
+          )
+        )
           .filter((document) => !parseSkillFilename(document.name))
           .sort((left, right) => left.name.localeCompare(right.name))
           .slice(0, TRIAGE_DOCUMENT_MAX_COUNT)
           .map((document) => ({
             name: document.name,
-            content: document.content.slice(0, TRIAGE_DOCUMENT_MAX_CONTENT_LENGTH),
+            content: document.content.slice(
+              0,
+              TRIAGE_DOCUMENT_MAX_CONTENT_LENGTH
+            ),
           }))
         : [];
     } catch (error) {
       this._logger.warn(
-        `Triage context documents unavailable for ${params.integrationId}: ${error instanceof Error ? error.message : String(error)}`
+        `Triage context documents unavailable for ${params.integrationId}: ${error instanceof Error ? error.message : String(error)
+        }`
       );
     }
 
@@ -1359,7 +1652,8 @@ export class ChannelInteractionService {
       });
     } catch (error) {
       this._logger.warn(
-        `Triage expertise unavailable for ${params.integrationId}: ${error instanceof Error ? error.message : String(error)}`
+        `Triage expertise unavailable for ${params.integrationId}: ${error instanceof Error ? error.message : String(error)
+        }`
       );
     }
     return {
@@ -1415,12 +1709,13 @@ export class ChannelInteractionService {
         `Lead fit scoring for integration ${integrationId} has no attached channel documents; scores will be low-confidence`
       );
     }
-    const feedbackExamples =
-      await this._repository.listLeadFitFeedbackExamples({
+    const feedbackExamples = await this._repository.listLeadFitFeedbackExamples(
+      {
         organizationId,
         integrationId,
         limit: config.profile.lead.feedbackExampleLimit,
-      });
+      }
+    );
     const truncateBio = (bio: string | null) =>
       bio ? bio.slice(0, 500) : undefined;
     const toExample = (row: {
@@ -1495,14 +1790,16 @@ export class ChannelInteractionService {
     );
   }
 
-  private async rerankTriageCandidates<T extends {
-    externalId: string;
-    rulesRank: number;
-    rulesReason: string;
-    name?: string | null;
-    username?: string | null;
-    bio?: string | null;
-  }>(params: {
+  private async rerankTriageCandidates<
+    T extends {
+      externalId: string;
+      rulesRank: number;
+      rulesReason: string;
+      name?: string | null;
+      username?: string | null;
+      bio?: string | null;
+    }
+  >(params: {
     organizationId: string;
     integrationId: string;
     triage: 'hot' | 'cultivate';
@@ -1510,14 +1807,16 @@ export class ChannelInteractionService {
     pickLimit: number;
     candidates: T[];
   }) {
-    const rules = params.candidates.slice(0, params.pickLimit).map((candidate, index) => ({
-      ...candidate,
-      finalRank: index + 1,
-      aiRank: null as number | null,
-      aiReason: null as string | null,
-      suggestedAction: null as string | null,
-      source: 'rules',
-    }));
+    const rules = params.candidates
+      .slice(0, params.pickLimit)
+      .map((candidate, index) => ({
+        ...candidate,
+        finalRank: index + 1,
+        aiRank: null as number | null,
+        aiReason: null as string | null,
+        suggestedAction: null as string | null,
+        source: 'rules',
+      }));
     if (!this.shouldUseTriageReranking()) {
       return { picks: rules, source: 'rules' as const };
     }
@@ -1535,10 +1834,7 @@ export class ChannelInteractionService {
           externalId: candidate.externalId,
           ...(candidate.name
             ? {
-              name: candidate.name.slice(
-                0,
-                TRIAGE_CANDIDATE_NAME_MAX_LENGTH
-              ),
+              name: candidate.name.slice(0, TRIAGE_CANDIDATE_NAME_MAX_LENGTH),
             }
             : {}),
           ...(candidate.username
@@ -1595,7 +1891,9 @@ export class ChannelInteractionService {
       return { picks, source: 'ai' as const };
     } catch (error) {
       this._logger.warn(
-        `Triage AI rerank failed for ${params.integrationId}/${params.triage}: ${error instanceof Error ? error.message.slice(0, 200) : 'unknown error'}`
+        `Triage AI rerank failed for ${params.integrationId}/${params.triage
+        }: ${error instanceof Error ? error.message.slice(0, 200) : 'unknown error'
+        }`
       );
       return { picks: rules, source: 'rules' as const };
     }
@@ -1662,7 +1960,7 @@ export class ChannelInteractionService {
         now
       );
       const snapshots = await this.scoreRelationshipBatch(batch);
-      await this._repository.updateCurrentRelationshipProjections(
+      await this.updateRelationshipProjectionsWithHotLogging(
         organizationId,
         integrationId,
         now,
@@ -1711,11 +2009,28 @@ export class ChannelInteractionService {
         source: pick.source,
       })),
     });
+    const audit = await this._repository.auditHotPickExclusions({
+      organizationId,
+      integrationId,
+      hour,
+      now,
+    });
+    if (audit.excludedCount > 0) {
+      this._logger.log(
+        `[hot-triage] Hot materialization visibility audit integration=${integrationId} hour=${hour} stored=${audit.storedCount
+        } visible=${audit.visibleCount} excluded=${audit.excludedCount
+        } ${JSON.stringify(trimHotPickAuditForLog(audit))}`
+      );
+    }
     return {
       hour,
       skipped: false as const,
       candidateCount: candidates.length,
       pickCount: result.count,
+      storedCount: result.count,
+      visibleCount: audit.visibleCount,
+      excludedCount: audit.excludedCount,
+      audit,
     };
   }
 
@@ -1789,11 +2104,32 @@ export class ChannelInteractionService {
       completedAt: now,
       picks,
     });
+    const audit = await this._repository.auditCultivatePickExclusions({
+      organizationId,
+      integrationId,
+      hour,
+      now,
+      config: {
+        warmGradeThreshold: config.profile.cultivate.warmGradeThreshold,
+        staleDays: config.profile.cultivate.staleDays,
+      },
+    });
+    if (audit.excludedCount > 0) {
+      this._logger.log(
+        `[follower-cultivate] Cultivate materialization visibility audit integration=${integrationId} hour=${hour} stored=${audit.storedCount
+        } visible=${audit.visibleCount} excluded=${audit.excludedCount
+        } ${JSON.stringify(trimCultivatePickAuditForLog(audit))}`
+      );
+    }
     return {
       hour,
       skipped: false as const,
       candidateCount: candidates.length,
       pickCount: result.count,
+      storedCount: result.count,
+      visibleCount: audit.visibleCount,
+      excludedCount: audit.excludedCount,
+      audit,
     };
   }
 
@@ -1862,7 +2198,7 @@ export class ChannelInteractionService {
         member.membershipState
       ),
     };
-    await this._repository.updateCurrentRelationshipProjections(
+    await this.updateRelationshipProjectionsWithHotLogging(
       organizationId,
       integrationId,
       snapshotAt,
@@ -1967,11 +2303,7 @@ export class ChannelInteractionService {
     content: string
   ) {
     this.validateBoundedString(externalId, 'externalId', MAX_ID_LENGTH);
-    this.validateBoundedString(
-      authorUserId,
-      'authorUserId',
-      MAX_ID_LENGTH
-    );
+    this.validateBoundedString(authorUserId, 'authorUserId', MAX_ID_LENGTH);
     this.validateBoundedString(content, 'content', MAX_AUDIENCE_NOTE_LENGTH);
     try {
       return await this._repository.createAudienceNote(
@@ -1994,12 +2326,14 @@ export class ChannelInteractionService {
   ) {
     this.validateBoundedString(noteId, 'noteId', MAX_ID_LENGTH);
     this.validateBoundedString(content, 'content', MAX_AUDIENCE_NOTE_LENGTH);
-    if (!await this._repository.updateAudienceNote(
-      organizationId,
-      integrationId,
-      noteId,
-      content
-    )) {
+    if (
+      !(await this._repository.updateAudienceNote(
+        organizationId,
+        integrationId,
+        noteId,
+        content
+      ))
+    ) {
       throw new NotFoundException('Follower note was not found');
     }
   }
@@ -2010,11 +2344,13 @@ export class ChannelInteractionService {
     noteId: string
   ) {
     this.validateBoundedString(noteId, 'noteId', MAX_ID_LENGTH);
-    if (!await this._repository.deleteAudienceNote(
-      organizationId,
-      integrationId,
-      noteId
-    )) {
+    if (
+      !(await this._repository.deleteAudienceNote(
+        organizationId,
+        integrationId,
+        noteId
+      ))
+    ) {
       throw new NotFoundException('Follower note was not found');
     }
   }
@@ -2029,7 +2365,9 @@ export class ChannelInteractionService {
     this.validateBoundedString(externalId, 'externalId', MAX_ID_LENGTH);
     this.validateBoundedString(userId, 'userId', MAX_ID_LENGTH);
     if (!isPersonalRelationshipGrade(grade)) {
-      throw new BadRequestException('Grade must be a half-star value between 1 and 5');
+      throw new BadRequestException(
+        'Grade must be a half-star value between 1 and 5'
+      );
     }
     try {
       const saved = await this._repository.upsertAudienceMemberGrade(
@@ -2074,7 +2412,11 @@ export class ChannelInteractionService {
     name: string,
     color?: string | null
   ) {
-    this.validateBoundedString(createdByUserId, 'createdByUserId', MAX_ID_LENGTH);
+    this.validateBoundedString(
+      createdByUserId,
+      'createdByUserId',
+      MAX_ID_LENGTH
+    );
     const normalized = this.normalizeFollowerListName(name);
     const normalizedColor = this.normalizeFollowerListColor(color);
     const result = await this._repository.createAudienceList(
@@ -2100,9 +2442,7 @@ export class ChannelInteractionService {
     this.validateBoundedString(listId, 'listId', MAX_ID_LENGTH);
     const normalized = this.normalizeFollowerListName(name);
     const normalizedColor =
-      color === undefined
-        ? undefined
-        : this.normalizeFollowerListColor(color);
+      color === undefined ? undefined : this.normalizeFollowerListColor(color);
     const result = await this._repository.updateAudienceList(
       organizationId,
       integrationId,
@@ -2125,11 +2465,13 @@ export class ChannelInteractionService {
     listId: string
   ) {
     this.validateBoundedString(listId, 'listId', MAX_ID_LENGTH);
-    if (!await this._repository.deleteAudienceList(
-      organizationId,
-      integrationId,
-      listId
-    )) {
+    if (
+      !(await this._repository.deleteAudienceList(
+        organizationId,
+        integrationId,
+        listId
+      ))
+    ) {
       throw new NotFoundException('Follower list was not found');
     }
   }
@@ -2167,13 +2509,14 @@ export class ChannelInteractionService {
   ) {
     this.validateBoundedString(listId, 'listId', MAX_ID_LENGTH);
     const profile = this.validateFollower(follower);
-    const result = await this._repository.upsertImportedAudienceMemberAndAddToList(
-      organizationId,
-      integrationId,
-      listId,
-      profile,
-      createdByUserId
-    );
+    const result =
+      await this._repository.upsertImportedAudienceMemberAndAddToList(
+        organizationId,
+        integrationId,
+        listId,
+        profile,
+        createdByUserId
+      );
     if ('missing' in result) {
       if (result.missing === 'list') {
         throw new NotFoundException('Follower list was not found');
@@ -2229,7 +2572,9 @@ export class ChannelInteractionService {
     if (hasExternalIds) {
       const externalIds = options.externalIds ?? [];
       if (!externalIds.length) {
-        throw new BadRequestException('externalIds must include at least one id');
+        throw new BadRequestException(
+          'externalIds must include at least one id'
+        );
       }
       if (externalIds.length > 50) {
         throw new BadRequestException('externalIds cannot exceed 50 ids');
@@ -2292,7 +2637,9 @@ export class ChannelInteractionService {
     }
     if (triage === 'lead' && !options?.snooze) {
       if (!Array.isArray(reasons) || reasons.length === 0) {
-        throw new BadRequestException('Lead dismiss requires at least one reason');
+        throw new BadRequestException(
+          'Lead dismiss requires at least one reason'
+        );
       }
     }
     const result = await this._repository.addAudienceTriageIgnore(
@@ -2306,6 +2653,24 @@ export class ChannelInteractionService {
     );
     if (result.missing === 'member') {
       throw new NotFoundException('Follower was not found');
+    }
+    if (triage === 'hot_lead' || triage === 'engaged_not_yet') {
+      this.logHotTriageDismissed({
+        organizationId,
+        integrationId,
+        externalId,
+        createdByUserId,
+        snooze: options?.snooze === true,
+      });
+    }
+    if (triage === 'cultivate') {
+      this.logCultivateDismissed({
+        organizationId,
+        integrationId,
+        externalId,
+        createdByUserId,
+        snooze: options?.snooze === true,
+      });
     }
   }
 
@@ -2460,9 +2825,7 @@ export class ChannelInteractionService {
     if (color == null || color === '') {
       return null;
     }
-    if (
-      !FOLLOWER_SEGMENT_COLORS.includes(color as FollowerSegmentColorValue)
-    ) {
+    if (!FOLLOWER_SEGMENT_COLORS.includes(color as FollowerSegmentColorValue)) {
       throw new BadRequestException('List color is not supported');
     }
     return color as FollowerSegmentColorValue;
@@ -2472,7 +2835,11 @@ export class ChannelInteractionService {
     if (!event || typeof event !== 'object') {
       throw new BadRequestException('Interaction event must be an object');
     }
-    this.validateBoundedString(event.providerEventKey, 'providerEventKey', MAX_ID_LENGTH);
+    this.validateBoundedString(
+      event.providerEventKey,
+      'providerEventKey',
+      MAX_ID_LENGTH
+    );
     this.validateBoundedString(
       event.counterparty?.externalId,
       'counterparty.externalId',
@@ -2481,18 +2848,24 @@ export class ChannelInteractionService {
     const kind = KIND_MAP[event.kind];
     const direction = DIRECTION_MAP[event.direction];
     if (!kind || !direction) {
-      throw new BadRequestException('Unsupported interaction kind or direction');
+      throw new BadRequestException(
+        'Unsupported interaction kind or direction'
+      );
     }
     const eventAt = this.parseDate(event.eventAt, 'eventAt');
     if (eventAt.getTime() > Date.now() + MAX_FUTURE_SKEW_MS) {
-      throw new BadRequestException('Interaction timestamp is too far in the future');
+      throw new BadRequestException(
+        'Interaction timestamp is too far in the future'
+      );
     }
     if (
       !Number.isInteger(event.normalizationVersion) ||
       event.normalizationVersion < 1 ||
       event.normalizationVersion > 1000
     ) {
-      throw new BadRequestException('normalizationVersion must be between 1 and 1000');
+      throw new BadRequestException(
+        'normalizationVersion must be between 1 and 1000'
+      );
     }
     if (event.relatedObjectId !== undefined) {
       this.validateBoundedString(
@@ -2503,11 +2876,17 @@ export class ChannelInteractionService {
     }
     const metadataEntries = Object.entries(event.metadata || {});
     if (metadataEntries.length > MAX_METADATA_ENTRIES) {
-      throw new BadRequestException('Interaction metadata has too many entries');
+      throw new BadRequestException(
+        'Interaction metadata has too many entries'
+      );
     }
     for (const [key, value] of metadataEntries) {
       this.validateBoundedString(key, 'metadata key', 128);
-      this.validateBoundedString(value, `metadata.${key}`, MAX_METADATA_VALUE_LENGTH);
+      this.validateBoundedString(
+        value,
+        `metadata.${key}`,
+        MAX_METADATA_VALUE_LENGTH
+      );
     }
     const counterparty = this.validateProfile(event.counterparty);
     const mappedMembership = event.membershipUpdate
@@ -2639,7 +3018,8 @@ export class ChannelInteractionService {
   private getWebhookCapabilityOrUndefined(providerIdentifier: string) {
     let provider: SocialProvider | undefined;
     try {
-      provider = this._integrationManager?.getSocialIntegration(providerIdentifier);
+      provider =
+        this._integrationManager?.getSocialIntegration(providerIdentifier);
     } catch {
       return undefined;
     }
@@ -2657,8 +3037,14 @@ export class ChannelInteractionService {
     return {
       ...profile,
       bio: this.optionalString(follower.bio, 'bio', MAX_PROFILE_TEXT_LENGTH),
-      followersCount: this.optionalCount(follower.followersCount, 'followersCount'),
-      followingCount: this.optionalCount(follower.followingCount, 'followingCount'),
+      followersCount: this.optionalCount(
+        follower.followersCount,
+        'followersCount'
+      ),
+      followingCount: this.optionalCount(
+        follower.followingCount,
+        'followingCount'
+      ),
       followedAt: this.optionalDate(follower.followedAt, 'followedAt'),
       accountCreatedAt: this.optionalDate(
         follower.accountCreatedAt,
@@ -2674,7 +3060,11 @@ export class ChannelInteractionService {
     picture?: string;
     profileUrl?: string;
   }): AudienceProfile {
-    this.validateBoundedString(profile?.externalId, 'externalId', MAX_ID_LENGTH);
+    this.validateBoundedString(
+      profile?.externalId,
+      'externalId',
+      MAX_ID_LENGTH
+    );
     const picture = this.optionalUrl(profile.picture, 'picture');
     const profileUrl = this.optionalUrl(profile.profileUrl, 'profileUrl');
     return {
@@ -2686,7 +3076,11 @@ export class ChannelInteractionService {
     };
   }
 
-  private optionalString(value: string | undefined, field: string, max: number) {
+  private optionalString(
+    value: string | undefined,
+    field: string,
+    max: number
+  ) {
     if (value === undefined) return undefined;
     this.validateBoundedString(value, field, max);
     return value;

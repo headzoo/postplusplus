@@ -1,10 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { Activity, ActivityMethod } from 'nestjs-temporal-core';
-import { ChannelInteractionRepository, utcHourKey } from '@gitroom/nestjs-libraries/database/prisma/channel-interactions/channel-interaction.repository';
+import {
+  ChannelInteractionRepository,
+  utcHourKey,
+} from '@gitroom/nestjs-libraries/database/prisma/channel-interactions/channel-interaction.repository';
 import { ChannelInteractionService } from '@gitroom/nestjs-libraries/database/prisma/channel-interactions/channel-interaction.service';
 import { IntegrationService } from '@gitroom/nestjs-libraries/database/prisma/integrations/integration.service';
 import { AdminScheduleLogService } from '@gitroom/nestjs-libraries/database/prisma/admin-schedule-logs/admin-schedule-log.service';
 import { CULTIVATE_MATERIALIZATION_LIST_SCAN } from '@gitroom/nestjs-libraries/temporal/cultivate.schedule';
+import { trimCultivatePickAuditForLog } from '@gitroom/nestjs-libraries/database/prisma/channel-interactions/cultivate-pick-audit';
 
 export type ChannelCultivateCandidate = {
   id: string;
@@ -79,9 +83,11 @@ export class ChannelCultivateActivity {
   }
 
   @ActivityMethod()
-  async listDueCandidatesV2(request: { hour: string; after?: string } = {
-    hour: utcHourKey(),
-  }) {
+  async listDueCandidatesV2(
+    request: { hour: string; after?: string } = {
+      hour: utcHourKey(),
+    }
+  ) {
     const result = await this._repository.listCultivateMaterializeCandidates(
       request.after,
       CULTIVATE_MATERIALIZATION_LIST_SCAN,
@@ -171,20 +177,39 @@ export class ChannelCultivateActivity {
       }
       await this._adminScheduleLogService.append({
         scheduleKey: 'follower-cultivate',
-        message: `Cultivate picks for channel ${request.candidate.id}: ${result.pickCount} picks from ${result.candidateCount} candidates`,
+        message: `Cultivate picks for channel ${request.candidate.id}: stored=${result.pickCount
+          } candidates=${result.candidateCount} visible=${result.visibleCount ?? result.pickCount
+          }`,
         meta: {
           hour: result.hour,
           organizationId: request.candidate.organizationId,
           integrationId: request.candidate.id,
           pickCount: result.pickCount,
+          storedCount: result.storedCount ?? result.pickCount,
           candidateCount: result.candidateCount,
+          visibleCount: result.visibleCount ?? result.pickCount,
+          excludedCount: result.excludedCount ?? 0,
         },
       });
+      if (result.audit && result.audit.excludedCount > 0) {
+        await this._adminScheduleLogService.append({
+          scheduleKey: 'follower-cultivate',
+          message: `Cultivate visibility audit for channel ${request.candidate.id}: stored=${result.audit.storedCount} visible=${result.audit.visibleCount} excluded=${result.audit.excludedCount}`,
+          meta: {
+            hour: result.hour,
+            organizationId: request.candidate.organizationId,
+            integrationId: request.candidate.id,
+            ...trimCultivatePickAuditForLog(result.audit),
+          },
+        });
+      }
       return {
         skipped: false as const,
         hour: result.hour,
         candidateCount: result.candidateCount,
         pickCount: result.pickCount,
+        visibleCount: result.visibleCount,
+        excludedCount: result.excludedCount,
       };
     } catch (error) {
       await this._adminScheduleLogService.append({

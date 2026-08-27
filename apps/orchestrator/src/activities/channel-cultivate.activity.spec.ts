@@ -123,7 +123,10 @@ describe('ChannelCultivateActivity', () => {
       logs
     );
 
-    const result = await activity.materializeCultivatePicksV2({ hour, candidate });
+    const result = await activity.materializeCultivatePicksV2({
+      hour,
+      candidate,
+    });
 
     expect(result).toEqual({
       skipped: true,
@@ -131,7 +134,9 @@ describe('ChannelCultivateActivity', () => {
       pickCount: 0,
       candidateCount: 0,
     });
-    expect(channelInteractionService.materializeCultivatePicksForIntegration).not.toHaveBeenCalled();
+    expect(
+      channelInteractionService.materializeCultivatePicksForIntegration
+    ).not.toHaveBeenCalled();
     expect(logs.append).toHaveBeenCalledWith(
       expect.objectContaining({
         scheduleKey: 'follower-cultivate',
@@ -156,6 +161,17 @@ describe('ChannelCultivateActivity', () => {
         skipped: false,
         candidateCount: 12,
         pickCount: 8,
+        storedCount: 8,
+        visibleCount: 8,
+        excludedCount: 0,
+        audit: {
+          hour,
+          storedCount: 8,
+          visibleCount: 8,
+          excludedCount: 0,
+          excludedByReason: {},
+          excluded: [],
+        },
       }),
     };
     const activity = createActivity(
@@ -165,9 +181,14 @@ describe('ChannelCultivateActivity', () => {
       logs
     );
 
-    const result = await activity.materializeCultivatePicksV2({ hour, candidate });
+    const result = await activity.materializeCultivatePicksV2({
+      hour,
+      candidate,
+    });
 
-    expect(channelInteractionService.materializeCultivatePicksForIntegration).toHaveBeenCalledWith(
+    expect(
+      channelInteractionService.materializeCultivatePicksForIntegration
+    ).toHaveBeenCalledWith(
       candidate.organizationId,
       candidate.id,
       new Date(`${hour}:00:00.000Z`)
@@ -177,16 +198,80 @@ describe('ChannelCultivateActivity', () => {
       hour,
       candidateCount: 12,
       pickCount: 8,
+      visibleCount: 8,
+      excludedCount: 0,
     });
     expect(logs.append).toHaveBeenCalledWith(
       expect.objectContaining({
         scheduleKey: 'follower-cultivate',
-        message: `Cultivate picks for channel ${candidate.id}: 8 picks from 12 candidates`,
+        message: `Cultivate picks for channel ${candidate.id}: stored=8 candidates=12 visible=8`,
         meta: expect.objectContaining({
           hour,
           integrationId: candidate.id,
           pickCount: 8,
+          storedCount: 8,
           candidateCount: 12,
+          visibleCount: 8,
+          excludedCount: 0,
+        }),
+      })
+    );
+  });
+
+  it('logs a cultivate visibility audit when stored picks are excluded at read time', async () => {
+    const logs = { append: jest.fn().mockResolvedValue(undefined) };
+    const integrationService = {
+      getIntegrationById: jest.fn().mockResolvedValue({
+        id: candidate.id,
+        organizationId: candidate.organizationId,
+        disabled: false,
+        deletedAt: null,
+      }),
+    };
+    const channelInteractionService = {
+      materializeCultivatePicksForIntegration: jest.fn().mockResolvedValue({
+        hour,
+        skipped: false,
+        candidateCount: 10,
+        pickCount: 10,
+        storedCount: 10,
+        visibleCount: 2,
+        excludedCount: 8,
+        audit: {
+          hour,
+          storedCount: 10,
+          visibleCount: 2,
+          excludedCount: 8,
+          excludedByReason: { recently_contacted: 8 },
+          excluded: [
+            {
+              externalId: 'cult-1',
+              username: 'one',
+              reason: 'recently_contacted',
+              relationshipTriage: 'mutual',
+            },
+          ],
+        },
+      }),
+    };
+    const activity = createActivity(
+      { listCultivateMaterializeCandidates: jest.fn() },
+      channelInteractionService,
+      integrationService,
+      logs
+    );
+
+    await activity.materializeCultivatePicksV2({ hour, candidate });
+
+    expect(logs.append).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scheduleKey: 'follower-cultivate',
+        message: `Cultivate visibility audit for channel ${candidate.id}: stored=10 visible=2 excluded=8`,
+        meta: expect.objectContaining({
+          storedCount: 10,
+          visibleCount: 2,
+          excludedCount: 8,
+          excludedByReason: { recently_contacted: 8 },
         }),
       })
     );
@@ -216,7 +301,10 @@ describe('ChannelCultivateActivity', () => {
       logs
     );
 
-    const result = await activity.materializeCultivatePicksV2({ hour, candidate });
+    const result = await activity.materializeCultivatePicksV2({
+      hour,
+      candidate,
+    });
 
     expect(result).toEqual({
       skipped: true,

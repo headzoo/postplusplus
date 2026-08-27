@@ -1,4 +1,8 @@
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { ioRedis } from '@gitroom/nestjs-libraries/redis/redis.service';
 import {
   applyPersonalRelationshipGrade,
@@ -15,10 +19,9 @@ import { getChannelStrategy } from '@gitroom/nestjs-libraries/channel-strategies
 import { ChannelStrategyId } from '@gitroom/nestjs-libraries/channel-strategies/channel-strategy.types';
 import { growAudienceStrategy } from '@gitroom/nestjs-libraries/channel-strategies/strategies/grow-audience.strategy';
 
-jest.mock(
-  '@gitroom/nestjs-libraries/integrations/integration.manager',
-  () => ({ IntegrationManager: class IntegrationManager { } })
-);
+jest.mock('@gitroom/nestjs-libraries/integrations/integration.manager', () => ({
+  IntegrationManager: class IntegrationManager { },
+}));
 
 jest.mock('@gitroom/nestjs-libraries/redis/redis.service', () => ({
   ioRedis: {
@@ -116,7 +119,9 @@ const createRepository = () => ({
     strategy: growStrategy,
   }),
   getCurrentRelationshipProjection: jest.fn().mockResolvedValue(null),
-  updateCurrentRelationshipProjections: jest.fn().mockResolvedValue({ count: 0 }),
+  updateCurrentRelationshipProjections: jest
+    .fn()
+    .mockResolvedValue({ count: 0 }),
   upsertAudienceMemberGrade: jest.fn().mockResolvedValue({
     grade: 4.5,
     relationshipGrade: 4,
@@ -137,6 +142,23 @@ const createRepository = () => ({
   listHotRefreshExternalIds: jest.fn().mockResolvedValue([]),
   listHotRulesCandidates: jest.fn().mockResolvedValue([]),
   replaceHotPickBatch: jest.fn().mockResolvedValue({ count: 0 }),
+  auditHotPickExclusions: jest.fn().mockResolvedValue({
+    hour: '2026-08-12T12',
+    storedCount: 0,
+    visibleCount: 0,
+    excludedCount: 0,
+    excludedByReason: {},
+    excluded: [],
+  }),
+  auditCultivatePickExclusions: jest.fn().mockResolvedValue({
+    hour: '2026-08-12T12',
+    storedCount: 0,
+    visibleCount: 0,
+    excludedCount: 0,
+    excludedByReason: {},
+    excluded: [],
+  }),
+  getHotPickAuditMembers: jest.fn().mockResolvedValue(new Map()),
   listUnscoredLeadExternalIds: jest.fn().mockResolvedValue([]),
   listUnscoredLeadCandidatesForIntegration: jest.fn().mockResolvedValue([]),
   listLeadFitFeedbackExamples: jest.fn().mockResolvedValue({
@@ -202,7 +224,9 @@ describe('ChannelInteractionService', () => {
   ])(
     'calculates formula-v4 relationship grade for effort %i and reciprocation %i',
     (effortScore, reciprocationScore, reciprocity, grade) => {
-      expect(calculateRelationshipGrade(effortScore, reciprocationScore)).toEqual({
+      expect(
+        calculateRelationshipGrade(effortScore, reciprocationScore)
+      ).toEqual({
         reciprocity,
         grade,
         formulaVersion: 4,
@@ -234,7 +258,9 @@ describe('ChannelInteractionService', () => {
   ])(
     'classifies relationship triage for effort %i and reciprocation %i',
     (effortScore, reciprocationScore, triage) => {
-      expect(getRelationshipTriage(effortScore, reciprocationScore)).toBe(triage);
+      expect(getRelationshipTriage(effortScore, reciprocationScore)).toBe(
+        triage
+      );
     }
   );
 
@@ -248,7 +274,9 @@ describe('ChannelInteractionService', () => {
   ] as const)(
     'applyHotTriageMembershipGate keeps Hot triage follower-only (%s + %s)',
     (membershipState, triage, expected) => {
-      expect(applyHotTriageMembershipGate(triage, membershipState)).toBe(expected);
+      expect(applyHotTriageMembershipGate(triage, membershipState)).toBe(
+        expected
+      );
     }
   );
 
@@ -279,7 +307,12 @@ describe('ChannelInteractionService', () => {
         } as any,
         ['tweet-1']
       )
-    ).resolves.toEqual({ created: 0, duplicates: 0, skipped: true, rateLimited: false });
+    ).resolves.toEqual({
+      created: 0,
+      duplicates: 0,
+      skipped: true,
+      rateLimited: false,
+    });
 
     expect(repository.recordPolledInboundLike).not.toHaveBeenCalled();
   });
@@ -399,10 +432,13 @@ describe('ChannelInteractionService', () => {
     try {
       const repository = createRepository();
       const resetUnixSeconds = 1_000_000_900;
-      const rateLimit = Object.assign(new Error('Request failed with code 429'), {
-        code: 429,
-        rateLimit: { limit: 75, remaining: 0, reset: resetUnixSeconds },
-      });
+      const rateLimit = Object.assign(
+        new Error('Request failed with code 429'),
+        {
+          code: 429,
+          rateLimit: { limit: 75, remaining: 0, reset: resetUnixSeconds },
+        }
+      );
       const postLikers = jest
         .fn()
         .mockRejectedValueOnce(rateLimit)
@@ -489,10 +525,13 @@ describe('ChannelInteractionService', () => {
     const log = jest.spyOn(console, 'log').mockImplementation();
     try {
       const repository = createRepository();
-      const rateLimit = Object.assign(new Error('Request failed with code 429'), {
-        code: 429,
-        rateLimit: { limit: 75, remaining: 0, reset: 1_787_237_965 },
-      });
+      const rateLimit = Object.assign(
+        new Error('Request failed with code 429'),
+        {
+          code: 429,
+          rateLimit: { limit: 75, remaining: 0, reset: 1_787_237_965 },
+        }
+      );
       const postLikers = jest.fn().mockRejectedValueOnce(rateLimit);
       const manager = {
         getSocialIntegration: jest.fn().mockReturnValue({ postLikers }),
@@ -556,25 +595,34 @@ describe('ChannelInteractionService', () => {
     repository.getDueRelationshipGradeBatch.mockResolvedValue({
       strategy: growStrategy,
       members: [
-        { externalId: 'quiet-follower', interactionCounts: interactionCounts() },
+        {
+          externalId: 'quiet-follower',
+          interactionCounts: interactionCounts(),
+        },
       ],
     });
     const service = new ChannelInteractionService(repository as any);
     const snapshotAt = new Date('2026-08-12T12:00:00.000Z');
 
     await expect(
-      service.buildRelationshipGradeSnapshotBatch('org', 'integration', snapshotAt)
+      service.buildRelationshipGradeSnapshotBatch(
+        'org',
+        'integration',
+        snapshotAt
+      )
     ).resolves.toEqual({ snapshotAt, processed: 1, hasMore: false });
     expect(repository.createRelationshipGradeSnapshots).toHaveBeenCalledWith(
       'org',
       'integration',
       snapshotAt,
-      [{
-        externalId: 'quiet-follower',
-        effortScore: 0,
-        reciprocationScore: 0,
-        ...growGrade(0, 0),
-      }]
+      [
+        {
+          externalId: 'quiet-follower',
+          effortScore: 0,
+          reciprocationScore: 0,
+          ...growGrade(0, 0),
+        },
+      ]
     );
   });
 
@@ -601,8 +649,9 @@ describe('ChannelInteractionService', () => {
 
     const [snapshot] =
       repository.createRelationshipGradeSnapshots.mock.calls[0][3];
-    const leadWeight = getChannelStrategy('lead_capture').getScoringProfile()
-      .interactionWeights.reply.inbound;
+    const leadWeight =
+      getChannelStrategy('lead_capture').getScoringProfile().interactionWeights
+        .reply.inbound;
     expect(snapshot).toEqual({
       externalId: 'person-1',
       effortScore: 0,
@@ -632,7 +681,9 @@ describe('ChannelInteractionService', () => {
       new Date('2026-08-12T12:00:00.000Z')
     );
 
-    expect(repository.createRelationshipGradeSnapshots.mock.calls[0][3]).toHaveLength(3);
+    expect(
+      repository.createRelationshipGradeSnapshots.mock.calls[0][3]
+    ).toHaveLength(3);
     expect(profileSpy).toHaveBeenCalledTimes(1);
     profileSpy.mockRestore();
   });
@@ -674,10 +725,14 @@ describe('ChannelInteractionService', () => {
       .mockResolvedValueOnce({ created: false });
     const service = new ChannelInteractionService(repository as any);
 
-    const result = await service.recordNormalizedDelivery('org', 'integration', [
-      interaction(),
-      interaction({ providerEventKey: 'provider-event-2' }),
-    ] as any);
+    const result = await service.recordNormalizedDelivery(
+      'org',
+      'integration',
+      [
+        interaction(),
+        interaction({ providerEventKey: 'provider-event-2' }),
+      ] as any
+    );
 
     expect(result).toEqual({ created: 1, duplicates: 1, membershipOnly: 0 });
     expect(repository.recordNormalizedEvent).toHaveBeenNthCalledWith(
@@ -724,16 +779,20 @@ describe('ChannelInteractionService', () => {
       ['person-1'],
       new Date('2026-08-12T12:05:00.000Z')
     );
-    expect(repository.updateCurrentRelationshipProjections).toHaveBeenCalledWith(
+    expect(
+      repository.updateCurrentRelationshipProjections
+    ).toHaveBeenCalledWith(
       'org',
       'integration',
       new Date('2026-08-12T12:05:00.000Z'),
-      [{
-        externalId: 'person-1',
-        effortScore: 4,
-        reciprocationScore: 2,
-        ...growGrade(4, 2),
-      }]
+      [
+        {
+          externalId: 'person-1',
+          effortScore: 4,
+          reciprocationScore: 2,
+          ...growGrade(4, 2),
+        },
+      ]
     );
   });
 
@@ -802,7 +861,9 @@ describe('ChannelInteractionService', () => {
     ] as any);
 
     expect(repository.getRelationshipScoresForMembers).not.toHaveBeenCalled();
-    expect(repository.updateCurrentRelationshipProjections).not.toHaveBeenCalled();
+    expect(
+      repository.updateCurrentRelationshipProjections
+    ).not.toHaveBeenCalled();
   });
 
   it('does not refresh relationship projections for unfollow-only deliveries', async () => {
@@ -817,16 +878,22 @@ describe('ChannelInteractionService', () => {
     ] as any);
 
     expect(repository.getRelationshipScoresForMembers).not.toHaveBeenCalled();
-    expect(repository.updateCurrentRelationshipProjections).not.toHaveBeenCalled();
+    expect(
+      repository.updateCurrentRelationshipProjections
+    ).not.toHaveBeenCalled();
   });
 
   it('swallows relationship projection refresh failures after recording events', async () => {
     const repository = createRepository();
-    repository.getRelationshipScoresForMembers.mockRejectedValue(new Error('refresh failed'));
+    repository.getRelationshipScoresForMembers.mockRejectedValue(
+      new Error('refresh failed')
+    );
     const service = new ChannelInteractionService(repository as any);
 
     await expect(
-      service.recordNormalizedDelivery('org', 'integration', [interaction()] as any)
+      service.recordNormalizedDelivery('org', 'integration', [
+        interaction(),
+      ] as any)
     ).resolves.toEqual({ created: 1, duplicates: 0, membershipOnly: 0 });
   });
 
@@ -834,12 +901,16 @@ describe('ChannelInteractionService', () => {
     const repository = createRepository();
     const service = new ChannelInteractionService(repository as any);
 
-    const result = await service.recordNormalizedDelivery('org', 'integration', [
-      interaction({
-        kind: 'follow',
-        membershipUpdate: 'not_follower',
-      }),
-    ] as any);
+    const result = await service.recordNormalizedDelivery(
+      'org',
+      'integration',
+      [
+        interaction({
+          kind: 'follow',
+          membershipUpdate: 'not_follower',
+        }),
+      ] as any
+    );
 
     expect(result).toEqual({ created: 0, duplicates: 0, membershipOnly: 1 });
     expect(repository.applyMembershipUpdate).toHaveBeenCalledWith(
@@ -916,7 +987,9 @@ describe('ChannelInteractionService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
     await expect(
       service.recordNormalizedDelivery('org', 'integration', [
-        interaction({ counterparty: { externalId: 'p', picture: 'file:///etc/passwd' } }),
+        interaction({
+          counterparty: { externalId: 'p', picture: 'file:///etc/passwd' },
+        }),
       ] as any)
     ).rejects.toBeInstanceOf(BadRequestException);
     await expect(
@@ -1003,7 +1076,12 @@ describe('ChannelInteractionService', () => {
       ['90_day', '2026-05-14T18:30:00.000Z'],
       ['year', '2025-08-12T18:30:00.000Z'],
     ] as const) {
-      await service.rebuildWindowSummary('org', 'integration', window, computedAt);
+      await service.rebuildWindowSummary(
+        'org',
+        'integration',
+        window,
+        computedAt
+      );
       expect(repository.rebuildWindowSummary).toHaveBeenLastCalledWith(
         'org',
         'integration',
@@ -1033,12 +1111,17 @@ describe('ChannelInteractionService', () => {
         channelInteractionWebhooks: capability,
       }),
     };
-    const service = new ChannelInteractionService(repository as any, manager as any);
-    const record = jest.spyOn(service, 'recordNormalizedDelivery').mockResolvedValue({
-      created: 1,
-      duplicates: 0,
-      membershipOnly: 0,
-    });
+    const service = new ChannelInteractionService(
+      repository as any,
+      manager as any
+    );
+    const record = jest
+      .spyOn(service, 'recordNormalizedDelivery')
+      .mockResolvedValue({
+        created: 1,
+        duplicates: 0,
+        membershipOnly: 0,
+      });
 
     await expect(
       service.handleDelivery('provider', {
@@ -1050,8 +1133,12 @@ describe('ChannelInteractionService', () => {
       'provider',
       'account-1'
     );
-    expect(record).toHaveBeenCalledWith('org-a', 'integration-a', [interaction()]);
-    expect(record).toHaveBeenCalledWith('org-b', 'integration-b', [interaction()]);
+    expect(record).toHaveBeenCalledWith('org-a', 'integration-a', [
+      interaction(),
+    ]);
+    expect(record).toHaveBeenCalledWith('org-b', 'integration-b', [
+      interaction(),
+    ]);
   });
 
   it('imports calendar content events after recording interactions', async () => {
@@ -1498,7 +1585,9 @@ describe('ChannelInteractionService', () => {
         ),
         headers: {},
       })
-    ).resolves.toEqual(expect.objectContaining({ accepted: false, logged: true }));
+    ).resolves.toEqual(
+      expect.objectContaining({ accepted: false, logged: true })
+    );
   });
 
   it('logs a challenge against the sole org that owns the provider', async () => {
@@ -1592,7 +1681,10 @@ describe('ChannelInteractionService', () => {
         },
       }),
     };
-    const service = new ChannelInteractionService(repository as any, manager as any);
+    const service = new ChannelInteractionService(
+      repository as any,
+      manager as any
+    );
 
     await expect(
       service.handleDelivery('provider', {
@@ -1611,13 +1703,16 @@ describe('ChannelInteractionService', () => {
     const manager = {
       getSocialIntegration: jest.fn().mockReturnValue({
         channelInteractionWebhooks: {
-          getDesiredSubscriptions: jest.fn().mockReturnValue([
-            { eventKey: 'like', direction: 'inbound' },
-          ]),
+          getDesiredSubscriptions: jest
+            .fn()
+            .mockReturnValue([{ eventKey: 'like', direction: 'inbound' }]),
         },
       }),
     };
-    const service = new ChannelInteractionService(repository as any, manager as any);
+    const service = new ChannelInteractionService(
+      repository as any,
+      manager as any
+    );
     const integration = {
       id: 'integration-a',
       organizationId: 'org-a',
@@ -1648,7 +1743,13 @@ describe('ChannelInteractionService', () => {
     const service = new ChannelInteractionService(repository as any);
 
     await expect(
-      service.upsertFollowerGrade('org', 'integration', 'follower-a', 'user-a', 4.5)
+      service.upsertFollowerGrade(
+        'org',
+        'integration',
+        'follower-a',
+        'user-a',
+        4.5
+      )
     ).resolves.toEqual({ grade: 4.5, adjustedGrade: 5 });
     expect(repository.upsertAudienceMemberGrade).toHaveBeenCalledWith(
       'org',
@@ -1663,17 +1764,40 @@ describe('ChannelInteractionService', () => {
       relationshipGrade: null,
     });
     await expect(
-      service.upsertFollowerGrade('org', 'integration', 'follower-a', 'user-a', 4.5)
+      service.upsertFollowerGrade(
+        'org',
+        'integration',
+        'follower-a',
+        'user-a',
+        4.5
+      )
     ).resolves.toEqual({ grade: 4.5, adjustedGrade: 4.5 });
 
     await expect(
-      service.upsertFollowerGrade('org', 'integration', 'follower-a', 'user-a', 2.25)
+      service.upsertFollowerGrade(
+        'org',
+        'integration',
+        'follower-a',
+        'user-a',
+        2.25
+      )
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('ignores a follower triage badge for an existing member', async () => {
     const repository = createRepository();
-    const service = new ChannelInteractionService(repository as any);
+    const adminScheduleLogService = {
+      append: jest.fn().mockResolvedValue(undefined),
+    };
+    const service = new ChannelInteractionService(
+      repository as any,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      adminScheduleLogService as any
+    );
 
     await expect(
       service.ignoreFollowerTriage(
@@ -1692,6 +1816,12 @@ describe('ChannelInteractionService', () => {
       'user-a',
       undefined,
       undefined
+    );
+    expect(adminScheduleLogService.append).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scheduleKey: 'hot-triage',
+        message: 'Hot triage dismissed for follower-a on channel integration',
+      })
     );
 
     await expect(
@@ -1731,6 +1861,13 @@ describe('ChannelInteractionService', () => {
       'user-a',
       undefined,
       undefined
+    );
+    expect(adminScheduleLogService.append).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scheduleKey: 'follower-cultivate',
+        message:
+          'Cultivate dismissed for follower-a on channel integration',
+      })
     );
   });
 
@@ -1778,7 +1915,18 @@ describe('ChannelInteractionService', () => {
 
   it('accepts engaged-not-yet triage ignores and rejects invalid values', async () => {
     const repository = createRepository();
-    const service = new ChannelInteractionService(repository as any);
+    const adminScheduleLogService = {
+      append: jest.fn().mockResolvedValue(undefined),
+    };
+    const service = new ChannelInteractionService(
+      repository as any,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      adminScheduleLogService as any
+    );
 
     await expect(
       service.ignoreFollowerTriage(
@@ -1797,6 +1945,17 @@ describe('ChannelInteractionService', () => {
       'user-a',
       undefined,
       undefined
+    );
+    expect(adminScheduleLogService.append).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scheduleKey: 'hot-triage',
+        message: 'Hot triage dismissed for follower-a on channel integration',
+        meta: expect.objectContaining({
+          externalId: 'follower-a',
+          integrationId: 'integration',
+          snooze: false,
+        }),
+      })
     );
 
     await expect(
@@ -1825,9 +1984,7 @@ describe('ChannelInteractionService', () => {
     const repository = createRepository();
     repository.removeAudienceListMembers.mockResolvedValue({
       ok: true,
-      removed: [
-        { externalId: 'person-1', name: 'Alex', username: 'alex' },
-      ],
+      removed: [{ externalId: 'person-1', name: 'Alex', username: 'alex' }],
       remaining: 3,
       hasMore: true,
     });
@@ -1910,16 +2067,20 @@ describe('ChannelInteractionService', () => {
       ...growGrade(10, 30),
       snapshotAt,
     });
-    expect(repository.updateCurrentRelationshipProjections).toHaveBeenCalledWith(
+    expect(
+      repository.updateCurrentRelationshipProjections
+    ).toHaveBeenCalledWith(
       'org',
       'integration',
       snapshotAt,
-      [{
-        externalId: 'follower-a',
-        effortScore: 10,
-        reciprocationScore: 30,
-        ...growGrade(10, 30),
-      }],
+      [
+        {
+          externalId: 'follower-a',
+          effortScore: 10,
+          reciprocationScore: 30,
+          ...growGrade(10, 30),
+        },
+      ],
       { force: true }
     );
     expect(repository.createRelationshipGradeSnapshots).not.toHaveBeenCalled();
@@ -1958,8 +2119,9 @@ describe('ChannelInteractionService', () => {
       ],
     });
     const service = new ChannelInteractionService(repository as any);
-    const brandRepost = getChannelStrategy('brand_awareness')
-      .getScoringProfile().interactionWeights.repost.inbound;
+    const brandRepost =
+      getChannelStrategy('brand_awareness').getScoringProfile()
+        .interactionWeights.repost.inbound;
 
     await expect(
       service.refreshFollowerRelationshipScore(
@@ -1990,7 +2152,9 @@ describe('ChannelInteractionService', () => {
       )
     ).rejects.toBeInstanceOf(NotFoundException);
     expect(repository.getRelationshipScoresForMembers).not.toHaveBeenCalled();
-    expect(repository.updateCurrentRelationshipProjections).not.toHaveBeenCalled();
+    expect(
+      repository.updateCurrentRelationshipProjections
+    ).not.toHaveBeenCalled();
   });
 
   it('stores a tracking grant and reuses it until it expires', async () => {
@@ -2160,6 +2324,14 @@ describe('ChannelInteractionService', () => {
       },
     ]);
     repository.replaceCultivatePickBatch.mockResolvedValue({ count: 1 });
+    repository.auditCultivatePickExclusions.mockResolvedValue({
+      hour: '2026-08-12T12',
+      storedCount: 1,
+      visibleCount: 1,
+      excludedCount: 0,
+      excludedByReason: {},
+      excluded: [],
+    });
     const service = new ChannelInteractionService(repository as any);
 
     await expect(
@@ -2169,7 +2341,29 @@ describe('ChannelInteractionService', () => {
       skipped: false,
       candidateCount: 1,
       pickCount: 1,
+      storedCount: 1,
+      visibleCount: 1,
+      excludedCount: 0,
+      audit: {
+        hour: '2026-08-12T12',
+        storedCount: 1,
+        visibleCount: 1,
+        excludedCount: 0,
+        excludedByReason: {},
+        excluded: [],
+      },
     });
+    expect(repository.auditCultivatePickExclusions).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: 'org',
+        integrationId: 'integration',
+        hour: '2026-08-12T12',
+        config: expect.objectContaining({
+          warmGradeThreshold: expect.any(Number),
+          staleDays: expect.any(Number),
+        }),
+      })
+    );
     expect(repository.replaceCultivatePickBatch).toHaveBeenCalledWith(
       expect.objectContaining({
         organizationId: 'org',
@@ -2190,7 +2384,9 @@ describe('ChannelInteractionService', () => {
 
   it('skips near-full Hot batches before refresh or AI, but refreshes a just-below-threshold batch before selecting candidates', async () => {
     const repository = createRepository();
-    repository.countVisibleHotPicks.mockResolvedValueOnce(18).mockResolvedValueOnce(17);
+    repository.countVisibleHotPicks
+      .mockResolvedValueOnce(18)
+      .mockResolvedValueOnce(17);
     repository.listHotRefreshExternalIds.mockResolvedValue(['hot-1']);
     repository.listHotRulesCandidates.mockResolvedValue([
       {
@@ -2223,13 +2419,11 @@ describe('ChannelInteractionService', () => {
     ).toBeLessThan(
       repository.listHotRulesCandidates.mock.invocationCallOrder[0]
     );
-    expect(repository.updateCurrentRelationshipProjections).toHaveBeenCalledWith(
-      'org',
-      'integration',
-      expect.any(Date),
-      [],
-      { force: true }
-    );
+    expect(
+      repository.updateCurrentRelationshipProjections
+    ).toHaveBeenCalledWith('org', 'integration', expect.any(Date), [], {
+      force: true,
+    });
   });
 
   it('passes the complete Hot rules pool to AI and persists only its validated reordered subset', async () => {
@@ -2441,7 +2635,10 @@ describe('ChannelInteractionService', () => {
         } as any
       );
 
-      await service.materializeCultivatePicksForIntegration('org', 'integration');
+      await service.materializeCultivatePicksForIntegration(
+        'org',
+        'integration'
+      );
 
       expect(openaiService.rerankTriageCandidates).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -2512,9 +2709,11 @@ describe('ChannelInteractionService', () => {
       }),
     };
     const contextDocumentService = {
-      listAttachedDocumentsForIntegration: jest.fn().mockResolvedValue([
-        { name: 'audience.md', content: 'We serve software founders.' },
-      ]),
+      listAttachedDocumentsForIntegration: jest
+        .fn()
+        .mockResolvedValue([
+          { name: 'audience.md', content: 'We serve software founders.' },
+        ]),
     };
     repository.listLeadFitFeedbackExamples.mockResolvedValue({
       rejected: [
@@ -2649,7 +2848,9 @@ describe('ChannelInteractionService', () => {
     const contextDocumentService = {
       listAttachedDocumentsForIntegration: jest
         .fn()
-        .mockResolvedValue([{ name: 'audience.md', content: 'Atheist, anti-MAGA.' }]),
+        .mockResolvedValue([
+          { name: 'audience.md', content: 'Atheist, anti-MAGA.' },
+        ]),
     };
     const service = new ChannelInteractionService(
       repository as any,

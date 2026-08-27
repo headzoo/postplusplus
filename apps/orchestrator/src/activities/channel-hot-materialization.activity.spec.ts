@@ -131,7 +131,9 @@ describe('ChannelHotMaterializationActivity', () => {
       pickCount: 0,
       candidateCount: 0,
     });
-    expect(channelInteractionService.materializeHotPicksForIntegration).not.toHaveBeenCalled();
+    expect(
+      channelInteractionService.materializeHotPicksForIntegration
+    ).not.toHaveBeenCalled();
     expect(logs.append).toHaveBeenCalledWith(
       expect.objectContaining({
         scheduleKey: 'hot-triage',
@@ -156,6 +158,17 @@ describe('ChannelHotMaterializationActivity', () => {
         skipped: false,
         candidateCount: 12,
         pickCount: 8,
+        storedCount: 8,
+        visibleCount: 8,
+        excludedCount: 0,
+        audit: {
+          hour,
+          storedCount: 8,
+          visibleCount: 8,
+          excludedCount: 0,
+          excludedByReason: {},
+          excluded: [],
+        },
       }),
     };
     const activity = createActivity(
@@ -167,7 +180,9 @@ describe('ChannelHotMaterializationActivity', () => {
 
     const result = await activity.materializeHotPicksV1({ hour, candidate });
 
-    expect(channelInteractionService.materializeHotPicksForIntegration).toHaveBeenCalledWith(
+    expect(
+      channelInteractionService.materializeHotPicksForIntegration
+    ).toHaveBeenCalledWith(
       candidate.organizationId,
       candidate.id,
       new Date(`${hour}:00:00.000Z`)
@@ -177,16 +192,80 @@ describe('ChannelHotMaterializationActivity', () => {
       hour,
       candidateCount: 12,
       pickCount: 8,
+      visibleCount: 8,
+      excludedCount: 0,
     });
     expect(logs.append).toHaveBeenCalledWith(
       expect.objectContaining({
         scheduleKey: 'hot-triage',
-        message: `Hot picks for channel ${candidate.id}: 8 picks from 12 candidates`,
+        message: `Hot picks for channel ${candidate.id}: stored=8 candidates=12 visible=8`,
         meta: expect.objectContaining({
           hour,
           integrationId: candidate.id,
           pickCount: 8,
+          storedCount: 8,
           candidateCount: 12,
+          visibleCount: 8,
+          excludedCount: 0,
+        }),
+      })
+    );
+  });
+
+  it('logs a hot visibility audit when stored picks are excluded at read time', async () => {
+    const logs = { append: jest.fn().mockResolvedValue(undefined) };
+    const integrationService = {
+      getIntegrationById: jest.fn().mockResolvedValue({
+        id: candidate.id,
+        organizationId: candidate.organizationId,
+        disabled: false,
+        deletedAt: null,
+      }),
+    };
+    const channelInteractionService = {
+      materializeHotPicksForIntegration: jest.fn().mockResolvedValue({
+        hour,
+        skipped: false,
+        candidateCount: 17,
+        pickCount: 17,
+        storedCount: 17,
+        visibleCount: 3,
+        excludedCount: 14,
+        audit: {
+          hour,
+          storedCount: 17,
+          visibleCount: 3,
+          excludedCount: 14,
+          excludedByReason: { dismissed: 14 },
+          excluded: [
+            {
+              externalId: 'hot-1',
+              username: 'one',
+              reason: 'dismissed',
+              relationshipTriage: 'hot_lead',
+            },
+          ],
+        },
+      }),
+    };
+    const activity = createActivity(
+      { listHotMaterializeCandidates: jest.fn() },
+      channelInteractionService,
+      integrationService,
+      logs
+    );
+
+    await activity.materializeHotPicksV1({ hour, candidate });
+
+    expect(logs.append).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scheduleKey: 'hot-triage',
+        message: `Hot visibility audit for channel ${candidate.id}: stored=17 visible=3 excluded=14`,
+        meta: expect.objectContaining({
+          storedCount: 17,
+          visibleCount: 3,
+          excludedCount: 14,
+          excludedByReason: { dismissed: 14 },
         }),
       })
     );

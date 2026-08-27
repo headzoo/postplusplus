@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import {
   ChannelAudienceMembership,
   ChannelFollowerSyncStatus,
@@ -29,6 +29,20 @@ import {
   RELATIONSHIP_TRIAGE_SNOOZE_MS,
   RELATIONSHIP_WINDOW_MS,
 } from './channel-interaction.scoring';
+import {
+  HotPickAuditMember,
+  HotPickAuditResult,
+  isHotTriageDebugReadLogEnabled,
+  summarizeHotPickAudit,
+  trimHotPickAuditForLog,
+} from './hot-pick-audit';
+import {
+  CultivatePickAuditConfig,
+  CultivatePickAuditResult,
+  isCultivateTriageDebugReadLogEnabled,
+  summarizeCultivatePickAudit,
+  trimCultivatePickAuditForLog,
+} from './cultivate-pick-audit';
 import {
   RelationshipGradeScheduleConfig,
   relationshipGradeDueCutoff,
@@ -284,6 +298,21 @@ export type HotPickInput = {
   source?: string;
 };
 
+export type {
+  HotPickAuditExcludedEntry,
+  HotPickAuditMember,
+  HotPickAuditResult,
+  HotPickExclusionReason,
+} from './hot-pick-audit';
+
+export type {
+  CultivatePickAuditConfig,
+  CultivatePickAuditExcludedEntry,
+  CultivatePickAuditMember,
+  CultivatePickAuditResult,
+  CultivatePickExclusionReason,
+} from './cultivate-pick-audit';
+
 export type CultivateCandidate = {
   externalId: string;
   username: string | null;
@@ -434,7 +463,9 @@ const BOT_SCORE_BATCH_SIZE = 100;
 const BOT_SCORE_STALE_MS =
   FOLLOWER_BOT_SCORE_SCHEDULE_INTERVAL_HOURS * 60 * 60 * 1000;
 
-function botScoreDueWhere(now = new Date()): Prisma.ChannelAudienceMemberWhereInput {
+function botScoreDueWhere(
+  now = new Date()
+): Prisma.ChannelAudienceMemberWhereInput {
   const dueCutoff = new Date(now.getTime() - BOT_SCORE_STALE_MS);
   return {
     OR: [
@@ -481,6 +512,8 @@ export type RelationshipGradeSnapshotInput = {
 
 @Injectable()
 export class ChannelInteractionRepository {
+  private readonly _logger = new Logger(ChannelInteractionRepository.name);
+
   constructor(
     private _dailyAggregate: PrismaRepository<
       | 'channelInteractionDailyAggregate'
@@ -551,18 +584,20 @@ export class ChannelInteractionRepository {
     return this.withSerializableRetry(async (tx) => {
       await this.assertOwnedIntegration(tx, organizationId, integrationId);
       const inserted = await tx.channelInteractionEvent.createMany({
-        data: [{
-          organizationId,
-          integrationId,
-          providerEventKey: event.providerEventKey,
-          counterpartyExternalId: event.counterparty.externalId,
-          kind: event.kind,
-          direction: event.direction,
-          eventAt: event.eventAt,
-          relatedObjectId: event.relatedObjectId,
-          metadata: event.metadata,
-          normalizationVersion: event.normalizationVersion,
-        }],
+        data: [
+          {
+            organizationId,
+            integrationId,
+            providerEventKey: event.providerEventKey,
+            counterpartyExternalId: event.counterparty.externalId,
+            kind: event.kind,
+            direction: event.direction,
+            eventAt: event.eventAt,
+            relatedObjectId: event.relatedObjectId,
+            metadata: event.metadata,
+            normalizationVersion: event.normalizationVersion,
+          },
+        ],
         skipDuplicates: true,
       });
       if (!inserted.count) {
@@ -620,11 +655,13 @@ export class ChannelInteractionRepository {
         );
       }
 
-      const day = new Date(Date.UTC(
-        event.eventAt.getUTCFullYear(),
-        event.eventAt.getUTCMonth(),
-        event.eventAt.getUTCDate()
-      ));
+      const day = new Date(
+        Date.UTC(
+          event.eventAt.getUTCFullYear(),
+          event.eventAt.getUTCMonth(),
+          event.eventAt.getUTCDate()
+        )
+      );
       await tx.channelInteractionDailyAggregate.upsert({
         where: {
           integrationId_counterpartyExternalId_day: {
@@ -699,18 +736,20 @@ export class ChannelInteractionRepository {
     return this.withSerializableRetry(async (tx) => {
       await this.assertOwnedIntegration(tx, organizationId, integrationId);
       const inserted = await tx.channelInteractionEvent.createMany({
-        data: [{
-          organizationId,
-          integrationId,
-          providerEventKey: event.providerEventKey,
-          counterpartyExternalId: event.counterparty.externalId,
-          kind: event.kind,
-          direction: event.direction,
-          eventAt: event.eventAt,
-          relatedObjectId: event.relatedObjectId,
-          metadata: event.metadata,
-          normalizationVersion: event.normalizationVersion,
-        }],
+        data: [
+          {
+            organizationId,
+            integrationId,
+            providerEventKey: event.providerEventKey,
+            counterpartyExternalId: event.counterparty.externalId,
+            kind: event.kind,
+            direction: event.direction,
+            eventAt: event.eventAt,
+            relatedObjectId: event.relatedObjectId,
+            metadata: event.metadata,
+            normalizationVersion: event.normalizationVersion,
+          },
+        ],
         skipDuplicates: true,
       });
       if (!inserted.count) {
@@ -747,11 +786,13 @@ export class ChannelInteractionRepository {
         data: { lastInboundAt: event.eventAt },
       });
 
-      const day = new Date(Date.UTC(
-        event.eventAt.getUTCFullYear(),
-        event.eventAt.getUTCMonth(),
-        event.eventAt.getUTCDate()
-      ));
+      const day = new Date(
+        Date.UTC(
+          event.eventAt.getUTCFullYear(),
+          event.eventAt.getUTCMonth(),
+          event.eventAt.getUTCDate()
+        )
+      );
       await tx.channelInteractionDailyAggregate.upsert({
         where: {
           integrationId_counterpartyExternalId_day: {
@@ -857,9 +898,10 @@ export class ChannelInteractionRepository {
       candidates: integrations.slice(0, take).map((integration) => ({
         id: integration.id,
         organizationId: integration.organizationId,
-        maintenance: integration.disabled || integration.deletedAt
-          ? 'cleanup' as const
-          : 'active' as const,
+        maintenance:
+          integration.disabled || integration.deletedAt
+            ? ('cleanup' as const)
+            : ('active' as const),
       })),
       next: hasMore ? integrations[take - 1]?.id : undefined,
     };
@@ -880,7 +922,9 @@ export class ChannelInteractionRepository {
       });
       const previousStates = new Map(
         existing.map((subscription) => [
-          `${subscription.eventKey}:${String(subscription.direction).toLowerCase()}`,
+          `${subscription.eventKey}:${String(
+            subscription.direction
+          ).toLowerCase()}`,
           subscription.state,
         ])
       );
@@ -903,7 +947,7 @@ export class ChannelInteractionRepository {
           ? cleanupComplete
             ? ChannelInteractionTrackingState.UNCONFIGURED
             : ChannelInteractionTrackingState.REMOVING
-          : subscription.state.toUpperCase() as ChannelInteractionTrackingState;
+          : (subscription.state.toUpperCase() as ChannelInteractionTrackingState);
         const failureCategory = subscription.failureCategory || null;
         const failureReason = subscription.reason
           ? subscription.reason.slice(0, 240)
@@ -956,14 +1000,18 @@ export class ChannelInteractionRepository {
         }
         if (subscription.state === 'error') {
           const key = `${subscription.eventKey}:${subscription.direction}`;
-          if (previousStates.get(key) !== ChannelInteractionTrackingState.ERROR) {
+          if (
+            previousStates.get(key) !== ChannelInteractionTrackingState.ERROR
+          ) {
             newlyFailed.push(key);
           }
         }
       }
 
       for (const subscription of existing) {
-        const key = `${subscription.eventKey}:${String(subscription.direction).toLowerCase()}`;
+        const key = `${subscription.eventKey}:${String(
+          subscription.direction
+        ).toLowerCase()}`;
         if (!reconciledKeys.has(key)) {
           await tx.channelInteractionSubscription.delete({
             where: { id: subscription.id },
@@ -1213,11 +1261,14 @@ export class ChannelInteractionRepository {
         },
         select: { externalId: true },
       });
-      const summaries = new Map<string, {
-        interactionCount: number;
-        interactionScore: number;
-        lastInteractionAt: Date | null;
-      }>();
+      const summaries = new Map<
+        string,
+        {
+          interactionCount: number;
+          interactionScore: number;
+          lastInteractionAt: Date | null;
+        }
+      >();
       for (const aggregate of aggregates) {
         const current = summaries.get(aggregate.counterpartyExternalId) || {
           interactionCount: 0,
@@ -1227,17 +1278,20 @@ export class ChannelInteractionRepository {
         const count = aggregate._count._all;
         const lastInteractionAt = aggregate._max.eventAt;
         current.interactionCount += count;
-        current.interactionScore += count * getChannelInteractionScore(
-          aggregate.kind.toLowerCase() as Parameters<
-            typeof getChannelInteractionScore
-          >[0],
-          aggregate.direction.toLowerCase() as Parameters<
-            typeof getChannelInteractionScore
-          >[1]
-        );
+        current.interactionScore +=
+          count *
+          getChannelInteractionScore(
+            aggregate.kind.toLowerCase() as Parameters<
+              typeof getChannelInteractionScore
+            >[0],
+            aggregate.direction.toLowerCase() as Parameters<
+              typeof getChannelInteractionScore
+            >[1]
+          );
         if (
           lastInteractionAt &&
-          (!current.lastInteractionAt || lastInteractionAt > current.lastInteractionAt)
+          (!current.lastInteractionAt ||
+            lastInteractionAt > current.lastInteractionAt)
         ) {
           current.lastInteractionAt = lastInteractionAt;
         }
@@ -1330,7 +1384,11 @@ export class ChannelInteractionRepository {
         }),
       ]);
 
-      if (!rollup || !followerSync?.activeGeneration || !followerSync.completedAt) {
+      if (
+        !rollup ||
+        !followerSync?.activeGeneration ||
+        !followerSync.completedAt
+      ) {
         return {
           items: [],
           hasMore: false,
@@ -1571,7 +1629,9 @@ export class ChannelInteractionRepository {
           organizationId,
           integrationId,
           counterpartyExternalId: snapshot.externalId,
-          windowStartedAt: new Date(snapshotAt.getTime() - RELATIONSHIP_WINDOW_MS),
+          windowStartedAt: new Date(
+            snapshotAt.getTime() - RELATIONSHIP_WINDOW_MS
+          ),
           snapshotAt,
           effortScore: snapshot.effortScore,
           reciprocationScore: snapshot.reciprocationScore,
@@ -1643,25 +1703,26 @@ export class ChannelInteractionRepository {
     cadence?: RelationshipGradeScheduleConfig
   ) {
     const dueCutoff = this.relationshipDueCutoff(snapshotAt, cadence);
-    const member = await this._dailyAggregate.model.channelAudienceMember.findFirst({
-      where: {
-        organizationId,
-        integrationId,
-        membershipState: ChannelAudienceMembership.FOLLOWER,
-        OR: this.relationshipStrategyBranches().map((branch) => ({
-          integration: { is: { strategyId: branch.selection } },
-          gradeSnapshots: {
-            none: {
-              formulaVersion: RELATIONSHIP_FORMULA_VERSION,
-              relationshipStrategyId: branch.strategyId,
-              relationshipStrategyVersion: branch.strategyVersion,
-              snapshotAt: { gt: dueCutoff },
+    const member =
+      await this._dailyAggregate.model.channelAudienceMember.findFirst({
+        where: {
+          organizationId,
+          integrationId,
+          membershipState: ChannelAudienceMembership.FOLLOWER,
+          OR: this.relationshipStrategyBranches().map((branch) => ({
+            integration: { is: { strategyId: branch.selection } },
+            gradeSnapshots: {
+              none: {
+                formulaVersion: RELATIONSHIP_FORMULA_VERSION,
+                relationshipStrategyId: branch.strategyId,
+                relationshipStrategyVersion: branch.strategyVersion,
+                snapshotAt: { gt: dueCutoff },
+              },
             },
-          },
-        })),
-      },
-      select: { id: true },
-    });
+          })),
+        },
+        select: { id: true },
+      });
     return !!member;
   }
 
@@ -1675,24 +1736,27 @@ export class ChannelInteractionRepository {
     integrationId: string,
     strategy: RelationshipGradeStrategySelection
   ) {
-    const stale = await this._dailyAggregate.model.channelAudienceMember.findFirst({
-      where: {
-        organizationId,
-        integrationId,
-        membershipState: ChannelAudienceMembership.FOLLOWER,
-        OR: [
-          { relationshipFormulaVersion: null },
-          { relationshipFormulaVersion: { not: RELATIONSHIP_FORMULA_VERSION } },
-          { relationshipStrategyId: null },
-          { relationshipStrategyId: { not: strategy.strategyId } },
-          { relationshipStrategyVersion: null },
-          {
-            relationshipStrategyVersion: { not: strategy.strategyVersion },
-          },
-        ],
-      },
-      select: { id: true },
-    });
+    const stale =
+      await this._dailyAggregate.model.channelAudienceMember.findFirst({
+        where: {
+          organizationId,
+          integrationId,
+          membershipState: ChannelAudienceMembership.FOLLOWER,
+          OR: [
+            { relationshipFormulaVersion: null },
+            {
+              relationshipFormulaVersion: { not: RELATIONSHIP_FORMULA_VERSION },
+            },
+            { relationshipStrategyId: null },
+            { relationshipStrategyId: { not: strategy.strategyId } },
+            { relationshipStrategyVersion: null },
+            {
+              relationshipStrategyVersion: { not: strategy.strategyVersion },
+            },
+          ],
+        },
+        select: { id: true },
+      });
     return !!stale;
   }
 
@@ -1715,21 +1779,22 @@ export class ChannelInteractionRepository {
     if (!uniqueIds.length) {
       return results;
     }
-    const rows = await this._dailyAggregate.model.channelAudienceMember.findMany({
-      where: {
-        organizationId,
-        integrationId,
-        externalId: { in: uniqueIds },
-      },
-      select: {
-        externalId: true,
-        inboundInteractionCount: true,
-        noteCount: true,
-        likesCount: true,
-        relationshipEffortScore: true,
-        relationshipReciprocationScore: true,
-      },
-    });
+    const rows =
+      await this._dailyAggregate.model.channelAudienceMember.findMany({
+        where: {
+          organizationId,
+          integrationId,
+          externalId: { in: uniqueIds },
+        },
+        select: {
+          externalId: true,
+          inboundInteractionCount: true,
+          noteCount: true,
+          likesCount: true,
+          relationshipEffortScore: true,
+          relationshipReciprocationScore: true,
+        },
+      });
     for (const row of rows) {
       results.set(row.externalId, {
         inboundInteractionCount: row.inboundInteractionCount,
@@ -1815,9 +1880,7 @@ export class ChannelInteractionRepository {
           organizationId,
           integrationId,
           ...this.warmFollowerWhere(),
-          ...(afterExternalId
-            ? { externalId: { gt: afterExternalId } }
-            : {}),
+          ...(afterExternalId ? { externalId: { gt: afterExternalId } } : {}),
         },
         orderBy: { externalId: 'asc' },
         select: {
@@ -1881,16 +1944,17 @@ export class ChannelInteractionRepository {
         select: { externalId: true },
       });
       if (!bridge) {
-        return { applied: 0, skipped: params.leads.length, appliedExternalIds: [] as string[] };
+        return {
+          applied: 0,
+          skipped: params.leads.length,
+          appliedExternalIds: [] as string[],
+        };
       }
       let applied = 0;
       let skipped = 0;
       const appliedExternalIds: string[] = [];
       for (const lead of params.leads) {
-        if (
-          !lead.externalId ||
-          lead.externalId === params.bridgeExternalId
-        ) {
+        if (!lead.externalId || lead.externalId === params.bridgeExternalId) {
           skipped++;
           continue;
         }
@@ -1981,11 +2045,10 @@ export class ChannelInteractionRepository {
 
   async clearAllDiscoveredLeads() {
     return this.withSerializableRetry(async (tx) => {
-      const affectedIntegrations =
-        await tx.channelAudienceLeadBridge.findMany({
-          distinct: ['integrationId'],
-          select: { integrationId: true },
-        });
+      const affectedIntegrations = await tx.channelAudienceLeadBridge.findMany({
+        distinct: ['integrationId'],
+        select: { integrationId: true },
+      });
       const bridgesDeleted = await tx.channelAudienceLeadBridge.deleteMany({});
       await tx.channelAudienceMember.updateMany({
         where: {
@@ -2102,7 +2165,8 @@ export class ChannelInteractionRepository {
             { relationshipTriage: 'mutual' },
             {
               relationshipGrade: {
-                gte: config?.warmGradeThreshold ?? CULTIVATE_WARM_GRADE_THRESHOLD,
+                gte:
+                  config?.warmGradeThreshold ?? CULTIVATE_WARM_GRADE_THRESHOLD,
               },
             },
           ],
@@ -2195,7 +2259,10 @@ export class ChannelInteractionRepository {
               : undefined
           ),
         },
-        orderBy: [{ lastOutboundAt: { sort: 'asc', nulls: 'first' } }, { externalId: 'asc' }],
+        orderBy: [
+          { lastOutboundAt: { sort: 'asc', nulls: 'first' } },
+          { externalId: 'asc' },
+        ],
         take,
         select: {
           externalId: true,
@@ -2434,10 +2501,7 @@ export class ChannelInteractionRepository {
             eventAt: { gte: params.recentEventSince },
           },
           distinct: ['counterpartyExternalId'],
-          orderBy: [
-            { counterpartyExternalId: 'asc' },
-            { eventAt: 'desc' },
-          ],
+          orderBy: [{ counterpartyExternalId: 'asc' }, { eventAt: 'desc' }],
           take: params.poolSize,
           select: { counterpartyExternalId: true },
         }),
@@ -2542,7 +2606,11 @@ export class ChannelInteractionRepository {
     });
   }
 
-  async listHotMaterializeCandidates(after?: string, take = 1, hour = utcHourKey()) {
+  async listHotMaterializeCandidates(
+    after?: string,
+    take = 1,
+    hour = utcHourKey()
+  ) {
     if (!Number.isInteger(take) || take < 1) {
       throw new Error('take must be a positive integer');
     }
@@ -2611,7 +2679,9 @@ export class ChannelInteractionRepository {
           pick.finalRank < 1
       )
     ) {
-      throw new Error('Hot picks must have unique positive member and rank values');
+      throw new Error(
+        'Hot picks must have unique positive member and rank values'
+      );
     }
     return this.withSerializableRetry(async (tx) => {
       await this.assertOwnedIntegration(
@@ -2690,12 +2760,198 @@ export class ChannelInteractionRepository {
     });
   }
 
+  async getHotPickAuditMembers(
+    organizationId: string,
+    integrationId: string,
+    externalIds: string[]
+  ): Promise<Map<string, HotPickAuditMember>> {
+    const uniqueIds = [...new Set(externalIds.filter(Boolean))];
+    if (!uniqueIds.length) {
+      return new Map();
+    }
+    return this.withSerializableRetry(async (tx) => {
+      await this.assertOwnedIntegration(tx, organizationId, integrationId);
+      const rows = await tx.channelAudienceMember.findMany({
+        where: {
+          organizationId,
+          integrationId,
+          externalId: { in: uniqueIds },
+        },
+        select: {
+          externalId: true,
+          username: true,
+          membershipState: true,
+          ignoredAt: true,
+          isBot: true,
+          relationshipTriage: true,
+          relationshipReciprocationScore: true,
+          relationshipEffortScore: true,
+          relationshipGrade: true,
+          lastOutboundAt: true,
+          triageIgnores: {
+            select: { triage: true, expiresAt: true },
+          },
+        },
+      });
+      return new Map(
+        rows.map((row) => [
+          row.externalId,
+          {
+            externalId: row.externalId,
+            username: row.username,
+            membershipState: row.membershipState,
+            ignoredAt: row.ignoredAt,
+            isBot: row.isBot,
+            relationshipTriage: row.relationshipTriage,
+            relationshipReciprocationScore: row.relationshipReciprocationScore,
+            relationshipEffortScore: row.relationshipEffortScore,
+            relationshipGrade: row.relationshipGrade,
+            lastOutboundAt: row.lastOutboundAt,
+            triageIgnores: row.triageIgnores,
+          },
+        ])
+      );
+    });
+  }
+
+  async auditHotPickExclusions(params: {
+    organizationId: string;
+    integrationId: string;
+    hour: string;
+    now?: Date;
+  }): Promise<HotPickAuditResult> {
+    const now = params.now ?? new Date();
+    return this.withSerializableRetry(async (tx) => {
+      await this.assertOwnedIntegration(
+        tx,
+        params.organizationId,
+        params.integrationId
+      );
+      const picks = await tx.channelAudienceHotPick.findMany({
+        where: {
+          organizationId: params.organizationId,
+          integrationId: params.integrationId,
+          hour: params.hour,
+        },
+        orderBy: [{ finalRank: 'asc' }, { counterpartyExternalId: 'asc' }],
+        select: {
+          counterpartyExternalId: true,
+          audienceMember: {
+            select: {
+              externalId: true,
+              username: true,
+              membershipState: true,
+              ignoredAt: true,
+              isBot: true,
+              relationshipTriage: true,
+              relationshipReciprocationScore: true,
+              relationshipEffortScore: true,
+              triageIgnores: {
+                select: { triage: true, expiresAt: true },
+              },
+            },
+          },
+        },
+      });
+      return summarizeHotPickAudit({
+        hour: params.hour,
+        now,
+        picks: picks.map((pick) => ({
+          externalId: pick.counterpartyExternalId,
+          member: pick.audienceMember
+            ? {
+              externalId: pick.audienceMember.externalId,
+              username: pick.audienceMember.username,
+              membershipState: pick.audienceMember.membershipState,
+              ignoredAt: pick.audienceMember.ignoredAt,
+              isBot: pick.audienceMember.isBot,
+              relationshipTriage: pick.audienceMember.relationshipTriage,
+              relationshipReciprocationScore:
+                pick.audienceMember.relationshipReciprocationScore,
+              relationshipEffortScore:
+                pick.audienceMember.relationshipEffortScore,
+              triageIgnores: pick.audienceMember.triageIgnores,
+            }
+            : null,
+        })),
+      });
+    });
+  }
+
+  async auditCultivatePickExclusions(params: {
+    organizationId: string;
+    integrationId: string;
+    hour: string;
+    now?: Date;
+    config?: CultivatePickAuditConfig;
+  }): Promise<CultivatePickAuditResult> {
+    const now = params.now ?? new Date();
+    return this.withSerializableRetry(async (tx) => {
+      await this.assertOwnedIntegration(
+        tx,
+        params.organizationId,
+        params.integrationId
+      );
+      const picks = await tx.channelAudienceCultivatePick.findMany({
+        where: {
+          organizationId: params.organizationId,
+          integrationId: params.integrationId,
+          hour: params.hour,
+        },
+        orderBy: [{ finalRank: 'asc' }, { counterpartyExternalId: 'asc' }],
+        select: {
+          counterpartyExternalId: true,
+          audienceMember: {
+            select: {
+              externalId: true,
+              username: true,
+              membershipState: true,
+              ignoredAt: true,
+              isBot: true,
+              relationshipTriage: true,
+              relationshipGrade: true,
+              lastOutboundAt: true,
+              triageIgnores: {
+                select: { triage: true, expiresAt: true },
+              },
+            },
+          },
+        },
+      });
+      return summarizeCultivatePickAudit({
+        hour: params.hour,
+        now,
+        ...(params.config ? { config: params.config } : {}),
+        picks: picks.map((pick) => ({
+          externalId: pick.counterpartyExternalId,
+          member: pick.audienceMember
+            ? {
+              externalId: pick.audienceMember.externalId,
+              username: pick.audienceMember.username,
+              membershipState: pick.audienceMember.membershipState,
+              ignoredAt: pick.audienceMember.ignoredAt,
+              isBot: pick.audienceMember.isBot,
+              relationshipTriage: pick.audienceMember.relationshipTriage,
+              relationshipGrade: pick.audienceMember.relationshipGrade,
+              lastOutboundAt: pick.audienceMember.lastOutboundAt,
+              triageIgnores: pick.audienceMember.triageIgnores,
+            }
+            : null,
+        })),
+      });
+    });
+  }
+
   async getAudienceHot(query: AudienceHotQuery) {
     const now = query.now ?? new Date();
     const currentHour = utcHourKey(now);
     const previousHour = utcHourKey(new Date(now.getTime() - 60 * 60 * 1000));
     return this.withSerializableRetry(async (tx) => {
-      await this.assertOwnedIntegration(tx, query.organizationId, query.integrationId);
+      await this.assertOwnedIntegration(
+        tx,
+        query.organizationId,
+        query.integrationId
+      );
       if (
         query.hour &&
         query.hour !== currentHour &&
@@ -2747,7 +3003,12 @@ export class ChannelInteractionRepository {
         batch.strategyVersion !== query.strategyVersion ||
         batch.materializationVersion !== query.materializationVersion
       ) {
-        return { items: [], hasMore: false, source: 'materialized' as const, hour: null };
+        return {
+          items: [],
+          hasMore: false,
+          source: 'materialized' as const,
+          hour: null,
+        };
       }
       const comparison = query.direction === 'desc' ? 'lt' : 'gt';
       const rows = await tx.channelAudienceHotPick.findMany({
@@ -2765,7 +3026,9 @@ export class ChannelInteractionRepository {
                 { finalRank: { [comparison]: query.cursor.finalRank } },
                 {
                   finalRank: query.cursor.finalRank,
-                  counterpartyExternalId: { [comparison]: query.cursor.externalId },
+                  counterpartyExternalId: {
+                    [comparison]: query.cursor.externalId,
+                  },
                 },
               ],
             }
@@ -2783,22 +3046,86 @@ export class ChannelInteractionRepository {
           aiReason: true,
           suggestedAction: true,
           source: true,
-          audienceMember: { select: this.audienceMemberListSelect(query.userId) },
+          audienceMember: {
+            select: this.audienceMemberListSelect(query.userId),
+          },
         },
       });
-      return {
-        items: rows.slice(0, query.limit).map((row) => ({
-          ...row.audienceMember,
-          finalRank: row.finalRank,
-          rulesRank: row.rulesRank,
-          hotReason: row.aiReason || row.rulesReason,
-          suggestedAction: row.suggestedAction,
-          hotSource: row.source,
-        })),
+      const items = rows.slice(0, query.limit).map((row) => ({
+        ...row.audienceMember,
+        finalRank: row.finalRank,
+        rulesRank: row.rulesRank,
+        hotReason: row.aiReason || row.rulesReason,
+        suggestedAction: row.suggestedAction,
+        hotSource: row.source,
+      }));
+      const result = {
+        items,
         hasMore: rows.length > query.limit,
         source: 'materialized' as const,
         hour: batch.hour,
       };
+      if (
+        isHotTriageDebugReadLogEnabled() &&
+        !query.cursor &&
+        batch.pickCount > items.length
+      ) {
+        const auditPicks = await tx.channelAudienceHotPick.findMany({
+          where: {
+            organizationId: query.organizationId,
+            integrationId: query.integrationId,
+            hour: batch.hour,
+          },
+          orderBy: [{ finalRank: 'asc' }, { counterpartyExternalId: 'asc' }],
+          select: {
+            counterpartyExternalId: true,
+            audienceMember: {
+              select: {
+                externalId: true,
+                username: true,
+                membershipState: true,
+                ignoredAt: true,
+                isBot: true,
+                relationshipTriage: true,
+                relationshipReciprocationScore: true,
+                relationshipEffortScore: true,
+                triageIgnores: {
+                  select: { triage: true, expiresAt: true },
+                },
+              },
+            },
+          },
+        });
+        const audit = summarizeHotPickAudit({
+          hour: batch.hour,
+          now,
+          picks: auditPicks.map((pick) => ({
+            externalId: pick.counterpartyExternalId,
+            member: pick.audienceMember
+              ? {
+                externalId: pick.audienceMember.externalId,
+                username: pick.audienceMember.username,
+                membershipState: pick.audienceMember.membershipState,
+                ignoredAt: pick.audienceMember.ignoredAt,
+                isBot: pick.audienceMember.isBot,
+                relationshipTriage: pick.audienceMember.relationshipTriage,
+                relationshipReciprocationScore:
+                  pick.audienceMember.relationshipReciprocationScore,
+                relationshipEffortScore:
+                  pick.audienceMember.relationshipEffortScore,
+                triageIgnores: pick.audienceMember.triageIgnores,
+              }
+              : null,
+          })),
+        });
+        this._logger.log(
+          `[hot-triage] Hot read visibility gap integration=${query.integrationId
+          } hour=${batch.hour} stored=${audit.storedCount} pageVisible=${items.length
+          } eligibleVisible=${audit.visibleCount} excluded=${audit.excludedCount
+          } ${JSON.stringify(trimHotPickAuditForLog(audit))}`
+        );
+      }
+      return result;
     });
   }
 
@@ -2835,15 +3162,16 @@ export class ChannelInteractionRepository {
           },
         })
         : await (async () => {
-          const current = await tx.channelAudienceCultivatePickBatch.findUnique({
-            where: {
-              organizationId_integrationId_hour: {
-                organizationId: query.organizationId,
-                integrationId: query.integrationId,
-                hour: currentHour,
+          const current =
+            await tx.channelAudienceCultivatePickBatch.findUnique({
+              where: {
+                organizationId_integrationId_hour: {
+                  organizationId: query.organizationId,
+                  integrationId: query.integrationId,
+                  hour: currentHour,
+                },
               },
-            },
-          });
+            });
           return (
             current ??
             (await tx.channelAudienceCultivatePickBatch.findUnique({
@@ -2920,12 +3248,71 @@ export class ChannelInteractionRepository {
         suggestedAction: row.suggestedAction,
         cultivateSource: row.source,
       }));
-      return {
+      const result = {
         items,
         hasMore: rows.length > query.limit,
         source: 'materialized' as const,
         hour: batch.hour,
       };
+      if (
+        isCultivateTriageDebugReadLogEnabled() &&
+        !query.cursor &&
+        batch.pickCount > items.length
+      ) {
+        const auditPicks = await tx.channelAudienceCultivatePick.findMany({
+          where: {
+            organizationId: query.organizationId,
+            integrationId: query.integrationId,
+            hour: batch.hour,
+          },
+          orderBy: [{ finalRank: 'asc' }, { counterpartyExternalId: 'asc' }],
+          select: {
+            counterpartyExternalId: true,
+            audienceMember: {
+              select: {
+                externalId: true,
+                username: true,
+                membershipState: true,
+                ignoredAt: true,
+                isBot: true,
+                relationshipTriage: true,
+                relationshipGrade: true,
+                lastOutboundAt: true,
+                triageIgnores: {
+                  select: { triage: true, expiresAt: true },
+                },
+              },
+            },
+          },
+        });
+        const audit = summarizeCultivatePickAudit({
+          hour: batch.hour,
+          now,
+          picks: auditPicks.map((pick) => ({
+            externalId: pick.counterpartyExternalId,
+            member: pick.audienceMember
+              ? {
+                externalId: pick.audienceMember.externalId,
+                username: pick.audienceMember.username,
+                membershipState: pick.audienceMember.membershipState,
+                ignoredAt: pick.audienceMember.ignoredAt,
+                isBot: pick.audienceMember.isBot,
+                relationshipTriage: pick.audienceMember.relationshipTriage,
+                relationshipGrade: pick.audienceMember.relationshipGrade,
+                lastOutboundAt: pick.audienceMember.lastOutboundAt,
+                triageIgnores: pick.audienceMember.triageIgnores,
+              }
+              : null,
+          })),
+        });
+        this._logger.log(
+          `[follower-cultivate] Cultivate read visibility gap integration=${query.integrationId
+          } hour=${batch.hour} stored=${audit.storedCount} pageVisible=${items.length
+          } eligibleVisible=${audit.visibleCount} excluded=${audit.excludedCount
+          } ${JSON.stringify(trimCultivatePickAuditForLog(audit))}`
+        );
+      }
+      return result;
     });
   }
 
@@ -3080,15 +3467,16 @@ export class ChannelInteractionRepository {
   }
 
   async hasDueBotScoreMembers(organizationId: string, integrationId: string) {
-    const member = await this._dailyAggregate.model.channelAudienceMember.findFirst({
-      where: {
-        organizationId,
-        integrationId,
-        membershipState: ChannelAudienceMembership.FOLLOWER,
-        ...botScoreDueWhere(),
-      },
-      select: { id: true },
-    });
+    const member =
+      await this._dailyAggregate.model.channelAudienceMember.findFirst({
+        where: {
+          organizationId,
+          integrationId,
+          membershipState: ChannelAudienceMembership.FOLLOWER,
+          ...botScoreDueWhere(),
+        },
+        select: { id: true },
+      });
     return !!member;
   }
 
@@ -3103,21 +3491,23 @@ export class ChannelInteractionRepository {
     }
 
     const rows =
-      await this._dailyAggregate.model.channelInteractionDailyAggregate.groupBy({
-        by: ['counterpartyExternalId'],
-        where: {
-          organizationId,
-          integrationId,
-          counterpartyExternalId: { in: uniqueIds },
-        },
-        _sum: {
-          interactionCount: true,
-          interactionScore: true,
-        },
-        _max: {
-          lastInteractionAt: true,
-        },
-      });
+      await this._dailyAggregate.model.channelInteractionDailyAggregate.groupBy(
+        {
+          by: ['counterpartyExternalId'],
+          where: {
+            organizationId,
+            integrationId,
+            counterpartyExternalId: { in: uniqueIds },
+          },
+          _sum: {
+            interactionCount: true,
+            interactionScore: true,
+          },
+          _max: {
+            lastInteractionAt: true,
+          },
+        }
+      );
 
     return new Map(
       rows.map((row) => [
@@ -3177,7 +3567,11 @@ export class ChannelInteractionRepository {
       if (!member) return null;
       const [events, tracking, personalGrade] = await Promise.all([
         tx.channelInteractionEvent.findMany({
-          where: { organizationId, integrationId, counterpartyExternalId: externalId },
+          where: {
+            organizationId,
+            integrationId,
+            counterpartyExternalId: externalId,
+          },
           orderBy: { eventAt: 'desc' },
           take: 20,
           select: {
@@ -3188,7 +3582,11 @@ export class ChannelInteractionRepository {
             relatedObjectId: true,
           },
         }),
-        this.getInteractionTrackingInTransaction(tx, organizationId, integrationId),
+        this.getInteractionTrackingInTransaction(
+          tx,
+          organizationId,
+          integrationId
+        ),
         userId
           ? tx.channelAudienceMemberGrade.findUnique({
             where: {
@@ -3245,7 +3643,13 @@ export class ChannelInteractionRepository {
     content: string
   ) {
     return this.withSerializableRetry(async (tx) => {
-      await this.assertNoteAccess(tx, organizationId, integrationId, externalId, authorUserId);
+      await this.assertNoteAccess(
+        tx,
+        organizationId,
+        integrationId,
+        externalId,
+        authorUserId
+      );
       const note = await tx.channelAudienceNote.create({
         data: {
           organizationId,
@@ -3274,14 +3678,19 @@ export class ChannelInteractionRepository {
     noteId: string,
     content: string
   ) {
-    const result = await this._dailyAggregate.model.channelAudienceNote.updateMany({
-      where: { id: noteId, organizationId, integrationId },
-      data: { content },
-    });
+    const result =
+      await this._dailyAggregate.model.channelAudienceNote.updateMany({
+        where: { id: noteId, organizationId, integrationId },
+        data: { content },
+      });
     return result.count === 1;
   }
 
-  async deleteAudienceNote(organizationId: string, integrationId: string, noteId: string) {
+  async deleteAudienceNote(
+    organizationId: string,
+    integrationId: string,
+    noteId: string
+  ) {
     return this.withSerializableRetry(async (tx) => {
       const note = await tx.channelAudienceNote.findFirst({
         where: { id: noteId, organizationId, integrationId },
@@ -3317,7 +3726,13 @@ export class ChannelInteractionRepository {
       return tx.channelAudienceList.findMany({
         where: { organizationId, integrationId, deletedAt: null },
         orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
-        select: { id: true, name: true, color: true, createdAt: true, updatedAt: true },
+        select: {
+          id: true,
+          name: true,
+          color: true,
+          createdAt: true,
+          updatedAt: true,
+        },
       });
     });
   }
@@ -3336,10 +3751,7 @@ export class ChannelInteractionRepository {
         select: { id: true, name: true },
       });
       const boundedLists = lists.slice(0, listLimit);
-      const categories = [
-        ...FOLLOWER_TRIAGE_FILTERS,
-        ...FOLLOWER_AUDIENCES,
-      ];
+      const categories = [...FOLLOWER_TRIAGE_FILTERS, ...FOLLOWER_AUDIENCES];
       const [categoryTotals, listTotals] = await Promise.all([
         Promise.all(
           categories.map((category) =>
@@ -3407,7 +3819,13 @@ export class ChannelInteractionRepository {
           color: color ?? null,
           createdByUserId,
         },
-        select: { id: true, name: true, color: true, createdAt: true, updatedAt: true },
+        select: {
+          id: true,
+          name: true,
+          color: true,
+          createdAt: true,
+          updatedAt: true,
+        },
       });
       return { conflict: false as const, list };
     });
@@ -3448,7 +3866,13 @@ export class ChannelInteractionRepository {
           name,
           ...(color !== undefined ? { color } : {}),
         },
-        select: { id: true, name: true, color: true, createdAt: true, updatedAt: true },
+        select: {
+          id: true,
+          name: true,
+          color: true,
+          createdAt: true,
+          updatedAt: true,
+        },
       });
       return { list };
     });
@@ -3459,10 +3883,11 @@ export class ChannelInteractionRepository {
     integrationId: string,
     listId: string
   ) {
-    const result = await this._dailyAggregate.model.channelAudienceList.updateMany({
-      where: { id: listId, organizationId, integrationId, deletedAt: null },
-      data: { deletedAt: new Date() },
-    });
+    const result =
+      await this._dailyAggregate.model.channelAudienceList.updateMany({
+        where: { id: listId, organizationId, integrationId, deletedAt: null },
+        data: { deletedAt: new Date() },
+      });
     return result.count === 1;
   }
 
@@ -3548,7 +3973,9 @@ export class ChannelInteractionRepository {
 
       const profileData = {
         ...(profile.name !== undefined ? { name: profile.name } : {}),
-        ...(profile.username !== undefined ? { username: profile.username } : {}),
+        ...(profile.username !== undefined
+          ? { username: profile.username }
+          : {}),
         ...(profile.picture !== undefined ? { picture: profile.picture } : {}),
         ...(profile.profileUrl !== undefined
           ? { profileUrl: profile.profileUrl }
@@ -3649,10 +4076,12 @@ export class ChannelInteractionRepository {
     listId: string,
     externalId: string
   ) {
-    const list = await this._dailyAggregate.model.channelAudienceList.findFirst({
-      where: { id: listId, organizationId, integrationId, deletedAt: null },
-      select: { id: true },
-    });
+    const list = await this._dailyAggregate.model.channelAudienceList.findFirst(
+      {
+        where: { id: listId, organizationId, integrationId, deletedAt: null },
+        select: { id: true },
+      }
+    );
     if (!list) {
       return { missing: 'list' as const };
     }
@@ -3678,10 +4107,12 @@ export class ChannelInteractionRepository {
     }
   ) {
     const limit = options.limit ?? 50;
-    const list = await this._dailyAggregate.model.channelAudienceList.findFirst({
-      where: { id: listId, organizationId, integrationId, deletedAt: null },
-      select: { id: true },
-    });
+    const list = await this._dailyAggregate.model.channelAudienceList.findFirst(
+      {
+        where: { id: listId, organizationId, integrationId, deletedAt: null },
+        select: { id: true },
+      }
+    );
     if (!list) {
       return { missing: 'list' as const };
     }
@@ -3705,31 +4136,33 @@ export class ChannelInteractionRepository {
     }>;
 
     if (options.onlyFollowing) {
-      rows = await this._dailyAggregate.model.channelAudienceListMember.findMany({
-        where: {
-          organizationId,
-          integrationId,
-          listId,
-          audienceMember: {
-            membershipState: ChannelAudienceMembership.FOLLOWER,
+      rows =
+        await this._dailyAggregate.model.channelAudienceListMember.findMany({
+          where: {
+            organizationId,
+            integrationId,
+            listId,
+            audienceMember: {
+              membershipState: ChannelAudienceMembership.FOLLOWER,
+            },
           },
-        },
-        orderBy: { counterpartyExternalId: 'asc' },
-        take: limit,
-        select: memberSelect,
-      });
+          orderBy: { counterpartyExternalId: 'asc' },
+          take: limit,
+          select: memberSelect,
+        });
     } else {
       const externalIds = options.externalIds ?? [];
-      rows = await this._dailyAggregate.model.channelAudienceListMember.findMany({
-        where: {
-          organizationId,
-          integrationId,
-          listId,
-          counterpartyExternalId: { in: externalIds },
-        },
-        orderBy: { counterpartyExternalId: 'asc' },
-        select: memberSelect,
-      });
+      rows =
+        await this._dailyAggregate.model.channelAudienceListMember.findMany({
+          where: {
+            organizationId,
+            integrationId,
+            listId,
+            counterpartyExternalId: { in: externalIds },
+          },
+          orderBy: { counterpartyExternalId: 'asc' },
+          select: memberSelect,
+        });
     }
 
     const removed = rows.map((row) => ({
@@ -3923,7 +4356,9 @@ export class ChannelInteractionRepository {
         },
         data: {
           ignoredAt: new Date(),
-          ...(ignoredByUserId ? { ignoredByUserId } : { ignoredByUserId: null }),
+          ...(ignoredByUserId
+            ? { ignoredByUserId }
+            : { ignoredByUserId: null }),
         },
       });
       return { ok: true as const };
@@ -3965,7 +4400,13 @@ export class ChannelInteractionRepository {
     grade: number
   ) {
     return this.withSerializableRetry(async (tx) => {
-      await this.assertNoteAccess(tx, organizationId, integrationId, externalId, userId);
+      await this.assertNoteAccess(
+        tx,
+        organizationId,
+        integrationId,
+        externalId,
+        userId
+      );
       const saved = await tx.channelAudienceMemberGrade.upsert({
         where: {
           organizationId_integrationId_counterpartyExternalId_userId: {
@@ -4659,14 +5100,15 @@ export class ChannelInteractionRepository {
       return new Map();
     }
 
-    const rows = await this._dailyAggregate.model.channelAudienceMember.findMany({
-      where: {
-        organizationId,
-        integrationId,
-        externalId: { in: uniqueIds },
-      },
-      select: this.audienceMemberListSelect(userId),
-    });
+    const rows =
+      await this._dailyAggregate.model.channelAudienceMember.findMany({
+        where: {
+          organizationId,
+          integrationId,
+          externalId: { in: uniqueIds },
+        },
+        select: this.audienceMemberListSelect(userId),
+      });
 
     return new Map(
       rows.map((row) => [
@@ -4688,7 +5130,9 @@ export class ChannelInteractionRepository {
           botConfidence: row.botConfidence,
           botFormulaVersion: row.botFormulaVersion,
           botGradedAt: row.botGradedAt,
-          listIds: (row.listMemberships ?? []).map((membership) => membership.listId),
+          listIds: (row.listMemberships ?? []).map(
+            (membership) => membership.listId
+          ),
           ignoredTriages: this.activeIgnoredTriages(row.triageIgnores ?? []),
           ignoredAt: row.ignoredAt ?? null,
         },
@@ -4702,8 +5146,7 @@ export class ChannelInteractionRepository {
     const now = Date.now();
     return ignores
       .filter(
-        (ignore) =>
-          ignore.expiresAt == null || ignore.expiresAt.getTime() > now
+        (ignore) => ignore.expiresAt == null || ignore.expiresAt.getTime() > now
       )
       .map((ignore) => ignore.triage);
   }
@@ -4723,7 +5166,9 @@ export class ChannelInteractionRepository {
           ? { lastInteractionAt: { lt: new Date(cursor.lastInteractionAt) } }
           : {
             OR: [
-              { lastInteractionAt: { gt: new Date(cursor.lastInteractionAt) } },
+              {
+                lastInteractionAt: { gt: new Date(cursor.lastInteractionAt) },
+              },
               { lastInteractionAt: null },
             ],
           }
@@ -4808,9 +5253,7 @@ export class ChannelInteractionRepository {
     };
   }
 
-  private isBotFilter(
-    isBot?: boolean
-  ): Prisma.ChannelAudienceMemberWhereInput {
+  private isBotFilter(isBot?: boolean): Prisma.ChannelAudienceMemberWhereInput {
     if (isBot === undefined) {
       return {};
     }
@@ -5407,10 +5850,7 @@ export class ChannelInteractionRepository {
       reasons: string[];
     }>;
   }> {
-    const take = Math.max(
-      0,
-      params.limit ?? LEAD_FIT_FEEDBACK_EXAMPLE_LIMIT
-    );
+    const take = Math.max(0, params.limit ?? LEAD_FIT_FEEDBACK_EXAMPLE_LIMIT);
     if (!take) {
       return { rejected: [], accepted: [] };
     }
@@ -5847,7 +6287,9 @@ export class ChannelInteractionRepository {
       }),
     ]);
     if (!member || !author) {
-      throw new Error('Channel audience member does not belong to organization');
+      throw new Error(
+        'Channel audience member does not belong to organization'
+      );
     }
   }
 
@@ -5900,7 +6342,9 @@ export class ChannelInteractionRepository {
       ...(profile.name !== undefined ? { name: profile.name } : {}),
       ...(profile.username !== undefined ? { username: profile.username } : {}),
       ...(profile.picture !== undefined ? { picture: profile.picture } : {}),
-      ...(profile.profileUrl !== undefined ? { profileUrl: profile.profileUrl } : {}),
+      ...(profile.profileUrl !== undefined
+        ? { profileUrl: profile.profileUrl }
+        : {}),
       ...(profile.bio !== undefined ? { bio: profile.bio } : {}),
       ...(profile.followersCount !== undefined
         ? { followersCount: profile.followersCount }
@@ -5932,9 +6376,7 @@ export class ChannelInteractionRepository {
     const syncCreateFollowedAt = followerSyncGeneration
       ? {
         followedAt:
-          profile.followedAt !== undefined
-            ? profile.followedAt
-            : new Date(),
+          profile.followedAt !== undefined ? profile.followedAt : new Date(),
       }
       : {};
     return tx.channelAudienceMember.upsert({
