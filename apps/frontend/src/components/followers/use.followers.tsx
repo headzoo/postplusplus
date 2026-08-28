@@ -289,15 +289,15 @@ export const FOLLOWER_INTERACTION_WINDOWS: {
   labelKey: string;
   defaultLabel: string;
 }[] = [
-    { value: 'week', labelKey: 'followers_window_week', defaultLabel: 'Week' },
-    { value: 'month', labelKey: 'followers_window_month', defaultLabel: 'Month' },
-    {
-      value: '90_day',
-      labelKey: 'followers_window_90_day',
-      defaultLabel: '90 Day',
-    },
-    { value: 'year', labelKey: 'followers_window_year', defaultLabel: 'Year' },
-  ];
+  { value: 'week', labelKey: 'followers_window_week', defaultLabel: 'Week' },
+  { value: 'month', labelKey: 'followers_window_month', defaultLabel: 'Month' },
+  {
+    value: '90_day',
+    labelKey: 'followers_window_90_day',
+    defaultLabel: '90 Day',
+  },
+  { value: 'year', labelKey: 'followers_window_year', defaultLabel: 'Year' },
+];
 
 export const DEFAULT_FOLLOWER_INTERACTION_WINDOW: ChannelInteractionWindow =
   'month';
@@ -334,13 +334,13 @@ export type UseFollowersParams = {
   search?: string;
   triage?: FollowerTriageFilter;
   audience?:
-  | 'lead'
-  | 'followed'
-  | 'unfollowed'
-  | 'ignored'
-  | 'cultivate'
-  | 'hot'
-  | 'converted';
+    | 'lead'
+    | 'followed'
+    | 'unfollowed'
+    | 'ignored'
+    | 'cultivate'
+    | 'hot'
+    | 'converted';
   listId?: string;
   isBot?: boolean;
 };
@@ -696,10 +696,10 @@ export const applyMyGradeToFollowerPage = (
       item.id !== externalId
         ? item
         : {
-          ...item,
-          myGrade: update.myGrade,
-          adjustedGrade: update.adjustedGrade,
-        }
+            ...item,
+            myGrade: update.myGrade,
+            adjustedGrade: update.adjustedGrade,
+          }
     ),
   };
 };
@@ -724,9 +724,9 @@ export const applyMyGradeToFollowerDetail = (
       ...detail.relationship,
       current: current
         ? {
-          ...current,
-          adjustedGrade: update.adjustedGrade,
-        }
+            ...current,
+            adjustedGrade: update.adjustedGrade,
+          }
         : current,
     },
   };
@@ -757,11 +757,11 @@ export const useFollowerGradeMutation = (
       await Promise.all([
         detailKey
           ? mutateCache(
-            detailKey,
-            (detail: FollowerMemberDetail | undefined) =>
-              applyMyGradeToFollowerDetail(detail, update),
-            { revalidate: false }
-          )
+              detailKey,
+              (detail: FollowerMemberDetail | undefined) =>
+                applyMyGradeToFollowerDetail(detail, update),
+              { revalidate: false }
+            )
           : Promise.resolve(),
         mutateCache(
           (key) => isFollowerListCacheKey(integrationId, key),
@@ -812,18 +812,18 @@ export const applyRelationshipSnapshotToFollowerPage = (
       item.id !== externalId
         ? item
         : {
-          ...item,
-          effortScore: current.effortScore,
-          reciprocationScore: current.reciprocationScore,
-          netGap: current.reciprocationScore - current.effortScore,
-          effortStars: current.effortStars,
-          reciprocationStars: current.reciprocationStars,
-          relationshipGrade: current.grade,
-          relationshipTriage: current.triage,
-          relationshipFormulaVersion: current.formulaVersion,
-          relationshipSnapshotAt: current.snapshotAt,
-          adjustedGrade: current.adjustedGrade,
-        }
+            ...item,
+            effortScore: current.effortScore,
+            reciprocationScore: current.reciprocationScore,
+            netGap: current.reciprocationScore - current.effortScore,
+            effortStars: current.effortStars,
+            reciprocationStars: current.reciprocationStars,
+            relationshipGrade: current.grade,
+            relationshipTriage: current.triage,
+            relationshipFormulaVersion: current.formulaVersion,
+            relationshipSnapshotAt: current.snapshotAt,
+            adjustedGrade: current.adjustedGrade,
+          }
     ),
   };
 };
@@ -888,11 +888,11 @@ export const useFollowerRelationshipScoreMutation = (
       await Promise.all([
         detailKey
           ? mutateCache(
-            detailKey,
-            (detail: FollowerMemberDetail | undefined) =>
-              applyRelationshipSnapshotToFollowerDetail(detail, current),
-            { revalidate: false }
-          )
+              detailKey,
+              (detail: FollowerMemberDetail | undefined) =>
+                applyRelationshipSnapshotToFollowerDetail(detail, current),
+              { revalidate: false }
+            )
           : Promise.resolve(),
         mutateCache(
           (key) => isFollowerListCacheKey(integrationId, key),
@@ -1100,20 +1100,20 @@ export const applyTriageIgnoreToFollowerPage = (
   const items = options?.removeFromPage
     ? page.items.filter((item) => item.id !== externalId)
     : page.items.map((item) => {
-      if (item.id !== externalId) {
-        return item;
-      }
-      if (options?.triage === 'lead') {
-        return { ...item, isLead: false };
-      }
-      if (options?.triage === 'cultivate') {
-        return { ...item, isCultivate: false };
-      }
-      if (options?.triage === 'hot_lead') {
-        return { ...item, relationshipTriage: null, isHot: false };
-      }
-      return { ...item, relationshipTriage: null };
-    });
+        if (item.id !== externalId) {
+          return item;
+        }
+        if (options?.triage === 'lead') {
+          return { ...item, isLead: false };
+        }
+        if (options?.triage === 'cultivate') {
+          return { ...item, isCultivate: false };
+        }
+        if (options?.triage === 'hot_lead') {
+          return { ...item, relationshipTriage: null, isHot: false };
+        }
+        return { ...item, relationshipTriage: null };
+      });
   return {
     ...page,
     items,

@@ -4,6 +4,7 @@ import { Provider } from '@prisma/client';
 import { UserDetailDto } from '@gitroom/nestjs-libraries/dtos/users/user.details.dto';
 import { EmailNotificationsDto } from '@gitroom/nestjs-libraries/dtos/users/email-notifications.dto';
 import { DashboardAnalyticsPreferenceItemDto } from '@gitroom/nestjs-libraries/dtos/users/dashboard-analytics-preferences.dto';
+import { FollowerBoardColumnPreferenceItemDto } from '@gitroom/nestjs-libraries/dtos/users/follower-board-column-preferences.dto';
 import { OrganizationRepository } from '@gitroom/nestjs-libraries/database/prisma/organizations/organization.repository';
 import { NotificationService } from '@gitroom/nestjs-libraries/database/prisma/notifications/notification.service';
 
@@ -137,6 +138,30 @@ export class UsersService {
     preferences: DashboardAnalyticsPreferenceItemDto[]
   ) {
     return this._usersRepository.saveDashboardAnalyticsPreferences(
+      userId,
+      organizationId,
+      preferences
+    );
+  }
+
+  getFollowerBoardColumnPreferences(
+    userId: string,
+    organizationId: string,
+    integrationId?: string
+  ) {
+    return this._usersRepository.getFollowerBoardColumnPreferences(
+      userId,
+      organizationId,
+      integrationId
+    );
+  }
+
+  saveFollowerBoardColumnPreferences(
+    userId: string,
+    organizationId: string,
+    preferences: FollowerBoardColumnPreferenceItemDto[]
+  ) {
+    return this._usersRepository.saveFollowerBoardColumnPreferences(
       userId,
       organizationId,
       preferences

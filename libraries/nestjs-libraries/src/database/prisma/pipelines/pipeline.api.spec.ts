@@ -489,13 +489,11 @@ describe('Pipeline API boundaries', () => {
     const create = jest
       .fn()
       .mockResolvedValue({ id: 'pipeline', color: '#FF5500' });
-    const update = jest
-      .fn()
-      .mockResolvedValue({
-        id: 'pipeline',
-        color: '#00AAFF',
-        scheduleRevision: 3,
-      });
+    const update = jest.fn().mockResolvedValue({
+      id: 'pipeline',
+      color: '#00AAFF',
+      scheduleRevision: 3,
+    });
     const transaction = {
       model: {
         $transaction: jest.fn(async (callback: any) =>
@@ -1052,13 +1050,11 @@ describe('Pipeline API boundaries', () => {
     };
     const slotUpdate = jest.fn().mockResolvedValue({ count: 1 });
     const revisionUpdate = jest.fn().mockResolvedValue({ count: 1 });
-    const findFirst = jest
-      .fn()
-      .mockResolvedValueOnce({
-        id: 'pipeline',
-        scheduleRevision: 4,
-        active: false,
-      });
+    const findFirst = jest.fn().mockResolvedValueOnce({
+      id: 'pipeline',
+      scheduleRevision: 4,
+      active: false,
+    });
     const slotFindFirst = jest
       .fn()
       .mockResolvedValueOnce({ id: 'source-slot' })

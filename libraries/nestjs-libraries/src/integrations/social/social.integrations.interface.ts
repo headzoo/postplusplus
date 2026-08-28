@@ -119,21 +119,21 @@ export type ChannelAnalyticsCaptureRequest = {
 
 export type ChannelAnalyticsCapturePage =
   | {
-    kind: 'daily';
-    points: ChannelAnalyticsDatedPoint[];
-    coverage: { fromDay: string; toDay: string };
-    nextCursor?: string;
-  }
+      kind: 'daily';
+      points: ChannelAnalyticsDatedPoint[];
+      coverage: { fromDay: string; toDay: string };
+      nextCursor?: string;
+    }
   | {
-    kind: 'post_lifetime';
-    points: ChannelAnalyticsPostLifetimePoint[];
-    /**
-     * Optional account-level daily points (e.g. follower totals) persisted
-     * alongside post_lifetime capture without updating coverage windows.
-     */
-    accountPoints?: ChannelAnalyticsDatedPoint[];
-    nextCursor?: string;
-  };
+      kind: 'post_lifetime';
+      points: ChannelAnalyticsPostLifetimePoint[];
+      /**
+       * Optional account-level daily points (e.g. follower totals) persisted
+       * alongside post_lifetime capture without updating coverage windows.
+       */
+      accountPoints?: ChannelAnalyticsDatedPoint[];
+      nextCursor?: string;
+    };
 
 /**
  * Split provider-normalized daily points into deterministic, bounded pages.
@@ -369,10 +369,10 @@ export type ChannelNoticeCategory =
 
 export type ChannelNoticeStatus =
   | {
-    state: 'ok';
-    unreadCount: number;
-    categories?: Partial<Record<ChannelNoticeCategory, number>>;
-  }
+      state: 'ok';
+      unreadCount: number;
+      categories?: Partial<Record<ChannelNoticeCategory, number>>;
+    }
   | { state: 'unsupported' }
   | { state: 'unavailable' };
 
@@ -658,17 +658,17 @@ export type NormalizedChannelInteractionEvent = {
 
 export type NormalizedChannelContentEvent =
   | {
-    type: 'post.upsert';
-    externalId: string;
-    url: string;
-    content: string;
-    publishedAt: string;
-  }
+      type: 'post.upsert';
+      externalId: string;
+      url: string;
+      content: string;
+      publishedAt: string;
+    }
   | {
-    type: 'post.delete';
-    externalId: string;
-    deletedAt: string;
-  };
+      type: 'post.delete';
+      externalId: string;
+      deletedAt: string;
+    };
 
 export type ChannelWebhookChallengeRequest = {
   query: Record<string, string | string[] | undefined>;
@@ -685,11 +685,11 @@ export type ChannelWebhookDeliveryRequest = {
 
 export type ChannelWebhookDeliveryResult =
   | {
-    accepted: true;
-    connectedAccountId: string;
-    events: NormalizedChannelInteractionEvent[];
-    contentEvents?: NormalizedChannelContentEvent[];
-  }
+      accepted: true;
+      connectedAccountId: string;
+      events: NormalizedChannelInteractionEvent[];
+      contentEvents?: NormalizedChannelContentEvent[];
+    }
   | { accepted: false; statusCode?: number };
 
 export type DesiredChannelInteractionSubscription = {
@@ -761,7 +761,7 @@ export interface ChannelInteractionWebhooksCapability {
 
 export interface SocialProvider
   extends IAuthenticator,
-  ISocialMediaIntegration {
+    ISocialMediaIntegration {
   identifier: string;
   isConfigured?: () => boolean;
   refreshWait?: boolean;

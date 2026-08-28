@@ -7,6 +7,9 @@ jest.mock('@gitroom/nestjs-libraries/redis/redis.service', () => ({
 jest.mock('@gitroom/nestjs-libraries/integrations/integration.manager', () => ({
   IntegrationManager: class IntegrationManager {},
 }));
+jest.mock('@gitroom/helpers/utils/sanitize.post.content', () => ({
+  sanitizePostContent: (value: string) => value,
+}));
 
 import { Test } from '@nestjs/testing';
 import { MODULE_METADATA } from '@nestjs/common/constants';
@@ -74,6 +77,7 @@ describe('DatabaseModule dependency wiring', () => {
         { provide: ChannelInteractionRepository, useValue: {} },
         { provide: ChannelAnalyticsService, useValue: {} },
         { provide: ChannelAnalyticsRepository, useValue: {} },
+        { provide: ConversionRepository, useValue: {} },
         { provide: AdminScheduleLogService, useValue: { append: jest.fn() } },
       ],
     }).compile();

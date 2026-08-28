@@ -108,16 +108,36 @@ jest.mock('@gitroom/frontend/components/followers/use.followers', () => {
   };
 });
 
+jest.mock('react-dnd', () => ({
+  useDrag: () => [{ isDragging: false }, jest.fn()],
+  useDrop: () => [{}, jest.fn()],
+  DndProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
 const follower = (overrides: Partial<Follower> = {}): Follower =>
-({
-  id: 'follower-1',
-  name: 'Alex Rivera',
-  username: 'alex',
-  picture: '/alex.png',
-  interactionCount: 12,
-  profileUrl: 'https://example.com/alex',
-  ...overrides,
-} as Follower);
+  ({
+    id: 'follower-1',
+    name: 'Alex Rivera',
+    username: 'alex',
+    picture: '/alex.png',
+    interactionCount: 12,
+    profileUrl: 'https://example.com/alex',
+    ...overrides,
+  } as Follower);
+
+const toOrderedSegmentColumns = (
+  columns: Array<{
+    segment: (typeof FOLLOWER_BOARD_SEGMENTS)[number];
+    items: Follower[];
+    total: number | null;
+    viewAllHref: string;
+  }>
+) =>
+  columns.map((column) => ({
+    kind: 'segment' as const,
+    columnKey: `segment:${column.segment.slug}`,
+    ...column,
+  }));
 
 const leadsSegment = FOLLOWER_BOARD_SEGMENTS.find(
   (segment) => segment.slug === 'leads'
@@ -142,17 +162,19 @@ describe('FollowerBoard', () => {
     const onOpen = jest.fn();
     render(
       <FollowerBoard
-        columns={FOLLOWER_BOARD_SEGMENTS.map((segment, index) => ({
-          segment,
-          items: [
-            follower({
-              id: `f-${index}`,
-              name: `${segment.defaultLabel} User`,
-            }),
-          ],
-          total: 10 + index,
-          viewAllHref: `/followers/${segment.slug}`,
-        }))}
+        orderedColumns={toOrderedSegmentColumns(
+          FOLLOWER_BOARD_SEGMENTS.map((segment, index) => ({
+            segment,
+            items: [
+              follower({
+                id: `f-${index}`,
+                name: `${segment.defaultLabel} User`,
+              }),
+            ],
+            total: 10 + index,
+            viewAllHref: `/followers/${segment.slug}`,
+          }))
+        )}
         onOpenFollower={onOpen}
         onDismissTriage={jest.fn()}
       />
@@ -188,12 +210,14 @@ describe('FollowerBoard', () => {
   it('shows segment descriptions in help tooltips instead of inline text', () => {
     render(
       <FollowerBoard
-        columns={FOLLOWER_BOARD_SEGMENTS.map((segment, index) => ({
-          segment,
-          items: [],
-          total: index,
-          viewAllHref: `/followers/${segment.slug}`,
-        }))}
+        orderedColumns={toOrderedSegmentColumns(
+          FOLLOWER_BOARD_SEGMENTS.map((segment, index) => ({
+            segment,
+            items: [],
+            total: index,
+            viewAllHref: `/followers/${segment.slug}`,
+          }))
+        )}
         onOpenFollower={jest.fn()}
       />
     );
@@ -230,20 +254,22 @@ describe('FollowerBoard', () => {
   it('renders View all in every column footer for populated and empty columns', () => {
     render(
       <FollowerBoard
-        columns={FOLLOWER_BOARD_SEGMENTS.map((segment, index) => ({
-          segment,
-          items:
-            index % 2 === 0
-              ? [
-                follower({
-                  id: `f-${index}`,
-                  name: `${segment.defaultLabel} User`,
-                }),
-              ]
-              : [],
-          total: 10 + index,
-          viewAllHref: `/followers/${segment.slug}`,
-        }))}
+        orderedColumns={toOrderedSegmentColumns(
+          FOLLOWER_BOARD_SEGMENTS.map((segment, index) => ({
+            segment,
+            items:
+              index % 2 === 0
+                ? [
+                    follower({
+                      id: `f-${index}`,
+                      name: `${segment.defaultLabel} User`,
+                    }),
+                  ]
+                : [],
+            total: 10 + index,
+            viewAllHref: `/followers/${segment.slug}`,
+          }))
+        )}
         onOpenFollower={jest.fn()}
         onDismissTriage={jest.fn()}
       />
@@ -259,9 +285,10 @@ describe('FollowerBoard', () => {
   it('renders custom list columns in the board grid', () => {
     render(
       <FollowerBoard
-        columns={[]}
-        listColumns={[
+        orderedColumns={[
           {
+            kind: 'list',
+            columnKey: 'list:list-1',
             list: {
               id: 'list-1',
               name: 'VIP',
@@ -319,6 +346,24 @@ describe('FollowerBoard', () => {
     expect(screen.getByText('No people in this segment yet.')).toBeTruthy();
     expect(screen.getByTestId('followers-board-view-all')).toBeTruthy();
   });
+});
+
+it('exposes a drag handle on the column icon and title', () => {
+  render(
+    <FollowerBoard
+      orderedColumns={toOrderedSegmentColumns([
+        {
+          segment: leadsSegment,
+          items: [follower()],
+          total: 1,
+          viewAllHref: '/followers/leads',
+        },
+      ])}
+      onOpenFollower={jest.fn()}
+    />
+  );
+
+  expect(screen.getByTestId('followers-board-column-drag-handle')).toBeTruthy();
 });
 
 describe('FollowerBoardRow', () => {

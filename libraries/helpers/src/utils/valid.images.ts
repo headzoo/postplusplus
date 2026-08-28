@@ -11,9 +11,7 @@ export class ValidContent implements ValidatorConstraintInterface {
     const content = striptags(contentRaw || '');
     const object = args.object as { image?: unknown[] };
     if (
-      (!object.image ||
-        !Array.isArray(object.image) ||
-        !object.image.length) &&
+      (!object.image || !Array.isArray(object.image) || !object.image.length) &&
       (!content || typeof content !== 'string' || content?.trim() === '')
     ) {
       return false;

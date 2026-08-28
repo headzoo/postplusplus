@@ -72,6 +72,7 @@ model Organization {
   postHttpLogs                        PostHttpLog[]
   webhookHttpLogs                     WebhookHttpLog[]
   dashboardAnalyticsPreferences       DashboardAnalyticsPreference[]
+  followerBoardColumnPreferences      FollowerBoardColumnPreference[]
   postRules                           PostRule[]
   postRuleIntegrations                PostRuleIntegration[]
   postRulePipelines                   PostRulePipeline[]
@@ -164,6 +165,7 @@ model User {
   adminWebAuthnChallenges            AdminWebAuthnChallenge[]
   adminVerificationSessions          AdminVerificationSession[]
   dashboardAnalyticsPreferences      DashboardAnalyticsPreference[]
+  followerBoardColumnPreferences     FollowerBoardColumnPreference[]
   dismissedAlerts                    UserDismissedAlert[]
 
   @@unique([email, providerName])
@@ -487,6 +489,7 @@ model Integration {
   webhookHttpLogs                     WebhookHttpLog[]
   contextDocuments                    IntegrationContextDocument[]
   dashboardAnalyticsPreferences       DashboardAnalyticsPreference[]
+  followerBoardColumnPreferences      FollowerBoardColumnPreference[]
   postRuleIntegrations                PostRuleIntegration[]
   conversionEvents                    ConversionEvent[]
   conversionClickAttributions         ConversionClickAttribution[]
@@ -539,6 +542,25 @@ model DashboardAnalyticsPreference {
   integration    Integration  @relation(fields: [integrationId], references: [id], onDelete: Cascade)
 
   @@unique([userId, organizationId, integrationId, metricKey])
+  @@index([userId, organizationId])
+  @@index([organizationId, integrationId])
+  @@index([integrationId])
+}
+
+model FollowerBoardColumnPreference {
+  id             String       @id @default(cuid())
+  userId         String
+  organizationId String
+  integrationId  String
+  columnKey      String
+  position       Int
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  integration    Integration  @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId, integrationId, columnKey])
   @@index([userId, organizationId])
   @@index([organizationId, integrationId])
   @@index([integrationId])

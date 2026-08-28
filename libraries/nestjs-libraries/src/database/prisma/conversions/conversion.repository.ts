@@ -84,7 +84,7 @@ export class ConversionRepository {
     >,
     private _integration: PrismaRepository<'integration'>,
     private _transaction: PrismaTransaction
-  ) { }
+  ) {}
 
   findOwnedIntegration(organizationId: string, integrationId: string) {
     return this._integration.model.integration.findFirst({
@@ -155,14 +155,14 @@ export class ConversionRepository {
         ...(options.strategyId ? { strategyId: options.strategyId } : {}),
         ...(options.cursor
           ? {
-            OR: [
-              { occurredAt: { lt: options.cursor.occurredAt } },
-              {
-                occurredAt: options.cursor.occurredAt,
-                id: { lt: options.cursor.id },
-              },
-            ],
-          }
+              OR: [
+                { occurredAt: { lt: options.cursor.occurredAt } },
+                {
+                  occurredAt: options.cursor.occurredAt,
+                  id: { lt: options.cursor.id },
+                },
+              ],
+            }
           : {}),
       },
       orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }],
@@ -173,9 +173,9 @@ export class ConversionRepository {
       next:
         events.length > take
           ? {
-            occurredAt: events[take - 1].occurredAt,
-            id: events[take - 1].id,
-          }
+              occurredAt: events[take - 1].occurredAt,
+              id: events[take - 1].id,
+            }
           : undefined,
     };
   }
@@ -247,34 +247,34 @@ export class ConversionRepository {
         orderBy: [{ _max: { occurredAt: 'desc' } }, { actorExternalId: 'asc' }],
         ...(options.cursor && cursorDate && !Number.isNaN(cursorDate.getTime())
           ? {
-            having: {
-              OR: [
-                {
-                  occurredAt: {
-                    _max: {
-                      lt: cursorDate,
+              having: {
+                OR: [
+                  {
+                    occurredAt: {
+                      _max: {
+                        lt: cursorDate,
+                      },
                     },
                   },
-                },
-                {
-                  AND: [
-                    {
-                      occurredAt: {
-                        _max: {
-                          equals: cursorDate,
+                  {
+                    AND: [
+                      {
+                        occurredAt: {
+                          _max: {
+                            equals: cursorDate,
+                          },
                         },
                       },
-                    },
-                    {
-                      actorExternalId: {
-                        gt: options.cursor!.externalId,
+                      {
+                        actorExternalId: {
+                          gt: options.cursor!.externalId,
+                        },
                       },
-                    },
-                  ],
-                },
-              ],
-            },
-          }
+                    ],
+                  },
+                ],
+              },
+            }
           : {}),
         take: overfetch,
       });
@@ -304,22 +304,22 @@ export class ConversionRepository {
 
       const latestEvents = selectedGroups.length
         ? await tx.conversionEvent.findMany({
-          where: {
-            organizationId,
-            integrationId,
-            OR: selectedGroups.map((group) => ({
-              actorExternalId: group.actorExternalId!,
-              occurredAt: group._max.occurredAt!,
-            })),
-          },
-          orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }],
-          select: {
-            actorExternalId: true,
-            occurredAt: true,
-            conversionType: true,
-            id: true,
-          },
-        })
+            where: {
+              organizationId,
+              integrationId,
+              OR: selectedGroups.map((group) => ({
+                actorExternalId: group.actorExternalId!,
+                occurredAt: group._max.occurredAt!,
+              })),
+            },
+            orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }],
+            select: {
+              actorExternalId: true,
+              occurredAt: true,
+              conversionType: true,
+              id: true,
+            },
+          })
         : [];
 
       const latestTypeByActor = new Map<string, string>();
@@ -688,7 +688,7 @@ export class ConversionRepository {
       const terminal = attempts >= maximumAttempts;
       const availableAt = new Date(
         now.getTime() +
-        BASE_RETRY_DELAY_MS * Math.pow(2, Math.min(attempts - 1, 10))
+          BASE_RETRY_DELAY_MS * Math.pow(2, Math.min(attempts - 1, 10))
       );
       await tx.conversionEvaluationJob.update({
         where: { id: job.id },
@@ -915,7 +915,7 @@ export class ConversionRepository {
       const insideCooldown =
         !!current?.lastEmittedAt &&
         input.eventAt.getTime() <
-        current.lastEmittedAt.getTime() + input.cooldownMs;
+          current.lastEmittedAt.getTime() + input.cooldownMs;
       if (insideCooldown) {
         await tx.conversionDerivationState.upsert({
           where,
@@ -1169,7 +1169,7 @@ export class ConversionRepository {
       if (
         input.resolutionSource === 'inferred' &&
         (supportCase.lastInboundAt?.getTime() ?? null) !==
-        (input.expectedLastInboundAt?.getTime() ?? null)
+          (input.expectedLastInboundAt?.getTime() ?? null)
       ) {
         return { event: null, created: false };
       }

@@ -38,13 +38,11 @@ describe('RelationshipGradeScheduleService', () => {
     };
     const workflow = {
       getHandle: jest.fn().mockReturnValue({
-        describe: jest
-          .fn()
-          .mockRejectedValue(
-            Object.assign(new Error('not found'), {
-              name: 'WorkflowNotFoundError',
-            })
-          ),
+        describe: jest.fn().mockRejectedValue(
+          Object.assign(new Error('not found'), {
+            name: 'WorkflowNotFoundError',
+          })
+        ),
       }),
     };
     const service = createService(schedule, workflow);

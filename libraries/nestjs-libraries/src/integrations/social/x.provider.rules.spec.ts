@@ -281,11 +281,9 @@ describe('XProvider PostRules Capability', () => {
     it('should successfully add a reply', async () => {
       const mockClient = {
         v2: {
-          tweet: jest
-            .fn()
-            .mockResolvedValue({
-              data: { id: 'reply123', text: 'Test reply' },
-            }),
+          tweet: jest.fn().mockResolvedValue({
+            data: { id: 'reply123', text: 'Test reply' },
+          }),
         },
       };
       (TwitterApi as jest.MockedClass<typeof TwitterApi>).mockImplementation(

@@ -148,12 +148,10 @@ export const startMcp = async (app: INestApplication) => {
       const token = result.tokenValidation?.subject;
       const auth = await resolveAuth(token!);
       if (!auth) {
-        res
-          .status(401)
-          .json({
-            error: 'invalid_token',
-            error_description: 'Could not resolve organization',
-          });
+        res.status(401).json({
+          error: 'invalid_token',
+          error_description: 'Could not resolve organization',
+        });
         return;
       }
 

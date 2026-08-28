@@ -83,19 +83,19 @@ const strategyWithDefaults = (
   defaultSort: string,
   filterPriority: string[] = []
 ) =>
-({
-  id,
-  version: 1,
-  summary: { key: 'summary', defaultValue: 'Summary' },
-  ui: {
-    defaultFilter,
-    defaultSort,
-    filterPriority,
-    filterEmphasis: defaultFilter,
-    compactMetrics: [],
-    emptyState: { key: 'empty', defaultValue: 'Empty' },
-  },
-} as FollowerChannel['strategy']);
+  ({
+    id,
+    version: 1,
+    summary: { key: 'summary', defaultValue: 'Summary' },
+    ui: {
+      defaultFilter,
+      defaultSort,
+      filterPriority,
+      filterEmphasis: defaultFilter,
+      compactMetrics: [],
+      emptyState: { key: 'empty', defaultValue: 'Empty' },
+    },
+  } as FollowerChannel['strategy']);
 
 const publicStrategy = (
   id: Parameters<typeof getChannelStrategy>[0]
@@ -148,6 +148,26 @@ const mainFollowersParams = () => {
 jest.mock('@mantine/hooks', () => ({
   useClickOutside: () => ({ current: null }),
 }));
+
+jest.mock('react-dnd', () => ({
+  useDrag: () => [{ isDragging: false }, (node: unknown) => node],
+  useDrop: () => [{}, (node: unknown) => node],
+  DndProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
+jest.mock('@gitroom/frontend/components/launches/helpers/dnd.provider', () => ({
+  DNDProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
+jest.mock(
+  '@gitroom/frontend/components/followers/use.follower.board.column.preferences',
+  () => ({
+    useFollowerBoardColumnPreferences: () => ({
+      data: [],
+      savePreferences: jest.fn(),
+    }),
+  })
+);
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push, replace }),
@@ -659,13 +679,13 @@ describe('FollowersComponent', () => {
     }));
     pushState = jest
       .spyOn(globalThis.history, 'pushState')
-      .mockImplementation(() => { });
+      .mockImplementation(() => {});
     historyBack = jest
       .spyOn(globalThis.history, 'back')
-      .mockImplementation(() => { });
+      .mockImplementation(() => {});
     replaceState = jest
       .spyOn(globalThis.history, 'replaceState')
-      .mockImplementation(() => { });
+      .mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -808,7 +828,7 @@ describe('FollowersComponent', () => {
     expect(filterBar.contains(vipChip)).toBe(true);
     expect(
       allFollowersChip.compareDocumentPosition(vipChip) &
-      Node.DOCUMENT_POSITION_FOLLOWING
+        Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Create list' })).toBeTruthy();
   });

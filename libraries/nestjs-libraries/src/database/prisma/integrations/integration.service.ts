@@ -149,7 +149,7 @@ export class IntegrationService {
     private _channelAnalyticsRepository: ChannelAnalyticsRepository,
     private _relationshipGradeScheduleService: RelationshipGradeScheduleService,
     private _conversionRepository: ConversionRepository
-  ) { }
+  ) {}
 
   async changeActiveCron(orgId: string) {
     const data = await this._autopostsRepository.getAutoposts(orgId);
@@ -157,7 +157,7 @@ export class IntegrationService {
     for (const item of data.filter((f) => f.active)) {
       try {
         await this._temporalService.terminateWorkflow(`autopost-${item.id}`);
-      } catch (err) { }
+      } catch (err) {}
     }
 
     return true;
@@ -369,12 +369,12 @@ export class IntegrationService {
   async createOrUpdateIntegration(
     additionalSettings:
       | {
-        title: string;
-        description: string;
-        type: 'checkbox' | 'text' | 'textarea';
-        value: any;
-        regex?: string;
-      }[]
+          title: string;
+          description: string;
+          type: 'checkbox' | 'text' | 'textarea';
+          value: any;
+          regex?: string;
+        }[]
       | undefined,
     oneTimeToken: boolean,
     org: string,
@@ -396,9 +396,9 @@ export class IntegrationService {
       ? picture?.indexOf('imagedelivery.net') > -1
         ? picture
         : await this.storage.uploadSimple(picture).catch((err) => {
-          console.log('Failed to upload profile picture:', picture, err);
-          return undefined;
-        })
+            console.log('Failed to upload profile picture:', picture, err);
+            return undefined;
+          })
       : undefined;
 
     const integration =
@@ -514,7 +514,7 @@ export class IntegrationService {
             } else if (cached === '0') {
               eligible = false;
             }
-          } catch { }
+          } catch {}
 
           if (eligible === undefined) {
             try {
@@ -532,7 +532,7 @@ export class IntegrationService {
                     ? 1
                     : 300
                 );
-              } catch { }
+              } catch {}
             } catch {
               return;
             }
@@ -544,10 +544,10 @@ export class IntegrationService {
 
           const tracking = interactionCapability
             ? await this.getInteractionTracking(
-              org.id,
-              integration.id,
-              interactionCapability.getInteractionCoverage()
-            )
+                org.id,
+                integration.id,
+                interactionCapability.getInteractionCoverage()
+              )
             : undefined;
           const strategy = resolveChannelStrategy(integration.strategyId);
           const recomputing =
@@ -603,9 +603,9 @@ export class IntegrationService {
       provider?.channelInteractionWebhooks?.getInteractionCoverage() ?? [];
     let tracked = provider?.channelInteractionWebhooks
       ? await this._channelInteractionRepository.getInteractionTracking(
-        org.id,
-        integration.id
-      )
+          org.id,
+          integration.id
+        )
       : { followerSync: null, subscriptions: [] };
     if (provider?.channelInteractionWebhooks) {
       await this.reconcileInteractionSubscriptionsIfNeeded(
@@ -620,35 +620,35 @@ export class IntegrationService {
     }
     const tracking = provider?.channelInteractionWebhooks
       ? this.getInteractionTrackingMetadata(
-        tracked.followerSync,
-        tracked.subscriptions,
-        coverage,
-        undefined,
-        { rankingAvailability: false }
-      )
+          tracked.followerSync,
+          tracked.subscriptions,
+          coverage,
+          undefined,
+          { rankingAvailability: false }
+        )
       : this.getUnsupportedTrackingMetadata(coverage);
     let profileUrl: string | undefined;
     try {
       profileUrl = this.sanitizeHttpUrl(provider?.profileUrl?.(integration));
-    } catch { }
+    } catch {}
 
     const trackingAuthorization = provider?.channelInteractionWebhooks
       ?.authorization
       ? {
-        connected:
-          await this._channelInteractionService.hasInteractionAuthorization(
-            integration
-          ),
-      }
+          connected:
+            await this._channelInteractionService.hasInteractionAuthorization(
+              integration
+            ),
+        }
       : undefined;
     const strategyApplicable = !!provider?.followers;
     const strategy = resolveChannelStrategy(integration.strategyId);
     const recomputing = strategyApplicable
       ? await this._channelInteractionRepository.hasStaleRelationshipProjections(
-        org.id,
-        integration.id,
-        { strategyId: strategy.id, strategyVersion: strategy.version }
-      )
+          org.id,
+          integration.id,
+          { strategyId: strategy.id, strategyVersion: strategy.version }
+        )
       : false;
 
     return {
@@ -777,8 +777,8 @@ export class IntegrationService {
             : {}),
           ...(subscription.trackingStartedAt
             ? {
-              trackingStartedAt: subscription.trackingStartedAt.toISOString(),
-            }
+                trackingStartedAt: subscription.trackingStartedAt.toISOString(),
+              }
             : {}),
           ...(subscription.createdAt
             ? { createdAt: subscription.createdAt.toISOString() }
@@ -800,8 +800,8 @@ export class IntegrationService {
       actor && 'userId' in actor
         ? actor.userId
         : actor && 'id' in actor
-          ? actor.id
-          : undefined;
+        ? actor.id
+        : undefined;
     const integration = await this._integrationRepository.getIntegrationById(
       org.id,
       integrationId
@@ -1060,8 +1060,8 @@ export class IntegrationService {
       actor && 'userId' in actor
         ? actor.userId
         : actor && 'id' in actor
-          ? actor.id
-          : undefined;
+        ? actor.id
+        : undefined;
     const integration = await this._integrationRepository.getIntegrationById(
       org.id,
       integrationId
@@ -1122,12 +1122,12 @@ export class IntegrationService {
     const since = dayjs.utc().subtract(sinceDays, 'day').toDate();
     let cursor = query.cursor
       ? this.decodeRecentFollowerCursor(
-        query.cursor,
-        org.id,
-        integration.id,
-        sinceDays,
-        withoutOutboundSinceFollow
-      )
+          query.cursor,
+          org.id,
+          integration.id,
+          sinceDays,
+          withoutOutboundSinceFollow
+        )
       : undefined;
 
     const accumulated: Follower[] = [];
@@ -1158,8 +1158,8 @@ export class IntegrationService {
       );
       const filtered = withoutOutboundSinceFollow
         ? mapped.filter((follower) =>
-          this.isWithoutOutboundSinceFollow(follower)
-        )
+            this.isWithoutOutboundSinceFollow(follower)
+          )
         : mapped;
 
       let took = 0;
@@ -1203,21 +1203,21 @@ export class IntegrationService {
     const lastReturned = accumulated.at(-1);
     const cursorForNext =
       withoutOutboundSinceFollow &&
-        accumulated.length < limit &&
-        lastFetchedCursor
+      accumulated.length < limit &&
+      lastFetchedCursor
         ? lastFetchedCursor
         : lastReturned?.followedAt
-          ? {
+        ? {
             followedAt: lastReturned.followedAt,
             externalId: lastReturned.id,
           }
-          : undefined;
+        : undefined;
     const tracking = provider.channelInteractionWebhooks
       ? await this.getInteractionTracking(
-        org.id,
-        integration.id,
-        provider.channelInteractionWebhooks.getInteractionCoverage()
-      )
+          org.id,
+          integration.id,
+          provider.channelInteractionWebhooks.getInteractionCoverage()
+        )
       : undefined;
 
     return {
@@ -1225,15 +1225,15 @@ export class IntegrationService {
       hasMore,
       ...(hasMore && cursorForNext
         ? {
-          nextCursor: this.encodeRecentFollowerCursor({
-            organizationId: org.id,
-            integrationId: integration.id,
-            sinceDays,
-            withoutOutboundSinceFollow,
-            followedAt: cursorForNext.followedAt,
-            externalId: cursorForNext.externalId,
-          }),
-        }
+            nextCursor: this.encodeRecentFollowerCursor({
+              organizationId: org.id,
+              integrationId: integration.id,
+              sinceDays,
+              withoutOutboundSinceFollow,
+              followedAt: cursorForNext.followedAt,
+              externalId: cursorForNext.externalId,
+            }),
+          }
         : {}),
       ...(tracking ? { tracking } : {}),
     };
@@ -1254,12 +1254,12 @@ export class IntegrationService {
       const resolvedExternalId = externalId
         ? externalId
         : username
-          ? await this._channelInteractionRepository.findMemberExternalIdByUsername(
+        ? await this._channelInteractionRepository.findMemberExternalIdByUsername(
             org.id,
             integrationId,
             username
           )
-          : null;
+        : null;
       if (!resolvedExternalId) {
         throw new HttpException('Follower was not found', HttpStatus.NOT_FOUND);
       }
@@ -1270,8 +1270,8 @@ export class IntegrationService {
         actor && 'userId' in actor
           ? actor.userId
           : actor && 'id' in actor
-            ? actor.id
-            : undefined
+          ? actor.id
+          : undefined
       );
       return this.mapFollowerMemberDetails(details, provider);
     } catch (error) {
@@ -1332,12 +1332,12 @@ export class IntegrationService {
     const resolvedExternalId = externalId
       ? externalId
       : username
-        ? await this._channelInteractionRepository.findMemberExternalIdByUsername(
+      ? await this._channelInteractionRepository.findMemberExternalIdByUsername(
           org.id,
           integrationId,
           username
         )
-        : null;
+      : null;
 
     if (!resolvedExternalId) {
       throw new HttpException('Follower was not found', HttpStatus.NOT_FOUND);
@@ -1484,8 +1484,8 @@ export class IntegrationService {
       snapshot != null
         ? ('snapshot' as const)
         : listTotal != null
-          ? ('list' as const)
-          : null;
+        ? ('list' as const)
+        : null;
 
     return {
       total,
@@ -2190,12 +2190,12 @@ export class IntegrationService {
     const tracking =
       provider.channelInteractionWebhooks && coverage.length
         ? this.getInteractionTrackingMetadata(
-          details.tracking.followerSync,
-          details.tracking.subscriptions,
-          coverage,
-          undefined,
-          { rankingAvailability: false }
-        )
+            details.tracking.followerSync,
+            details.tracking.subscriptions,
+            coverage,
+            undefined,
+            { rankingAvailability: false }
+          )
         : this.getUnsupportedTrackingMetadata(coverage);
 
     return {
@@ -2286,9 +2286,9 @@ export class IntegrationService {
         : {}),
       ...(member.weFollowedAt
         ? {
-          weFollowedAt: member.weFollowedAt.toISOString(),
-          isFollowed: true,
-        }
+            weFollowedAt: member.weFollowedAt.toISOString(),
+            isFollowed: true,
+          }
         : {}),
       ...(member.accountCreatedAt
         ? { accountCreatedAt: member.accountCreatedAt.toISOString() }
@@ -2300,7 +2300,7 @@ export class IntegrationService {
         ? { likesCount: member.likesCount }
         : {}),
       ...(Number.isSafeInteger(member.inboundInteractionCount) &&
-        member.inboundInteractionCount! >= 0
+      member.inboundInteractionCount! >= 0
         ? { interactionCount: member.inboundInteractionCount }
         : {}),
       ...(member.lastInboundAt
@@ -2366,11 +2366,11 @@ export class IntegrationService {
         ? { isBot: member?.isBot ?? null }
         : {}),
       ...(member?.botConfidence === null ||
-        Number.isFinite(member?.botConfidence)
+      Number.isFinite(member?.botConfidence)
         ? { botConfidence: member?.botConfidence ?? null }
         : {}),
       ...(member?.botFormulaVersion === null ||
-        Number.isSafeInteger(member?.botFormulaVersion)
+      Number.isSafeInteger(member?.botFormulaVersion)
         ? { botFormulaVersion: member?.botFormulaVersion ?? null }
         : {}),
       ...(member?.botGradedAt == null
@@ -2378,11 +2378,11 @@ export class IntegrationService {
           ? { botGradedAt: null }
           : {}
         : {
-          botGradedAt:
-            member.botGradedAt instanceof Date
-              ? member.botGradedAt.toISOString()
-              : String(member.botGradedAt),
-        }),
+            botGradedAt:
+              member.botGradedAt instanceof Date
+                ? member.botGradedAt.toISOString()
+                : String(member.botGradedAt),
+          }),
     };
   }
 
@@ -2624,16 +2624,16 @@ export class IntegrationService {
         storedTriage ??
         (strategy
           ? getStrategyRelationshipTriage(
-            {
-              effortScore: snapshot.effortScore,
-              reciprocationScore: snapshot.reciprocationScore,
-            },
-            strategy.getScoringProfile()
-          )
+              {
+                effortScore: snapshot.effortScore,
+                reciprocationScore: snapshot.reciprocationScore,
+              },
+              strategy.getScoringProfile()
+            )
           : getRelationshipTriage(
-            snapshot.effortScore,
-            snapshot.reciprocationScore
-          )),
+              snapshot.effortScore,
+              snapshot.reciprocationScore
+            )),
       formulaVersion: snapshot.formulaVersion,
       ...(strategy ? { strategyId: strategy.id } : {}),
       ...(Number.isSafeInteger(snapshot.relationshipStrategyVersion)
@@ -2835,12 +2835,12 @@ export class IntegrationService {
     const window = query.window!;
     const cursor = query.cursor
       ? this.decodeRankedFollowerCursor(
-        query.cursor,
-        organizationId,
-        integration.id,
-        window,
-        direction
-      )
+          query.cursor,
+          organizationId,
+          integration.id,
+          window,
+          direction
+        )
       : undefined;
     const ranked = await this._channelInteractionRepository.getRankedFollowers({
       organizationId,
@@ -2911,9 +2911,9 @@ export class IntegrationService {
           : {}),
         ...(row.audienceMember.accountCreatedAt
           ? {
-            accountCreatedAt:
-              row.audienceMember.accountCreatedAt.toISOString(),
-          }
+              accountCreatedAt:
+                row.audienceMember.accountCreatedAt.toISOString(),
+            }
           : {}),
         interactionCount: row.interactionCount,
         interactionScore: row.interactionScore,
@@ -2941,22 +2941,22 @@ export class IntegrationService {
       hasMore: ranked.hasMore,
       ...(ranked.hasMore && last
         ? {
-          nextCursor: this.encodeRankedFollowerCursor({
-            organizationId,
-            integrationId: integration.id,
-            window,
-            direction,
-            generation: ranked.rollup.activeGeneration,
-            search: query.search,
-            triage: query.triage,
-            listId: query.listId,
-            isBot: query.isBot,
-            interactionCount: last.interactionCount!,
-            interactionScore: last.interactionScore!,
-            lastInteractionAt: last.lastInteractionAt || null,
-            externalId: last.id,
-          }),
-        }
+            nextCursor: this.encodeRankedFollowerCursor({
+              organizationId,
+              integrationId: integration.id,
+              window,
+              direction,
+              generation: ranked.rollup.activeGeneration,
+              search: query.search,
+              triage: query.triage,
+              listId: query.listId,
+              isBot: query.isBot,
+              interactionCount: last.interactionCount!,
+              interactionScore: last.interactionScore!,
+              lastInteractionAt: last.lastInteractionAt || null,
+              externalId: last.id,
+            }),
+          }
         : {}),
       window,
       tracking,
@@ -2972,12 +2972,12 @@ export class IntegrationService {
     const direction = query.direction ?? 'desc';
     const cursor = query.cursor
       ? this.decodeLeadAudienceCursor(
-        query.cursor,
-        organizationId,
-        integration.id,
-        direction,
-        query.search
-      )
+          query.cursor,
+          organizationId,
+          integration.id,
+          direction,
+          query.search
+        )
       : undefined;
     const ranked = await this._channelInteractionRepository.getAudienceLeads({
       organizationId,
@@ -3009,20 +3009,20 @@ export class IntegrationService {
       hasMore: ranked.hasMore,
       ...(ranked.hasMore && last
         ? {
-          nextCursor: this.encodeLeadAudienceCursor({
-            organizationId,
-            integrationId: integration.id,
-            direction,
-            search: query.search,
-            audience: 'lead',
-            leadFitScore: last.leadFitScore ?? null,
-            leadBridgeScore: last.leadBridgeScore ?? null,
-            lastInboundAt: last.lastInboundAt
-              ? last.lastInboundAt.toISOString()
-              : null,
-            externalId: last.externalId,
-          }),
-        }
+            nextCursor: this.encodeLeadAudienceCursor({
+              organizationId,
+              integrationId: integration.id,
+              direction,
+              search: query.search,
+              audience: 'lead',
+              leadFitScore: last.leadFitScore ?? null,
+              leadBridgeScore: last.leadBridgeScore ?? null,
+              lastInboundAt: last.lastInboundAt
+                ? last.lastInboundAt.toISOString()
+                : null,
+              externalId: last.externalId,
+            }),
+          }
         : {}),
     };
   }
@@ -3036,12 +3036,12 @@ export class IntegrationService {
     const direction = query.direction ?? 'desc';
     const cursor = query.cursor
       ? this.decodeFollowedAudienceCursor(
-        query.cursor,
-        organizationId,
-        integration.id,
-        direction,
-        query.search
-      )
+          query.cursor,
+          organizationId,
+          integration.id,
+          direction,
+          query.search
+        )
       : undefined;
     const ranked = await this._channelInteractionRepository.getAudienceFollowed(
       {
@@ -3062,16 +3062,16 @@ export class IntegrationService {
       hasMore: ranked.hasMore,
       ...(ranked.hasMore && last?.weFollowedAt
         ? {
-          nextCursor: this.encodeFollowedAudienceCursor({
-            organizationId,
-            integrationId: integration.id,
-            direction,
-            search: query.search,
-            audience: 'followed',
-            weFollowedAt: last.weFollowedAt.toISOString(),
-            externalId: last.externalId,
-          }),
-        }
+            nextCursor: this.encodeFollowedAudienceCursor({
+              organizationId,
+              integrationId: integration.id,
+              direction,
+              search: query.search,
+              audience: 'followed',
+              weFollowedAt: last.weFollowedAt.toISOString(),
+              externalId: last.externalId,
+            }),
+          }
         : {}),
     };
   }
@@ -3085,12 +3085,12 @@ export class IntegrationService {
     const direction = query.direction ?? 'desc';
     const cursor = query.cursor
       ? this.decodeUnfollowedAudienceCursor(
-        query.cursor,
-        organizationId,
-        integration.id,
-        direction,
-        query.search
-      )
+          query.cursor,
+          organizationId,
+          integration.id,
+          direction,
+          query.search
+        )
       : undefined;
     const ranked =
       await this._channelInteractionRepository.getAudienceUnfollowed({
@@ -3110,16 +3110,16 @@ export class IntegrationService {
       hasMore: ranked.hasMore,
       ...(ranked.hasMore && last?.weFollowedAt
         ? {
-          nextCursor: this.encodeUnfollowedAudienceCursor({
-            organizationId,
-            integrationId: integration.id,
-            direction,
-            search: query.search,
-            audience: 'unfollowed',
-            weFollowedAt: last.weFollowedAt.toISOString(),
-            externalId: last.externalId,
-          }),
-        }
+            nextCursor: this.encodeUnfollowedAudienceCursor({
+              organizationId,
+              integrationId: integration.id,
+              direction,
+              search: query.search,
+              audience: 'unfollowed',
+              weFollowedAt: last.weFollowedAt.toISOString(),
+              externalId: last.externalId,
+            }),
+          }
         : {}),
     };
   }
@@ -3139,19 +3139,19 @@ export class IntegrationService {
     }
     const cursor = query.cursor
       ? this.decodeConvertedAudienceCursor(
-        query.cursor,
-        organizationId,
-        integration.id,
-        direction,
-        query.search
-      )
+          query.cursor,
+          organizationId,
+          integration.id,
+          direction,
+          query.search
+        )
       : undefined;
     const actorExternalIds = query.search
       ? await this._channelInteractionRepository.listAudienceMemberExternalIdsMatchingSearch(
-        organizationId,
-        integration.id,
-        query.search
-      )
+          organizationId,
+          integration.id,
+          query.search
+        )
       : undefined;
     if (query.search && !actorExternalIds?.length) {
       return { items: [], hasMore: false };
@@ -3181,10 +3181,10 @@ export class IntegrationService {
         ...this.mapAudienceMemberProfile(member),
         ...(conversion
           ? {
-            lastConvertedAt: conversion.lastConvertedAt.toISOString(),
-            latestConversionType: conversion.latestConversionType,
-            conversionCount: conversion.conversionCount,
-          }
+              lastConvertedAt: conversion.lastConvertedAt.toISOString(),
+              latestConversionType: conversion.latestConversionType,
+              conversionCount: conversion.conversionCount,
+            }
           : {}),
       };
     });
@@ -3194,16 +3194,16 @@ export class IntegrationService {
       hasMore: ranked.hasMore,
       ...(ranked.hasMore && last
         ? {
-          nextCursor: this.encodeConvertedAudienceCursor({
-            organizationId,
-            integrationId: integration.id,
-            direction,
-            search: query.search,
-            audience: 'converted',
-            lastConvertedAt: last.lastConvertedAt.toISOString(),
-            externalId: last.externalId,
-          }),
-        }
+            nextCursor: this.encodeConvertedAudienceCursor({
+              organizationId,
+              integrationId: integration.id,
+              direction,
+              search: query.search,
+              audience: 'converted',
+              lastConvertedAt: last.lastConvertedAt.toISOString(),
+              externalId: last.externalId,
+            }),
+          }
         : {}),
     };
   }
@@ -3221,12 +3221,12 @@ export class IntegrationService {
     const direction = query.direction ?? 'asc';
     const cursor = query.cursor
       ? this.decodeCultivateAudienceCursor(
-        query.cursor,
-        organizationId,
-        integration.id,
-        direction,
-        query.search
-      )
+          query.cursor,
+          organizationId,
+          integration.id,
+          direction,
+          query.search
+        )
       : undefined;
     const ranked =
       await this._channelInteractionRepository.getAudienceCultivate({
@@ -3240,12 +3240,12 @@ export class IntegrationService {
         limit: query.limit,
         ...(cursor
           ? {
-            hour: cursor.hour,
-            cursor: {
-              finalRank: cursor.finalRank,
-              externalId: cursor.externalId,
-            },
-          }
+              hour: cursor.hour,
+              cursor: {
+                finalRank: cursor.finalRank,
+                externalId: cursor.externalId,
+              },
+            }
           : {}),
         ...(query.search ? { search: query.search } : {}),
       });
@@ -3262,17 +3262,17 @@ export class IntegrationService {
       hasMore: ranked.hasMore,
       ...(ranked.hasMore && last && ranked.hour
         ? {
-          nextCursor: this.encodeCultivateAudienceCursor({
-            organizationId,
-            integrationId: integration.id,
-            direction,
-            search: query.search,
-            audience: 'cultivate',
-            hour: ranked.hour,
-            finalRank: last.finalRank,
-            externalId: last.externalId,
-          }),
-        }
+            nextCursor: this.encodeCultivateAudienceCursor({
+              organizationId,
+              integrationId: integration.id,
+              direction,
+              search: query.search,
+              audience: 'cultivate',
+              hour: ranked.hour,
+              finalRank: last.finalRank,
+              externalId: last.externalId,
+            }),
+          }
         : {}),
     };
     return this.enrichFollowerPageWithInteractionMetrics(
@@ -3297,12 +3297,12 @@ export class IntegrationService {
     const direction = query.direction ?? 'asc';
     const cursor = query.cursor
       ? this.decodeHotAudienceCursor(
-        query.cursor,
-        organizationId,
-        integration.id,
-        direction,
-        query.search
-      )
+          query.cursor,
+          organizationId,
+          integration.id,
+          direction,
+          query.search
+        )
       : undefined;
     const ranked = await this._channelInteractionRepository.getAudienceHot({
       organizationId,
@@ -3315,12 +3315,12 @@ export class IntegrationService {
       limit: query.limit,
       ...(cursor
         ? {
-          hour: cursor.hour,
-          cursor: {
-            finalRank: cursor.finalRank,
-            externalId: cursor.externalId,
-          },
-        }
+            hour: cursor.hour,
+            cursor: {
+              finalRank: cursor.finalRank,
+              externalId: cursor.externalId,
+            },
+          }
         : {}),
       ...(query.search ? { search: query.search } : {}),
     });
@@ -3338,17 +3338,17 @@ export class IntegrationService {
       hasMore: ranked.hasMore,
       ...(ranked.hasMore && last && ranked.hour
         ? {
-          nextCursor: this.encodeHotAudienceCursor({
-            organizationId,
-            integrationId: integration.id,
-            direction,
-            search: query.search,
-            audience: 'hot',
-            hour: ranked.hour,
-            finalRank: last.finalRank,
-            externalId: last.externalId,
-          }),
-        }
+            nextCursor: this.encodeHotAudienceCursor({
+              organizationId,
+              integrationId: integration.id,
+              direction,
+              search: query.search,
+              audience: 'hot',
+              hour: ranked.hour,
+              finalRank: last.finalRank,
+              externalId: last.externalId,
+            }),
+          }
         : {}),
     };
     return this.enrichFollowerPageWithInteractionMetrics(
@@ -3403,8 +3403,8 @@ export class IntegrationService {
         ...(bridge.bridgeMember?.username
           ? { username: bridge.bridgeMember.username }
           : bridge.bridgeMember?.name
-            ? { username: bridge.bridgeMember.name }
-            : {}),
+          ? { username: bridge.bridgeMember.name }
+          : {}),
         ...(bridge.bridgeRelationshipGrade != null
           ? { grade: bridge.bridgeRelationshipGrade }
           : {}),
@@ -3422,12 +3422,12 @@ export class IntegrationService {
     const direction = query.direction ?? 'desc';
     const cursor = query.cursor
       ? this.decodeIgnoredAudienceCursor(
-        query.cursor,
-        organizationId,
-        integration.id,
-        direction,
-        query.search
-      )
+          query.cursor,
+          organizationId,
+          integration.id,
+          direction,
+          query.search
+        )
       : undefined;
     const ranked =
       await this._channelInteractionRepository.getIgnoredAudienceFollowers({
@@ -3449,16 +3449,16 @@ export class IntegrationService {
       hasMore: ranked.hasMore,
       ...(ranked.hasMore && last?.ignoredAt
         ? {
-          nextCursor: this.encodeIgnoredAudienceCursor({
-            organizationId,
-            integrationId: integration.id,
-            direction,
-            search: query.search,
-            audience: 'ignored',
-            ignoredAt: last.ignoredAt.toISOString(),
-            externalId: last.externalId,
-          }),
-        }
+            nextCursor: this.encodeIgnoredAudienceCursor({
+              organizationId,
+              integrationId: integration.id,
+              direction,
+              search: query.search,
+              audience: 'ignored',
+              ignoredAt: last.ignoredAt.toISOString(),
+              externalId: last.externalId,
+            }),
+          }
         : {}),
     };
     return this.enrichFollowerPageWithInteractionMetrics(
@@ -3485,17 +3485,17 @@ export class IntegrationService {
     const sortField = getAudienceFollowerSortField(sortKey);
     const cursor = query.cursor
       ? this.decodeAudienceFollowerCursor(
-        query.cursor,
-        organizationId,
-        integration.id,
-        sortKey,
-        direction,
-        search,
-        query.triage,
-        sortField,
-        query.listId,
-        query.isBot
-      )
+          query.cursor,
+          organizationId,
+          integration.id,
+          sortKey,
+          direction,
+          search,
+          query.triage,
+          sortField,
+          query.listId,
+          query.isBot
+        )
       : undefined;
     const ranked =
       await this._channelInteractionRepository.getAudienceFollowers({
@@ -3519,20 +3519,20 @@ export class IntegrationService {
       hasMore: ranked.hasMore,
       ...(ranked.hasMore && last
         ? {
-          nextCursor: this.encodeAudienceFollowerCursor({
-            organizationId,
-            integrationId: integration.id,
-            sort: sortKey,
-            direction,
-            search,
-            triage: query.triage,
-            listId: query.listId,
-            isBot: query.isBot,
-            sortField,
-            sortValue: this.audienceCursorSortValue(last, sortField),
-            externalId: last.externalId,
-          }),
-        }
+            nextCursor: this.encodeAudienceFollowerCursor({
+              organizationId,
+              integrationId: integration.id,
+              sort: sortKey,
+              direction,
+              search,
+              triage: query.triage,
+              listId: query.listId,
+              isBot: query.isBot,
+              sortField,
+              sortValue: this.audienceCursorSortValue(last, sortField),
+              externalId: last.externalId,
+            }),
+          }
         : {}),
     };
 
@@ -3555,11 +3555,11 @@ export class IntegrationService {
     const direction = query.direction ?? sort.defaultDirection;
     const cursor = query.cursor
       ? this.decodeNoteCountFollowerCursor(
-        query.cursor,
-        organizationId,
-        integration.id,
-        direction
-      )
+          query.cursor,
+          organizationId,
+          integration.id,
+          direction
+        )
       : undefined;
     const ranked =
       await this._channelInteractionRepository.getFollowersByNoteCount({
@@ -3583,18 +3583,18 @@ export class IntegrationService {
       hasMore: ranked.hasMore,
       ...(ranked.hasMore && last
         ? {
-          nextCursor: this.encodeNoteCountFollowerCursor({
-            organizationId,
-            integrationId: integration.id,
-            direction,
-            search: query.search,
-            triage: query.triage,
-            listId: query.listId,
-            isBot: query.isBot,
-            noteCount: last.noteCount!,
-            externalId: last.id,
-          }),
-        }
+            nextCursor: this.encodeNoteCountFollowerCursor({
+              organizationId,
+              integrationId: integration.id,
+              direction,
+              search: query.search,
+              triage: query.triage,
+              listId: query.listId,
+              isBot: query.isBot,
+              noteCount: last.noteCount!,
+              externalId: last.id,
+            }),
+          }
         : {}),
     };
   }
@@ -3609,11 +3609,11 @@ export class IntegrationService {
     const direction = query.direction ?? sort.defaultDirection;
     const cursor = query.cursor
       ? this.decodeLikesCountFollowerCursor(
-        query.cursor,
-        organizationId,
-        integration.id,
-        direction
-      )
+          query.cursor,
+          organizationId,
+          integration.id,
+          direction
+        )
       : undefined;
     const ranked =
       await this._channelInteractionRepository.getFollowersByLikesCount({
@@ -3637,18 +3637,18 @@ export class IntegrationService {
       hasMore: ranked.hasMore,
       ...(ranked.hasMore && last
         ? {
-          nextCursor: this.encodeLikesCountFollowerCursor({
-            organizationId,
-            integrationId: integration.id,
-            direction,
-            search: query.search,
-            triage: query.triage,
-            listId: query.listId,
-            isBot: query.isBot,
-            likesCount: last.likesCount!,
-            externalId: last.id,
-          }),
-        }
+            nextCursor: this.encodeLikesCountFollowerCursor({
+              organizationId,
+              integrationId: integration.id,
+              direction,
+              search: query.search,
+              triage: query.triage,
+              listId: query.listId,
+              isBot: query.isBot,
+              likesCount: last.likesCount!,
+              externalId: last.id,
+            }),
+          }
         : {}),
     };
   }
@@ -3663,12 +3663,12 @@ export class IntegrationService {
     const direction = query.direction ?? sort.defaultDirection;
     const cursor = query.cursor
       ? this.decodeGradeFollowerCursor(
-        query.cursor,
-        'follower-relationship-grade:v1:',
-        organizationId,
-        integration.id,
-        direction
-      )
+          query.cursor,
+          'follower-relationship-grade:v1:',
+          organizationId,
+          integration.id,
+          direction
+        )
       : undefined;
     const ranked =
       await this._channelInteractionRepository.getFollowersByRelationshipGrade({
@@ -3691,21 +3691,21 @@ export class IntegrationService {
       hasMore: ranked.hasMore,
       ...(ranked.hasMore && last
         ? {
-          nextCursor: this.encodeGradeFollowerCursor(
-            'follower-relationship-grade:v1:',
-            {
-              organizationId,
-              integrationId: integration.id,
-              direction,
-              search: query.search,
-              triage: query.triage,
-              listId: query.listId,
-              isBot: query.isBot,
-              grade: last.relationshipGrade ?? null,
-              externalId: last.externalId,
-            }
-          ),
-        }
+            nextCursor: this.encodeGradeFollowerCursor(
+              'follower-relationship-grade:v1:',
+              {
+                organizationId,
+                integrationId: integration.id,
+                direction,
+                search: query.search,
+                triage: query.triage,
+                listId: query.listId,
+                isBot: query.isBot,
+                grade: last.relationshipGrade ?? null,
+                externalId: last.externalId,
+              }
+            ),
+          }
         : {}),
     };
   }
@@ -3720,12 +3720,12 @@ export class IntegrationService {
     const direction = query.direction ?? sort.defaultDirection;
     const cursor = query.cursor
       ? this.decodeGradeFollowerCursor(
-        query.cursor,
-        'follower-bot-grade:v1:',
-        organizationId,
-        integration.id,
-        direction
-      )
+          query.cursor,
+          'follower-bot-grade:v1:',
+          organizationId,
+          integration.id,
+          direction
+        )
       : undefined;
     const ranked =
       await this._channelInteractionRepository.getFollowersByBotGrade({
@@ -3748,21 +3748,21 @@ export class IntegrationService {
       hasMore: ranked.hasMore,
       ...(ranked.hasMore && last
         ? {
-          nextCursor: this.encodeGradeFollowerCursor(
-            'follower-bot-grade:v1:',
-            {
-              organizationId,
-              integrationId: integration.id,
-              direction,
-              search: query.search,
-              triage: query.triage,
-              listId: query.listId,
-              isBot: query.isBot,
-              grade: last.botGrade ?? null,
-              externalId: last.externalId,
-            }
-          ),
-        }
+            nextCursor: this.encodeGradeFollowerCursor(
+              'follower-bot-grade:v1:',
+              {
+                organizationId,
+                integrationId: integration.id,
+                direction,
+                search: query.search,
+                triage: query.triage,
+                listId: query.listId,
+                isBot: query.isBot,
+                grade: last.botGrade ?? null,
+                externalId: last.externalId,
+              }
+            ),
+          }
         : {}),
     };
   }
@@ -3781,14 +3781,14 @@ export class IntegrationService {
         : ('relationshipNetGap' as const);
     const cursor = query.cursor
       ? this.decodeProjectedFollowerCursor(
-        query.cursor,
-        organizationId,
-        integration.id,
-        sort.key,
-        direction,
-        query.search,
-        query.triage
-      )
+          query.cursor,
+          organizationId,
+          integration.id,
+          sort.key,
+          direction,
+          query.search,
+          query.triage
+        )
       : undefined;
     const ranked =
       await this._channelInteractionRepository.getFollowersByProjectedField({
@@ -3813,19 +3813,19 @@ export class IntegrationService {
       hasMore: ranked.hasMore,
       ...(ranked.hasMore && last
         ? {
-          nextCursor: this.encodeProjectedFollowerCursor({
-            organizationId,
-            integrationId: integration.id,
-            sort: sort.key,
-            direction,
-            search: query.search,
-            triage: query.triage,
-            listId: query.listId,
-            isBot: query.isBot,
-            value,
-            externalId: last.externalId,
-          }),
-        }
+            nextCursor: this.encodeProjectedFollowerCursor({
+              organizationId,
+              integrationId: integration.id,
+              sort: sort.key,
+              direction,
+              search: query.search,
+              triage: query.triage,
+              listId: query.listId,
+              isBot: query.isBot,
+              value,
+              externalId: last.externalId,
+            }),
+          }
         : {}),
     };
   }
@@ -3840,12 +3840,12 @@ export class IntegrationService {
     const direction = query.direction ?? sort.defaultDirection;
     const cursor = query.cursor
       ? this.decodeGradeFollowerCursor(
-        query.cursor,
-        'follower-my-grade:v1:',
-        organizationId,
-        integration.id,
-        direction
-      )
+          query.cursor,
+          'follower-my-grade:v1:',
+          organizationId,
+          integration.id,
+          direction
+        )
       : undefined;
     const ranked =
       await this._channelInteractionRepository.getFollowersByMyGrade({
@@ -3868,21 +3868,21 @@ export class IntegrationService {
       hasMore: ranked.hasMore,
       ...(ranked.hasMore && last
         ? {
-          nextCursor: this.encodeGradeFollowerCursor(
-            'follower-my-grade:v1:',
-            {
-              organizationId,
-              integrationId: integration.id,
-              direction,
-              search: query.search,
-              triage: query.triage,
-              listId: query.listId,
-              isBot: query.isBot,
-              grade: last.personalGrades[0]?.grade ?? null,
-              externalId: last.externalId,
-            }
-          ),
-        }
+            nextCursor: this.encodeGradeFollowerCursor(
+              'follower-my-grade:v1:',
+              {
+                organizationId,
+                integrationId: integration.id,
+                direction,
+                search: query.search,
+                triage: query.triage,
+                listId: query.listId,
+                isBot: query.isBot,
+                grade: last.personalGrades[0]?.grade ?? null,
+                externalId: last.externalId,
+              }
+            ),
+          }
         : {}),
     };
   }
@@ -3909,10 +3909,10 @@ export class IntegrationService {
   private getInteractionTrackingMetadata(
     followerSync:
       | {
-        activeGeneration: string | null;
-        status: ChannelFollowerSyncStatus;
-        completedAt: Date | null;
-      }
+          activeGeneration: string | null;
+          status: ChannelFollowerSyncStatus;
+          completedAt: Date | null;
+        }
       | null
       | undefined,
     subscriptions: {
@@ -3953,27 +3953,27 @@ export class IntegrationService {
       hasError && hasActive
         ? 'partial'
         : hasError
-          ? 'error'
-          : states.includes(ChannelInteractionTrackingState.PROVISIONING) ||
-            !states.length
-            ? 'provisioning'
-            : states.includes(ChannelInteractionTrackingState.UNCONFIGURED)
-              ? 'unconfigured'
-              : states.includes(ChannelInteractionTrackingState.PARTIAL) ||
-                this.hasLimitedInteractionCoverage(coverage)
-                ? 'partial'
-                : 'active';
+        ? 'error'
+        : states.includes(ChannelInteractionTrackingState.PROVISIONING) ||
+          !states.length
+        ? 'provisioning'
+        : states.includes(ChannelInteractionTrackingState.UNCONFIGURED)
+        ? 'unconfigured'
+        : states.includes(ChannelInteractionTrackingState.PARTIAL) ||
+          this.hasLimitedInteractionCoverage(coverage)
+        ? 'partial'
+        : 'active';
     const availability = options?.rankingAvailability
       ? followerSync?.activeGeneration && followerSync.completedAt && computedAt
         ? 'ready'
         : state === 'error' || state === 'unconfigured'
-          ? 'unavailable'
-          : 'provisioning'
-      : state === 'error' || state === 'unconfigured'
         ? 'unavailable'
-        : state === 'provisioning'
-          ? 'provisioning'
-          : undefined;
+        : 'provisioning'
+      : state === 'error' || state === 'unconfigured'
+      ? 'unavailable'
+      : state === 'provisioning'
+      ? 'provisioning'
+      : undefined;
     const trackingStartedAt = subscriptions
       .map((subscription) => subscription.trackingStartedAt)
       .filter((startedAt): startedAt is Date => !!startedAt)
@@ -3985,7 +3985,7 @@ export class IntegrationService {
       failedSubscriptions.length > 1
         ? `${failedSubscriptions.length} tracking subscriptions failed. See the subscriptions list below for details.`
         : failedSubscriptions[0]?.reason ||
-        failedSubscription?.failureReason?.slice(0, 160);
+          failedSubscription?.failureReason?.slice(0, 160);
     return {
       state,
       ...(availability ? { availability } : {}),
@@ -5000,13 +5000,13 @@ export class IntegrationService {
           ...(counts?.ignoredAt ? { isIgnored: true } : {}),
           ...(metric
             ? {
-              interactionScore: metric.interactionScore,
-              ...(metric.lastInteractionAt
-                ? {
-                  lastInteractionAt: metric.lastInteractionAt.toISOString(),
-                }
-                : {}),
-            }
+                interactionScore: metric.interactionScore,
+                ...(metric.lastInteractionAt
+                  ? {
+                      lastInteractionAt: metric.lastInteractionAt.toISOString(),
+                    }
+                  : {}),
+              }
             : {}),
         });
       });
@@ -5093,7 +5093,7 @@ export class IntegrationService {
         items: Array.isArray(page?.items) ? page.items : [],
         hasMore: !!page?.hasMore,
         ...(typeof page?.nextCursor === 'string' &&
-          !this.isHttpUrl(page.nextCursor)
+        !this.isHttpUrl(page.nextCursor)
           ? { nextCursor: page.nextCursor }
           : {}),
       };
@@ -5272,11 +5272,11 @@ export class IntegrationService {
         ? { total: page.total }
         : {}),
       ...(typeof page?.nextCursor === 'string' &&
-        !this.isHttpUrl(page.nextCursor)
+      !this.isHttpUrl(page.nextCursor)
         ? { nextCursor: page.nextCursor }
         : {}),
       ...(typeof page?.previousCursor === 'string' &&
-        !this.isHttpUrl(page.previousCursor)
+      !this.isHttpUrl(page.previousCursor)
         ? { previousCursor: page.previousCursor }
         : {}),
       hasMore: page?.hasMore === true,
@@ -5317,11 +5317,11 @@ export class IntegrationService {
         ? { accountCreatedAt: follower.accountCreatedAt }
         : {}),
       ...(Number.isSafeInteger(follower.interactionCount) &&
-        follower.interactionCount >= 0
+      follower.interactionCount >= 0
         ? { interactionCount: follower.interactionCount }
         : {}),
       ...(Number.isSafeInteger(follower.interactionScore) &&
-        follower.interactionScore >= 0
+      follower.interactionScore >= 0
         ? { interactionScore: follower.interactionScore }
         : {}),
       ...(typeof follower.lastInteractionAt === 'string'
@@ -5340,22 +5340,22 @@ export class IntegrationService {
         ? { likesCount: follower.likesCount }
         : {}),
       ...(follower.relationshipGrade === null ||
-        Number.isFinite(follower.relationshipGrade)
+      Number.isFinite(follower.relationshipGrade)
         ? { relationshipGrade: follower.relationshipGrade }
         : {}),
       ...(follower.myGrade === null || Number.isFinite(follower.myGrade)
         ? { myGrade: follower.myGrade }
         : {}),
       ...(follower.adjustedGrade === null ||
-        Number.isFinite(follower.adjustedGrade)
+      Number.isFinite(follower.adjustedGrade)
         ? { adjustedGrade: follower.adjustedGrade }
         : {}),
       ...(follower.effortScore === null ||
-        Number.isSafeInteger(follower.effortScore)
+      Number.isSafeInteger(follower.effortScore)
         ? { effortScore: follower.effortScore }
         : {}),
       ...(follower.reciprocationScore === null ||
-        Number.isSafeInteger(follower.reciprocationScore)
+      Number.isSafeInteger(follower.reciprocationScore)
         ? { reciprocationScore: follower.reciprocationScore }
         : {}),
       ...(follower.netGap === null || Number.isSafeInteger(follower.netGap)
@@ -5365,19 +5365,19 @@ export class IntegrationService {
         ? { effortStars: follower.effortStars }
         : {}),
       ...(follower.reciprocationStars === null ||
-        Number.isFinite(follower.reciprocationStars)
+      Number.isFinite(follower.reciprocationStars)
         ? { reciprocationStars: follower.reciprocationStars }
         : {}),
       ...(follower.relationshipTriage === null ||
-        this.isRelationshipTriage(follower.relationshipTriage)
+      this.isRelationshipTriage(follower.relationshipTriage)
         ? { relationshipTriage: follower.relationshipTriage }
         : {}),
       ...(follower.relationshipFormulaVersion === null ||
-        Number.isSafeInteger(follower.relationshipFormulaVersion)
+      Number.isSafeInteger(follower.relationshipFormulaVersion)
         ? { relationshipFormulaVersion: follower.relationshipFormulaVersion }
         : {}),
       ...(follower.relationshipSnapshotAt === null ||
-        typeof follower.relationshipSnapshotAt === 'string'
+      typeof follower.relationshipSnapshotAt === 'string'
         ? { relationshipSnapshotAt: follower.relationshipSnapshotAt }
         : {}),
       ...(follower.botGrade === null || Number.isSafeInteger(follower.botGrade)
@@ -5387,24 +5387,24 @@ export class IntegrationService {
         ? { isBot: follower.isBot }
         : {}),
       ...(follower.botConfidence === null ||
-        Number.isFinite(follower.botConfidence)
+      Number.isFinite(follower.botConfidence)
         ? { botConfidence: follower.botConfidence }
         : {}),
       ...(follower.botFormulaVersion === null ||
-        Number.isSafeInteger(follower.botFormulaVersion)
+      Number.isSafeInteger(follower.botFormulaVersion)
         ? { botFormulaVersion: follower.botFormulaVersion }
         : {}),
       ...(follower.botGradedAt === null ||
-        typeof follower.botGradedAt === 'string'
+      typeof follower.botGradedAt === 'string'
         ? { botGradedAt: follower.botGradedAt }
         : {}),
       ...(Array.isArray(follower.listIds)
         ? {
-          listIds: follower.listIds.filter(
-            (listId): listId is string =>
-              typeof listId === 'string' && !!listId
-          ),
-        }
+            listIds: follower.listIds.filter(
+              (listId): listId is string =>
+                typeof listId === 'string' && !!listId
+            ),
+          }
         : {}),
       ...(follower.isLead === true ? { isLead: true } : {}),
       ...(follower.isIgnored === true ? { isIgnored: true } : {}),
@@ -5423,11 +5423,11 @@ export class IntegrationService {
         ? { suggestedAction: follower.suggestedAction }
         : {}),
       ...(follower.leadBridgeScore === null ||
-        Number.isFinite(follower.leadBridgeScore)
+      Number.isFinite(follower.leadBridgeScore)
         ? { leadBridgeScore: follower.leadBridgeScore }
         : {}),
       ...(follower.leadFitScore === null ||
-        Number.isFinite(follower.leadFitScore)
+      Number.isFinite(follower.leadFitScore)
         ? { leadFitScore: follower.leadFitScore }
         : {}),
       ...(typeof follower.leadFitReason === 'string'
@@ -5435,23 +5435,23 @@ export class IntegrationService {
         : {}),
       ...(Array.isArray(follower.leadBridges)
         ? {
-          leadBridges: follower.leadBridges
-            .filter(
-              (bridge) =>
-                bridge &&
-                typeof bridge.externalId === 'string' &&
-                !!bridge.externalId
-            )
-            .map((bridge) => ({
-              externalId: bridge.externalId,
-              ...(typeof bridge.username === 'string'
-                ? { username: bridge.username }
-                : {}),
-              ...(Number.isFinite(bridge.grade)
-                ? { grade: bridge.grade }
-                : {}),
-            })),
-        }
+            leadBridges: follower.leadBridges
+              .filter(
+                (bridge) =>
+                  bridge &&
+                  typeof bridge.externalId === 'string' &&
+                  !!bridge.externalId
+              )
+              .map((bridge) => ({
+                externalId: bridge.externalId,
+                ...(typeof bridge.username === 'string'
+                  ? { username: bridge.username }
+                  : {}),
+                ...(Number.isFinite(bridge.grade)
+                  ? { grade: bridge.grade }
+                  : {}),
+              })),
+          }
         : {}),
     };
   }
@@ -5953,11 +5953,11 @@ export class IntegrationService {
             unreadCount: 0,
             categories: undefined as
               | Partial<
-                Record<
-                  'mention' | 'reply' | 'like' | 'repost' | 'follow',
-                  number
+                  Record<
+                    'mention' | 'reply' | 'like' | 'repost' | 'follow',
+                    number
+                  >
                 >
-              >
               | undefined,
           };
 
@@ -6045,8 +6045,9 @@ export class IntegrationService {
       }
     }
 
-    const cacheKey = `integration:notices:${org.id}:${liveIntegration.id
-      }:${since.toISOString()}`;
+    const cacheKey = `integration:notices:${org.id}:${
+      liveIntegration.id
+    }:${since.toISOString()}`;
     const cached = await ioRedis.get(cacheKey);
     if (cached) {
       return JSON.parse(cached) as ChannelNoticeStatus;

@@ -29,6 +29,10 @@ import {
   GetDashboardAnalyticsPreferencesQueryDto,
   SaveDashboardAnalyticsPreferencesDto,
 } from '@gitroom/nestjs-libraries/dtos/users/dashboard-analytics-preferences.dto';
+import {
+  GetFollowerBoardColumnPreferencesQueryDto,
+  SaveFollowerBoardColumnPreferencesDto,
+} from '@gitroom/nestjs-libraries/dtos/users/follower-board-column-preferences.dto';
 import { DismissAlertDto } from '@gitroom/nestjs-libraries/dtos/users/dismissed-alert.dto';
 import { HttpForbiddenException } from '@gitroom/nestjs-libraries/services/exception.filter';
 import { RealIP } from 'nestjs-real-ip';
@@ -299,6 +303,32 @@ export class UsersController {
     @Body() body: SaveDashboardAnalyticsPreferencesDto
   ) {
     return this._userService.saveDashboardAnalyticsPreferences(
+      user.id,
+      organization.id,
+      body.preferences
+    );
+  }
+
+  @Get('/follower-board-column-preferences')
+  async getFollowerBoardColumnPreferences(
+    @GetUserFromRequest() user: User,
+    @GetOrgFromRequest() organization: Organization,
+    @Query() query: GetFollowerBoardColumnPreferencesQueryDto
+  ) {
+    return this._userService.getFollowerBoardColumnPreferences(
+      user.id,
+      organization.id,
+      query.integrationId
+    );
+  }
+
+  @Post('/follower-board-column-preferences')
+  async saveFollowerBoardColumnPreferences(
+    @GetUserFromRequest() user: User,
+    @GetOrgFromRequest() organization: Organization,
+    @Body() body: SaveFollowerBoardColumnPreferencesDto
+  ) {
+    return this._userService.saveFollowerBoardColumnPreferences(
       user.id,
       organization.id,
       body.preferences

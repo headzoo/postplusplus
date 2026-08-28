@@ -8,6 +8,7 @@ import { AuthService } from '@gitroom/helpers/auth/auth.service';
 import { UserDetailDto } from '@gitroom/nestjs-libraries/dtos/users/user.details.dto';
 import { EmailNotificationsDto } from '@gitroom/nestjs-libraries/dtos/users/email-notifications.dto';
 import { DashboardAnalyticsPreferenceItemDto } from '@gitroom/nestjs-libraries/dtos/users/dashboard-analytics-preferences.dto';
+import { FollowerBoardColumnPreferenceItemDto } from '@gitroom/nestjs-libraries/dtos/users/follower-board-column-preferences.dto';
 import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
 
 @Injectable()
@@ -15,6 +16,7 @@ export class UsersRepository {
   constructor(
     private _user: PrismaRepository<'user'>,
     private _dashboardAnalyticsPreference: PrismaRepository<'dashboardAnalyticsPreference'>,
+    private _followerBoardColumnPreference: PrismaRepository<'followerBoardColumnPreference'>,
     private _userDismissedAlert: PrismaRepository<'userDismissedAlert'>,
     private _integration: PrismaRepository<'integration'>,
     private _transaction: PrismaTransaction
@@ -376,6 +378,93 @@ export class UsersRepository {
     });
 
     return this.getDashboardAnalyticsPreferences(
+      userId,
+      organizationId,
+      integrationIds.length === 1 ? integrationIds[0] : undefined
+    );
+  }
+
+  getFollowerBoardColumnPreferences(
+    userId: string,
+    organizationId: string,
+    integrationId?: string
+  ) {
+    return this._followerBoardColumnPreference.model.followerBoardColumnPreference.findMany(
+      {
+        where: {
+          userId,
+          organizationId,
+          ...(integrationId ? { integrationId } : {}),
+        },
+        select: {
+          integrationId: true,
+          columnKey: true,
+          position: true,
+        },
+        orderBy: [{ integrationId: 'asc' }, { position: 'asc' }],
+      }
+    );
+  }
+
+  async saveFollowerBoardColumnPreferences(
+    userId: string,
+    organizationId: string,
+    preferences: FollowerBoardColumnPreferenceItemDto[]
+  ) {
+    const integrationIds = [
+      ...new Set(preferences.map((preference) => preference.integrationId)),
+    ];
+    if (!integrationIds.length) {
+      return [];
+    }
+
+    const ownedIntegrations =
+      await this._integration.model.integration.findMany({
+        where: {
+          organizationId,
+          deletedAt: null,
+          id: { in: integrationIds },
+        },
+        select: { id: true },
+      });
+    if (ownedIntegrations.length !== integrationIds.length) {
+      throw new BadRequestException('Invalid integration');
+    }
+
+    const seen = new Set<string>();
+    for (const preference of preferences) {
+      const key = `${preference.integrationId}:${preference.columnKey}`;
+      if (seen.has(key)) {
+        throw new BadRequestException('Duplicate column preference');
+      }
+      seen.add(key);
+    }
+
+    await this._transaction.model.$transaction(async (tx) => {
+      await tx.followerBoardColumnPreference.deleteMany({
+        where: {
+          userId,
+          organizationId,
+          integrationId: { in: integrationIds },
+        },
+      });
+
+      if (!preferences.length) {
+        return;
+      }
+
+      await tx.followerBoardColumnPreference.createMany({
+        data: preferences.map((preference) => ({
+          userId,
+          organizationId,
+          integrationId: preference.integrationId,
+          columnKey: preference.columnKey,
+          position: preference.position,
+        })),
+      });
+    });
+
+    return this.getFollowerBoardColumnPreferences(
       userId,
       organizationId,
       integrationIds.length === 1 ? integrationIds[0] : undefined

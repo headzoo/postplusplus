@@ -147,32 +147,32 @@ export const formatFollowerPageContext = (
   },
   strategy: context.strategy
     ? {
-      id: shortenFollowerContextText(context.strategy.id, 80) || '',
-      version: context.strategy.version,
-      summary: shortenFollowerContextText(context.strategy.summary),
-    }
+        id: shortenFollowerContextText(context.strategy.id, 80) || '',
+        version: context.strategy.version,
+        summary: shortenFollowerContextText(context.strategy.summary),
+      }
     : undefined,
   follower: context.follower
     ? {
-      id: shortenFollowerContextText(context.follower.id, 160),
-      username: shortenFollowerContextText(context.follower.username),
-      name: shortenFollowerContextText(context.follower.name),
-    }
+        id: shortenFollowerContextText(context.follower.id, 160),
+        username: shortenFollowerContextText(context.follower.username),
+        name: shortenFollowerContextText(context.follower.name),
+      }
     : undefined,
   category: context.category
     ? {
-      key: context.category.key,
-      label: shortenFollowerContextText(context.category.label, 80),
-      meaning: shortenFollowerContextText(context.category.meaning),
-    }
+        key: context.category.key,
+        label: shortenFollowerContextText(context.category.label, 80),
+        meaning: shortenFollowerContextText(context.category.meaning),
+      }
     : undefined,
   search: shortenFollowerContextText(context.search),
   list: context.list
     ? {
-      id: shortenFollowerContextText(context.list.id, 160) || '',
-      name: shortenFollowerContextText(context.list.name),
-      status: context.list.status,
-    }
+        id: shortenFollowerContextText(context.list.id, 160) || '',
+        name: shortenFollowerContextText(context.list.name),
+        status: context.list.status,
+      }
     : undefined,
   availableLists: context.availableLists
     ?.slice(0, 20)
@@ -183,23 +183,23 @@ export const formatFollowerPageContext = (
     .filter((list) => list.id),
   sort: context.sort
     ? {
-      key: shortenFollowerContextText(context.sort.key, 80) || '',
-      label: shortenFollowerContextText(context.sort.label, 80) || '',
-      scope: context.sort.scope,
-      direction: context.sort.direction,
-      caveat: shortenFollowerContextText(context.sort.caveat),
-    }
+        key: shortenFollowerContextText(context.sort.key, 80) || '',
+        label: shortenFollowerContextText(context.sort.label, 80) || '',
+        scope: context.sort.scope,
+        direction: context.sort.direction,
+        caveat: shortenFollowerContextText(context.sort.caveat),
+      }
     : undefined,
   tracking: context.tracking
     ? {
-      availability: context.tracking.availability,
-      state: shortenFollowerContextText(context.tracking.state, 80),
-      computedAt: shortenFollowerContextText(context.tracking.computedAt, 80),
-      followerSnapshotAt: shortenFollowerContextText(
-        context.tracking.followerSnapshotAt,
-        80
-      ),
-    }
+        availability: context.tracking.availability,
+        state: shortenFollowerContextText(context.tracking.state, 80),
+        computedAt: shortenFollowerContextText(context.tracking.computedAt, 80),
+        followerSnapshotAt: shortenFollowerContextText(
+          context.tracking.followerSnapshotAt,
+          80
+        ),
+      }
     : undefined,
 });
 
@@ -341,7 +341,7 @@ export const getAudienceFollowerSortField = (
 
   return (
     AUDIENCE_FOLLOWER_SORT_FIELDS[
-    sortKey as keyof typeof AUDIENCE_FOLLOWER_SORT_FIELDS
+      sortKey as keyof typeof AUDIENCE_FOLLOWER_SORT_FIELDS
     ] ?? AUDIENCE_FOLLOWER_SORT_FIELDS.recent
   );
 };

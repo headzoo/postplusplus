@@ -19,7 +19,10 @@ import { FollowerListCreateModal } from '@gitroom/frontend/components/followers/
 import { FollowerListAddModal } from '@gitroom/frontend/components/followers/follower.list.add.modal';
 import { FollowerListColorPicker } from '@gitroom/frontend/components/followers/follower.list.color.picker';
 import { FollowerTriageTip } from '@gitroom/frontend/components/followers/follower.triage.tip';
-import { FollowerBoard } from '@gitroom/frontend/components/followers/follower.board';
+import {
+  FollowerBoard,
+  FollowerBoardOrderedColumn,
+} from '@gitroom/frontend/components/followers/follower.board';
 import { FollowerFiltersMenu } from '@gitroom/frontend/components/followers/follower.filters.menu';
 import { FollowerTriageVisibilityMenu } from '@gitroom/frontend/components/followers/follower.triage.visibility.menu';
 import {
@@ -32,7 +35,16 @@ import {
   categoryCount,
   isFollowerSegmentVisible,
 } from '@gitroom/frontend/components/followers/follower.segments';
+import {
+  applyFollowerBoardColumnPreferences,
+  buildFollowerBoardColumnPreferences,
+  columnKeyForList,
+  columnKeyForSegment,
+  reorderVisibleKeys,
+} from '@gitroom/frontend/components/followers/follower.board.layout';
+import { useFollowerBoardColumnPreferences } from '@gitroom/frontend/components/followers/use.follower.board.column.preferences';
 import { useFollowerTriageVisibility } from '@gitroom/frontend/components/followers/use.follower.triage.visibility';
+import { DNDProvider } from '@gitroom/frontend/components/launches/helpers/dnd.provider';
 import { useCopilotFollowerPageProperties } from '@gitroom/frontend/components/followers/use.copilot.follower.page';
 import {
   useDecisionModal,
@@ -88,13 +100,13 @@ const FOLLOWER_VIEW_BY_SLUG: Record<
   {
     triage?: FollowerTriageFilter;
     audience?:
-    | 'lead'
-    | 'followed'
-    | 'unfollowed'
-    | 'ignored'
-    | 'cultivate'
-    | 'hot'
-    | 'converted';
+      | 'lead'
+      | 'followed'
+      | 'unfollowed'
+      | 'ignored'
+      | 'cultivate'
+      | 'hot'
+      | 'converted';
     isBot?: true;
   }
 > = {
@@ -120,13 +132,13 @@ type FollowerFilterOption = {
   slug?: string;
   value?: FollowerTriageFilter;
   audience?:
-  | 'lead'
-  | 'followed'
-  | 'unfollowed'
-  | 'cultivate'
-  | 'ignored'
-  | 'hot'
-  | 'converted';
+    | 'lead'
+    | 'followed'
+    | 'unfollowed'
+    | 'cultivate'
+    | 'ignored'
+    | 'hot'
+    | 'converted';
   isBot?: true;
   key: string;
   defaultLabel: string;
@@ -170,13 +182,13 @@ export type FollowerListPath = {
   slug?: string;
   triage?: FollowerTriageFilter;
   audience?:
-  | 'lead'
-  | 'followed'
-  | 'unfollowed'
-  | 'ignored'
-  | 'cultivate'
-  | 'hot'
-  | 'converted';
+    | 'lead'
+    | 'followed'
+    | 'unfollowed'
+    | 'ignored'
+    | 'cultivate'
+    | 'hot'
+    | 'converted';
   isBot?: true;
 };
 
@@ -306,7 +318,7 @@ export const resolveFollowerStrategyDefaults = ({
 
   const slug =
     strategy.ui.defaultFilter !== 'all' &&
-      FOLLOWER_VIEW_BY_SLUG[strategy.ui.defaultFilter]
+    FOLLOWER_VIEW_BY_SLUG[strategy.ui.defaultFilter]
       ? strategy.ui.defaultFilter
       : undefined;
   // Fit is the lead endpoint's established ordering, rather than a generic sort.
@@ -323,9 +335,9 @@ export const resolveFollowerStrategyDefaults = ({
     slug,
     ...(sortOption
       ? {
-        sort: sortOption.key,
-        direction: sortOption.defaultDirection,
-      }
+          sort: sortOption.key,
+          direction: sortOption.defaultDirection,
+        }
       : {}),
   };
 };
@@ -537,14 +549,14 @@ const TrackingNotice: FC<{
         <p className="text-[13px] text-textItemBlur">
           {trackingStartedAt
             ? t(
-              'followers_tracking_no_backfill_since',
-              'Rankings include events received after tracking began on {{date}}. Earlier provider activity is not backfilled.',
-              { date: trackingStartedAt }
-            )
+                'followers_tracking_no_backfill_since',
+                'Rankings include events received after tracking began on {{date}}. Earlier provider activity is not backfilled.',
+                { date: trackingStartedAt }
+              )
             : t(
-              'followers_tracking_no_backfill',
-              'Rankings include only events received after tracking begins. Earlier provider activity is not backfilled.'
-            )}
+                'followers_tracking_no_backfill',
+                'Rankings include only events received after tracking begins. Earlier provider activity is not backfilled.'
+              )}
         </p>
       )}
     </div>
@@ -569,13 +581,13 @@ export const FollowersComponent: FC = () => {
     audience,
     isBot: pathIsBot,
   } = followerPath.type === 'follower'
-      ? {
+    ? {
         slug: undefined,
         triage: undefined,
         audience: undefined,
         isBot: undefined,
       }
-      : followerPath;
+    : followerPath;
   const urlSearch = searchParams.get('search') ?? '';
   const urlListId = searchParams.get('listId') || undefined;
   const urlSort = searchParams.get('sort') || undefined;
@@ -649,7 +661,7 @@ export const FollowersComponent: FC = () => {
     const eligibleIds = channels.map((channel) => channel.id);
     const preferredId =
       followerPath.type === 'follower' &&
-        eligibleIds.includes(followerPath.integrationId)
+      eligibleIds.includes(followerPath.integrationId)
         ? followerPath.integrationId
         : selectedIntegrationId;
     const nextId = resolveChannelId({
@@ -699,24 +711,31 @@ export const FollowersComponent: FC = () => {
     () => channels.find((channel) => channel.id === selectedIntegrationId),
     [channels, selectedIntegrationId]
   );
+  const { hiddenSlugs, toggleVisibility } = useFollowerTriageVisibility(
+    selectedIntegrationId
+  );
   const {
-    hiddenSlugs,
-    isVisible: isTriageVisible,
-    toggleVisibility,
-  } = useFollowerTriageVisibility(selectedIntegrationId);
+    data: boardColumnPreferences = [],
+    savePreferences: saveBoardColumnPreferences,
+  } = useFollowerBoardColumnPreferences(selectedIntegrationId);
+  const [localBoardColumnKeys, setLocalBoardColumnKeys] = useState<
+    string[] | null
+  >(null);
+  const boardColumnKeysRef = useRef<string[]>([]);
+  const boardDraggingRef = useRef(false);
 
   const strategyDefaults =
     selectedIntegrationId &&
-      !appliedStrategyDefaultChannelRef.current.has(selectedIntegrationId)
+    !appliedStrategyDefaultChannelRef.current.has(selectedIntegrationId)
       ? resolveFollowerStrategyDefaults({
-        pathname: historyPath || '/followers',
-        search: urlSearch,
-        listId: urlListId,
-        sort: urlSort,
-        direction: urlDirectionParam || undefined,
-        strategy: selectedChannel?.strategy,
-        sorts: selectedChannel?.sorts,
-      })
+          pathname: historyPath || '/followers',
+          search: urlSearch,
+          listId: urlListId,
+          sort: urlSort,
+          direction: urlDirectionParam || undefined,
+          strategy: selectedChannel?.strategy,
+          sorts: selectedChannel?.sorts,
+        })
       : undefined;
   const strategyDefaultView = strategyDefaults?.slug
     ? FOLLOWER_VIEW_BY_SLUG[strategyDefaults.slug]
@@ -975,8 +994,8 @@ export const FollowersComponent: FC = () => {
       resolvedAudience === 'hot' || resolvedAudience === 'converted'
         ? undefined
         : requiresWindow
-          ? window
-          : undefined,
+        ? window
+        : undefined,
     search: trimmedSearch || undefined,
     triage: urlListId ? undefined : resolvedTriage,
     audience: urlListId ? undefined : resolvedAudience,
@@ -1117,9 +1136,9 @@ export const FollowersComponent: FC = () => {
             error instanceof Error
               ? error.message
               : t(
-                'followers_lead_follow_error',
-                'Could not follow this profile'
-              ),
+                  'followers_lead_follow_error',
+                  'Could not follow this profile'
+                ),
             'warning'
           );
         }
@@ -1223,33 +1242,33 @@ export const FollowersComponent: FC = () => {
       },
       strategy: selectedChannel?.strategy
         ? {
-          id: selectedChannel.strategy.id,
-          version: selectedChannel.strategy.version,
-          summary: selectedChannel.strategy.summary.defaultValue,
-        }
+            id: selectedChannel.strategy.id,
+            version: selectedChannel.strategy.version,
+            summary: selectedChannel.strategy.summary.defaultValue,
+          }
         : undefined,
       follower:
         followerPath.type === 'follower'
           ? {
-            id: selectedFollower?.id,
-            username: selectedFollower?.username || followerPath.username,
-            name: selectedFollower?.name,
-          }
+              id: selectedFollower?.id,
+              username: selectedFollower?.username || followerPath.username,
+              name: selectedFollower?.name,
+            }
           : undefined,
       category: activeCategory
         ? {
-          key: activeCategory,
-          label: categoryLabel,
-          meaning: FOLLOWER_CATEGORY_DESCRIPTIONS[activeCategory],
-        }
+            key: activeCategory,
+            label: categoryLabel,
+            meaning: FOLLOWER_CATEGORY_DESCRIPTIONS[activeCategory],
+          }
         : undefined,
       search: normalizeFollowerSearch(trimmedSearch),
       list: urlListId
         ? {
-          id: urlListId,
-          name: activeList?.name,
-          status: activeList ? 'current' : 'unknown_or_deleted',
-        }
+            id: urlListId,
+            name: activeList?.name,
+            status: activeList ? 'current' : 'unknown_or_deleted',
+          }
         : undefined,
       availableLists: followerLists.map((list) => ({
         id: list.id,
@@ -1258,25 +1277,25 @@ export const FollowersComponent: FC = () => {
       sort:
         activeSort && effectiveDirection
           ? {
-            key: activeSort.key,
-            label: activeSort.label,
-            scope: activeSort.scope || 'native',
-            direction: effectiveDirection,
-            caveat:
-              activeSort.scope === 'page'
-                ? 'Sorting applies only to the currently loaded page.'
-                : undefined,
-          }
+              key: activeSort.key,
+              label: activeSort.label,
+              scope: activeSort.scope || 'native',
+              direction: effectiveDirection,
+              caveat:
+                activeSort.scope === 'page'
+                  ? 'Sorting applies only to the currently loaded page.'
+                  : undefined,
+            }
           : undefined,
       interactionWindow: requiresWindow ? window : undefined,
       pagination: { size: limit, number: pageNumber },
       tracking: tracking
         ? {
-          availability: tracking.availability,
-          state: tracking.state,
-          computedAt: tracking.computedAt,
-          followerSnapshotAt: tracking.followerSnapshotAt,
-        }
+            availability: tracking.availability,
+            state: tracking.state,
+            computedAt: tracking.computedAt,
+            followerSnapshotAt: tracking.followerSnapshotAt,
+          }
         : undefined,
     });
   }, [
@@ -1315,8 +1334,9 @@ export const FollowersComponent: FC = () => {
       externalId?: string;
       username?: string;
     }) => {
-      const modalId = `follower-detail-${integrationId}-${username || externalId
-        }`;
+      const modalId = `follower-detail-${integrationId}-${
+        username || externalId
+      }`;
       openedFollowerKeyRef.current = modalId;
       modal.openModal({
         id: modalId,
@@ -1460,14 +1480,14 @@ export const FollowersComponent: FC = () => {
       title: t('followers_list_remove_title', 'Remove this list?'),
       description: listName
         ? t(
-          'followers_list_remove_description_named',
-          '"{{name}}" will be deleted. People in it stay as followers.',
-          { name: listName }
-        )
+            'followers_list_remove_description_named',
+            '"{{name}}" will be deleted. People in it stay as followers.',
+            { name: listName }
+          )
         : t(
-          'followers_list_remove_description',
-          'This list will be deleted. People in it stay as followers.'
-        ),
+            'followers_list_remove_description',
+            'This list will be deleted. People in it stay as followers.'
+          ),
       approveLabel: t('yes', 'Yes'),
       cancelLabel: t('cancel', 'Cancel'),
     });
@@ -1494,62 +1514,129 @@ export const FollowersComponent: FC = () => {
     urlListId,
   ]);
 
-  const boardColumns = useMemo(() => {
+  const defaultBoardColumns = useMemo((): FollowerBoardOrderedColumn[] => {
     if (!showBoard) {
       return [];
     }
-    return FOLLOWER_BOARD_SEGMENTS.filter((segment) =>
-      isFollowerSegmentVisible(segment.slug, hiddenSlugs)
-    ).map((segment) => {
-      const preview =
-        boardPreviewBySlug[segment.slug as keyof typeof boardPreviewBySlug];
-      const countKey = segment.isBot
-        ? 'bots'
-        : segment.categoryKey || segment.slug;
-      return {
-        segment,
-        items: preview?.data?.items ?? [],
-        total: categoryCount(audienceSummary?.categories, countKey),
-        isLoading: !!preview?.isLoading,
-        viewAllHref: buildFollowersPageHref({
-          slug: segment.slug,
-          sort: querySort,
-          direction: querySort ? queryDirection : undefined,
-        }),
-      };
-    });
-  }, [
-    audienceSummary?.categories,
-    boardPreviewBySlug,
-    queryDirection,
-    querySort,
-    showBoard,
-    hiddenSlugs,
-  ]);
+    const segmentColumns: FollowerBoardOrderedColumn[] =
+      FOLLOWER_BOARD_SEGMENTS.filter((segment) =>
+        isFollowerSegmentVisible(segment.slug, hiddenSlugs)
+      ).map((segment) => {
+        const preview =
+          boardPreviewBySlug[segment.slug as keyof typeof boardPreviewBySlug];
+        const countKey = segment.isBot
+          ? 'bots'
+          : segment.categoryKey || segment.slug;
+        return {
+          kind: 'segment' as const,
+          columnKey: columnKeyForSegment(segment.slug),
+          segment,
+          items: preview?.data?.items ?? [],
+          total: categoryCount(audienceSummary?.categories, countKey),
+          isLoading: !!preview?.isLoading,
+          viewAllHref: buildFollowersPageHref({
+            slug: segment.slug,
+            sort: querySort,
+            direction: querySort ? queryDirection : undefined,
+          }),
+        };
+      });
 
-  const boardListColumns = useMemo(() => {
-    if (!showBoard) {
-      return [];
-    }
     const totalsByListId = new Map(
       (audienceSummary?.lists ?? []).map((list) => [list.id, list.total])
     );
-    return followerLists.map((list) => ({
-      list,
-      total: totalsByListId.get(list.id) ?? null,
-      viewAllHref: buildFollowersPageHref({
-        listId: list.id,
-        sort: querySort,
-        direction: querySort ? queryDirection : undefined,
-      }),
-    }));
+    const listColumns: FollowerBoardOrderedColumn[] = followerLists.map(
+      (list) => ({
+        kind: 'list' as const,
+        columnKey: columnKeyForList(list.id),
+        list,
+        total: totalsByListId.get(list.id) ?? null,
+        viewAllHref: buildFollowersPageHref({
+          listId: list.id,
+          sort: querySort,
+          direction: querySort ? queryDirection : undefined,
+        }),
+      })
+    );
+
+    return [...segmentColumns, ...listColumns];
   }, [
+    audienceSummary?.categories,
     audienceSummary?.lists,
+    boardPreviewBySlug,
     followerLists,
+    hiddenSlugs,
     queryDirection,
     querySort,
     showBoard,
   ]);
+
+  const orderedBoardColumns = useMemo((): FollowerBoardOrderedColumn[] => {
+    if (!selectedIntegrationId || !defaultBoardColumns.length) {
+      return defaultBoardColumns;
+    }
+
+    const preferred = applyFollowerBoardColumnPreferences(
+      defaultBoardColumns,
+      boardColumnPreferences,
+      selectedIntegrationId
+    );
+
+    if (!localBoardColumnKeys) {
+      return preferred;
+    }
+
+    const byKey = new Map(
+      preferred.map((column) => [column.columnKey, column])
+    );
+    const ordered = localBoardColumnKeys
+      .map((key) => byKey.get(key))
+      .filter((column): column is FollowerBoardOrderedColumn => !!column);
+    const seen = new Set(ordered.map((column) => column.columnKey));
+    for (const column of preferred) {
+      if (!seen.has(column.columnKey)) {
+        ordered.push(column);
+      }
+    }
+    return ordered;
+  }, [
+    boardColumnPreferences,
+    defaultBoardColumns,
+    localBoardColumnKeys,
+    selectedIntegrationId,
+  ]);
+
+  useEffect(() => {
+    boardColumnKeysRef.current = orderedBoardColumns.map(
+      (column) => column.columnKey
+    );
+  }, [orderedBoardColumns]);
+
+  useEffect(() => {
+    setLocalBoardColumnKeys(null);
+    boardDraggingRef.current = false;
+  }, [selectedIntegrationId]);
+
+  const onBoardReorderLocal = useCallback((from: number, to: number) => {
+    boardDraggingRef.current = true;
+    setLocalBoardColumnKeys((current) => {
+      const keys = current || boardColumnKeysRef.current;
+      const next = reorderVisibleKeys(keys, from, to);
+      boardColumnKeysRef.current = next;
+      return next;
+    });
+  }, []);
+
+  const onBoardDragEnd = useCallback(() => {
+    if (!boardDraggingRef.current || !selectedIntegrationId) {
+      return;
+    }
+    boardDraggingRef.current = false;
+    const keys = boardColumnKeysRef.current;
+    void saveBoardColumnPreferences(
+      buildFollowerBoardColumnPreferences(selectedIntegrationId, keys)
+    );
+  }, [saveBoardColumnPreferences, selectedIntegrationId]);
 
   useEffect(() => {
     if (
@@ -2100,29 +2187,32 @@ export const FollowersComponent: FC = () => {
         </div>
 
         {showBoard && (
-          <FollowerBoard
-            columns={boardColumns}
-            listColumns={boardListColumns}
-            integrationId={selectedIntegrationId}
-            canFollow={canFollowAudienceMember}
-            canUnfollow={canFollowAudienceMember}
-            lists={followerLists}
-            onOpenFollower={openFollowerDetail}
-            onDismissTriage={async (
-              follower,
-              triageValue,
-              reasons,
-              options
-            ) => {
-              await handleDismissTriage(
+          <DNDProvider>
+            <FollowerBoard
+              orderedColumns={orderedBoardColumns}
+              integrationId={selectedIntegrationId}
+              canFollow={canFollowAudienceMember}
+              canUnfollow={canFollowAudienceMember}
+              lists={followerLists}
+              onReorderLocal={onBoardReorderLocal}
+              onDragEnd={onBoardDragEnd}
+              onOpenFollower={openFollowerDetail}
+              onDismissTriage={async (
                 follower,
                 triageValue,
                 reasons,
                 options
-              );
-            }}
-            onUnfollow={handleUnfollowFollower}
-          />
+              ) => {
+                await handleDismissTriage(
+                  follower,
+                  triageValue,
+                  reasons,
+                  options
+                );
+              }}
+              onUnfollow={handleUnfollowFollower}
+            />
+          </DNDProvider>
         )}
 
         {isInteractionsSort && !showBoard && (
@@ -2182,10 +2272,10 @@ export const FollowersComponent: FC = () => {
                     timelineHref={
                       follower.username && selectedIntegrationId
                         ? buildFollowerTimelineHref(
-                          selectedIntegrationId,
-                          follower.username,
-                          follower.id
-                        )
+                            selectedIntegrationId,
+                            follower.username,
+                            follower.id
+                          )
                         : undefined
                     }
                     lists={followerLists}

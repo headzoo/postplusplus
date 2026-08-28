@@ -79,13 +79,13 @@ export type FollowerSegmentDefinition = {
   icon: FC<IconProps>;
   categoryKey?: keyof typeof FOLLOWER_CATEGORY_DESCRIPTIONS;
   audience?:
-  | 'lead'
-  | 'followed'
-  | 'unfollowed'
-  | 'ignored'
-  | 'cultivate'
-  | 'hot'
-  | 'converted';
+    | 'lead'
+    | 'followed'
+    | 'unfollowed'
+    | 'ignored'
+    | 'cultivate'
+    | 'hot'
+    | 'converted';
   triage?: FollowerTriageFilter;
   isBot?: true;
 };
@@ -358,99 +358,99 @@ export const FOLLOWER_TAB_SEGMENTS: Array<{
   defaultLabel: string;
   color: FollowerSegmentColor;
   audience?:
-  | 'lead'
-  | 'followed'
-  | 'unfollowed'
-  | 'ignored'
-  | 'cultivate'
-  | 'hot'
-  | 'converted';
+    | 'lead'
+    | 'followed'
+    | 'unfollowed'
+    | 'ignored'
+    | 'cultivate'
+    | 'hot'
+    | 'converted';
   triage?: FollowerTriageFilter;
   isBot?: true;
 }> = [
-    {
-      key: 'followers_triage_filter_all',
-      defaultLabel: 'All',
-      color: 'neutral',
-    },
-    {
-      slug: 'leads',
-      key: 'followers_audience_leads',
-      defaultLabel: 'Leads',
-      color: 'red',
-      audience: 'lead',
-    },
-    {
-      slug: 'hot',
-      key: 'followers_triage_hot_lead',
-      defaultLabel: 'Hot',
-      color: 'red',
-      audience: 'hot',
-    },
-    {
-      slug: 'cultivate',
-      key: 'followers_audience_cultivate',
-      defaultLabel: 'Cultivate',
-      color: 'red',
-      audience: 'cultivate',
-    },
-    {
-      slug: 'followed',
-      key: 'followers_audience_followed',
-      defaultLabel: 'Followed',
-      color: 'green',
-      audience: 'followed',
-    },
-    {
-      slug: 'conversions',
-      key: 'followers_audience_conversions',
-      defaultLabel: 'Conversions',
-      color: 'purple',
-      audience: 'converted',
-    },
-    {
-      slug: 'mutual',
-      key: 'followers_triage_mutual',
-      defaultLabel: 'Mutual',
-      color: 'green',
-      triage: 'mutual',
-    },
-    {
-      slug: 'quiet',
-      key: 'followers_triage_quiet',
-      defaultLabel: 'Quiet',
-      color: 'green',
-      triage: 'quiet',
-    },
-    {
-      slug: 'costly',
-      key: 'followers_triage_over_invested',
-      defaultLabel: 'Costly',
-      color: 'yellow',
-      triage: 'over_invested',
-    },
-    {
-      slug: 'ignored',
-      key: 'followers_ignored_list',
-      defaultLabel: 'Ignored',
-      color: 'yellow',
-      audience: 'ignored',
-    },
-    {
-      slug: 'unfollowed',
-      key: 'followers_audience_unfollowed',
-      defaultLabel: 'Unfollowed',
-      color: 'yellow',
-      audience: 'unfollowed',
-    },
-    {
-      slug: 'bots',
-      key: 'followers_bot_filter',
-      defaultLabel: 'Bots',
-      color: 'yellow',
-      isBot: true,
-    },
-  ];
+  {
+    key: 'followers_triage_filter_all',
+    defaultLabel: 'All',
+    color: 'neutral',
+  },
+  {
+    slug: 'leads',
+    key: 'followers_audience_leads',
+    defaultLabel: 'Leads',
+    color: 'red',
+    audience: 'lead',
+  },
+  {
+    slug: 'hot',
+    key: 'followers_triage_hot_lead',
+    defaultLabel: 'Hot',
+    color: 'red',
+    audience: 'hot',
+  },
+  {
+    slug: 'cultivate',
+    key: 'followers_audience_cultivate',
+    defaultLabel: 'Cultivate',
+    color: 'red',
+    audience: 'cultivate',
+  },
+  {
+    slug: 'followed',
+    key: 'followers_audience_followed',
+    defaultLabel: 'Followed',
+    color: 'green',
+    audience: 'followed',
+  },
+  {
+    slug: 'conversions',
+    key: 'followers_audience_conversions',
+    defaultLabel: 'Conversions',
+    color: 'purple',
+    audience: 'converted',
+  },
+  {
+    slug: 'mutual',
+    key: 'followers_triage_mutual',
+    defaultLabel: 'Mutual',
+    color: 'green',
+    triage: 'mutual',
+  },
+  {
+    slug: 'quiet',
+    key: 'followers_triage_quiet',
+    defaultLabel: 'Quiet',
+    color: 'green',
+    triage: 'quiet',
+  },
+  {
+    slug: 'costly',
+    key: 'followers_triage_over_invested',
+    defaultLabel: 'Costly',
+    color: 'yellow',
+    triage: 'over_invested',
+  },
+  {
+    slug: 'ignored',
+    key: 'followers_ignored_list',
+    defaultLabel: 'Ignored',
+    color: 'yellow',
+    audience: 'ignored',
+  },
+  {
+    slug: 'unfollowed',
+    key: 'followers_audience_unfollowed',
+    defaultLabel: 'Unfollowed',
+    color: 'yellow',
+    audience: 'unfollowed',
+  },
+  {
+    slug: 'bots',
+    key: 'followers_bot_filter',
+    defaultLabel: 'Bots',
+    color: 'yellow',
+    isBot: true,
+  },
+];
 
 export const categoryCount = (
   categories: Record<string, number | null> | undefined,

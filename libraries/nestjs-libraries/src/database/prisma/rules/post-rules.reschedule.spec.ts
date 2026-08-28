@@ -83,16 +83,14 @@ const createService = () => {
     finalizeEvaluation: jest.fn().mockResolvedValue({ finalized: true }),
     findSuccessorRun: jest.fn().mockResolvedValue(null),
     createSuccessorRun: jest.fn().mockResolvedValue({ id: 'run-2' }),
-    getRemovableGroupMembers: jest
-      .fn()
-      .mockResolvedValue([
-        {
-          id: 'post-1',
-          parentPostId: null,
-          releaseId: 'tweet-1',
-          platformDeletedAt: null,
-        },
-      ]),
+    getRemovableGroupMembers: jest.fn().mockResolvedValue([
+      {
+        id: 'post-1',
+        parentPostId: null,
+        releaseId: 'tweet-1',
+        platformDeletedAt: null,
+      },
+    ]),
     markPostsPlatformDeleted: jest.fn().mockResolvedValue({ updated: 1 }),
     getRootPostByGroup: jest.fn().mockResolvedValue(null),
     getReschedulePipeline: jest.fn(),
