@@ -2086,7 +2086,7 @@ export class ChannelInteractionService {
       return { hour, skipped: 'near_full' as const, visibleCount };
     }
 
-    const candidates = await this._repository.listCultivateCandidates({
+    let candidates = await this._repository.listCultivateCandidates({
       organizationId,
       integrationId,
       now,
@@ -2094,6 +2094,14 @@ export class ChannelInteractionService {
       warmGradeThreshold: config.profile.cultivate.warmGradeThreshold,
       staleDays: config.profile.cultivate.staleDays,
     });
+    if (!candidates.length) {
+      candidates = await this._repository.listCultivateFallbackCandidates({
+        organizationId,
+        integrationId,
+        now,
+        take: config.profile.cultivate.fallbackPickLimit,
+      });
+    }
     const ranked = this._repository
       .rankCultivateCandidates(candidates, hour, now)
       .map((row) => ({

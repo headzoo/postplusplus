@@ -82,6 +82,13 @@ export const matchesCultivateWarmSignal = (
   (member.relationshipGrade != null &&
     member.relationshipGrade >= warmGradeThreshold);
 
+/** Mutual/quiet picks used when the primary warm+stale pool is empty. */
+export const matchesCultivateFallbackTriage = (
+  member: Pick<CultivatePickAuditMember, 'relationshipTriage'>
+) =>
+  member.relationshipTriage === 'mutual' ||
+  member.relationshipTriage === 'quiet';
+
 export const isCultivateStaleEnough = (
   lastOutboundAt: Date | null,
   now: Date,
@@ -120,6 +127,9 @@ export const classifyCultivatePickVisibility = (
     )
   ) {
     return 'dismissed';
+  }
+  if (matchesCultivateFallbackTriage(member)) {
+    return 'visible';
   }
   if (!matchesCultivateWarmSignal(member, config.warmGradeThreshold)) {
     return 'not_warm';

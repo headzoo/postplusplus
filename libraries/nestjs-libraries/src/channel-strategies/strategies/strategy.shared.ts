@@ -50,6 +50,7 @@ export const DEFAULT_MATERIALIZATION_PROFILE: StrategyMaterializationProfile = {
     nearFullRatio: 0.9,
     warmGradeThreshold: 3.5,
     staleDays: 14,
+    fallbackPickLimit: 10,
   },
 };
 

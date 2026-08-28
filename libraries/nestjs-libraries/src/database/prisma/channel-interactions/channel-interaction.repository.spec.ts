@@ -515,6 +515,7 @@ describe('ChannelInteractionRepository', () => {
       .mockResolvedValueOnce(7)
       .mockResolvedValueOnce(8)
       .mockResolvedValueOnce(9)
+      .mockResolvedValueOnce(10)
       .mockResolvedValueOnce(0);
 
     const result = await repository.getStoredFollowerAudienceCounts(
@@ -540,8 +541,9 @@ describe('ChannelInteractionRepository', () => {
       engaged_not_yet: 5,
       lead: 6,
       followed: 7,
-      ignored: 8,
-      cultivate: 9,
+      unfollowed: 8,
+      ignored: 9,
+      cultivate: 10,
       hot: 0,
     });
     expect(result.lists).toHaveLength(20);
@@ -551,7 +553,7 @@ describe('ChannelInteractionRepository', () => {
       total: 0,
     });
     expect(result.listsTruncated).toBe(true);
-    expect(tx.channelAudienceMember.count).toHaveBeenCalledTimes(30);
+    expect(tx.channelAudienceMember.count).toHaveBeenCalledTimes(31);
     expect(tx.channelAudienceMember.count).toHaveBeenCalledWith({
       where: expect.objectContaining({
         organizationId: 'org',
@@ -1471,12 +1473,17 @@ describe('ChannelInteractionRepository', () => {
       members: [
         {
           externalId: 'outbound-only',
+          membershipState: null,
           interactionCounts: interactionCounts({ reply: { outbound: 2 } }),
         },
-        { externalId: 'zero-activity', interactionCounts: interactionCounts() },
+        {
+          externalId: 'zero-activity',
+          membershipState: null,
+          interactionCounts: interactionCounts(),
+        },
       ],
     });
-    expect(tx.channelAudienceMember.findMany).toHaveBeenLastCalledWith(
+    expect(tx.channelAudienceMember.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         orderBy: { id: 'asc' },
         take: 100,
@@ -1492,6 +1499,14 @@ describe('ChannelInteractionRepository', () => {
         }),
       })
     );
+    expect(tx.channelAudienceMember.findMany).toHaveBeenCalledWith({
+      where: {
+        organizationId: 'org',
+        integrationId: 'integration',
+        externalId: { in: ['outbound-only', 'zero-activity'] },
+      },
+      select: { externalId: true, membershipState: true },
+    });
     expect(groupBy).toHaveBeenLastCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
@@ -1609,10 +1624,12 @@ describe('ChannelInteractionRepository', () => {
       members: [
         {
           externalId: 'person-1',
+          membershipState: null,
           interactionCounts: interactionCounts({ reply: { outbound: 2 } }),
         },
         {
           externalId: 'quiet-follower',
+          membershipState: null,
           interactionCounts: interactionCounts(),
         },
       ],
@@ -1677,6 +1694,7 @@ describe('ChannelInteractionRepository', () => {
     const { repository, tx } = createHarness();
     tx.channelAudienceMember.findFirst.mockResolvedValue({
       externalId: 'person-1',
+      membershipState: ChannelAudienceMembership.FOLLOWER,
       relationshipEffortScore: 10,
       relationshipReciprocationScore: 5,
     });
@@ -1689,6 +1707,7 @@ describe('ChannelInteractionRepository', () => {
       )
     ).resolves.toEqual({
       externalId: 'person-1',
+      membershipState: ChannelAudienceMembership.FOLLOWER,
       relationshipEffortScore: 10,
       relationshipReciprocationScore: 5,
     });
@@ -1700,6 +1719,7 @@ describe('ChannelInteractionRepository', () => {
       },
       select: {
         externalId: true,
+        membershipState: true,
         relationshipEffortScore: true,
         relationshipReciprocationScore: true,
       },
@@ -2862,6 +2882,20 @@ describe('ChannelInteractionRepository', () => {
     expect(ranked[0].rulesReason).toContain('No outbound attention yet');
     expect(ranked[1].externalId).toBe('fresh');
     expect(ranked[1].finalRank).toBe(2);
+    expect(
+      repository.rankCultivateCandidates(
+        [
+          {
+            externalId: 'quiet-1',
+            lastOutboundAt: null,
+            relationshipGrade: 2,
+            relationshipTriage: 'quiet',
+          },
+        ],
+        '2026-08-21T12',
+        now
+      )[0].rulesReason
+    ).toContain('quiet relationship');
   });
 
   it('reads materialized cultivate picks when present for the hour', async () => {
@@ -2921,6 +2955,170 @@ describe('ChannelInteractionRepository', () => {
       source: 'materialized',
       hour: '2026-08-21T12',
     });
+  });
+
+  it('lists cultivate fallback candidates as mutual or quiet without stale cutoff', async () => {
+    const { repository, audienceMemberFindMany } = createHarness();
+    audienceMemberFindMany.mockResolvedValue([
+      {
+        externalId: 'quiet-1',
+        username: 'quiet',
+        name: 'Quiet',
+        relationshipGrade: 2,
+        relationshipTriage: 'quiet',
+        lastOutboundAt: new Date('2026-08-20T00:00:00.000Z'),
+      },
+    ]);
+
+    await expect(
+      repository.listCultivateFallbackCandidates({
+        organizationId: 'org',
+        integrationId: 'integration',
+        take: 10,
+      })
+    ).resolves.toEqual([
+      expect.objectContaining({
+        externalId: 'quiet-1',
+        relationshipTriage: 'quiet',
+      }),
+    ]);
+
+    expect(audienceMemberFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          organizationId: 'org',
+          integrationId: 'integration',
+          membershipState: ChannelAudienceMembership.FOLLOWER,
+          ignoredAt: null,
+          NOT: { relationshipTriage: 'hot_lead' },
+          relationshipTriage: { in: ['mutual', 'quiet'] },
+        }),
+        take: 10,
+      })
+    );
+  });
+
+  it('due-lists cultivate channels with primary or fallback members and retries empty hour batches', async () => {
+    const { repository, integrationFindMany } = createHarness();
+    integrationFindMany.mockResolvedValue([
+      {
+        id: 'integration-a',
+        organizationId: 'org',
+        providerIdentifier: 'x',
+      },
+    ]);
+
+    await expect(
+      repository.listCultivateMaterializeCandidates(
+        undefined,
+        8,
+        '2026-08-21T12'
+      )
+    ).resolves.toEqual({
+      candidates: [
+        {
+          id: 'integration-a',
+          organizationId: 'org',
+          providerIdentifier: 'x',
+        },
+      ],
+      next: undefined,
+    });
+
+    expect(integrationFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          channelAudienceMembers: {
+            some: {
+              OR: [
+                expect.objectContaining({
+                  membershipState: ChannelAudienceMembership.FOLLOWER,
+                }),
+                expect.objectContaining({
+                  relationshipTriage: { in: ['mutual', 'quiet'] },
+                }),
+              ],
+            },
+          },
+          channelAudienceCultivatePickBatches: {
+            none: { hour: '2026-08-21T12', pickCount: { gt: 0 } },
+          },
+        }),
+      })
+    );
+  });
+
+  it('serves quiet cultivate fallback picks without primary warm+stale filter', async () => {
+    const { repository, tx } = createHarness();
+    tx.channelAudienceCultivatePickBatch.findUnique.mockResolvedValue({
+      hour: '2026-08-21T12',
+      strategyId: 'grow_audience',
+      strategyVersion: 1,
+      materializationVersion: 1,
+    });
+    tx.channelAudienceCultivatePick.findMany.mockResolvedValue([
+      {
+        finalRank: 1,
+        rulesRank: 1,
+        rulesReason: 'No outbound attention yet · quiet relationship',
+        aiReason: null,
+        suggestedAction: null,
+        source: 'rules',
+        counterpartyExternalId: 'quiet-1',
+        audienceMember: {
+          externalId: 'quiet-1',
+          name: 'Quiet',
+          username: 'quiet',
+          picture: null,
+          profileUrl: null,
+          bio: null,
+          followersCount: null,
+          followingCount: null,
+          followedAt: null,
+          accountCreatedAt: null,
+        },
+      },
+    ]);
+
+    await expect(
+      repository.getAudienceCultivate({
+        organizationId: 'org',
+        integrationId: 'integration',
+        strategyId: 'grow_audience',
+        strategyVersion: 1,
+        materializationVersion: 1,
+        direction: 'asc',
+        limit: 24,
+        now: new Date('2026-08-21T12:30:00.000Z'),
+      })
+    ).resolves.toEqual({
+      items: [
+        expect.objectContaining({
+          externalId: 'quiet-1',
+          cultivateReason: 'No outbound attention yet · quiet relationship',
+        }),
+      ],
+      hasMore: false,
+      source: 'materialized',
+      hour: '2026-08-21T12',
+    });
+
+    expect(tx.channelAudienceCultivatePick.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          audienceMember: expect.objectContaining({
+            AND: expect.arrayContaining([
+              {
+                OR: [
+                  expect.objectContaining({ AND: expect.any(Array) }),
+                  { relationshipTriage: { in: ['mutual', 'quiet'] } },
+                ],
+              },
+            ]),
+          }),
+        }),
+      })
+    );
   });
 
   it('filters note-count followers by username or name when search is set', async () => {
@@ -3338,29 +3536,29 @@ describe('ChannelInteractionRepository', () => {
       const expectedTriageFilter =
         triage === 'hot_lead'
           ? {
-              OR: [
-                { relationshipTriage: 'hot_lead' },
-                {
-                  relationshipReciprocationScore: { gt: 0 },
-                  relationshipEffortScore: 0,
-                },
-              ],
-              triageIgnores: {
-                none: expect.objectContaining({
-                  triage: { in: ['hot_lead', 'engaged_not_yet'] },
-                  OR: expect.any(Array),
-                }),
+            OR: [
+              { relationshipTriage: 'hot_lead' },
+              {
+                relationshipReciprocationScore: { gt: 0 },
+                relationshipEffortScore: 0,
               },
-            }
+            ],
+            triageIgnores: {
+              none: expect.objectContaining({
+                triage: { in: ['hot_lead', 'engaged_not_yet'] },
+                OR: expect.any(Array),
+              }),
+            },
+          }
           : {
-              relationshipTriage: triage,
-              triageIgnores: {
-                none: expect.objectContaining({
-                  triage,
-                  OR: expect.any(Array),
-                }),
-              },
-            };
+            relationshipTriage: triage,
+            triageIgnores: {
+              none: expect.objectContaining({
+                triage,
+                OR: expect.any(Array),
+              }),
+            },
+          };
 
       await repository.getAudienceFollowers({
         organizationId: 'org',

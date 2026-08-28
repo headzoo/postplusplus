@@ -184,6 +184,11 @@ export function assertMaterializationProfile(
     MATERIALIZATION_LIMITS.maxStaleDays,
     'cultivate stale days'
   );
+  assertPositiveBoundedInteger(
+    profile.cultivate.fallbackPickLimit,
+    MATERIALIZATION_LIMITS.maxPickLimit,
+    'cultivate fallback pick limit'
+  );
 }
 
 export function assertConversionProfile(profile: ChannelConversionProfile) {

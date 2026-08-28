@@ -37,17 +37,26 @@ describe('cultivate-pick-audit', () => {
         relationshipTriage: 'quiet',
         relationshipGrade: 2,
       })
-    ).toBe('not_warm');
+    ).toBe('visible');
     expect(
       classifyCultivatePickVisibility(
         {
           ...baseMember,
+          relationshipTriage: 'over_invested',
+          relationshipGrade: 4,
           lastOutboundAt: new Date('2026-08-27T10:00:00.000Z'),
         },
         new Date('2026-08-27T11:00:00.000Z'),
         { warmGradeThreshold: 3.5, staleDays: 14 }
       )
     ).toBe('recently_contacted');
+    expect(
+      classifyCultivatePickVisibility({
+        ...baseMember,
+        relationshipTriage: 'over_invested',
+        relationshipGrade: 2,
+      })
+    ).toBe('not_warm');
     expect(classifyCultivatePickVisibility(baseMember)).toBe('visible');
   });
 

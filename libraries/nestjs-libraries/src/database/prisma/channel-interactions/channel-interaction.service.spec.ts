@@ -134,6 +134,7 @@ const createRepository = () => ({
     hasMore: false,
   }),
   listCultivateCandidates: jest.fn().mockResolvedValue([]),
+  listCultivateFallbackCandidates: jest.fn().mockResolvedValue([]),
   rankCultivateCandidates: jest.fn().mockReturnValue([]),
   countVisibleCultivatePicks: jest.fn().mockResolvedValue(0),
   replaceCultivatePickBatch: jest.fn().mockResolvedValue({ count: 0 }),
@@ -2396,6 +2397,73 @@ describe('ChannelInteractionService', () => {
             rulesReason: 'No outbound attention yet · mutual relationship',
             source: 'rules',
           },
+        ],
+      })
+    );
+    expect(repository.listCultivateFallbackCandidates).not.toHaveBeenCalled();
+  });
+
+  it('falls back to mutual/quiet when the primary cultivate pool is empty', async () => {
+    const repository = createRepository();
+    repository.listCultivateCandidates.mockResolvedValue([]);
+    repository.listCultivateFallbackCandidates.mockResolvedValue([
+      {
+        externalId: 'quiet-1',
+        username: 'quietone',
+        name: 'Quiet',
+        relationshipGrade: 2,
+        relationshipTriage: 'quiet',
+        lastOutboundAt: null,
+      },
+    ]);
+    repository.rankCultivateCandidates.mockReturnValue([
+      {
+        externalId: 'quiet-1',
+        username: 'quietone',
+        name: 'Quiet',
+        relationshipGrade: 2,
+        relationshipTriage: 'quiet',
+        lastOutboundAt: null,
+        rulesRank: 1,
+        finalRank: 1,
+        rulesReason: 'No outbound attention yet · quiet relationship',
+      },
+    ]);
+    repository.replaceCultivatePickBatch.mockResolvedValue({ count: 1 });
+    repository.auditCultivatePickExclusions.mockResolvedValue({
+      hour: '2026-08-12T12',
+      storedCount: 1,
+      visibleCount: 1,
+      excludedCount: 0,
+      excludedByReason: {},
+      excluded: [],
+    });
+    const service = new ChannelInteractionService(repository as any);
+
+    await expect(
+      service.materializeCultivatePicksForIntegration('org', 'integration')
+    ).resolves.toEqual(
+      expect.objectContaining({
+        hour: '2026-08-12T12',
+        skipped: false,
+        candidateCount: 1,
+        pickCount: 1,
+      })
+    );
+    expect(repository.listCultivateFallbackCandidates).toHaveBeenCalledWith({
+      organizationId: 'org',
+      integrationId: 'integration',
+      now: expect.any(Date),
+      take: 10,
+    });
+    expect(repository.replaceCultivatePickBatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        candidateCount: 1,
+        picks: [
+          expect.objectContaining({
+            counterpartyExternalId: 'quiet-1',
+            rulesReason: 'No outbound attention yet · quiet relationship',
+          }),
         ],
       })
     );

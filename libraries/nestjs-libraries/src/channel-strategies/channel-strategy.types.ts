@@ -105,6 +105,8 @@ export type CultivateMaterializationConfig = {
   nearFullRatio: number;
   warmGradeThreshold: number;
   staleDays: number;
+  /** Mutual/quiet picks when the primary warm+stale pool is empty. */
+  fallbackPickLimit: number;
 };
 
 export type StrategyMaterializationProfile = {

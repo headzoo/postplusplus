@@ -2278,7 +2278,17 @@ export class ChannelInteractionRepository {
     };
   }
 
-  private cultivateEligibilityWhere(
+  private cultivateSafetyWhere(): Prisma.ChannelAudienceMemberWhereInput {
+    return {
+      membershipState: ChannelAudienceMembership.FOLLOWER,
+      ignoredAt: null,
+      OR: [{ isBot: null }, { isBot: false }],
+      NOT: { relationshipTriage: 'hot_lead' },
+      triageIgnores: { none: this.activeTriageIgnoreWhere('cultivate') },
+    };
+  }
+
+  private cultivateWarmAndStaleWhere(
     now = new Date(),
     config?: { warmGradeThreshold: number; staleDays: number }
   ): Prisma.ChannelAudienceMemberWhereInput {
@@ -2287,11 +2297,6 @@ export class ChannelInteractionRepository {
         (config ? config.staleDays * 24 * 60 * 60 * 1000 : CULTIVATE_STALE_MS)
     );
     return {
-      membershipState: ChannelAudienceMembership.FOLLOWER,
-      ignoredAt: null,
-      OR: [{ isBot: null }, { isBot: false }],
-      NOT: { relationshipTriage: 'hot_lead' },
-      triageIgnores: { none: this.activeTriageIgnoreWhere('cultivate') },
       AND: [
         {
           OR: [
@@ -2308,6 +2313,46 @@ export class ChannelInteractionRepository {
           OR: [
             { lastOutboundAt: null },
             { lastOutboundAt: { lt: staleBefore } },
+          ],
+        },
+      ],
+    };
+  }
+
+  private cultivateEligibilityWhere(
+    now = new Date(),
+    config?: { warmGradeThreshold: number; staleDays: number }
+  ): Prisma.ChannelAudienceMemberWhereInput {
+    return {
+      ...this.cultivateSafetyWhere(),
+      ...this.cultivateWarmAndStaleWhere(now, config),
+    };
+  }
+
+  /** Mutual/quiet followers for Cultivate when the primary warm+stale pool is empty. */
+  private cultivateFallbackEligibilityWhere(): Prisma.ChannelAudienceMemberWhereInput {
+    return {
+      ...this.cultivateSafetyWhere(),
+      relationshipTriage: { in: ['mutual', 'quiet'] },
+    };
+  }
+
+  /** Read/count filter: primary eligibility or mutual/quiet fallback safety. */
+  private cultivateVisibleWhere(
+    now = new Date(),
+    config?: { warmGradeThreshold: number; staleDays: number }
+  ): Prisma.ChannelAudienceMemberWhereInput {
+    return {
+      membershipState: ChannelAudienceMembership.FOLLOWER,
+      ignoredAt: null,
+      NOT: { relationshipTriage: 'hot_lead' },
+      triageIgnores: { none: this.activeTriageIgnoreWhere('cultivate') },
+      AND: [
+        { OR: [{ isBot: null }, { isBot: false }] },
+        {
+          OR: [
+            this.cultivateWarmAndStaleWhere(now, config),
+            { relationshipTriage: { in: ['mutual', 'quiet'] } },
           ],
         },
       ],
@@ -2343,9 +2388,17 @@ export class ChannelInteractionRepository {
           },
         },
         channelAudienceMembers: {
-          some: this.cultivateEligibilityWhere(),
+          some: {
+            OR: [
+              this.cultivateEligibilityWhere(),
+              this.cultivateFallbackEligibilityWhere(),
+            ],
+          },
         },
-        channelAudienceCultivatePickBatches: { none: { hour } },
+        // Retry empty hour batches; skip only when a non-empty batch exists.
+        channelAudienceCultivatePickBatches: {
+          none: { hour, pickCount: { gt: 0 } },
+        },
         ...(after ? { id: { gt: after } } : {}),
       },
       orderBy: { id: 'asc' },
@@ -2409,6 +2462,45 @@ export class ChannelInteractionRepository {
     });
   }
 
+  async listCultivateFallbackCandidates(params: {
+    organizationId: string;
+    integrationId: string;
+    now?: Date;
+    take?: number;
+  }): Promise<CultivateCandidate[]> {
+    const take = params.take ?? 10;
+    if (!Number.isInteger(take) || take < 1) {
+      throw new Error('take must be a positive integer');
+    }
+    return this.withSerializableRetry(async (tx) => {
+      await this.assertOwnedIntegration(
+        tx,
+        params.organizationId,
+        params.integrationId
+      );
+      return tx.channelAudienceMember.findMany({
+        where: {
+          organizationId: params.organizationId,
+          integrationId: params.integrationId,
+          ...this.cultivateFallbackEligibilityWhere(),
+        },
+        orderBy: [
+          { lastOutboundAt: { sort: 'asc', nulls: 'first' } },
+          { externalId: 'asc' },
+        ],
+        take,
+        select: {
+          externalId: true,
+          username: true,
+          name: true,
+          relationshipGrade: true,
+          relationshipTriage: true,
+          lastOutboundAt: true,
+        },
+      });
+    });
+  }
+
   async countVisibleCultivatePicks(params: {
     organizationId: string;
     integrationId: string;
@@ -2436,7 +2528,7 @@ export class ChannelInteractionRepository {
               materializationVersion: params.materializationVersion,
             },
           },
-          audienceMember: this.cultivateEligibilityWhere(),
+          audienceMember: this.cultivateVisibleWhere(),
         },
       });
     });
@@ -3341,7 +3433,7 @@ export class ChannelInteractionRepository {
           integrationId: query.integrationId,
           hour: batch.hour,
           audienceMember: {
-            ...this.cultivateEligibilityWhere(now),
+            ...this.cultivateVisibleWhere(now),
             ...(query.search ? this.audienceSearchFilter(query.search) : {}),
           },
           ...(query.cursor
@@ -3520,6 +3612,8 @@ export class ChannelInteractionRepository {
     const relationship =
       candidate.relationshipTriage === 'mutual'
         ? 'mutual relationship'
+        : candidate.relationshipTriage === 'quiet'
+        ? 'quiet relationship'
         : candidate.relationshipGrade != null
         ? `grade ${candidate.relationshipGrade.toFixed(1)}`
         : 'warm relationship';
