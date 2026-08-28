@@ -1,6 +1,6 @@
 {
   "name": "@headz/postplusplus",
-  "version": "2.7.15",
+  "version": "2.7.16",
   "description": "Schedule and publish social media and chat posts across 28+ channels with calendars, pipelines, and analytics.",
   "main": "index.js",
   "license": "AGPL-3.0",
