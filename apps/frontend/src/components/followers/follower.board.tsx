@@ -24,15 +24,12 @@ import {
   columnKeyForSegment,
 } from '@gitroom/frontend/components/followers/follower.board.layout';
 import { CustomScrollArea } from '@gitroom/frontend/components/ui/custom.scroll.area';
-import {
-  HelpIcon,
-  MoreIcon,
-  TagIcon,
-} from '@gitroom/frontend/components/ui/icons';
+import { MoreIcon, TagIcon } from '@gitroom/frontend/components/ui/icons';
 import {
   DismissTriageOptions,
   useRelationshipTriageDismiss,
 } from '@gitroom/frontend/components/followers/follower.card';
+import { FollowerBoardColumnMenu } from '@gitroom/frontend/components/followers/follower.board.column.menu';
 import { useUnfollowConfirmModal } from '@gitroom/frontend/components/followers/unfollow.confirm.modal';
 import {
   DismissibleTriage,
@@ -390,8 +387,7 @@ const FollowerBoardColumnHeader: FC<{
   title: string;
   countLabel: string;
   titleTruncate?: boolean;
-  helpLabel?: string;
-  helpContent?: string;
+  segment?: FollowerSegmentDefinition;
   dragHandleRef?: (node: HTMLElement | null) => void;
 }> = ({
   color,
@@ -399,8 +395,7 @@ const FollowerBoardColumnHeader: FC<{
   title,
   countLabel,
   titleTruncate = false,
-  helpLabel,
-  helpContent,
+  segment,
   dragHandleRef,
 }) => {
   const t = useT();
@@ -449,20 +444,7 @@ const FollowerBoardColumnHeader: FC<{
           </div>
         </div>
       </div>
-      {helpLabel && helpContent ? (
-        <button
-          type="button"
-          className="shrink-0 text-textItemBlur hover:text-newTextColor cursor-help"
-          aria-label={helpLabel}
-          data-testid="followers-board-column-help"
-          data-tooltip-id="tooltip"
-          data-tooltip-content={helpContent}
-          data-tooltip-events={['hover', 'click']}
-          data-tooltip-place="top"
-        >
-          <HelpIcon size={16} />
-        </button>
-      ) : null}
+      {segment ? <FollowerBoardColumnMenu segment={segment} /> : null}
     </div>
   );
 };
@@ -508,10 +490,6 @@ export const FollowerBoardColumn: FC<{
   const Icon = segment.icon;
   const countLabel = formatSegmentCount(total);
   const segmentLabel = t(segment.key, segment.defaultLabel);
-  const segmentDescription = t(
-    segment.descriptionKey,
-    segment.defaultDescription
-  );
 
   return (
     <div
@@ -531,10 +509,7 @@ export const FollowerBoardColumn: FC<{
         icon={<Icon size={16} />}
         title={segmentLabel}
         countLabel={countLabel}
-        helpLabel={t('followers_board_column_help', 'About {{segment}}', {
-          segment: segmentLabel,
-        })}
-        helpContent={segmentDescription}
+        segment={segment}
         dragHandleRef={dragHandleRef}
       />
 

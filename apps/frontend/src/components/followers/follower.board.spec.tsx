@@ -108,6 +108,25 @@ jest.mock('@gitroom/frontend/components/followers/use.followers', () => {
   };
 });
 
+const openModal = jest.fn();
+
+jest.mock('@gitroom/frontend/components/layout/new-modal', () => ({
+  useModals: () => ({
+    openModal,
+    closeCurrent: jest.fn(),
+    closeAll: jest.fn(),
+  }),
+}));
+
+jest.mock('@mantine/hooks', () => ({
+  useClickOutside: () => ({ current: null }),
+}));
+
+jest.mock('next/navigation', () => ({
+  usePathname: () => '/followers',
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 jest.mock('react-dnd', () => ({
   useDrag: () => [{ isDragging: false }, jest.fn()],
   useDrop: () => [{}, jest.fn()],
@@ -207,7 +226,8 @@ describe('FollowerBoard', () => {
     );
   });
 
-  it('shows segment descriptions in help tooltips instead of inline text', () => {
+  it('shows a column menu with Help that opens a segment help modal', () => {
+    openModal.mockClear();
     render(
       <FollowerBoard
         orderedColumns={toOrderedSegmentColumns(
@@ -224,14 +244,28 @@ describe('FollowerBoard', () => {
 
     expect(screen.queryByText(leadsSegment.defaultDescription)).toBeNull();
 
-    const helpButtons = screen.getAllByTestId('followers-board-column-help');
-    expect(helpButtons).toHaveLength(FOLLOWER_BOARD_SEGMENTS.length);
+    const menuButtons = screen.getAllByTestId('followers-board-column-menu');
+    expect(menuButtons).toHaveLength(FOLLOWER_BOARD_SEGMENTS.length);
 
-    const leadsHelp = helpButtons[0];
-    expect(leadsHelp.getAttribute('data-tooltip-content')).toBe(
-      leadsSegment.defaultDescription
+    fireEvent.click(menuButtons[0]);
+    const helpItem = screen.getByTestId('followers-board-column-help');
+    expect(helpItem.textContent).toBe('Help');
+    fireEvent.click(helpItem);
+
+    expect(openModal).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'About Leads',
+      })
     );
-    expect(leadsHelp.getAttribute('aria-label')).toBe('About Leads');
+
+    const hotIndex = FOLLOWER_BOARD_SEGMENTS.findIndex((s) => s.slug === 'hot');
+    fireEvent.click(menuButtons[hotIndex]);
+    fireEvent.click(screen.getByTestId('followers-board-column-help'));
+    expect(openModal).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'About Hot',
+      })
+    );
   });
 
   it('renders a scroll wrapper when a column has items', () => {

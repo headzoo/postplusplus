@@ -3536,29 +3536,29 @@ describe('ChannelInteractionRepository', () => {
       const expectedTriageFilter =
         triage === 'hot_lead'
           ? {
-            OR: [
-              { relationshipTriage: 'hot_lead' },
-              {
-                relationshipReciprocationScore: { gt: 0 },
-                relationshipEffortScore: 0,
+              OR: [
+                { relationshipTriage: 'hot_lead' },
+                {
+                  relationshipReciprocationScore: { gt: 0 },
+                  relationshipEffortScore: 0,
+                },
+              ],
+              triageIgnores: {
+                none: expect.objectContaining({
+                  triage: { in: ['hot_lead', 'engaged_not_yet'] },
+                  OR: expect.any(Array),
+                }),
               },
-            ],
-            triageIgnores: {
-              none: expect.objectContaining({
-                triage: { in: ['hot_lead', 'engaged_not_yet'] },
-                OR: expect.any(Array),
-              }),
-            },
-          }
+            }
           : {
-            relationshipTriage: triage,
-            triageIgnores: {
-              none: expect.objectContaining({
-                triage,
-                OR: expect.any(Array),
-              }),
-            },
-          };
+              relationshipTriage: triage,
+              triageIgnores: {
+                none: expect.objectContaining({
+                  triage,
+                  OR: expect.any(Array),
+                }),
+              },
+            };
 
       await repository.getAudienceFollowers({
         organizationId: 'org',
