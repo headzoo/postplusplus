@@ -11,20 +11,27 @@ import { getFollowerSegmentHelpCopy } from '@gitroom/frontend/components/followe
 
 export const FollowerBoardColumnMenu: FC<{
   segment: FollowerSegmentDefinition;
-}> = ({ segment }) => {
+  onAdd?: () => void;
+}> = ({ segment, onAdd }) => {
   const t = useT();
   const [open, setOpen] = useState(false);
   const ref = useClickOutside(() => setOpen(false));
   const helpModal = useFollowerSegmentHelpModal();
   const hasHelp = !!getFollowerSegmentHelpCopy(segment.slug);
+  const showAdd = segment.slug === 'leads' && !!onAdd;
 
-  if (!hasHelp) {
+  if (!hasHelp && !showAdd) {
     return null;
   }
 
   const openHelp = () => {
     setOpen(false);
     helpModal.open(segment);
+  };
+
+  const openAdd = () => {
+    setOpen(false);
+    onAdd?.();
   };
 
   return (
@@ -61,15 +68,28 @@ export const FollowerBoardColumnMenu: FC<{
           )}
           data-testid="followers-board-column-menu-panel"
         >
-          <button
-            type="button"
-            role="menuitem"
-            onClick={openHelp}
-            className="w-full rounded-[6px] px-[10px] py-[8px] text-start text-[13px] text-newTextColor hover:bg-newBgColor"
-            data-testid="followers-board-column-help"
-          >
-            {t('followers_board_column_help_menu', 'Help')}
-          </button>
+          {showAdd && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={openAdd}
+              className="w-full rounded-[6px] px-[10px] py-[8px] text-start text-[13px] text-newTextColor hover:bg-newBgColor"
+              data-testid="followers-board-column-add"
+            >
+              {t('followers_board_column_add_menu', 'Add')}
+            </button>
+          )}
+          {hasHelp && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={openHelp}
+              className="w-full rounded-[6px] px-[10px] py-[8px] text-start text-[13px] text-newTextColor hover:bg-newBgColor"
+              data-testid="followers-board-column-help"
+            >
+              {t('followers_board_column_help_menu', 'Help')}
+            </button>
+          )}
         </div>
       )}
     </div>

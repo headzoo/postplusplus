@@ -388,6 +388,7 @@ const FollowerBoardColumnHeader: FC<{
   countLabel: string;
   titleTruncate?: boolean;
   segment?: FollowerSegmentDefinition;
+  onAddLead?: () => void;
   dragHandleRef?: (node: HTMLElement | null) => void;
 }> = ({
   color,
@@ -396,6 +397,7 @@ const FollowerBoardColumnHeader: FC<{
   countLabel,
   titleTruncate = false,
   segment,
+  onAddLead,
   dragHandleRef,
 }) => {
   const t = useT();
@@ -444,7 +446,9 @@ const FollowerBoardColumnHeader: FC<{
           </div>
         </div>
       </div>
-      {segment ? <FollowerBoardColumnMenu segment={segment} /> : null}
+      {segment ? (
+        <FollowerBoardColumnMenu segment={segment} onAdd={onAddLead} />
+      ) : null}
     </div>
   );
 };
@@ -462,6 +466,7 @@ export const FollowerBoardColumn: FC<{
   dragHandleRef?: (node: HTMLElement | null) => void;
   dropRef?: (node: HTMLElement | null) => void;
   onOpenFollower: (follower: Follower) => void;
+  onAddLead?: () => void;
   onDismissTriage?: (
     follower: Follower,
     triage: DismissibleTriage,
@@ -482,6 +487,7 @@ export const FollowerBoardColumn: FC<{
   dragHandleRef,
   dropRef,
   onOpenFollower,
+  onAddLead,
   onDismissTriage,
   onUnfollow,
 }) => {
@@ -510,6 +516,7 @@ export const FollowerBoardColumn: FC<{
         title={segmentLabel}
         countLabel={countLabel}
         segment={segment}
+        onAddLead={onAddLead}
         dragHandleRef={dragHandleRef}
       />
 
@@ -634,6 +641,7 @@ const SortableFollowerBoardColumn: FC<{
   onReorderLocal: (from: number, to: number) => void;
   onDragEnd: () => void;
   onOpenFollower: (follower: Follower) => void;
+  onAddLead?: () => void;
   onDismissTriage?: (
     follower: Follower,
     triage: DismissibleTriage,
@@ -651,6 +659,7 @@ const SortableFollowerBoardColumn: FC<{
   onReorderLocal,
   onDragEnd,
   onOpenFollower,
+  onAddLead,
   onDismissTriage,
   onUnfollow,
 }) => {
@@ -715,6 +724,7 @@ const SortableFollowerBoardColumn: FC<{
         dragHandleRef={dragHandleRef}
         dropRef={dropRef}
         onOpenFollower={onOpenFollower}
+        onAddLead={onAddLead}
         onDismissTriage={onDismissTriage}
         onUnfollow={onUnfollow}
       />
@@ -748,6 +758,7 @@ export const FollowerBoard: FC<{
   onReorderLocal?: (from: number, to: number) => void;
   onDragEnd?: () => void;
   onOpenFollower: (follower: Follower) => void;
+  onAddLead?: () => void;
   onDismissTriage?: (
     follower: Follower,
     triage: DismissibleTriage,
@@ -764,6 +775,7 @@ export const FollowerBoard: FC<{
   onReorderLocal,
   onDragEnd,
   onOpenFollower,
+  onAddLead,
   onDismissTriage,
   onUnfollow,
 }) => {
@@ -784,6 +796,7 @@ export const FollowerBoard: FC<{
             onReorderLocal={onReorderLocal}
             onDragEnd={onDragEnd}
             onOpenFollower={onOpenFollower}
+            onAddLead={onAddLead}
             onDismissTriage={onDismissTriage}
             onUnfollow={onUnfollow}
           />
@@ -799,6 +812,7 @@ export const FollowerBoard: FC<{
             canUnfollow={canUnfollow}
             lists={lists}
             onOpenFollower={onOpenFollower}
+            onAddLead={onAddLead}
             onDismissTriage={onDismissTriage}
             onUnfollow={onUnfollow}
           />

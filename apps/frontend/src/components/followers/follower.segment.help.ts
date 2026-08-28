@@ -22,7 +22,7 @@ export const FOLLOWER_SEGMENT_HELP_COPY: Partial<
     defaultSummary: FOLLOWER_CATEGORY_DESCRIPTIONS.lead,
     calculationKey: 'followers_segment_help_leads_calculation',
     defaultCalculation:
-      'Leads are people who interact with the channel but are not followers yet, including warm-network prospects reached through bridges (for example “Via @handle”). Membership comes from audience state and recent interactions—not from the Mutual/Quiet/Costly effort ratios. Cards may show an optional Fit score. You can follow them (when the channel supports it), move them to a list, remove them with a reason, or snooze them.',
+      'Leads are people who interact with the channel but are not followers yet, including warm-network prospects reached through bridges (for example “Via @handle”). Membership comes from audience state and recent interactions—not from the Mutual/Quiet/Costly effort ratios. The list is ordered by when each person entered Leads (newest first), so manually added profiles appear at the top. Cards may show an optional Fit score. You can follow them (when the channel supports it), move them to a list, remove them with a reason, or snooze them.',
   },
   hot: {
     summaryKey: 'followers_board_hot_description',

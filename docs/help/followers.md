@@ -58,7 +58,7 @@ Hot refreshes about once per hour with a bounded set of relationships that need 
 
 ### Leads
 
-Leads are people who interact but may not follow you yet (including “Via @handle” bridges). Cards can show a **Fit** score. Click the **Lead** badge to follow them through the channel (when supported), move them to a custom list, remove them with a reason, or snooze for 7 days. Dismissing removes them from the Leads view when that filter is active. Empty: **No leads on this channel**.
+Leads are people who interact but may not follow you yet (including “Via @handle” bridges). Cards can show a **Fit** score. Newest leads appear first (including people you add manually). Click the **Lead** badge to follow them through the channel (when supported), move them to a custom list, remove them with a reason, or snooze for 7 days. Use the Leads column **⋮** menu or the **+ Add** button on the Leads tab to paste a profile URL and add someone manually. Dismissing removes them from the Leads view when that filter is active. Empty: **No leads on this channel**.
 
 ### Cultivate
 

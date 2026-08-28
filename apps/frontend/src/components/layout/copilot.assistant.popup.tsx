@@ -1,9 +1,12 @@
 'use client';
 
-import { FC, ReactNode, useEffect, useState } from 'react';
+import { FC, ReactNode, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { CopilotPopup } from '@copilotkit/react-ui';
-import type { InputProps } from '@copilotkit/react-ui/dist/components/chat/props';
+import type {
+  InputProps,
+  WindowProps,
+} from '@copilotkit/react-ui/dist/components/chat/props';
 import {
   useCopilotMessagesContext,
   type SuggestionItem,
@@ -16,6 +19,7 @@ type CopilotAssistantPopupProps = {
   initialMessage?: string;
   suggestions?: SuggestionItem[];
   Input?: React.ComponentType<InputProps>;
+  showClearChat?: boolean;
   children?: ReactNode;
 };
 
@@ -40,6 +44,7 @@ const CopilotAssistantPopupChat: FC<CopilotAssistantPopupProps> = ({
   initialMessage,
   suggestions,
   Input,
+  showClearChat = false,
   children,
 }) => {
   const t = useT();
@@ -54,12 +59,24 @@ const CopilotAssistantPopupChat: FC<CopilotAssistantPopupProps> = ({
       ? { suggestions }
       : {};
 
+  const Window = useMemo(() => {
+    if (!showClearChat) {
+      return ResizableCopilotWindow;
+    }
+
+    const ClearChatWindow: FC<WindowProps> = (windowProps) => (
+      <ResizableCopilotWindow {...windowProps} showClearChat />
+    );
+    ClearChatWindow.displayName = 'ClearChatWindow';
+    return ClearChatWindow;
+  }, [showClearChat]);
+
   return (
     <CopilotPopup
       hitEscapeToClose={false}
       clickOutsideToClose={true}
       instructions={instructions}
-      Window={ResizableCopilotWindow}
+      Window={Window}
       Input={Input}
       {...suggestionProps}
       labels={{

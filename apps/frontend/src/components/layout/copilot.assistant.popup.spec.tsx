@@ -9,15 +9,22 @@ import {
   COPILOT_POPUP_SIZE_KEY,
   getDefaultCopilotPopupSize,
 } from './copilot.assistant.popup.size';
-import { ResizableCopilotWindow } from './copilot.assistant.popup.window';
+import {
+  CopilotClearChatButton,
+  ResizableCopilotWindow,
+} from './copilot.assistant.popup.window';
 
 let popupProps: any;
 let messages: Array<{ id: string }> = [];
 let chatOpen = true;
 let setOpen = jest.fn();
+let reset = jest.fn();
+let stopGeneration = jest.fn();
+let isLoading = false;
 
 jest.mock('@copilotkit/react-core', () => ({
   useCopilotMessagesContext: () => ({ messages }),
+  useCopilotChat: () => ({ reset, stopGeneration, isLoading }),
 }));
 
 jest.mock('@copilotkit/react-ui', () => ({
@@ -89,6 +96,51 @@ describe('CopilotAssistantPopup', () => {
 
     expect(popupProps.Input).toBe(CustomInput);
   });
+
+  it('wraps Window with clear chat when showClearChat is enabled', () => {
+    render(<CopilotAssistantPopup instructions="help" showClearChat />);
+
+    expect(popupProps.Window).not.toBe(ResizableCopilotWindow);
+    expect(popupProps.Window.displayName).toBe('ClearChatWindow');
+  });
+});
+
+describe('CopilotClearChatButton', () => {
+  beforeEach(() => {
+    messages = [];
+    reset = jest.fn();
+    stopGeneration = jest.fn();
+    isLoading = false;
+  });
+
+  it('hides when there are no messages', () => {
+    render(<CopilotClearChatButton />);
+
+    expect(screen.queryByRole('button', { name: 'Clear chat' })).toBeNull();
+  });
+
+  it('clears chat when clicked', () => {
+    messages = [{ id: 'm1' }];
+
+    render(<CopilotClearChatButton />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear chat' }));
+
+    expect(stopGeneration).not.toHaveBeenCalled();
+    expect(reset).toHaveBeenCalled();
+  });
+
+  it('stops generation before clearing when loading', () => {
+    messages = [{ id: 'm1' }];
+    isLoading = true;
+
+    render(<CopilotClearChatButton />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear chat' }));
+
+    expect(stopGeneration).toHaveBeenCalled();
+    expect(reset).toHaveBeenCalled();
+  });
 });
 
 describe('ResizableCopilotWindow', () => {
@@ -96,6 +148,7 @@ describe('ResizableCopilotWindow', () => {
     localStorage.clear();
     chatOpen = true;
     setOpen = jest.fn();
+    messages = [];
     Object.defineProperty(window, 'innerWidth', {
       configurable: true,
       value: 1280,
@@ -171,5 +224,38 @@ describe('ResizableCopilotWindow', () => {
     ) as HTMLElement;
     expect(windowEl.style.width).toBe(`${defaults.width}px`);
     expect(windowEl.style.height).toBe(`${defaults.height}px`);
+  });
+
+  it('renders the clear chat button when showClearChat is enabled and messages exist', () => {
+    messages = [{ id: 'm1' }];
+
+    render(
+      <ResizableCopilotWindow
+        clickOutsideToClose={false}
+        hitEscapeToClose={false}
+        shortcut="/"
+        showClearChat
+      >
+        <div>content</div>
+      </ResizableCopilotWindow>
+    );
+
+    expect(screen.getByRole('button', { name: 'Clear chat' })).toBeTruthy();
+  });
+
+  it('does not render the clear chat button by default', () => {
+    messages = [{ id: 'm1' }];
+
+    render(
+      <ResizableCopilotWindow
+        clickOutsideToClose={false}
+        hitEscapeToClose={false}
+        shortcut="/"
+      >
+        <div>content</div>
+      </ResizableCopilotWindow>
+    );
+
+    expect(screen.queryByRole('button', { name: 'Clear chat' })).toBeNull();
   });
 });

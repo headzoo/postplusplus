@@ -2568,6 +2568,36 @@ export class ChannelInteractionService {
     };
   }
 
+  async importLead(
+    organizationId: string,
+    integrationId: string,
+    follower: Follower,
+    createdByUserId?: string
+  ) {
+    const profile = this.validateFollower(follower);
+    const result = await this._repository.upsertImportedAudienceMemberAsLead(
+      organizationId,
+      integrationId,
+      profile,
+      createdByUserId
+    );
+    if ('rejected' in result) {
+      throw new BadRequestException(
+        'This profile is already a follower or someone you follow'
+      );
+    }
+    if ('missing' in result) {
+      throw new NotFoundException('Follower was not found');
+    }
+    return {
+      externalId: result.member.externalId,
+      name: result.member.name,
+      username: result.member.username,
+      profileUrl: profile.profileUrl ?? null,
+      picture: profile.picture ?? null,
+    };
+  }
+
   async removeFollowerListMember(
     organizationId: string,
     integrationId: string,

@@ -1376,6 +1376,42 @@ export const useFollowerListMutations = (integrationId?: string) => {
     [fetch, integrationId, mutateCache]
   );
 
+  const importLeadFromUrl = useCallback(
+    async (url: string) => {
+      if (!integrationId) {
+        throw new Error('Channel is required');
+      }
+      const response = await fetch(`/followers/${integrationId}/leads/import`, {
+        method: 'POST',
+        body: JSON.stringify({ url }),
+      });
+      if (!response.ok) {
+        let message = 'Failed to import profile as a lead';
+        try {
+          const body = await response.json();
+          if (typeof body?.message === 'string') {
+            message = body.message;
+          } else if (Array.isArray(body?.message) && body.message[0]) {
+            message = String(body.message[0]);
+          }
+        } catch {
+          // keep default message
+        }
+        throw new Error(message);
+      }
+      const imported = (await response.json()) as {
+        externalId?: string;
+        name?: string | null;
+        username?: string | null;
+        picture?: string | null;
+        profileUrl?: string | null;
+      };
+      await revalidateFollowerChannelCaches(mutateCache, integrationId);
+      return imported;
+    },
+    [fetch, integrationId, mutateCache]
+  );
+
   const removeMember = useCallback(
     async (listId: string, externalId: string) => {
       if (!integrationId) {
@@ -1597,6 +1633,7 @@ export const useFollowerListMutations = (integrationId?: string) => {
     updateList,
     addMember,
     importMemberFromUrl,
+    importLeadFromUrl,
     removeMember,
     ignoreTriage,
     followMember,

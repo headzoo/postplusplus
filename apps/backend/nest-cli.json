@@ -17,6 +17,10 @@
       {
         "include": "../../../libraries/nestjs-libraries/src/channel-strategies/expertise/**/*.md",
         "outDir": "dist/libraries/nestjs-libraries/src"
+      },
+      {
+        "include": "../../../libraries/nestjs-libraries/src/help/help-manifest.generated.json",
+        "outDir": "dist/libraries/nestjs-libraries/src/help"
       }
     ],
     "watchAssets": false,

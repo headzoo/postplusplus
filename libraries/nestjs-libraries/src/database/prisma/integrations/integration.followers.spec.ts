@@ -3784,16 +3784,14 @@ describe('IntegrationService followers', () => {
   });
 
   it('rejects replaying a lead cursor under a follower triage filter', async () => {
-    const cursor = `follower-lead:v3:${Buffer.from(
+    const cursor = `follower-lead:v4:${Buffer.from(
       JSON.stringify({
-        version: 3,
+        version: 4,
         organizationId: 'org-a',
         integrationId: 'channel-a',
         direction: 'desc',
         audience: 'lead',
-        leadFitScore: 88,
-        leadBridgeScore: 4,
-        lastInboundAt: '2026-08-14T12:00:00.000Z',
+        createdAt: '2026-08-14T12:00:00.000Z',
         externalId: 'lead-1',
       })
     ).toString('base64url')}`;

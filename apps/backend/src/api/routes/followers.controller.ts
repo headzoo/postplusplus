@@ -321,6 +321,21 @@ export class FollowersController {
     );
   }
 
+  @Post('/:integrationId/leads/import')
+  importLead(
+    @GetOrgFromRequest() org: Organization,
+    @GetUserFromRequest() user: User,
+    @Param('integrationId') integrationId: string,
+    @Body() body: ImportFollowerListMemberDto
+  ) {
+    return this._integrationService.importLeadFromUrl(
+      org,
+      user,
+      integrationId,
+      body.url
+    );
+  }
+
   @Delete('/:integrationId/lists/:listId/members')
   removeFollowerListMember(
     @GetOrgFromRequest() org: Organization,

@@ -1608,6 +1608,7 @@ model ChannelAudienceMember {
   @@index([integrationId, membershipState, lastInboundAt, externalId], map: "ChannelAudienceMember_lead_inbound_keyset_idx")
   @@index([integrationId, membershipState, leadBridgeScore, lastInboundAt, externalId], map: "ChannelAudienceMember_lead_bridge_keyset_idx")
   @@index([integrationId, membershipState, leadFitScore, leadBridgeScore, lastInboundAt, externalId], map: "ChannelAudienceMember_lead_fit_keyset_idx")
+  @@index([integrationId, membershipState, createdAt, externalId], map: "ChannelAudienceMember_lead_created_keyset_idx")
   @@index([integrationId, membershipState, relationshipGrade, externalId])
   @@index([integrationId, membershipState, relationshipEffortScore, externalId], map: "ChannelAudienceMember_rel_effort_keyset_idx")
   @@index([integrationId, membershipState, relationshipReciprocationScore, externalId], map: "ChannelAudienceMember_rel_reciprocation_keyset_idx")

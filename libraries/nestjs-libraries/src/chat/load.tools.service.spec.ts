@@ -13,7 +13,7 @@ jest.mock('@ai-sdk/openai', () => ({
 }));
 
 jest.mock('@mastra/memory', () => ({
-  Memory: class Memory {},
+  Memory: class Memory { },
 }));
 
 jest.mock('@gitroom/nestjs-libraries/chat/mastra.store', () => ({
@@ -27,6 +27,7 @@ jest.mock('@gitroom/nestjs-libraries/chat/tools/tool.list', () => ({
 import {
   LoadToolsService,
   renderFollowerPageGuidance,
+  renderHelpPageGuidance,
   renderSelectedPipelineGuidance,
   SelectedPipelineContext,
 } from './load.tools.service';
@@ -247,9 +248,9 @@ describe('renderFollowerPageGuidance', () => {
         get: (key: string) =>
           key === 'followerPage'
             ? {
-                ...followerPage,
-                strategy: { id: 'customer_support', version: 1 },
-              }
+              ...followerPage,
+              strategy: { id: 'customer_support', version: 1 },
+            }
             : null,
       },
     });
@@ -375,5 +376,32 @@ describe('renderFollowerPageGuidance', () => {
     expect(instructions.indexOf('Live follower-page context')).toBeLessThan(
       instructions.indexOf('Product engagement expertise')
     );
+  });
+});
+
+describe('renderHelpPageGuidance', () => {
+  it('renders help-mode guidance when the panel is open', () => {
+    const guidance = renderHelpPageGuidance({
+      open: true,
+      view: 'article',
+      slug: 'calendar',
+      hash: 'scheduling',
+      title: 'Calendar',
+      searchQuery: 'schedule',
+    });
+
+    expect(guidance).toContain('HELP MODE ACTIVE');
+    expect(guidance).toContain('article');
+    expect(guidance).toContain('Calendar');
+    expect(guidance).toContain('slug: calendar');
+    expect(guidance).toContain('section: #scheduling');
+    expect(guidance).toContain('searchHelp');
+    expect(guidance).toContain('readHelpArticle');
+    expect(guidance).toContain('MUST call searchHelp');
+    expect(guidance).toContain('Do NOT answer product how-to questions from memory');
+  });
+
+  it('does not add help guidance when the panel is closed', () => {
+    expect(renderHelpPageGuidance(null)).toBe('');
   });
 });

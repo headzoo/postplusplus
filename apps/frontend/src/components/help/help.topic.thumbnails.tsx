@@ -1,7 +1,26 @@
 import { FC, ReactNode } from 'react';
 
-const ThumbnailShell: FC<{ children: ReactNode }> = ({ children }) => (
-  <span className="flex h-[48px] w-[48px] shrink-0 items-center justify-center rounded-[10px] bg-btnSimple text-textColor">
+const TOPIC_COLOR_CLASSES: Record<string, string> = {
+  calendar: 'bg-[#1d9bf0]',
+  agent: 'bg-[#D82D7E]',
+  dashboard: 'bg-[#8155dd]',
+  docs: 'bg-[#0f766e]',
+  followers: 'bg-[#d97706]',
+  media: 'bg-[#16a34a]',
+  pipelines: 'bg-[#eb3825]',
+  rules: 'bg-[#2563eb]',
+  settings: 'bg-[#6b7280]',
+};
+
+const DEFAULT_TOPIC_COLOR_CLASS = 'bg-[#313030]';
+
+const ThumbnailShell: FC<{ children: ReactNode; colorClass: string }> = ({
+  children,
+  colorClass,
+}) => (
+  <span
+    className={`flex h-[48px] w-[48px] shrink-0 items-center justify-center rounded-[10px] text-white ${colorClass}`}
+  >
     {children}
   </span>
 );
@@ -26,11 +45,16 @@ const stroke = {
   strokeLinejoin: 'round' as const,
 };
 
+const topicColorClass = (slug: string) =>
+  TOPIC_COLOR_CLASSES[slug] ?? DEFAULT_TOPIC_COLOR_CLASS;
+
 export const HelpTopicThumbnail: FC<{ slug: string }> = ({ slug }) => {
+  const colorClass = topicColorClass(slug);
+
   switch (slug) {
     case 'calendar':
       return (
-        <ThumbnailShell>
+        <ThumbnailShell colorClass={colorClass}>
           <Icon>
             <path
               d="M8 3v3M16 3v3M4 9h16M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z"
@@ -41,7 +65,7 @@ export const HelpTopicThumbnail: FC<{ slug: string }> = ({ slug }) => {
       );
     case 'agent':
       return (
-        <ThumbnailShell>
+        <ThumbnailShell colorClass={colorClass}>
           <Icon>
             <path
               d="M12 3v2M8 9h8a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2Z"
@@ -53,7 +77,7 @@ export const HelpTopicThumbnail: FC<{ slug: string }> = ({ slug }) => {
       );
     case 'dashboard':
       return (
-        <ThumbnailShell>
+        <ThumbnailShell colorClass={colorClass}>
           <Icon>
             <path
               d="M4 13h6v7H4v-7ZM14 4h6v16h-6V4ZM4 4h6v7H4V4Z"
@@ -64,7 +88,7 @@ export const HelpTopicThumbnail: FC<{ slug: string }> = ({ slug }) => {
       );
     case 'docs':
       return (
-        <ThumbnailShell>
+        <ThumbnailShell colorClass={colorClass}>
           <Icon>
             <path
               d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"
@@ -76,7 +100,7 @@ export const HelpTopicThumbnail: FC<{ slug: string }> = ({ slug }) => {
       );
     case 'followers':
       return (
-        <ThumbnailShell>
+        <ThumbnailShell colorClass={colorClass}>
           <Icon>
             <path
               d="M16 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 18.5V20M18.5 20v-1.2a2.8 2.8 0 0 0-2-2.7M12.5 7.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM19 8.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0Z"
@@ -87,7 +111,7 @@ export const HelpTopicThumbnail: FC<{ slug: string }> = ({ slug }) => {
       );
     case 'media':
       return (
-        <ThumbnailShell>
+        <ThumbnailShell colorClass={colorClass}>
           <Icon>
             <path
               d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7Z"
@@ -102,7 +126,7 @@ export const HelpTopicThumbnail: FC<{ slug: string }> = ({ slug }) => {
       );
     case 'pipelines':
       return (
-        <ThumbnailShell>
+        <ThumbnailShell colorClass={colorClass}>
           <Icon>
             <path
               d="M4 7h16M4 12h10M4 17h13M16 9.5V14.5M16 9.5l2 2M16 9.5l-2 2"
@@ -113,7 +137,7 @@ export const HelpTopicThumbnail: FC<{ slug: string }> = ({ slug }) => {
       );
     case 'rules':
       return (
-        <ThumbnailShell>
+        <ThumbnailShell colorClass={colorClass}>
           <Icon>
             <circle cx="12" cy="12" r="8" {...stroke} />
             <path d="M12 8v4M12 12h4M12 12H8" {...stroke} />
@@ -122,7 +146,7 @@ export const HelpTopicThumbnail: FC<{ slug: string }> = ({ slug }) => {
       );
     case 'settings':
       return (
-        <ThumbnailShell>
+        <ThumbnailShell colorClass={colorClass}>
           <Icon>
             <circle cx="12" cy="12" r="3" {...stroke} />
             <path
@@ -134,7 +158,7 @@ export const HelpTopicThumbnail: FC<{ slug: string }> = ({ slug }) => {
       );
     default:
       return (
-        <ThumbnailShell>
+        <ThumbnailShell colorClass={colorClass}>
           <Icon>
             <circle cx="12" cy="12" r="8" {...stroke} />
             <path d="M12 8v5M12 16h.01" {...stroke} />

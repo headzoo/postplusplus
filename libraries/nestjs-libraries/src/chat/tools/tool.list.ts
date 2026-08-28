@@ -32,6 +32,9 @@ import { AgentSkillsListTool } from '@gitroom/nestjs-libraries/chat/tools/agent-
 import { AgentSkillLoadTool } from '@gitroom/nestjs-libraries/chat/tools/agent-skill.load.tool';
 import { ExpertiseListTool } from '@gitroom/nestjs-libraries/chat/tools/expertise.list.tool';
 import { ExpertiseReadTool } from '@gitroom/nestjs-libraries/chat/tools/expertise.read.tool';
+import { HelpTopicsListTool } from '@gitroom/nestjs-libraries/chat/tools/help.topics.list.tool';
+import { HelpSearchTool } from '@gitroom/nestjs-libraries/chat/tools/help.search.tool';
+import { HelpArticleReadTool } from '@gitroom/nestjs-libraries/chat/tools/help.article.read.tool';
 
 export const toolList = [
   IntegrationListTool,
@@ -60,6 +63,9 @@ export const toolList = [
   AgentSkillLoadTool,
   ExpertiseListTool,
   ExpertiseReadTool,
+  HelpTopicsListTool,
+  HelpSearchTool,
+  HelpArticleReadTool,
   IntegrationValidationTool,
   IntegrationTriggerTool,
   IntegrationSchedulePostTool,

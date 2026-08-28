@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { buildHelpManifest } from './build-help-manifest.mjs';
+import {
+  buildHelpManifest,
+  writeHelpManifest,
+} from './build-help-manifest.mjs';
 
 const withHelpDir = async (files, callback) => {
   const helpDir = await mkdtemp(path.join(os.tmpdir(), 'postplusplus-help-'));
@@ -156,6 +159,38 @@ test('buildHelpManifest rejects missing help pages and fragments', async () => {
         () => buildHelpManifest({ helpDir }),
         /calendar\.md: unresolved help anchor \/help\/calendar#missing/
       );
+    }
+  );
+});
+
+test('writeHelpManifest writes identical dual outputs', async () => {
+  await withHelpDir(
+    {
+      'calendar.md': '# Calendar\n\n## Scheduling\n',
+    },
+    async (helpDir) => {
+      const outputDir = await mkdtemp(
+        path.join(os.tmpdir(), 'postplusplus-help-out-')
+      );
+      try {
+        const first = path.join(outputDir, 'frontend', 'help-manifest.json');
+        const second = path.join(outputDir, 'backend', 'help-manifest.json');
+        const { manifest, outputPaths } = await writeHelpManifest({
+          helpDir,
+          outputPaths: [first, second],
+        });
+
+        assert.deepEqual(outputPaths, [first, second]);
+        const firstPayload = await readFile(first, 'utf8');
+        const secondPayload = await readFile(second, 'utf8');
+        assert.equal(firstPayload, secondPayload);
+        assert.equal(
+          JSON.parse(firstPayload).pages.length,
+          manifest.pages.length
+        );
+      } finally {
+        await rm(outputDir, { recursive: true, force: true });
+      }
     }
   );
 });

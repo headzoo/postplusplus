@@ -18,10 +18,18 @@ import {
 jest.mock('remark-gfm', () => jest.fn());
 jest.mock('react-markdown', () => ({
   __esModule: true,
-  default: () => null,
+  default: ({ components }: any) => {
+    const React = require('react');
+    const H1 = components.h1;
+    return React.createElement(H1, null, 'Calendar');
+  },
 }));
 jest.mock('./use.help.manifest', () => ({
   useHelpManifest: jest.fn(),
+}));
+
+jest.mock('./use.copilot.help.page', () => ({
+  useCopilotHelpPageProperties: jest.fn(),
 }));
 
 jest.mock('@gitroom/frontend/components/layout/title', () => ({
@@ -204,12 +212,39 @@ describe('HelpDrawer', () => {
     );
     expect(dialog.className).toContain('mobile:w-full');
     expect(dialog.className).toContain('bg-newColColor');
+    expect(dialog.className).toContain('p-4');
     expect(dialog.className).toContain('shadow-menu');
     expect(dialog.className).toContain('border-newSep');
     expect(dialog.className).toContain('translate-x-0');
+    const innerCard = Array.from(dialog.querySelectorAll('div')).find(
+      (el) =>
+        el.className.includes('rounded-[12px]') &&
+        el.className.includes('bg-[#FFFFFF]') &&
+        el.className.includes('dark:bg-[#000000]')
+    );
+    expect(innerCard).toBeTruthy();
+    const helpCenter = screen.getByRole('link', { name: /Help center/ });
+    expect(innerCard?.contains(helpCenter)).toBe(false);
     expect(
       screen.getByRole('separator', { name: 'Resize help panel' })
     ).toBeTruthy();
+  });
+
+  it('keeps article Back chrome outside the inner card', () => {
+    render(<HelpDrawer open onClose={jest.fn()} triggerRef={triggerRef} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Calendar Plan/ }));
+
+    const dialog = screen.getByRole('dialog', { name: 'Help' });
+    const innerCard = Array.from(dialog.querySelectorAll('div')).find(
+      (el) =>
+        el.className.includes('rounded-[12px]') &&
+        el.className.includes('bg-[#FFFFFF]') &&
+        el.className.includes('dark:bg-[#000000]')
+    );
+    const back = screen.getByRole('button', { name: 'Back' });
+    expect(innerCard).toBeTruthy();
+    expect(innerCard?.contains(back)).toBe(false);
   });
 
   it('restores panel width from localStorage', () => {

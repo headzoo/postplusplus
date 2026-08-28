@@ -1590,6 +1590,54 @@ export class IntegrationService {
     listId: string,
     url: string
   ) {
+    const profile = await this.resolveAudienceProfileFromImportUrl(
+      org,
+      integrationId,
+      url
+    );
+
+    try {
+      return await this._channelInteractionService.importFollowerListMember(
+        org.id,
+        integrationId,
+        listId,
+        profile,
+        user.id
+      );
+    } catch (error) {
+      this.rethrowFollowerListError(error);
+    }
+  }
+
+  async importLeadFromUrl(
+    org: Organization,
+    user: User,
+    integrationId: string,
+    url: string
+  ) {
+    const profile = await this.resolveAudienceProfileFromImportUrl(
+      org,
+      integrationId,
+      url
+    );
+
+    try {
+      return await this._channelInteractionService.importLead(
+        org.id,
+        integrationId,
+        profile,
+        user.id
+      );
+    } catch (error) {
+      this.rethrowFollowerListError(error);
+    }
+  }
+
+  private async resolveAudienceProfileFromImportUrl(
+    org: Organization,
+    integrationId: string,
+    url: string
+  ): Promise<Follower> {
     const trimmedUrl = typeof url === 'string' ? url.trim() : '';
     if (!trimmedUrl || trimmedUrl.length > 2048) {
       throw new HttpException('Invalid profile URL', HttpStatus.BAD_REQUEST);
@@ -1676,18 +1724,7 @@ export class IntegrationService {
         HttpStatus.BAD_REQUEST
       );
     }
-
-    try {
-      return await this._channelInteractionService.importFollowerListMember(
-        org.id,
-        integrationId,
-        listId,
-        profile,
-        user.id
-      );
-    } catch (error) {
-      this.rethrowFollowerListError(error);
-    }
+    return profile;
   }
 
   async removeFollowerListMember(
@@ -2666,6 +2703,7 @@ export class IntegrationService {
       query.cursor?.startsWith('follower-lead:v1:') ||
       query.cursor?.startsWith('follower-lead:v2:') ||
       query.cursor?.startsWith('follower-lead:v3:') ||
+      query.cursor?.startsWith('follower-lead:v4:') ||
       query.cursor?.startsWith('follower-cultivate:v1:') ||
       query.cursor?.startsWith('follower-cultivate:v2:')
     ) {
@@ -3015,11 +3053,7 @@ export class IntegrationService {
               direction,
               search: query.search,
               audience: 'lead',
-              leadFitScore: last.leadFitScore ?? null,
-              leadBridgeScore: last.leadBridgeScore ?? null,
-              lastInboundAt: last.lastInboundAt
-                ? last.lastInboundAt.toISOString()
-                : null,
+              createdAt: last.createdAt.toISOString(),
               externalId: last.externalId,
             }),
           }
@@ -4226,8 +4260,8 @@ export class IntegrationService {
       audience: 'lead';
     } & AudienceLeadCursor
   ) {
-    return `follower-lead:v3:${Buffer.from(
-      JSON.stringify({ version: 3, ...cursor })
+    return `follower-lead:v4:${Buffer.from(
+      JSON.stringify({ version: 4, ...cursor })
     ).toString('base64url')}`;
   }
 
@@ -4491,35 +4525,28 @@ export class IntegrationService {
     search: string | undefined
   ): AudienceLeadCursor {
     try {
-      if (!value.startsWith('follower-lead:v3:')) throw new Error();
+      if (!value.startsWith('follower-lead:v4:')) throw new Error();
       const cursor = JSON.parse(
         Buffer.from(
-          value.slice('follower-lead:v3:'.length),
+          value.slice('follower-lead:v4:'.length),
           'base64url'
         ).toString('utf8')
       );
       if (
-        cursor?.version !== 3 ||
+        cursor?.version !== 4 ||
         cursor.organizationId !== organizationId ||
         cursor.integrationId !== integrationId ||
         cursor.direction !== direction ||
         cursor.search !== search ||
         cursor.audience !== 'lead' ||
-        (cursor.leadFitScore !== null &&
-          typeof cursor.leadFitScore !== 'number') ||
-        (cursor.leadBridgeScore !== null &&
-          typeof cursor.leadBridgeScore !== 'number') ||
-        (cursor.lastInboundAt !== null &&
-          (typeof cursor.lastInboundAt !== 'string' ||
-            Number.isNaN(Date.parse(cursor.lastInboundAt)))) ||
+        typeof cursor.createdAt !== 'string' ||
+        Number.isNaN(Date.parse(cursor.createdAt)) ||
         typeof cursor.externalId !== 'string'
       ) {
         throw new Error();
       }
       return {
-        leadFitScore: cursor.leadFitScore,
-        leadBridgeScore: cursor.leadBridgeScore,
-        lastInboundAt: cursor.lastInboundAt,
+        createdAt: cursor.createdAt,
         externalId: cursor.externalId,
       };
     } catch {
@@ -4868,6 +4895,7 @@ export class IntegrationService {
       'follower-lead:v1:',
       'follower-lead:v2:',
       'follower-lead:v3:',
+      'follower-lead:v4:',
       'follower-followed:v1:',
       'follower-unfollowed:v1:',
       'follower-converted:v1:',

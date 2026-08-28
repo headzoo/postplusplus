@@ -167,23 +167,43 @@ export const buildHelpManifest = async (options = {}) => {
   };
 };
 
+export const DEFAULT_HELP_MANIFEST_OUTPUTS = [
+  path.join(repoDir, 'apps/frontend/src/help/help-manifest.generated.json'),
+  path.join(
+    repoDir,
+    'libraries/nestjs-libraries/src/help/help-manifest.generated.json'
+  ),
+];
+
 export const writeHelpManifest = async (options = {}) => {
   const helpDir =
     options.helpDir ?? path.join(repoDir, 'apps/frontend/src/help');
-  const outputPath =
-    options.outputPath ?? path.join(helpDir, 'help-manifest.generated.json');
+  const outputPaths = Array.isArray(options.outputPaths)
+    ? options.outputPaths
+    : options.outputPath
+    ? [options.outputPath]
+    : DEFAULT_HELP_MANIFEST_OUTPUTS;
   const manifest = await buildHelpManifest({ helpDir });
+  const payload = `${JSON.stringify(manifest, null, 2)}\n`;
 
-  await mkdir(path.dirname(outputPath), { recursive: true });
-  await writeFile(outputPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+  for (const outputPath of outputPaths) {
+    await mkdir(path.dirname(outputPath), { recursive: true });
+    await writeFile(outputPath, payload, 'utf8');
+  }
 
-  return manifest;
+  return { manifest, outputPaths };
 };
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   try {
-    const manifest = await writeHelpManifest();
-    console.log(`Built help manifest with ${manifest.pages.length} page(s).`);
+    const { manifest, outputPaths } = await writeHelpManifest();
+    console.log(
+      `Built help manifest with ${
+        manifest.pages.length
+      } page(s) -> ${outputPaths
+        .map((outputPath) => path.relative(repoDir, outputPath))
+        .join(', ')}.`
+    );
   } catch (error) {
     console.error(`Help corpus build failed: ${error.message}`);
     process.exitCode = 1;

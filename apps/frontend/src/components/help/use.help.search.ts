@@ -1,15 +1,11 @@
 'use client';
 
 import { useMemo } from 'react';
-import MiniSearch from 'minisearch';
+import {
+  createHelpSearchIndex,
+  searchHelpManifest,
+} from '@gitroom/nestjs-libraries/help/help.search';
 import { HelpArticle, HelpManifest } from './help.types';
-
-type SearchDocument = Pick<HelpArticle, 'slug' | 'title' | 'excerpt'> & {
-  headingText: string;
-};
-
-const topicSort = (left: HelpArticle, right: HelpArticle) =>
-  left.title.localeCompare(right.title);
 
 export const useHelpSearch = (
   manifest: HelpManifest | undefined,
@@ -20,27 +16,7 @@ export const useHelpSearch = (
       return null;
     }
 
-    const search = new MiniSearch<SearchDocument>({
-      fields: ['title', 'headingText', 'excerpt'],
-      storeFields: ['slug', 'title', 'excerpt'],
-      idField: 'slug',
-      searchOptions: {
-        boost: { title: 4, headingText: 2, excerpt: 1 },
-        prefix: true,
-        fuzzy: 0.2,
-      },
-    });
-
-    search.addAll(
-      manifest.pages.map((article) => ({
-        slug: article.slug,
-        title: article.title,
-        excerpt: article.excerpt,
-        headingText: article.headingText,
-      }))
-    );
-
-    return search;
+    return createHelpSearchIndex(manifest);
   }, [manifest]);
 
   return useMemo(() => {
@@ -48,19 +24,6 @@ export const useHelpSearch = (
       return [];
     }
 
-    const normalizedQuery = query.trim();
-    if (!normalizedQuery) {
-      return [...manifest.pages].sort(topicSort);
-    }
-
-    const pagesBySlug = new Map(
-      manifest.pages.map((article) => [article.slug, article])
-    );
-    return (
-      index
-        ?.search(normalizedQuery)
-        .map((result) => pagesBySlug.get(result.slug))
-        .filter((article): article is HelpArticle => Boolean(article)) ?? []
-    );
+    return searchHelpManifest(manifest, query, index ?? undefined);
   }, [index, manifest, query]);
 };

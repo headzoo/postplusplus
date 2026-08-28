@@ -248,6 +248,7 @@ describe('FollowerBoard', () => {
     expect(menuButtons).toHaveLength(FOLLOWER_BOARD_SEGMENTS.length);
 
     fireEvent.click(menuButtons[0]);
+    expect(screen.queryByTestId('followers-board-column-add')).toBeNull();
     const helpItem = screen.getByTestId('followers-board-column-help');
     expect(helpItem.textContent).toBe('Help');
     fireEvent.click(helpItem);
@@ -266,6 +267,45 @@ describe('FollowerBoard', () => {
         title: 'About Hot',
       })
     );
+  });
+
+  it('shows Add above Help in the Leads column menu and calls onAddLead', () => {
+    const onAddLead = jest.fn();
+    render(
+      <FollowerBoard
+        orderedColumns={toOrderedSegmentColumns(
+          FOLLOWER_BOARD_SEGMENTS.map((segment, index) => ({
+            segment,
+            items: [],
+            total: index,
+            viewAllHref: `/followers/${segment.slug}`,
+          }))
+        )}
+        onOpenFollower={jest.fn()}
+        onAddLead={onAddLead}
+      />
+    );
+
+    const menuButtons = screen.getAllByTestId('followers-board-column-menu');
+    fireEvent.click(menuButtons[0]);
+
+    const panel = screen.getByTestId('followers-board-column-menu-panel');
+    const items = panel.querySelectorAll('[role="menuitem"]');
+    expect(items).toHaveLength(2);
+    expect(items[0].getAttribute('data-testid')).toBe(
+      'followers-board-column-add'
+    );
+    expect(items[0].textContent).toBe('Add');
+    expect(items[1].getAttribute('data-testid')).toBe(
+      'followers-board-column-help'
+    );
+
+    fireEvent.click(screen.getByTestId('followers-board-column-add'));
+    expect(onAddLead).toHaveBeenCalled();
+
+    const hotIndex = FOLLOWER_BOARD_SEGMENTS.findIndex((s) => s.slug === 'hot');
+    fireEvent.click(menuButtons[hotIndex]);
+    expect(screen.queryByTestId('followers-board-column-add')).toBeNull();
   });
 
   it('renders a scroll wrapper when a column has items', () => {

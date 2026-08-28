@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { HelpContent } from './help-content';
 import { HelpMarkdown } from './help.markdown';
 import { HelpManifest } from './help.types';
@@ -34,6 +34,10 @@ jest.mock('react-markdown', () => ({
 }));
 jest.mock('./use.help.manifest', () => ({
   useHelpManifest: jest.fn(),
+}));
+
+jest.mock('./use.copilot.help.page', () => ({
+  useCopilotHelpPageProperties: jest.fn(),
 }));
 
 const manifest: HelpManifest = {
@@ -68,6 +72,10 @@ describe('HelpContent', () => {
       error: undefined,
       isLoading: false,
     } as ReturnType<typeof useHelpManifest>);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it('only requests the manifest while open', () => {
@@ -105,6 +113,85 @@ describe('HelpContent', () => {
     expect(screen.getByRole('button', { name: /Calendar/ })).toBeTruthy();
   });
 
+  it('keeps the article view while typing in search until debounce settles', () => {
+    jest.useFakeTimers();
+    render(<HelpContent open />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Calendar Plan/ }));
+    const articleSearch = screen.getByRole('searchbox', {
+      name: 'Search help',
+    }) as HTMLInputElement;
+
+    fireEvent.change(articleSearch, { target: { value: 'queue' } });
+
+    expect(screen.getByRole('button', { name: 'Back' })).toBeTruthy();
+    expect(articleSearch.value).toBe('queue');
+    expect(document.getElementById('help-search-article')).toBeTruthy();
+
+    act(() => {
+      jest.advanceTimersByTime(300);
+    });
+
+    expect(screen.queryByRole('button', { name: 'Back' })).toBeNull();
+    const catalogSearch = screen.getByRole('searchbox', {
+      name: 'Search help',
+    }) as HTMLInputElement;
+    expect(catalogSearch.id).toBe('help-search');
+    expect(catalogSearch.value).toBe('queue');
+    expect(screen.queryByRole('button', { name: /Calendar Plan/ })).toBeNull();
+    expect(screen.getByRole('button', { name: /Pipelines/ })).toBeTruthy();
+    expect(document.activeElement).toBe(catalogSearch);
+
+    jest.useRealTimers();
+  });
+
+  it('cancels article search navigation when the query is cleared', () => {
+    jest.useFakeTimers();
+    render(<HelpContent open />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Calendar Plan/ }));
+    const articleSearch = screen.getByRole('searchbox', {
+      name: 'Search help',
+    });
+
+    fireEvent.change(articleSearch, { target: { value: 'queue' } });
+    fireEvent.change(articleSearch, { target: { value: '' } });
+
+    act(() => {
+      jest.advanceTimersByTime(300);
+    });
+
+    expect(screen.getByRole('button', { name: 'Back' })).toBeTruthy();
+    expect(document.getElementById('help-search-article')).toBeTruthy();
+
+    jest.useRealTimers();
+  });
+
+  it('cancels article search navigation when Back is pressed', () => {
+    jest.useFakeTimers();
+    render(<HelpContent open />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Calendar Plan/ }));
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search help' }), {
+      target: { value: 'queue' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+
+    act(() => {
+      jest.advanceTimersByTime(300);
+    });
+
+    expect(screen.queryByRole('button', { name: 'Back' })).toBeNull();
+    const catalogSearch = screen.getByRole('searchbox', {
+      name: 'Search help',
+    }) as HTMLInputElement;
+    expect(catalogSearch.id).toBe('help-search');
+    expect(catalogSearch.value).toBe('queue');
+    expect(document.activeElement).not.toBe(catalogSearch);
+
+    jest.useRealTimers();
+  });
+
   it('opens FAQ rows into the mapped article and hash', () => {
     const onEntryChange = jest.fn();
     render(<HelpContent open onEntryChange={onEntryChange} />);
@@ -128,6 +215,21 @@ describe('HelpContent', () => {
     expect(helpCenter.getAttribute('href')).toBe('/help');
     expect(helpCenter.getAttribute('target')).toBe('_blank');
     expect(helpCenter.getAttribute('rel')).toContain('noopener');
+    expect(helpCenter.className).toContain('bg-newBgColor');
+  });
+
+  it('shows Topics and Frequently Asked Questions section headers', () => {
+    render(<HelpContent open />);
+
+    expect(
+      screen.getByRole('heading', { name: 'Topics', level: 3 })
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('heading', {
+        name: 'Frequently Asked Questions',
+        level: 3,
+      })
+    ).toBeTruthy();
   });
 
   it('renders topic one-liners without repeating the title prefix', () => {
@@ -158,14 +260,28 @@ describe('HelpContent', () => {
     ).toBeNull();
   });
 
+  it('renders colorful topic thumbnail backgrounds', () => {
+    render(<HelpContent open />);
+
+    const calendarRow = screen.getByRole('button', { name: /Calendar/ });
+    const thumbnail = calendarRow.querySelector('span');
+    expect(thumbnail?.className).toContain('bg-[#1d9bf0]');
+  });
+
   it('keeps article navigation in panel history', () => {
     render(<HelpContent open />);
     fireEvent.click(screen.getByRole('button', { name: /Calendar Plan/ }));
     fireEvent.click(screen.getByRole('link', { name: 'Pipeline help' }));
 
-    expect(screen.getByText('Pipelines')).toBeTruthy();
+    // react-markdown is mocked with fixed copy; heading id comes from the active article.
+    expect(
+      screen.getByRole('heading', { name: 'Scheduling' }).getAttribute('id')
+    ).toBe('queue');
     fireEvent.click(screen.getByRole('button', { name: 'Back' }));
     expect(screen.getByRole('button', { name: 'Back' })).toBeTruthy();
+    expect(
+      screen.getByRole('heading', { name: 'Scheduling' }).getAttribute('id')
+    ).toBe('scheduling');
     fireEvent.click(screen.getByRole('button', { name: 'Back' }));
     expect(screen.getByRole('searchbox', { name: 'Search help' })).toBeTruthy();
   });

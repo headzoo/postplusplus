@@ -3,6 +3,7 @@
 import { FC, useMemo } from 'react';
 import { CopilotAssistantPopup } from '@gitroom/frontend/components/layout/copilot.assistant.popup';
 import { useActiveFollowerPage } from '@gitroom/frontend/components/followers/use.copilot.follower.page';
+import { useHelpPanelOpen } from '@gitroom/frontend/components/help/use.copilot.help.page';
 import { FollowersCopilotInput } from '@gitroom/frontend/components/followers/followers.copilot.input';
 import { FollowersCopilotLaunchListener } from '@gitroom/frontend/components/followers/followers.copilot.launch.listener';
 import { useFollowerChannels } from '@gitroom/frontend/components/followers/use.followers';
@@ -10,6 +11,7 @@ import { useT } from '@gitroom/react/translation/get.transation.service.client';
 
 export const FollowersAssistant: FC = () => {
   const t = useT();
+  const helpPanelOpen = useHelpPanelOpen();
   const followerPage = useActiveFollowerPage();
   const { data: channels } = useFollowerChannels();
   const selectedChannelId = followerPage?.channel?.id;
@@ -31,6 +33,10 @@ export const FollowersAssistant: FC = () => {
       }),
     [strategy, t]
   );
+
+  if (helpPanelOpen) {
+    return null;
+  }
 
   return (
     <CopilotAssistantPopup

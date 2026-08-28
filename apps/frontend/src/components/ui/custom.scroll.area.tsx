@@ -1,16 +1,12 @@
 'use client';
 
-import { CSSProperties, FC, ReactNode, useMemo } from 'react';
+import { CSSProperties, FC, MutableRefObject, ReactNode, useMemo } from 'react';
 import { OverlayScrollbarsComponent } from 'overlayscrollbars-react';
 import type { OverlayScrollbars } from 'overlayscrollbars';
 import clsx from 'clsx';
 import 'overlayscrollbars/overlayscrollbars.css';
 
-const SCROLLBAR_OPTIONS = {
-  autoHide: 'scroll' as const,
-  autoHideDelay: 800,
-  theme: 'os-theme-postiz',
-};
+type ScrollbarAutoHide = 'never' | 'scroll' | 'leave' | 'move';
 
 const getOverflowOptions = (direction: 'vertical' | 'horizontal') =>
   direction === 'horizontal'
@@ -23,6 +19,8 @@ export const CustomScrollArea: FC<{
   children: ReactNode;
   maxHeight?: string | number;
   direction?: 'vertical' | 'horizontal';
+  autoHide?: ScrollbarAutoHide;
+  viewportRef?: MutableRefObject<HTMLElement | null>;
   id?: string;
   'data-testid'?: string;
   onScroll?: (viewport: HTMLElement) => void;
@@ -32,6 +30,8 @@ export const CustomScrollArea: FC<{
   children,
   maxHeight,
   direction = 'vertical',
+  autoHide = 'scroll',
+  viewportRef,
   id,
   'data-testid': dataTestId,
   onScroll,
@@ -44,9 +44,36 @@ export const CustomScrollArea: FC<{
   const options = useMemo(
     () => ({
       overflow: getOverflowOptions(direction),
-      scrollbars: SCROLLBAR_OPTIONS,
+      scrollbars: {
+        autoHide,
+        autoHideDelay: 800,
+        theme: 'os-theme-postiz',
+      },
     }),
-    [direction]
+    [autoHide, direction]
+  );
+
+  const events = useMemo(
+    () => ({
+      initialized: (instance: OverlayScrollbars) => {
+        if (viewportRef) {
+          viewportRef.current = instance.elements().viewport;
+        }
+      },
+      destroyed: () => {
+        if (viewportRef) {
+          viewportRef.current = null;
+        }
+      },
+      ...(onScroll
+        ? {
+            scroll: (instance: OverlayScrollbars) => {
+              onScroll(instance.elements().viewport);
+            },
+          }
+        : {}),
+    }),
+    [onScroll, viewportRef]
   );
 
   return (
@@ -61,15 +88,7 @@ export const CustomScrollArea: FC<{
       )}
       style={style}
       options={options}
-      events={
-        onScroll
-          ? {
-              scroll: (instance: OverlayScrollbars) => {
-                onScroll(instance.elements().viewport);
-              },
-            }
-          : undefined
-      }
+      events={events}
     >
       {contentClassName ? (
         <div className={contentClassName}>{children}</div>

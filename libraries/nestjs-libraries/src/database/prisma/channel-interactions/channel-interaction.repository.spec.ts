@@ -577,6 +577,11 @@ describe('ChannelInteractionRepository', () => {
         OR: [
           { inboundInteractionCount: { gt: 0 } },
           { leadBridgesAsLead: { some: {} } },
+          {
+            leadFitFeedbacks: {
+              some: { source: 'lead_add', verdict: 'accepted' },
+            },
+          },
         ],
         ignoredAt: null,
         triageIgnores: {
@@ -2439,6 +2444,11 @@ describe('ChannelInteractionRepository', () => {
           OR: [
             { inboundInteractionCount: { gt: 0 } },
             { leadBridgesAsLead: { some: {} } },
+            {
+              leadFitFeedbacks: {
+                some: { source: 'lead_add', verdict: 'accepted' },
+              },
+            },
           ],
           weFollowedAt: null,
           triageIgnores: {
@@ -2453,12 +2463,7 @@ describe('ChannelInteractionRepository', () => {
             excludeActiveListMembership,
           ],
         },
-        orderBy: [
-          { leadFitScore: { sort: 'desc', nulls: 'last' } },
-          { leadBridgeScore: { sort: 'desc', nulls: 'last' } },
-          { lastInboundAt: { sort: 'desc', nulls: 'last' } },
-          { externalId: 'desc' },
-        ],
+        orderBy: [{ createdAt: 'desc' }, { externalId: 'desc' }],
         take: 3,
       })
     );
@@ -2730,6 +2735,11 @@ describe('ChannelInteractionRepository', () => {
           OR: [
             { inboundInteractionCount: { gt: 0 } },
             { leadBridgesAsLead: { some: {} } },
+            {
+              leadFitFeedbacks: {
+                some: { source: 'lead_add', verdict: 'accepted' },
+              },
+            },
           ],
           weFollowedAt: null,
           triageIgnores: {
@@ -2753,53 +2763,24 @@ describe('ChannelInteractionRepository', () => {
     );
   });
 
-  it('uses fit score, bridge score and last inbound keyset pagination for leads', async () => {
+  it('uses createdAt keyset pagination for leads', async () => {
     const { repository } = createHarness();
 
     expect(
-      (repository as any).leadBridgeKeyset(
+      (repository as any).leadCreatedKeyset(
         {
-          leadFitScore: 90,
-          leadBridgeScore: 4.5,
-          lastInboundAt: '2026-08-14T12:00:00.000Z',
+          createdAt: '2026-08-14T12:00:00.000Z',
           externalId: 'lead-1',
         },
         'desc'
       )
     ).toEqual({
       OR: [
-        { leadFitScore: { lt: 90 } },
+        { createdAt: { lt: new Date('2026-08-14T12:00:00.000Z') } },
         {
-          AND: [
-            { leadFitScore: 90 },
-            {
-              OR: [
-                { leadBridgeScore: { lt: 4.5 } },
-                {
-                  AND: [
-                    { leadBridgeScore: 4.5 },
-                    {
-                      OR: [
-                        {
-                          lastInboundAt: {
-                            lt: new Date('2026-08-14T12:00:00.000Z'),
-                          },
-                        },
-                        {
-                          lastInboundAt: new Date('2026-08-14T12:00:00.000Z'),
-                          externalId: { lt: 'lead-1' },
-                        },
-                        { lastInboundAt: null },
-                      ],
-                    },
-                  ],
-                },
-                { leadBridgeScore: null },
-              ],
-            },
-          ],
+          createdAt: new Date('2026-08-14T12:00:00.000Z'),
+          externalId: { lt: 'lead-1' },
         },
-        { leadFitScore: null },
       ],
     });
   });
@@ -4208,6 +4189,105 @@ describe('ChannelInteractionRepository', () => {
       tx.channelAudienceMember.upsert.mock.calls[0][0].create
     ).not.toHaveProperty('membershipState');
     expect(tx.channelAudienceListMember.upsert).toHaveBeenCalled();
+  });
+
+  it('imports a profile as a manual lead without list membership', async () => {
+    const { repository, tx } = createHarness();
+    tx.channelAudienceMember.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        externalId: '42',
+        name: 'Harbor',
+        username: 'HarborClient',
+        bio: null,
+        followersCount: null,
+        followingCount: null,
+        leadFitScore: null,
+        leadFitReason: null,
+        leadFitMatchedTopics: null,
+      });
+    tx.channelAudienceMember.upsert.mockResolvedValue({});
+    tx.channelAudienceMemberTriageIgnore.deleteMany.mockResolvedValue({
+      count: 1,
+    });
+
+    await expect(
+      repository.upsertImportedAudienceMemberAsLead(
+        'org',
+        'integration',
+        {
+          externalId: '42',
+          name: 'Harbor',
+          username: 'HarborClient',
+          profileUrl: 'https://x.com/HarborClient',
+        },
+        'user-a'
+      )
+    ).resolves.toEqual({
+      ok: true,
+      member: {
+        externalId: '42',
+        name: 'Harbor',
+        username: 'HarborClient',
+      },
+    });
+    expect(tx.channelAudienceMember.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          organizationId: 'org',
+          integrationId: 'integration',
+          externalId: '42',
+          name: 'Harbor',
+          username: 'HarborClient',
+          profileUrl: 'https://x.com/HarborClient',
+          createdAt: expect.any(Date),
+        }),
+        update: expect.objectContaining({
+          name: 'Harbor',
+          username: 'HarborClient',
+          profileUrl: 'https://x.com/HarborClient',
+          createdAt: expect.any(Date),
+        }),
+      })
+    );
+    expect(
+      tx.channelAudienceMemberTriageIgnore.deleteMany
+    ).toHaveBeenCalledWith({
+      where: {
+        organizationId: 'org',
+        integrationId: 'integration',
+        counterpartyExternalId: '42',
+        triage: 'lead',
+      },
+    });
+    expect(tx.channelAudienceLeadFitFeedback.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          source: 'lead_add',
+          verdict: 'accepted',
+          createdByUserId: 'user-a',
+        }),
+      })
+    );
+    expect(tx.channelAudienceListMember.upsert).not.toHaveBeenCalled();
+  });
+
+  it('rejects importing a follower or followed profile as a lead', async () => {
+    const { repository, tx } = createHarness();
+    tx.channelAudienceMember.findFirst.mockResolvedValue({
+      externalId: '42',
+      membershipState: ChannelAudienceMembership.FOLLOWER,
+      weFollowedAt: null,
+    });
+
+    await expect(
+      repository.upsertImportedAudienceMemberAsLead('org', 'integration', {
+        externalId: '42',
+        name: 'Harbor',
+        username: 'HarborClient',
+      })
+    ).resolves.toEqual({ rejected: 'already_audience' });
+    expect(tx.channelAudienceMember.upsert).not.toHaveBeenCalled();
   });
 
   it('lists lead-fit feedback examples and drops accepted rows that were also rejected', async () => {

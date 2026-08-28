@@ -75,6 +75,14 @@ describe('CopilotController', () => {
             },
             pagination: { size: 24, number: 1 },
           },
+          helpPage: {
+            open: true,
+            view: 'article',
+            slug: 'calendar',
+            hash: 'scheduling',
+            title: 'Calendar',
+            searchQuery: 'schedule',
+          },
           organization: { id: 'client-org' },
           user: { id: 'client-user' },
           ignored: 'ignored',
@@ -137,6 +145,14 @@ describe('CopilotController', () => {
         pagination: { size: 24, number: 1 },
       })
     );
+    expect(context.get('helpPage')).toEqual({
+      open: true,
+      view: 'article',
+      slug: 'calendar',
+      hash: 'scheduling',
+      title: 'Calendar',
+      searchQuery: 'schedule',
+    });
     expect(context.get('organization')).toBe(JSON.stringify(organization));
     expect(context.get('user')).toBe(JSON.stringify({ userId: user.id }));
     expect(context.get('ui')).toBe('true');

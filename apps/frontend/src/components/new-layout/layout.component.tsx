@@ -40,6 +40,8 @@ import { SidebarNav } from '@gitroom/frontend/components/new-layout/sidebar-nav'
 import { MobileSidebarDrawer } from '@gitroom/frontend/components/new-layout/mobile-sidebar.drawer';
 import { SiteHeader } from '@gitroom/frontend/components/new-layout/site-header';
 import { HelpDrawer } from '@gitroom/frontend/components/help/help.drawer';
+import { HelpAssistant } from '@gitroom/frontend/components/help/help.assistant';
+import { usePublishHelpPanelOpen } from '@gitroom/frontend/components/help/use.copilot.help.page';
 
 export const LayoutComponent = ({ children }: { children: ReactNode }) => {
   const fetch = useFetch();
@@ -54,6 +56,8 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
   const desktopHelpTriggerRef = useRef<HTMLButtonElement>(null);
   const mobileHelpTriggerRef = useRef<HTMLButtonElement>(null);
   const activeHelpTriggerRef = useRef<HTMLButtonElement>(null);
+
+  usePublishHelpPanelOpen(helpOpen);
 
   const { backendUrl, billingEnabled, isGeneral } = useVariables();
 
@@ -140,6 +144,7 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                     triggerRef={activeHelpTriggerRef}
                     locationKey={helpLocationKey}
                   />
+                  {helpOpen && <HelpAssistant />}
                   <div className="flex min-h-0 flex-1 gap-[8px] overflow-hidden">
                     <Support />
                     <div

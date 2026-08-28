@@ -9,11 +9,19 @@ import {
   useRef,
   useState,
 } from 'react';
+import {
+  useCopilotChat,
+  useCopilotMessagesContext,
+} from '@copilotkit/react-core';
 import { useChatContext } from '@copilotkit/react-ui';
 import type { WindowProps } from '@copilotkit/react-ui/dist/components/chat/props';
 import { isMacOS } from '@copilotkit/shared';
 import clsx from 'clsx';
-import { CornerResizeIcon } from '@gitroom/frontend/components/ui/icons';
+import {
+  CornerResizeIcon,
+  TrashIcon,
+} from '@gitroom/frontend/components/ui/icons';
+import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import {
   clampCopilotPopupSize,
   COPILOT_POPUP_MOBILE_MEDIA,
@@ -40,11 +48,47 @@ const preventScroll = (event: TouchEvent): void => {
   }
 };
 
-export const ResizableCopilotWindow: FC<WindowProps> = ({
+export const CopilotClearChatButton: FC = () => {
+  const t = useT();
+  const { messages } = useCopilotMessagesContext();
+  const { reset, stopGeneration, isLoading } = useCopilotChat();
+
+  if (messages.length === 0) {
+    return null;
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        if (isLoading) {
+          stopGeneration();
+        }
+        reset();
+      }}
+      aria-label={t('clear_chat', 'Clear chat')}
+      className={clsx(
+        'absolute top-[64px] start-3 z-[11]',
+        'inline-flex h-[28px] w-[28px] items-center justify-center rounded-full border',
+        'border-newTableBorder bg-newBgColorInner text-textItemBlur',
+        'hover:border-newTextColor/40 hover:text-newTextColor'
+      )}
+    >
+      <TrashIcon size={14} />
+    </button>
+  );
+};
+
+export type ResizableCopilotWindowProps = WindowProps & {
+  showClearChat?: boolean;
+};
+
+export const ResizableCopilotWindow: FC<ResizableCopilotWindowProps> = ({
   children,
   clickOutsideToClose,
   shortcut,
   hitEscapeToClose,
+  showClearChat = false,
 }) => {
   const windowRef = useRef<HTMLDivElement>(null);
   const sizeRef = useRef<CopilotPopupSize>(getStoredCopilotPopupSize());
@@ -78,6 +122,9 @@ export const ResizableCopilotWindow: FC<WindowProps> = ({
       }
 
       const parentElement = windowRef.current?.parentElement;
+      const target = event.target as Node | null;
+      const helpDrawer =
+        target instanceof Element ? target.closest('[data-help-drawer]') : null;
 
       let className = '';
       if (event.target instanceof HTMLElement) {
@@ -87,7 +134,8 @@ export const ResizableCopilotWindow: FC<WindowProps> = ({
       if (
         open &&
         parentElement &&
-        !parentElement.contains(event.target as Node) &&
+        !parentElement.contains(target as Node) &&
+        !helpDrawer &&
         !className.includes('copilotKitDebugMenu')
       ) {
         setOpen(false);
@@ -289,6 +337,7 @@ export const ResizableCopilotWindow: FC<WindowProps> = ({
         />
       )}
       {children}
+      {showClearChat && <CopilotClearChatButton />}
     </div>
   );
 };

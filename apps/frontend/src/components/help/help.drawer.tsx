@@ -284,9 +284,10 @@ export const HelpDrawer: FC<{
         role="dialog"
         aria-modal="true"
         aria-labelledby="help-drawer-title"
+        data-help-drawer="true"
         style={isMobileViewport ? undefined : { width: panelWidth }}
         className={clsx(
-          'absolute top-0 end-0 z-[561] flex h-full flex-col rounded-s-[12px] border-s border-newSep bg-newColColor text-base shadow-menu transition-transform duration-200 ease-out mobile:w-full mobile:min-w-0 mobile:max-w-none mobile:rounded-none',
+          'absolute top-0 end-0 z-[561] flex h-full flex-col rounded-s-[12px] border-s border-newSep bg-newColColor p-4 text-base shadow-menu transition-transform duration-200 ease-out mobile:w-full mobile:min-w-0 mobile:max-w-none mobile:rounded-none',
           isResizing && 'select-none',
           open
             ? 'translate-x-0 pointer-events-auto'
@@ -306,7 +307,7 @@ export const HelpDrawer: FC<{
             isResizing && 'bg-newSep/60'
           )}
         />
-        <div className="flex items-center justify-between border-b border-newTableBorder px-4 py-3">
+        <div className="flex shrink-0 items-center justify-between pb-3">
           <h2
             id="help-drawer-title"
             className="text-base font-semibold text-textColor"

@@ -27,6 +27,7 @@ import {
   Sections,
 } from '@gitroom/backend/services/auth/permissions/permission.exception.class';
 import type { SelectedPipelineContext } from '@gitroom/nestjs-libraries/chat/load.tools.service';
+import type { HelpPageContext } from '@gitroom/nestjs-libraries/help/help.types';
 import {
   formatFollowerPageContext,
   FollowerPageContext,
@@ -47,6 +48,7 @@ export type ChannelsContext = {
   integrations: UiIntegrationContext[];
   pipeline: SelectedPipelineContext | null;
   followerPage: FollowerPageContext | null;
+  helpPage: HelpPageContext | null;
   organization: string;
   user?: string;
   ui: 'true';
@@ -87,6 +89,15 @@ const isFollowerPageContext = (value: unknown): value is FollowerPageContext =>
   typeof value.pagination.size === 'number' &&
   typeof value.pagination.number === 'number';
 
+const isHelpPageContext = (value: unknown): value is HelpPageContext =>
+  isRecord(value) &&
+  value.open === true &&
+  (value.view === 'catalog' || value.view === 'article') &&
+  (value.slug === undefined || typeof value.slug === 'string') &&
+  (value.hash === undefined || typeof value.hash === 'string') &&
+  (value.title === undefined || typeof value.title === 'string') &&
+  (value.searchQuery === undefined || typeof value.searchQuery === 'string');
+
 @Controller('/copilot')
 export class CopilotController {
   constructor(
@@ -102,6 +113,7 @@ export class CopilotController {
         integrations: [] as UiIntegrationContext[],
         pipeline: null,
         followerPage: null,
+        helpPage: null,
       };
     }
 
@@ -114,6 +126,9 @@ export class CopilotController {
         : null,
       followerPage: isFollowerPageContext(properties.followerPage)
         ? formatFollowerPageContext(properties.followerPage)
+        : null,
+      helpPage: isHelpPageContext(properties.helpPage)
+        ? properties.helpPage
         : null,
     };
   }
@@ -129,6 +144,7 @@ export class CopilotController {
     requestContext.set('integrations', properties.integrations);
     requestContext.set('pipeline', properties.pipeline);
     requestContext.set('followerPage', properties.followerPage);
+    requestContext.set('helpPage', properties.helpPage);
     requestContext.set('organization', JSON.stringify(organization));
     if (user) {
       requestContext.set('user', JSON.stringify({ userId: user.id }));

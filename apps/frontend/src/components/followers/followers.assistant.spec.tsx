@@ -48,6 +48,12 @@ jest.mock('./followers.copilot.launch.listener', () => ({
   ),
 }));
 
+let helpPanelOpen = false;
+
+jest.mock('@gitroom/frontend/components/help/use.copilot.help.page', () => ({
+  useHelpPanelOpen: () => helpPanelOpen,
+}));
+
 // The browser only receives the public strategy view served by /followers/channels.
 const publicStrategy = (id: string): FollowerChannel['strategy'] => {
   const strategy = listChannelStrategies().find((item) => item.id === id)!;
@@ -93,6 +99,16 @@ describe('FollowersAssistant', () => {
     popupProps = undefined;
     channels = [];
     copilotApiConfig.properties = {};
+    helpPanelOpen = false;
+  });
+
+  it('hides while the help panel is open', () => {
+    helpPanelOpen = true;
+    channels = [channelFor('channel-1', 'lead_capture')];
+
+    render(<Harness page={pageFor('channel-1')} />);
+
+    expect(popupProps).toBeUndefined();
   });
 
   it.each(listChannelStrategies().map((strategy) => [strategy.id, strategy]))(

@@ -27,6 +27,7 @@ const push = jest.fn();
 const useFollowersMock = jest.fn();
 const useCopilotReadableMock = jest.fn();
 const importMemberFromUrlMock = jest.fn();
+const importLeadFromUrlMock = jest.fn();
 const deleteListMock = jest.fn();
 const updateListMock = jest.fn();
 let mockPathname = '/followers';
@@ -409,6 +410,7 @@ jest.mock('@gitroom/frontend/components/followers/use.followers', () => {
       updateList: updateListMock,
       addMember: jest.fn(),
       importMemberFromUrl: importMemberFromUrlMock,
+      importLeadFromUrl: importLeadFromUrlMock,
       removeMember: jest.fn(),
       ignoreTriage: jest.fn(),
       ignoreFollower: jest.fn(),
@@ -632,6 +634,7 @@ describe('FollowersComponent', () => {
     useFollowersMock.mockReset();
     useCopilotReadableMock.mockReset();
     importMemberFromUrlMock.mockReset();
+    importLeadFromUrlMock.mockReset();
     deleteListMock.mockReset();
     deleteListMock.mockResolvedValue(undefined);
     updateListMock.mockReset();
@@ -1228,6 +1231,26 @@ describe('FollowersComponent', () => {
     expect(openModal).toHaveBeenCalledWith(
       expect.objectContaining({
         title: 'Add to list',
+      })
+    );
+  });
+
+  it('shows an Add button on the leads tab and opens the lead import modal', () => {
+    mockPathname = '/followers/leads';
+    followersPage = {
+      items: [{ id: 'follower-1', name: 'Alex Example' }],
+      hasMore: false,
+      total: 1,
+    };
+
+    render(<FollowersComponent />);
+
+    const addButton = screen.getByTestId('followers-lead-add-button');
+    expect(addButton.textContent).toContain('Add');
+    fireEvent.click(addButton);
+    expect(openModal).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Add lead',
       })
     );
   });

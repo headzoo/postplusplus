@@ -33,6 +33,7 @@ describe('FollowersController', () => {
     createFollowerList: jest.fn(),
     listFollowerLists: jest.fn(),
     importFollowerListMemberFromUrl: jest.fn(),
+    importLeadFromUrl: jest.fn(),
   };
   const controller = new FollowersController(service as any);
 
@@ -126,7 +127,8 @@ describe('FollowersController', () => {
       org,
       user,
       'channel-a',
-      'VIP'
+      'VIP',
+      undefined
     );
   });
 
@@ -612,6 +614,30 @@ describe('FollowersController', () => {
       user,
       'channel-a',
       'list-1',
+      'https://x.com/HarborClient'
+    );
+  });
+
+  it('delegates importing a lead from a profile URL', async () => {
+    const imported = {
+      externalId: '42',
+      name: 'Harbor',
+      username: 'HarborClient',
+      profileUrl: 'https://x.com/HarborClient',
+      picture: null as string | null,
+    };
+    service.importLeadFromUrl.mockResolvedValue(imported);
+    const controllerWithImport = new FollowersController(service as any);
+
+    await expect(
+      controllerWithImport.importLead(org, user, 'channel-a', {
+        url: 'https://x.com/HarborClient',
+      })
+    ).resolves.toEqual(imported);
+    expect(service.importLeadFromUrl).toHaveBeenCalledWith(
+      org,
+      user,
+      'channel-a',
       'https://x.com/HarborClient'
     );
   });

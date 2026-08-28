@@ -176,9 +176,7 @@ export type LikesCountFollowersQuery = {
 };
 
 export type AudienceLeadCursor = {
-  leadFitScore: number | null;
-  leadBridgeScore: number | null;
-  lastInboundAt: string | null;
+  createdAt: string;
   externalId: string;
 };
 
@@ -4306,6 +4304,131 @@ export class ChannelInteractionRepository {
     });
   }
 
+  async upsertImportedAudienceMemberAsLead(
+    organizationId: string,
+    integrationId: string,
+    profile: AudienceProfile,
+    createdByUserId?: string
+  ) {
+    return this.withSerializableRetry(async (tx) => {
+      await this.assertOwnedIntegration(tx, organizationId, integrationId);
+
+      const existing = await tx.channelAudienceMember.findFirst({
+        where: {
+          organizationId,
+          integrationId,
+          externalId: profile.externalId,
+        },
+        select: {
+          externalId: true,
+          membershipState: true,
+          weFollowedAt: true,
+        },
+      });
+      if (
+        existing?.membershipState === ChannelAudienceMembership.FOLLOWER ||
+        existing?.weFollowedAt != null
+      ) {
+        return { rejected: 'already_audience' as const };
+      }
+
+      const listedAt = new Date();
+      const profileData = {
+        ...(profile.name !== undefined ? { name: profile.name } : {}),
+        ...(profile.username !== undefined
+          ? { username: profile.username }
+          : {}),
+        ...(profile.picture !== undefined ? { picture: profile.picture } : {}),
+        ...(profile.profileUrl !== undefined
+          ? { profileUrl: profile.profileUrl }
+          : {}),
+        ...(profile.bio !== undefined ? { bio: profile.bio } : {}),
+        ...(profile.followersCount !== undefined
+          ? { followersCount: profile.followersCount }
+          : {}),
+        ...(profile.followingCount !== undefined
+          ? { followingCount: profile.followingCount }
+          : {}),
+        ...(profile.followedAt !== undefined
+          ? { followedAt: profile.followedAt }
+          : {}),
+        ...(profile.accountCreatedAt !== undefined
+          ? { accountCreatedAt: profile.accountCreatedAt }
+          : {}),
+      };
+
+      await tx.channelAudienceMember.upsert({
+        where: {
+          integrationId_externalId: {
+            integrationId,
+            externalId: profile.externalId,
+          },
+        },
+        create: {
+          organizationId,
+          integrationId,
+          externalId: profile.externalId,
+          createdAt: listedAt,
+          ...profileData,
+        },
+        update: {
+          ...profileData,
+          createdAt: listedAt,
+        },
+      });
+
+      const member = await tx.channelAudienceMember.findFirst({
+        where: {
+          organizationId,
+          integrationId,
+          externalId: profile.externalId,
+        },
+        select: {
+          externalId: true,
+          name: true,
+          username: true,
+          bio: true,
+          followersCount: true,
+          followingCount: true,
+          leadFitScore: true,
+          leadFitReason: true,
+          leadFitMatchedTopics: true,
+        },
+      });
+      if (!member) {
+        return { missing: 'member' as const };
+      }
+
+      await tx.channelAudienceMemberTriageIgnore.deleteMany({
+        where: {
+          organizationId,
+          integrationId,
+          counterpartyExternalId: profile.externalId,
+          triage: 'lead',
+        },
+      });
+
+      await this.upsertLeadFitFeedback(tx, {
+        organizationId,
+        integrationId,
+        externalId: profile.externalId,
+        source: 'lead_add',
+        verdict: 'accepted',
+        reasons: [],
+        createdByUserId,
+        member,
+      });
+      return {
+        ok: true as const,
+        member: {
+          externalId: member.externalId,
+          name: member.name,
+          username: member.username,
+        },
+      };
+    });
+  }
+
   async removeAudienceListMember(
     organizationId: string,
     integrationId: string,
@@ -4515,7 +4638,7 @@ export class ChannelInteractionRepository {
       organizationId: string;
       integrationId: string;
       externalId: string;
-      source: 'lead_dismiss' | 'list_add';
+      source: 'lead_dismiss' | 'list_add' | 'lead_add';
       verdict: 'rejected' | 'accepted';
       reasons: string[];
       listId?: string;
@@ -4768,6 +4891,11 @@ export class ChannelInteractionRepository {
           OR: [
             { inboundInteractionCount: { gt: 0 } },
             { leadBridgesAsLead: { some: {} } },
+            {
+              leadFitFeedbacks: {
+                some: { source: 'lead_add', verdict: 'accepted' },
+              },
+            },
           ],
           triageIgnores: { none: this.activeTriageIgnoreWhere('lead') },
           weFollowedAt: null,
@@ -4776,18 +4904,17 @@ export class ChannelInteractionRepository {
             this.ignoredVisibilityFilter(query.ignoredVisibility),
             this.leadFitVisibilityFilter(),
             this.excludeActiveListMembershipFilter(),
-            this.leadBridgeKeyset(query.cursor, query.direction)
+            this.leadCreatedKeyset(query.cursor, query.direction)
           ),
         },
         orderBy: [
-          { leadFitScore: { sort: query.direction, nulls: 'last' } },
-          { leadBridgeScore: { sort: query.direction, nulls: 'last' } },
-          { lastInboundAt: { sort: query.direction, nulls: 'last' } },
+          { createdAt: query.direction },
           { externalId: query.direction },
         ],
         take: query.limit + 1,
         select: {
           ...this.audienceMemberListSelect(query.userId),
+          createdAt: true,
           inboundInteractionCount: true,
           lastInboundAt: true,
           leadBridgeScore: true,
@@ -5559,6 +5686,11 @@ export class ChannelInteractionRepository {
         OR: [
           { inboundInteractionCount: { gt: 0 } },
           { leadBridgesAsLead: { some: {} } },
+          {
+            leadFitFeedbacks: {
+              some: { source: 'lead_add', verdict: 'accepted' },
+            },
+          },
         ],
         ignoredAt: null,
         weFollowedAt: null,
@@ -5867,14 +5999,7 @@ export class ChannelInteractionRepository {
     };
   }
 
-  private leadInboundKeyset(
-    cursor: AudienceLeadCursor | undefined,
-    direction: 'asc' | 'desc'
-  ): Prisma.ChannelAudienceMemberWhereInput {
-    return this.leadBridgeKeyset(cursor, direction);
-  }
-
-  private leadBridgeKeyset(
+  private leadCreatedKeyset(
     cursor: AudienceLeadCursor | undefined,
     direction: 'asc' | 'desc'
   ): Prisma.ChannelAudienceMemberWhereInput {
@@ -5883,56 +6008,14 @@ export class ChannelInteractionRepository {
     }
 
     const comparison = direction === 'desc' ? 'lt' : 'gt';
-    const fitScore = cursor.leadFitScore;
-    const score = cursor.leadBridgeScore;
-    const lastInboundAt =
-      cursor.lastInboundAt == null ? null : new Date(cursor.lastInboundAt);
-
-    const inboundTieBreak: Prisma.ChannelAudienceMemberWhereInput =
-      lastInboundAt == null
-        ? {
-            lastInboundAt: null,
-            externalId: { [comparison]: cursor.externalId },
-          }
-        : {
-            OR: [
-              { lastInboundAt: { [comparison]: lastInboundAt } },
-              {
-                lastInboundAt,
-                externalId: { [comparison]: cursor.externalId },
-              },
-              ...(direction === 'desc' ? [{ lastInboundAt: null }] : []),
-            ],
-          };
-
-    const bridgeTieBreak: Prisma.ChannelAudienceMemberWhereInput =
-      score == null
-        ? {
-            AND: [{ leadBridgeScore: null }, inboundTieBreak],
-          }
-        : {
-            OR: [
-              { leadBridgeScore: { [comparison]: score } },
-              {
-                AND: [{ leadBridgeScore: score }, inboundTieBreak],
-              },
-              ...(direction === 'desc' ? [{ leadBridgeScore: null }] : []),
-            ],
-          };
-
-    if (fitScore == null) {
-      return {
-        AND: [{ leadFitScore: null }, bridgeTieBreak],
-      };
-    }
-
+    const createdAt = new Date(cursor.createdAt);
     return {
       OR: [
-        { leadFitScore: { [comparison]: fitScore } },
+        { createdAt: { [comparison]: createdAt } },
         {
-          AND: [{ leadFitScore: fitScore }, bridgeTieBreak],
+          createdAt,
+          externalId: { [comparison]: cursor.externalId },
         },
-        ...(direction === 'desc' ? [{ leadFitScore: null }] : []),
       ],
     };
   }
@@ -6099,6 +6182,11 @@ export class ChannelInteractionRepository {
               OR: [
                 { inboundInteractionCount: { gt: 0 } },
                 { leadBridgesAsLead: { some: {} } },
+                {
+                  leadFitFeedbacks: {
+                    some: { source: 'lead_add', verdict: 'accepted' },
+                  },
+                },
               ],
             },
             this.leadFitNeedsScoreWhere(),

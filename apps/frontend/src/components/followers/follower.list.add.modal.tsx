@@ -8,8 +8,10 @@ import { useT } from '@gitroom/react/translation/get.transation.service.client';
 export const FollowerListAddModal: FC<{
   close: () => void;
   listName?: string;
+  description?: string;
+  errorFallback?: string;
   onImport: (url: string) => Promise<void>;
-}> = ({ close, listName, onImport }) => {
+}> = ({ close, listName, description, errorFallback, onImport }) => {
   const t = useT();
   const [url, setUrl] = useState('');
   const [saving, setSaving] = useState(false);
@@ -30,29 +32,34 @@ export const FollowerListAddModal: FC<{
       setError(
         err instanceof Error && err.message
           ? err.message
-          : t(
-              'followers_list_add_error',
-              'We could not add this profile to the list.'
-            )
+          : errorFallback ||
+              t(
+                'followers_list_add_error',
+                'We could not add this profile to the list.'
+              )
       );
     } finally {
       setSaving(false);
     }
-  }, [close, onImport, t, url]);
+  }, [close, errorFallback, onImport, t, url]);
+
+  const descriptionText =
+    description ||
+    (listName
+      ? t(
+          'followers_list_add_description_named',
+          'Paste a profile URL to add someone to {{list}}.',
+          { list: listName }
+        )
+      : t(
+          'followers_list_add_description',
+          'Paste a profile URL to add someone to this list.'
+        ));
 
   return (
     <div>
       <p className="mb-[12px] text-[13px] text-textItemBlur">
-        {listName
-          ? t(
-              'followers_list_add_description_named',
-              'Paste a profile URL to add someone to {{list}}.',
-              { list: listName }
-            )
-          : t(
-              'followers_list_add_description',
-              'Paste a profile URL to add someone to this list.'
-            )}
+        {descriptionText}
       </p>
       <Input
         name="follower-list-add-url"

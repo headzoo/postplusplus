@@ -1097,6 +1097,7 @@ export const FollowersComponent: FC = () => {
     updateList,
     addMember,
     importMemberFromUrl,
+    importLeadFromUrl,
     removeMember,
     ignoreTriage,
     followMember,
@@ -1470,6 +1471,28 @@ export const FollowersComponent: FC = () => {
       ),
     });
   }, [activeList?.name, importMemberFromUrl, modal, t, urlListId]);
+
+  const openAddLeadModal = useCallback(() => {
+    modal.openModal({
+      title: t('followers_lead_add_title', 'Add lead'),
+      children: (close) => (
+        <FollowerListAddModal
+          close={close}
+          description={t(
+            'followers_lead_add_description',
+            'Paste a profile URL to add someone to Leads.'
+          )}
+          errorFallback={t(
+            'followers_lead_add_error',
+            'We could not add this profile as a lead.'
+          )}
+          onImport={async (url) => {
+            await importLeadFromUrl(url);
+          }}
+        />
+      ),
+    });
+  }, [importLeadFromUrl, modal, t]);
 
   const removeSelectedList = useCallback(async () => {
     if (!urlListId) {
@@ -2184,6 +2207,20 @@ export const FollowersComponent: FC = () => {
               )}
             </div>
           )}
+
+          {resolvedAudience === 'lead' && !urlListId && (
+            <div className="flex items-center gap-[8px]">
+              <button
+                type="button"
+                onClick={openAddLeadModal}
+                className="inline-flex items-center gap-[6px] rounded-[8px] border border-newBorder bg-newBgColorInner px-[10px] py-[6px] text-[13px] text-textItemBlur hover:bg-newTableHeader hover:text-newTextColor"
+                data-testid="followers-lead-add-button"
+              >
+                <PlusIcon size={14} />
+                {t('followers_lead_add_button', 'Add')}
+              </button>
+            </div>
+          )}
         </div>
 
         {showBoard && (
@@ -2197,6 +2234,7 @@ export const FollowersComponent: FC = () => {
               onReorderLocal={onBoardReorderLocal}
               onDragEnd={onBoardDragEnd}
               onOpenFollower={openFollowerDetail}
+              onAddLead={openAddLeadModal}
               onDismissTriage={async (
                 follower,
                 triageValue,
