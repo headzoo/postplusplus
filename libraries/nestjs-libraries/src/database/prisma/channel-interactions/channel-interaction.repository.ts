@@ -12,6 +12,7 @@ import {
 import {
   ChannelInteractionSubscriptionReconciliationResult,
   FollowerTriageFilter,
+  ChannelInteractionPostSnapshot,
 } from '@gitroom/nestjs-libraries/integrations/social/social.integrations.interface';
 import {
   AudienceFollowerSortField,
@@ -107,6 +108,7 @@ export type PersistedInteraction = {
   normalizationVersion: number;
   membershipUpdate?: ChannelAudienceMembership;
   score: number;
+  postSnapshot?: ChannelInteractionPostSnapshot;
 };
 
 export type DesiredInteractionSubscription = {
@@ -602,11 +604,45 @@ export class ChannelInteractionRepository {
             conversationExternalId: event.conversationExternalId,
             metadata: event.metadata,
             normalizationVersion: event.normalizationVersion,
+            postSnapshot: event.postSnapshot as
+              | Prisma.InputJsonValue
+              | undefined,
+            snapshotVersion: event.postSnapshot?.version,
+            snapshotCompleteness: event.postSnapshot?.completeness,
           },
         ],
         skipDuplicates: true,
       });
       if (!inserted.count) {
+        if (event.postSnapshot) {
+          const existing = await tx.channelInteractionEvent.findUnique({
+            where: {
+              integrationId_providerEventKey: {
+                integrationId,
+                providerEventKey: event.providerEventKey,
+              },
+            },
+            select: { snapshotCompleteness: true },
+          });
+          if (
+            this.snapshotCompletenessRank(event.postSnapshot.completeness) >
+            this.snapshotCompletenessRank(existing?.snapshotCompleteness)
+          ) {
+            await tx.channelInteractionEvent.update({
+              where: {
+                integrationId_providerEventKey: {
+                  integrationId,
+                  providerEventKey: event.providerEventKey,
+                },
+              },
+              data: {
+                postSnapshot: event.postSnapshot as Prisma.InputJsonValue,
+                snapshotVersion: event.postSnapshot.version,
+                snapshotCompleteness: event.postSnapshot.completeness,
+              },
+            });
+          }
+        }
         return { created: false };
       }
       const interaction = await tx.channelInteractionEvent.findUniqueOrThrow({
@@ -740,6 +776,10 @@ export class ChannelInteractionRepository {
       });
       return { created: true };
     });
+  }
+
+  private snapshotCompletenessRank(value: string | null | undefined) {
+    return value === 'complete' ? 2 : value === 'partial' ? 1 : 0;
   }
 
   /**

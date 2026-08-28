@@ -21,6 +21,7 @@ import {
 } from '@gitroom/nestjs-libraries/dtos/posts/providers-settings/all.providers.settings';
 import { ValidContent } from '@gitroom/helpers/utils/valid.images';
 import { sanitizePostContent } from '@gitroom/helpers/utils/sanitize.post.content';
+import { PostReferenceDto } from '@gitroom/nestjs-libraries/dtos/posts/post-reference.dto';
 
 export class Integration {
   @IsDefined()
@@ -47,6 +48,11 @@ export class PostContent {
   @Type(() => MediaDto)
   @ValidateNested({ each: true })
   image: MediaDto[];
+
+  @IsOptional()
+  @Type(() => PostReferenceDto)
+  @ValidateNested()
+  reference?: PostReferenceDto;
 }
 
 export class Post {

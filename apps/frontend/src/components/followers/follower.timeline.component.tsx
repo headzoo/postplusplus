@@ -20,21 +20,9 @@ import {
   useFollowerDetail,
   useFollowerMemberTimeline,
 } from '@gitroom/frontend/components/followers/use.followers';
+import { openExternalPost } from '@gitroom/frontend/components/external-post/open.external.post';
 
 const TIMELINE_PAGE_SIZE = 20;
-const EXTERNAL_POST_TAB_NAME = 'postplusplus-external-post';
-
-let externalPostTab: Window | null = null;
-
-const openExternalPost = (url: string) => {
-  if (externalPostTab && !externalPostTab.closed) {
-    externalPostTab.location.href = url;
-    externalPostTab.focus();
-    return;
-  }
-  externalPostTab = window.open(url, EXTERNAL_POST_TAB_NAME);
-  externalPostTab?.focus();
-};
 
 const decodeFollowerPathSegment = (value: string) => {
   try {

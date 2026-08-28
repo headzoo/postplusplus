@@ -26,9 +26,11 @@ import {
   MemberPostMedia,
   NormalizedChannelContentEvent,
   NormalizedChannelInteractionEvent,
+  ChannelInteractionPostSnapshot,
   PendingCheckResponse,
   PostDetails,
   PostLiker,
+  PostReference,
   PostResponse,
   PublishedPostEditInput,
   ProviderWebhookEndpointReconciliationResult,
@@ -38,6 +40,7 @@ import {
   PostRulesRemovePostResult,
   PostRulesRepostResult,
   PostRulesAddPlugReplyResult,
+  ConversationHydrationRequest,
 } from '@gitroom/nestjs-libraries/integrations/social/social.integrations.interface';
 import {
   API_ORDER_FOLLOWER_SORTS,
@@ -87,6 +90,7 @@ type XPendingData = {
     article_status?: 'draft' | 'published';
   };
   mediaIds: string[];
+  quoteTweetId?: string;
   // Article cover selected in the settings, uploaded separately from the post
   // media (which is embedded in the article body).
   coverMediaId?: string;
@@ -287,6 +291,112 @@ export class XProvider extends SocialAbstract implements SocialProvider {
     };
   }
 
+  conversations = {
+    supported: {
+      kinds: ['mention', 'repost'] as ChannelInteractionKind[],
+      actions: { repost: true },
+    },
+    metadata: (postSnapshot: ChannelInteractionPostSnapshot) => ({
+      likeUrl: postSnapshot.url,
+      replyUrl: `https://x.com/intent/tweet?in_reply_to=${encodeURIComponent(
+        postSnapshot.externalId
+      )}`,
+      canRepost: true,
+    }),
+    eligibility: ({
+      integration,
+      event,
+      postSnapshot,
+    }: {
+      integration: Integration;
+      event: {
+        kind: ChannelInteractionKind;
+        relatedObjectId?: string | null;
+        metadata?: Record<string, string>;
+      };
+      postSnapshot: ChannelInteractionPostSnapshot;
+    }) => {
+      const repostTarget =
+        event.kind === 'repost' ? postSnapshot.repostedPost : postSnapshot;
+      const canRepost =
+        !!repostTarget &&
+        repostTarget.author.externalId !== integration.internalId;
+      return {
+        likeUrl: postSnapshot.url,
+        replyUrl: `https://x.com/intent/tweet?in_reply_to=${encodeURIComponent(
+          postSnapshot.externalId
+        )}`,
+        canRepost,
+        canQuote: true,
+        ...(canRepost
+          ? { repostExternalId: repostTarget.externalId }
+          : { repostReason: 'You cannot repost your own post' }),
+      };
+    },
+    getHydrationSourceExternalId: (event: {
+      kind: ChannelInteractionKind;
+      relatedObjectId?: string | null;
+      metadata?: Record<string, string>;
+    }) =>
+      event.kind === 'mention' && event.metadata?.referenceType !== 'quote'
+        ? this.boundedId(event.relatedObjectId)
+        : undefined,
+    hydrate: async (
+      _integration: Integration,
+      accessToken: string,
+      requests: ConversationHydrationRequest[]
+    ) => {
+      const requested = requests.slice(0, 100);
+      if (!requested.length) return [];
+      const client = await this.getClient(accessToken);
+      const response = await client.v2.tweets(
+        requested.map((request) => request.externalPostId),
+        {
+          expansions: [
+            'author_id',
+            'attachments.media_keys',
+            'referenced_tweets.id',
+            'referenced_tweets.id.author_id',
+          ],
+          'tweet.fields': [
+            'created_at',
+            'text',
+            'attachments',
+            'referenced_tweets',
+          ],
+          'user.fields': ['name', 'username', 'profile_image_url'],
+          'media.fields': ['url', 'preview_image_url', 'type'],
+        }
+      );
+      const tweets = response.data ?? [];
+      const byId = new Map(tweets.map((tweet) => [tweet.id, tweet]));
+      return requested.flatMap((request) => {
+        const tweet = byId.get(request.externalPostId);
+        if (!tweet) return [];
+        const author =
+          this.xIncludedProfile(response.includes, tweet.author_id) ??
+          this.xProfile({ id: tweet.author_id });
+        if (!author) return [];
+        return [
+          {
+            eventId: request.eventId,
+            postSnapshot: this.xPostSnapshot(
+              tweet,
+              response.includes,
+              author,
+              this.xEventTimestamp(tweet, new Date().toISOString())
+            ),
+          },
+        ];
+      });
+    },
+    repost: (
+      integration: Integration,
+      accessToken: string,
+      externalPostId: string
+    ) => this.repostViaRules(integration, accessToken, externalPostId),
+  };
+
   stripLinks = () => !!process.env.STRIP_LINKS_FROM_X_POSTS;
   // X rate limits are per user (300 posts / 3 hours), not per app, so the cap
   // only needs to keep bursts polite. With the pending flow the slot is held
@@ -294,6 +404,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
   // single slot is no longer required - it would serialize every customer's
   // status checks behind uploads.
   override maxConcurrentJob = 10;
+  postReferences = { quote: true };
   toolTip =
     'You will be logged in into your current account, if you would like a different account, change it first on X';
 
@@ -337,6 +448,22 @@ export class XProvider extends SocialAbstract implements SocialProvider {
 
   maxLength(additionalSettings?: any, settings?: any) {
     return xMaxLength(additionalSettings, settings?.post_type);
+  }
+
+  validatePostReference(
+    reference: PostReference,
+    post: { value: Array<{ reference?: PostReference }>; settings?: any }
+  ): string | true {
+    if (reference.type !== 'quote') {
+      return 'X only supports quote post references';
+    }
+    if (post.value.length !== 1) {
+      return 'X quote posts cannot be part of a thread';
+    }
+    if (post.settings?.post_type === 'article') {
+      return 'X articles cannot quote a post';
+    }
+    return true;
   }
 
   supportsEdit(post: PublishedPostEditInput): boolean {
@@ -666,6 +793,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
     const references = Array.isArray(tweet?.referenced_tweets)
       ? tweet.referenced_tweets
       : [];
+    const postSnapshot = this.xPostSnapshot(tweet, includes, actor, eventAt);
     const replyReference = references.find(
       (reference: any) => reference?.type === 'replied_to'
     );
@@ -693,6 +821,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
             connectedAccountId,
             relatedObjectId: this.boundedId(replyReference.id),
             conversationExternalId,
+            postSnapshot,
           })
         );
       }
@@ -726,6 +855,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
             relatedObjectId: this.boundedId(repostReference.id),
             conversationExternalId,
             metadata: { referenceType: 'repost' },
+            postSnapshot,
           })
         );
       }
@@ -756,6 +886,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
             relatedObjectId: this.boundedId(quoteReference.id),
             conversationExternalId,
             metadata: { referenceType: 'quote' },
+            postSnapshot,
           })
         );
       }
@@ -779,6 +910,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
             connectedAccountId,
             relatedObjectId: tweetId,
             conversationExternalId,
+            postSnapshot,
           })
         );
       } else if (outbound) {
@@ -797,6 +929,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
               connectedAccountId,
               relatedObjectId: tweetId,
               conversationExternalId,
+              postSnapshot,
             })
           );
         }
@@ -846,6 +979,108 @@ export class XProvider extends SocialAbstract implements SocialProvider {
     return username
       ? `https://twitter.com/${encodeURIComponent(username)}/status/${tweetId}`
       : `https://x.com/i/status/${tweetId}`;
+  }
+
+  private xPostSnapshot(
+    tweet: any,
+    includes: any,
+    author: NonNullable<ReturnType<XProvider['xProfile']>>,
+    publishedAt: string,
+    nested = false
+  ): ChannelInteractionPostSnapshot {
+    const externalId = this.boundedId(tweet?.id_str ?? tweet?.id);
+    if (!externalId) {
+      throw new Error('Malformed X post snapshot');
+    }
+    const content = this.boundedText(this.xPostText(tweet), 10000) || '';
+    const { media, incomplete: incompleteMedia } = this.xPostMedia(
+      tweet,
+      includes
+    );
+    const references = nested
+      ? []
+      : Array.isArray(tweet?.referenced_tweets)
+      ? tweet.referenced_tweets
+      : [];
+    const quotedReference = references.find(
+      (reference: any) => reference?.type === 'quoted'
+    );
+    const repostedReference = references.find(
+      (reference: any) => reference?.type === 'retweeted'
+    );
+    const nestedPost = (reference: any) => {
+      const referenced = this.xIncludedTweet(includes, reference?.id);
+      const referencedAuthor = this.xIncludedProfile(
+        includes,
+        referenced?.author_id
+      );
+      return referenced && referencedAuthor
+        ? this.xPostSnapshot(
+            referenced,
+            includes,
+            referencedAuthor,
+            this.xEventTimestamp(referenced, publishedAt),
+            true
+          )
+        : undefined;
+    };
+    const quotedPost = nestedPost(quotedReference);
+    const repostedPost = nestedPost(repostedReference);
+    const incompleteReference =
+      (quotedReference && !quotedPost) || (repostedReference && !repostedPost);
+    return {
+      externalId,
+      url: this.xStatusUrl(author.username, externalId),
+      content,
+      publishedAt,
+      author,
+      ...(media.length ? { media } : {}),
+      ...(quotedPost ? { quotedPost } : {}),
+      ...(repostedPost ? { repostedPost } : {}),
+      version: 1,
+      completeness:
+        !content || incompleteReference || incompleteMedia
+          ? 'partial'
+          : 'complete',
+    };
+  }
+
+  private xPostMedia(
+    tweet: any,
+    includes: any
+  ): {
+    media: ChannelInteractionPostSnapshot['media'];
+    incomplete: boolean;
+  } {
+    const mediaKeys = Array.isArray(tweet?.attachments?.media_keys)
+      ? tweet.attachments.media_keys.slice(0, 8)
+      : [];
+    const includedMedia = Array.isArray(includes?.media) ? includes.media : [];
+    let incomplete = false;
+    const media = mediaKeys.flatMap((key: unknown) => {
+      const item = includedMedia.find(
+        (candidate: any) => candidate?.media_key === key
+      );
+      const type =
+        item?.type === 'photo'
+          ? 'image'
+          : item?.type === 'video' || item?.type === 'animated_gif'
+          ? 'video'
+          : undefined;
+      const url = this.safeHttpUrl(
+        item?.url ?? item?.preview_image_url ?? item?.preview_url
+      );
+      if (!type || !url) {
+        incomplete = true;
+        return [];
+      }
+      return [
+        { type, url } as NonNullable<
+          ChannelInteractionPostSnapshot['media']
+        >[number],
+      ];
+    });
+    return { media, incomplete };
   }
 
   private xMentionProfiles(tweet: any) {
@@ -981,6 +1216,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
     conversationExternalId?: string;
     metadata?: Record<string, string>;
     membershipUpdate?: 'follower' | 'not_follower';
+    postSnapshot?: ChannelInteractionPostSnapshot;
   }): NormalizedChannelInteractionEvent {
     const semanticIdentity = [
       input.kind,
@@ -1022,6 +1258,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
         ? { conversationExternalId: input.conversationExternalId }
         : {}),
       ...(input.metadata ? { metadata: input.metadata } : {}),
+      ...(input.postSnapshot ? { postSnapshot: input.postSnapshot } : {}),
       normalizationVersion: X_WEBHOOK_NORMALIZATION_VERSION,
       ...(input.membershipUpdate
         ? { membershipUpdate: input.membershipUpdate }
@@ -3093,6 +3330,14 @@ export class XProvider extends SocialAbstract implements SocialProvider {
     const client = await this.getClient(accessToken);
     const [firstPost] = postDetails;
     const isArticle = firstPost?.settings?.post_type === 'article';
+    const quoteTweetId =
+      firstPost?.reference?.type === 'quote' &&
+      firstPost.reference.providerIdentifier === this.identifier
+        ? firstPost.reference.externalId
+        : undefined;
+    if (quoteTweetId && (isArticle || postDetails.length !== 1)) {
+      throw new Error('X quote posts must be a single regular status');
+    }
 
     // Upload the media now; the transcoding wait moves to checkPostStatus and
     // the tweet itself is only created by finalizePost, so nothing here is
@@ -3141,6 +3386,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
           },
           mediaIds: (media[firstPost.id] || []).filter((f) => f),
           ...(coverMediaId ? { coverMediaId } : {}),
+          ...(quoteTweetId ? { quoteTweetId } : {}),
           processingIds,
         } as XPendingData,
       },
@@ -3543,6 +3789,9 @@ export class XProvider extends SocialAbstract implements SocialProvider {
         ? removeLinks(pendingData.message)
         : pendingData.message,
       ...(mediaIds.length ? { media: { media_ids: mediaIds } } : {}),
+      ...(pendingData.quoteTweetId
+        ? { quote_tweet_id: pendingData.quoteTweetId }
+        : {}),
       made_with_ai: this.assetBoolean(settings.made_with_ai),
       paid_partnership: this.assetBoolean(settings.paid_partnership),
     };

@@ -274,6 +274,75 @@ describe('PostActivity.editPost', () => {
   });
 });
 
+describe('PostActivity.postSocial', () => {
+  it('maps the root post reference to provider details', async () => {
+    const post = jest.fn().mockResolvedValue([]);
+    const instance = new PostActivity(
+      {
+        updateTags: jest.fn().mockImplementation((_org, posts) => posts),
+        updateMedia: jest.fn().mockResolvedValue([]),
+      } as any,
+      {} as any,
+      {
+        getSocialIntegration: jest.fn().mockReturnValue({
+          editor: 'normal',
+          post,
+        }),
+      } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      { append: jest.fn().mockResolvedValue(undefined) } as any
+    );
+    const { stripHtmlValidation } = jest.requireMock(
+      '@gitroom/helpers/utils/strip.html.validation'
+    );
+    stripHtmlValidation.mockReturnValue('Hello');
+
+    await instance.postSocial(
+      {
+        organizationId: 'org',
+        providerIdentifier: 'x',
+        token: 'token',
+        internalId: 'user',
+      } as any,
+      [
+        {
+          id: 'post-1',
+          content: 'Hello',
+          settings: '{}',
+          image: '[]',
+          reference: {
+            type: 'quote',
+            providerIdentifier: 'x',
+            externalId: '123',
+          },
+        },
+      ] as any
+    );
+
+    expect(post).toHaveBeenCalledWith(
+      'user',
+      'token',
+      [
+        expect.objectContaining({
+          reference: {
+            type: 'quote',
+            providerIdentifier: 'x',
+            externalId: '123',
+          },
+        }),
+      ],
+      expect.objectContaining({ providerIdentifier: 'x' })
+    );
+  });
+});
+
 describe('PostActivity V108 legacy plug compatibility', () => {
   it('resolves globalPlugsV107 through PipelinePlugService', async () => {
     const resolveGlobalPlugs = jest

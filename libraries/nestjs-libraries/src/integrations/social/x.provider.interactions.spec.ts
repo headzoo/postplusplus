@@ -340,6 +340,72 @@ describe('XProvider interaction webhooks', () => {
     });
   });
 
+  it('captures bounded source, quote, and repost presentation snapshots', async () => {
+    const capability = new XProvider().channelInteractionWebhooks;
+    const quote = await capability.verifyAndNormalizeDelivery(
+      signedRequest(
+        activity(
+          'post.quote.create',
+          {
+            id: 'quote-with-media',
+            author_id: '8',
+            text: 'My reaction',
+            created_at: '2024-01-01T00:00:04.000Z',
+            attachments: { media_keys: ['photo-1'] },
+            referenced_tweets: [{ type: 'quoted', id: 'original' }],
+          },
+          {
+            direction: 'inbound',
+            includes: {
+              users: [user('8'), user('42', 'connected')],
+              tweets: [
+                {
+                  id: 'original',
+                  author_id: '42',
+                  text: 'Original post',
+                  created_at: '2024-01-01T00:00:00.000Z',
+                },
+              ],
+              media: [
+                {
+                  media_key: 'photo-1',
+                  type: 'photo',
+                  url: 'https://images.x.example/photo-1.jpg',
+                },
+              ],
+            },
+          }
+        )
+      )
+    );
+
+    expect(quote).toMatchObject({
+      accepted: true,
+      events: [
+        {
+          kind: 'mention',
+          metadata: { referenceType: 'quote' },
+          postSnapshot: {
+            externalId: 'quote-with-media',
+            content: 'My reaction',
+            author: { externalId: '8' },
+            media: [
+              { type: 'image', url: 'https://images.x.example/photo-1.jpg' },
+            ],
+            quotedPost: {
+              externalId: 'original',
+              content: 'Original post',
+              author: { externalId: '42' },
+            },
+            version: 1,
+            completeness: 'complete',
+          },
+        },
+      ],
+      contentEvents: [],
+    });
+  });
+
   it('imports standalone outbound posts and marks platform deletes', async () => {
     const capability = new XProvider().channelInteractionWebhooks;
     const created = await capability.verifyAndNormalizeDelivery(
@@ -1307,5 +1373,31 @@ describe('XProvider interaction webhooks', () => {
           (options as RequestInit).method === 'DELETE'
       )
     ).toBe(false);
+  });
+
+  it('exposes X conversation links and reuses the posting repost capability', async () => {
+    const provider = new XProvider();
+    const snapshot = {
+      externalId: 'tweet-1',
+      url: 'https://x.com/alice/status/tweet-1',
+      content: 'Hello',
+      publishedAt: '2026-08-28T12:00:00.000Z',
+      author: { externalId: 'alice', username: 'alice' },
+      version: 1,
+      completeness: 'complete' as const,
+    };
+    expect(provider.conversations.metadata(snapshot)).toEqual({
+      likeUrl: snapshot.url,
+      replyUrl: 'https://x.com/intent/tweet?in_reply_to=tweet-1',
+      canRepost: true,
+    });
+
+    const repost = jest
+      .spyOn(provider as any, 'repostViaRules')
+      .mockResolvedValue({ status: 'reposted', remoteReleaseId: 'tweet-1' });
+    await expect(
+      provider.conversations.repost({} as any, 'token:secret', 'tweet-1')
+    ).resolves.toEqual({ status: 'reposted', remoteReleaseId: 'tweet-1' });
+    expect(repost).toHaveBeenCalledWith({}, 'token:secret', 'tweet-1');
   });
 });

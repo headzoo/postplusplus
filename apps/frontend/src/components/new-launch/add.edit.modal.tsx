@@ -9,6 +9,7 @@ import { Integrations } from '@gitroom/frontend/components/launches/calendar.con
 import { useShallow } from 'zustand/react/shallow';
 import { useExistingData } from '@gitroom/frontend/components/launches/helpers/use.existing.data';
 import { newDayjs } from '@gitroom/frontend/components/layout/set.timezone';
+import { PostReferenceState } from '@gitroom/frontend/components/new-launch/post-reference.types';
 
 const toEditorHtml = (content: string) =>
   content.indexOf('<p>') > -1
@@ -53,6 +54,7 @@ export interface AddEditModalProps {
       path: string;
     }>;
   }>;
+  initialPostReference?: PostReferenceState;
 }
 
 export const AddEditModal: FC<AddEditModalProps> = (props) => {
@@ -153,6 +155,8 @@ export const AddEditModalInnerInner: FC<AddEditModalProps> = (props) => {
     setTags,
     setEditor,
     setRepeater,
+    setPostReference,
+    setPublishingMode,
   } = useLaunchStore(
     useShallow((state) => ({
       reset: state.reset,
@@ -164,10 +168,17 @@ export const AddEditModalInnerInner: FC<AddEditModalProps> = (props) => {
       setTags: state.setTags,
       setEditor: state.setEditor,
       setRepeater: state.setRepeater,
+      setPostReference: state.setPostReference,
+      setPublishingMode: state.setPublishingMode,
     }))
   );
 
   useEffect(() => {
+    if (props.initialPostReference) {
+      setPostReference(props.initialPostReference);
+      setPublishingMode('manual');
+    }
+
     const existingChannels =
       existingData.channels ||
       (existingData.integration

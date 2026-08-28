@@ -99,7 +99,9 @@ const createHarness = () => {
     },
     channelInteractionEvent: {
       createMany: jest.fn().mockResolvedValue({ count: 1 }),
+      findUnique: jest.fn().mockResolvedValue({ snapshotCompleteness: null }),
       findUniqueOrThrow: jest.fn().mockResolvedValue({ id: 'interaction-1' }),
+      update: jest.fn().mockResolvedValue({}),
       groupBy: jest.fn().mockResolvedValue([]),
       findMany: jest.fn().mockResolvedValue([]),
     },
@@ -695,6 +697,46 @@ describe('ChannelInteractionRepository', () => {
         },
       })
     );
+  });
+
+  it('enriches a duplicate event with a more complete post snapshot', async () => {
+    const { repository, tx } = createHarness();
+    tx.channelInteractionEvent.createMany.mockResolvedValue({ count: 0 });
+    tx.channelInteractionEvent.findUnique.mockResolvedValue({
+      snapshotCompleteness: 'partial',
+    });
+    const postSnapshot = {
+      externalId: 'post-1',
+      url: 'https://x.com/person-1/status/post-1',
+      content: 'Complete post',
+      publishedAt: '2026-08-12T23:30:00.000Z',
+      author: { externalId: 'person-1' },
+      version: 1,
+      completeness: 'complete' as const,
+    };
+
+    await expect(
+      repository.recordNormalizedEvent(
+        'org',
+        'integration',
+        event({ postSnapshot })
+      )
+    ).resolves.toEqual({ created: false });
+
+    expect(tx.channelInteractionEvent.update).toHaveBeenCalledWith({
+      where: {
+        integrationId_providerEventKey: {
+          integrationId: 'integration',
+          providerEventKey: 'event-1',
+        },
+      },
+      data: {
+        postSnapshot,
+        snapshotVersion: 1,
+        snapshotCompleteness: 'complete',
+      },
+    });
+    expect(tx.channelInteractionDailyAggregate.upsert).not.toHaveBeenCalled();
   });
 
   it('persists conversation identity and enqueues accepted interaction evidence atomically', async () => {

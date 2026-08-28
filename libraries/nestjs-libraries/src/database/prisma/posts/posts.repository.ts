@@ -4,6 +4,7 @@ import { Post as PostBody } from '@gitroom/nestjs-libraries/dtos/posts/create.po
 import {
   APPROVED_SUBMIT_FOR_ORDER,
   CreationMethod,
+  Prisma,
   Post,
   State,
 } from '@prisma/client';
@@ -751,6 +752,14 @@ export class PostsRepository {
             }),
         image: JSON.stringify(value.image),
         settings: JSON.stringify(body.settings),
+        ...(posts.length === 0 &&
+        (type === 'create' || value.reference !== undefined)
+          ? {
+              reference: value.reference
+                ? (value.reference as unknown as Prisma.InputJsonValue)
+                : Prisma.JsonNull,
+            }
+          : {}),
         organization: {
           connect: {
             id: orgId,

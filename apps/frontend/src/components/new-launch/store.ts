@@ -7,6 +7,7 @@ import { createRef, RefObject } from 'react';
 import { PostComment } from '@gitroom/frontend/components/new-launch/providers/post-comment.enum';
 import { newDayjs } from '@gitroom/frontend/components/layout/set.timezone';
 import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
+import { PostReferenceState } from '@gitroom/frontend/components/new-launch/post-reference.types';
 
 interface Values {
   id: string;
@@ -47,6 +48,9 @@ interface StoreState {
   showSettings: boolean;
   publishingMode: PublishingMode;
   pipelineId?: string;
+  postReference: PostReferenceState | null;
+  setPostReference: (postReference: PostReferenceState | null) => void;
+  clearPostReference: () => void;
   setLocked: (locked: boolean) => void;
   integrations: Integrations[];
   selectedIntegrations: SelectedIntegrations[];
@@ -163,6 +167,7 @@ const initialState = {
   showSettings: false,
   publishingMode: 'manual' as PublishingMode,
   pipelineId: undefined as string | undefined,
+  postReference: null as PostReferenceState | null,
   integrations: [] as Integrations[],
   selectedIntegrations: [] as SelectedIntegrations[],
   global: [] as Values[],
@@ -182,6 +187,24 @@ export const useLaunchStore = create<StoreState>()((set) => ({
     settings: any
   ) => {
     set((state) => {
+      if (state.postReference) {
+        if (integration.identifier !== state.postReference.providerIdentifier) {
+          return state;
+        }
+
+        const existingWithReference = state.selectedIntegrations.find(
+          (i) => i.integration.id === integration.id
+        );
+
+        if (existingWithReference) {
+          return state;
+        }
+
+        if (state.selectedIntegrations.length >= 1) {
+          return state;
+        }
+      }
+
       const existing = state.selectedIntegrations.find(
         (i) => i.integration.id === integration.id
       );
@@ -574,6 +597,14 @@ export const useLaunchStore = create<StoreState>()((set) => ({
   setPipelineId: (pipelineId?: string) =>
     set(() => ({
       pipelineId,
+    })),
+  setPostReference: (postReference: PostReferenceState | null) =>
+    set(() => ({
+      postReference,
+    })),
+  clearPostReference: () =>
+    set(() => ({
+      postReference: null,
     })),
   setDate: (date: dayjs.Dayjs) =>
     set((state) => ({

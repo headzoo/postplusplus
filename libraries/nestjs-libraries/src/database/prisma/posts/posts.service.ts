@@ -46,6 +46,7 @@ import {
 import {
   AnalyticsData,
   PostLiker,
+  PostReference,
 } from '@gitroom/nestjs-libraries/integrations/social/social.integrations.interface';
 import { timer } from '@gitroom/helpers/utils/timer';
 import { ioRedis } from '@gitroom/nestjs-libraries/redis/redis.service';
@@ -1135,6 +1136,52 @@ export class PostsService {
     );
   }
 
+  private validatePostReference(
+    post: CreatePostDto['posts'][number],
+    integration: Integration
+  ) {
+    const references = post.value
+      .map((value, index) => ({ reference: value.reference, index }))
+      .filter(
+        (
+          value
+        ): value is {
+          reference: PostReference;
+          index: number;
+        } => !!value.reference
+      );
+    if (!references.length) {
+      return;
+    }
+
+    if (references.length !== 1 || references[0].index !== 0) {
+      throw new BadRequestException(
+        'Post references are only supported on the first post in a thread'
+      );
+    }
+
+    const reference = references[0].reference;
+    if (reference.providerIdentifier !== integration.providerIdentifier) {
+      throw new BadRequestException(
+        'The post reference provider must match the selected integration'
+      );
+    }
+
+    const provider = this._integrationManager.getSocialIntegration(
+      integration.providerIdentifier
+    );
+    if (!provider.postReferences?.quote) {
+      throw new BadRequestException(
+        `${provider.name} does not support quote post references`
+      );
+    }
+
+    const validation = provider.validatePostReference?.(reference, post);
+    if (validation && validation !== true) {
+      throw new BadRequestException(validation);
+    }
+  }
+
   async createPost(
     orgId: string,
     body: CreatePostDto,
@@ -1183,6 +1230,19 @@ export class PostsService {
           );
         }
       }
+      if (post.value.some((value) => value.reference)) {
+        const integration = await this._integrationService.getIntegrationById(
+          orgId,
+          post.integration.id
+        );
+        if (!integration) {
+          throw new BadRequestException(
+            `Integration with id ${post.integration.id} not found`
+          );
+        }
+        this.validatePostReference(post, integration);
+      }
+
       const provider = this._integrationManager.getSocialIntegration(
         (post.settings as any)?.__type
       );

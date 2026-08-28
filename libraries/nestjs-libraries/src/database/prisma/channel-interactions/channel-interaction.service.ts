@@ -18,6 +18,7 @@ import {
   ChannelInteractionAuthorizationGrant,
   ChannelInteractionDirection,
   ChannelInteractionKind,
+  ChannelInteractionPostSnapshot,
   ChannelInteractionWindow,
   ChannelWebhookChallengeRequest,
   ChannelWebhookDeliveryRequest,
@@ -127,6 +128,8 @@ const MAX_PROFILE_TEXT_LENGTH = 4096;
 const MAX_METADATA_VALUE_LENGTH = 2048;
 const MAX_AUDIENCE_NOTE_LENGTH = 4096;
 const MAX_POST_CONTENT_LENGTH = 100000;
+const MAX_SNAPSHOT_CONTENT_LENGTH = 10000;
+const MAX_SNAPSHOT_MEDIA = 8;
 // Renew tracking grants a little early so a reconciliation pass never starts
 // with a token that expires mid-flight.
 const AUTHORIZATION_REFRESH_SKEW_MS = 60 * 1000;
@@ -2993,6 +2996,118 @@ export class ChannelInteractionService {
       normalizationVersion: event.normalizationVersion,
       membershipUpdate,
       score: getChannelInteractionScore(event.kind, event.direction),
+      ...(event.postSnapshot
+        ? { postSnapshot: this.validatePostSnapshot(event.postSnapshot) }
+        : {}),
+    };
+  }
+
+  validatePostSnapshot(
+    snapshot: ChannelInteractionPostSnapshot
+  ): ChannelInteractionPostSnapshot {
+    if (!snapshot || typeof snapshot !== 'object') {
+      throw new BadRequestException('postSnapshot must be an object');
+    }
+    if (
+      !Number.isInteger(snapshot.version) ||
+      snapshot.version < 1 ||
+      snapshot.version > 1000
+    ) {
+      throw new BadRequestException(
+        'postSnapshot.version must be between 1 and 1000'
+      );
+    }
+    if (
+      snapshot.completeness !== 'complete' &&
+      snapshot.completeness !== 'partial' &&
+      snapshot.completeness !== 'missing'
+    ) {
+      throw new BadRequestException('postSnapshot.completeness is unsupported');
+    }
+    return {
+      ...this.validateSnapshotPost(snapshot, 'postSnapshot', false),
+      version: snapshot.version,
+      completeness: snapshot.completeness,
+    };
+  }
+
+  private validateSnapshotPost(
+    snapshot: Omit<ChannelInteractionPostSnapshot, 'version' | 'completeness'>,
+    field: string,
+    nested: boolean
+  ): Omit<
+    ChannelInteractionPostSnapshot,
+    'version' | 'completeness' | 'quotedPost' | 'repostedPost'
+  > & {
+    quotedPost?: ChannelInteractionPostSnapshot['quotedPost'];
+    repostedPost?: ChannelInteractionPostSnapshot['repostedPost'];
+  } {
+    if (!snapshot || typeof snapshot !== 'object') {
+      throw new BadRequestException(`${field} must be an object`);
+    }
+    this.validateBoundedString(
+      snapshot.externalId,
+      `${field}.externalId`,
+      MAX_ID_LENGTH
+    );
+    const url = this.optionalUrl(snapshot.url, `${field}.url`);
+    if (!url) throw new BadRequestException(`${field}.url is required`);
+    if (
+      typeof snapshot.content !== 'string' ||
+      snapshot.content.length > MAX_SNAPSHOT_CONTENT_LENGTH
+    ) {
+      throw new BadRequestException(
+        `${field}.content must be at most ${MAX_SNAPSHOT_CONTENT_LENGTH} characters`
+      );
+    }
+    const publishedAt = this.parseDate(
+      snapshot.publishedAt,
+      `${field}.publishedAt`
+    );
+    const media = snapshot.media;
+    if (media && (!Array.isArray(media) || media.length > MAX_SNAPSHOT_MEDIA)) {
+      throw new BadRequestException(
+        `${field}.media must contain at most ${MAX_SNAPSHOT_MEDIA} entries`
+      );
+    }
+    const normalizedMedia = media?.map((item, index) => {
+      if (
+        !item ||
+        (item.type !== 'image' && item.type !== 'video') ||
+        !this.optionalUrl(item.url, `${field}.media[${index}].url`)
+      ) {
+        throw new BadRequestException(`${field}.media[${index}] is malformed`);
+      }
+      return { type: item.type, url: item.url };
+    });
+    if (nested && (snapshot.quotedPost || snapshot.repostedPost)) {
+      throw new BadRequestException(
+        `${field} cannot contain nested references`
+      );
+    }
+    const quotedPost = snapshot.quotedPost
+      ? this.validateSnapshotPost(
+          snapshot.quotedPost,
+          `${field}.quotedPost`,
+          true
+        )
+      : undefined;
+    const repostedPost = snapshot.repostedPost
+      ? this.validateSnapshotPost(
+          snapshot.repostedPost,
+          `${field}.repostedPost`,
+          true
+        )
+      : undefined;
+    return {
+      externalId: snapshot.externalId,
+      url,
+      content: snapshot.content,
+      publishedAt: publishedAt.toISOString(),
+      author: this.validateProfile(snapshot.author),
+      ...(normalizedMedia?.length ? { media: normalizedMedia } : {}),
+      ...(quotedPost ? { quotedPost } : {}),
+      ...(repostedPost ? { repostedPost } : {}),
     };
   }
 

@@ -392,6 +392,10 @@ export const sidebar: DefaultTheme.SidebarItem[] =
         "link": "/help/calendar"
       },
       {
+        "text": "Conversations",
+        "link": "/help/conversation"
+      },
+      {
         "text": "Dashboard",
         "link": "/help/dashboard"
       },

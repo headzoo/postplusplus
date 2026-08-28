@@ -630,6 +630,7 @@ model Post {
   likesSyncedAt              DateTime?
   settings                   String?
   image                      String?
+  reference                  Json?
   submittedForOrderId        String?
   submittedForOrganizationId String?
   approvedSubmitForOrder     APPROVED_SUBMIT_FOR_ORDER @default(NO)
@@ -1639,6 +1640,9 @@ model ChannelInteractionEvent {
   conversationExternalId String?
   metadata               Json?
   normalizationVersion   Int                         @default(1)
+  postSnapshot           Json?
+  snapshotVersion        Int?
+  snapshotCompleteness   String?
   createdAt              DateTime                    @default(now())
   organization           Organization                @relation(fields: [organizationId], references: [id])
   integration            Integration                 @relation(fields: [integrationId], references: [id])
@@ -1648,6 +1652,7 @@ model ChannelInteractionEvent {
   @@index([integrationId, counterpartyExternalId, eventAt])
   @@index([integrationId, kind, direction, eventAt])
   @@index([integrationId, conversationExternalId, eventAt])
+  @@index([organizationId, direction, eventAt, id], map: "ChannelInteractionEvent_inbox_keyset_idx")
   @@index([organizationId])
 }
 

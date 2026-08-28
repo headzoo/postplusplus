@@ -55,6 +55,11 @@ import {
 } from '@gitroom/frontend/components/new-launch/last-pipeline';
 import { stripHtmlValidation } from '@gitroom/helpers/utils/strip.html.validation';
 import { useHotkeys } from 'react-hotkeys-hook';
+import {
+  postReferenceSnapshotKey,
+  attachRootPostReference,
+} from '@gitroom/frontend/components/new-launch/post-reference.types';
+import { ComposerPostReferencePreview } from '@gitroom/frontend/components/new-launch/post-reference.preview';
 
 export const ManageModal: FC<AddEditModalProps> = (props) => {
   const t = useT();
@@ -98,6 +103,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
     global,
     internal,
     editor,
+    postReference,
   } = useLaunchStore(
     useShallow((state) => ({
       hide: state.hide,
@@ -124,6 +130,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
       global: state.global,
       internal: state.internal,
       editor: state.editor,
+      postReference: state.postReference,
     }))
   );
   const activePipelines = useMemo(
@@ -136,10 +143,14 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
   const pipelineMode =
     publishingMode === 'pipeline' &&
     !!selectedPipeline &&
-    !existingData?.integration;
+    !existingData?.integration &&
+    !postReference;
 
   const selectPipeline = useCallback(
     (nextPipelineId: string) => {
+      if (postReference) {
+        return;
+      }
       const pipeline = activePipelines.find(
         (candidate) => candidate.id === nextPipelineId
       );
@@ -158,7 +169,13 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
       setPublishingMode('pipeline');
       setLastPipelineId(pipeline.id);
     },
-    [activePipelines, setPipelineId, setPublishingMode, setSelectedIntegrations]
+    [
+      activePipelines,
+      postReference,
+      setPipelineId,
+      setPublishingMode,
+      setSelectedIntegrations,
+    ]
   );
 
   const restoredPipelineRef = useRef(false);
@@ -169,6 +186,8 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
       addEditSets ||
       props.selectedChannels?.length ||
       props.set ||
+      props.initialPostReference ||
+      postReference ||
       !activePipelines.length
     ) {
       return;
@@ -187,8 +206,19 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
     existingData?.integration,
     props.selectedChannels,
     props.set,
+    props.initialPostReference,
+    postReference,
     selectPipeline,
   ]);
+
+  useEffect(() => {
+    if (!postReference || publishingMode !== 'pipeline') {
+      return;
+    }
+
+    setPublishingMode('manual');
+    setPipelineId(undefined);
+  }, [postReference, publishingMode, setPipelineId, setPublishingMode]);
 
   useEffect(() => {
     if (hide) {
@@ -271,8 +301,18 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
           settings: integration.settings,
         }))
         .sort((a, b) => a.id.localeCompare(b.id)),
+      postReference: postReferenceSnapshotKey(postReference),
     });
-  }, [editor, global, internal, tags, date, repeater, selectedIntegrations]);
+  }, [
+    editor,
+    global,
+    internal,
+    tags,
+    date,
+    repeater,
+    selectedIntegrations,
+    postReference,
+  ]);
 
   // Existing posts keep hydrating after first paint (editor mode, TipTap HTML
   // normalization, provider settings). Refresh the baseline until state is idle,
@@ -313,8 +353,13 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
       return getComposerSnapshot() !== initialSnapshotRef.current;
     }
 
-    return hasComposerText();
-  }, [isEditingExistingPost, getComposerSnapshot, hasComposerText]);
+    return hasComposerText() || !!postReference;
+  }, [
+    isEditingExistingPost,
+    getComposerSnapshot,
+    hasComposerText,
+    postReference,
+  ]);
 
   const closeComposer = useCallback(() => {
     if (customClose) {
@@ -468,28 +513,33 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
 
       const group = existingData.group || makeId(10);
 
-      const posts = allValues.map((post: any) => ({
-        integration: {
-          id: post.id,
-        },
-        group,
-        settings: { ...(post.settings || {}) },
-        value: post.values.map((value: any) => ({
-          ...(value.id ? { id: value.id } : {}),
-          content: value.content,
-          delay: value.delay || 0,
-          image:
-            (value?.media || []).map(
-              ({ id, path, alt, thumbnail, thumbnailTimestamp }: any) => ({
-                id,
-                path,
-                alt,
-                thumbnail,
-                thumbnailTimestamp,
-              })
-            ) || [],
-        })),
-      }));
+      const posts = allValues.map((post: any) =>
+        attachRootPostReference(
+          {
+            integration: {
+              id: post.id,
+            },
+            group,
+            settings: { ...(post.settings || {}) },
+            value: post.values.map((value: any) => ({
+              ...(value.id ? { id: value.id } : {}),
+              content: value.content,
+              delay: value.delay || 0,
+              image:
+                (value?.media || []).map(
+                  ({ id, path, alt, thumbnail, thumbnailTimestamp }: any) => ({
+                    id,
+                    path,
+                    alt,
+                    thumbnail,
+                    thumbnailTimestamp,
+                  })
+                ) || [],
+            })),
+          },
+          postReference
+        )
+      );
 
       if (!dummy) {
         const checkAllValid = await (
@@ -730,6 +780,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
       activePipelines,
       resetForNextPost,
       selectPipeline,
+      postReference,
     ]
   );
 
@@ -755,10 +806,11 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                   <PicksSocialsComponent
                     toolTip={true}
                     disabled={pipelineMode}
+                    quoteReferenceActive={!!postReference}
                   />
                 </div>
                 <div>
-                  {!dummy && !pipelineMode && (
+                  {!dummy && !pipelineMode && !postReference && (
                     <SelectCustomer
                       onChange={changeCustomer}
                       integrations={integrations}
@@ -769,6 +821,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
               <div className="flex flex-1 gap-[6px] flex-col">
                 <div>{!existingData.integration && <SelectCurrent />}</div>
                 <div className="flex-1 flex flex-col">
+                  <ComposerPostReferencePreview />
                   {!hide && <EditorWrapper totalPosts={1} value="" />}
                 </div>
                 <div
@@ -839,6 +892,13 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                         : publishingMode
                     }
                     onChange={(event) => {
+                      if (postReference) {
+                        setPublishingMode(
+                          event.target.value === 'now' ? 'now' : 'manual'
+                        );
+                        return;
+                      }
+
                       if (
                         event.target.value === 'manual' ||
                         event.target.value === 'now'
@@ -854,7 +914,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                       {t('schedule_manually', 'Schedule manually')}
                     </option>
                     <option value="now">{t('post_now', 'Post Now')}</option>
-                    {activePipelines.length > 0 ? (
+                    {!postReference && activePipelines.length > 0 ? (
                       <optgroup label={t('pipelines', 'Pipelines')}>
                         {activePipelines.map((pipeline) => (
                           <option key={pipeline.id} value={pipeline.id}>
@@ -862,13 +922,13 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                           </option>
                         ))}
                       </optgroup>
-                    ) : (
+                    ) : !postReference ? (
                       <option value="" disabled>
                         {t('no_active_pipelines', 'No active Pipelines')}
                       </option>
-                    )}
+                    ) : null}
                   </select>
-                  {activePipelines.length === 0 && (
+                  {!postReference && activePipelines.length === 0 && (
                     <button
                       type="button"
                       onClick={() => {

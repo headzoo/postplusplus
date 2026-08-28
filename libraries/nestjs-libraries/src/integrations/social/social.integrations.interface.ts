@@ -243,6 +243,70 @@ export interface PostRulesCapability {
   ): Promise<PostRulesAddPlugReplyResult>;
 }
 
+export type ConversationActionDescriptors = {
+  likeUrl?: string;
+  replyUrl?: string;
+  canRepost: boolean;
+  canQuote?: boolean;
+  repostReason?: string;
+};
+
+export type ConversationEventContext = {
+  kind: ChannelInteractionKind;
+  relatedObjectId?: string | null;
+  metadata?: Record<string, string>;
+};
+
+export type ConversationEligibilityContext = {
+  integration: Integration;
+  event: ConversationEventContext;
+  postSnapshot: ChannelInteractionPostSnapshot;
+};
+
+export type ConversationActionEligibility = ConversationActionDescriptors & {
+  repostExternalId?: string;
+};
+
+export type ConversationHydrationRequest = {
+  eventId: string;
+  externalPostId: string;
+};
+
+export type ConversationHydrationResult = {
+  eventId: string;
+  postSnapshot: ChannelInteractionPostSnapshot;
+};
+
+export type ConversationRepostResult =
+  | { status: 'reposted'; remoteReleaseId: string }
+  | { status: 'already_reposted' }
+  | { status: 'auth_error' }
+  | { status: 'unsupported' }
+  | { status: 'retryable_failure'; reason?: string };
+
+export interface ConversationCapability {
+  supported: {
+    kinds: ChannelInteractionKind[];
+    actions: { repost: boolean };
+  };
+  eligibility(
+    context: ConversationEligibilityContext
+  ): ConversationActionEligibility;
+  getHydrationSourceExternalId(
+    event: ConversationEventContext
+  ): string | undefined;
+  hydrate(
+    integration: Integration,
+    accessToken: string,
+    requests: ConversationHydrationRequest[]
+  ): Promise<ConversationHydrationResult[]>;
+  repost(
+    integration: Integration,
+    accessToken: string,
+    externalPostId: string
+  ): Promise<ConversationRepostResult>;
+}
+
 export type GenerateAuthUrlResponse = {
   url: string;
   codeVerifier: string;
@@ -337,6 +401,14 @@ export type PostDetails<T = any> = {
   settings: T;
   media?: MediaContent[];
   poll?: PollDetails;
+  reference?: PostReference;
+};
+
+export type PostReference = {
+  type: 'quote';
+  providerIdentifier: string;
+  externalId: string;
+  url?: string;
 };
 
 export type PollDetails = {
@@ -642,6 +714,28 @@ export type ChannelInteractionCounterparty = {
   profileUrl?: string;
 };
 
+export type ChannelInteractionPostMedia = {
+  type: 'image' | 'video';
+  url: string;
+};
+
+export type ChannelInteractionPostSnapshotReference = {
+  externalId: string;
+  url: string;
+  content: string;
+  publishedAt: string;
+  author: ChannelInteractionCounterparty;
+  media?: ChannelInteractionPostMedia[];
+};
+
+export type ChannelInteractionPostSnapshot =
+  ChannelInteractionPostSnapshotReference & {
+    quotedPost?: ChannelInteractionPostSnapshotReference;
+    repostedPost?: ChannelInteractionPostSnapshotReference;
+    version: number;
+    completeness: 'complete' | 'partial' | 'missing';
+  };
+
 export type NormalizedChannelInteractionEvent = {
   providerEventKey: string;
   kind: ChannelInteractionKind;
@@ -654,6 +748,7 @@ export type NormalizedChannelInteractionEvent = {
   normalizationVersion: number;
   membershipUpdate?: ChannelAudienceMembership;
   eventType?: string;
+  postSnapshot?: ChannelInteractionPostSnapshot;
 };
 
 export type NormalizedChannelContentEvent =
@@ -874,7 +969,15 @@ export interface SocialProvider
     post: PublishedPostEditInput,
     integration: Integration
   ): boolean;
+  postReferences?: {
+    quote: boolean;
+  };
+  validatePostReference?(
+    reference: PostReference,
+    post: { value: Array<{ reference?: PostReference }>; settings?: any }
+  ): string | true;
   channelInteractionWebhooks?: ChannelInteractionWebhooksCapability;
   analyticsSnapshot?: ChannelAnalyticsSnapshotCapability;
   postRules?: PostRulesCapability;
+  conversations?: ConversationCapability;
 }

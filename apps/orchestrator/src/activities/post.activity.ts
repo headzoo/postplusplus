@@ -295,7 +295,7 @@ export class PostActivity {
     );
 
     const mappedPosts = await Promise.all(
-      (newPosts || []).map(async (p) => ({
+      (newPosts || []).map(async (p, index) => ({
         id: p.id,
         message: stripHtmlValidation(
           getIntegration.editor,
@@ -311,6 +311,9 @@ export class PostActivity {
           JSON.parse(p.image || '[]'),
           getIntegration?.convertToJPEG || false
         ),
+        ...(index === 0 && p.reference
+          ? { reference: p.reference as any }
+          : {}),
       }))
     );
 

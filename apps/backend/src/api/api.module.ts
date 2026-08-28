@@ -56,6 +56,7 @@ import { PipelineAutopostController } from '@gitroom/backend/api/routes/pipeline
 import { RulesController } from '@gitroom/backend/api/routes/rules.controller';
 import { ConversionsController } from '@gitroom/backend/api/routes/conversions.controller';
 import { ConversionWebhooksController } from '@gitroom/backend/api/routes/conversion-webhooks.controller';
+import { ConversationsController } from '@gitroom/backend/api/routes/conversations.controller';
 
 const authenticatedController = [
   UsersController,
@@ -85,6 +86,7 @@ const authenticatedController = [
   LogsController,
   RulesController,
   ConversionsController,
+  ConversationsController,
 ];
 @Module({
   imports: [UploadModule],

@@ -10,6 +10,7 @@ import {
 } from '@gitroom/frontend/components/new-layout/menu-item';
 import { useModals } from '@gitroom/frontend/components/layout/new-modal';
 import { AgentMediaModal } from '@gitroom/frontend/components/layout/agent.media.modal';
+import { SpeechBubblesIcon } from '@gitroom/frontend/components/ui/icons';
 
 interface MenuItemInterface {
   name: string;
@@ -99,6 +100,11 @@ export const useMenuItem = () => {
         </svg>
       ),
       path: '/followers',
+    },
+    {
+      name: t('conversations', 'Conversations'),
+      icon: <SpeechBubblesIcon size={20} />,
+      path: '/conversation',
     },
     {
       name: t('pipelines', 'Pipelines'),

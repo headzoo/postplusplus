@@ -1,26 +1,23 @@
 import React, { useCallback } from 'react';
 import clsx from 'clsx';
 import { useModals } from '@gitroom/frontend/components/layout/new-modal';
-import dayjs from 'dayjs';
-import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { SetSelectionModal } from '@gitroom/frontend/components/launches/calendar';
-import {
-  ADD_EDIT_MODAL_OPTIONS,
-  AddEditModal,
-} from '@gitroom/frontend/components/new-launch/add.edit.modal';
 import { useIntegrationList } from '@gitroom/frontend/components/launches/helpers/use.integration.list';
 import useSWR, { useSWRConfig } from 'swr';
+import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
+import { useOpenComposer } from '@gitroom/frontend/components/new-launch/use.open.composer';
 
 export const NewPost = ({
   variant = 'sidebar',
 }: {
   variant?: 'sidebar' | 'header';
 }) => {
-  const fetch = useFetch();
   const modal = useModals();
+  const fetch = useFetch();
   const { mutate: globalMutate } = useSWRConfig();
   const { data: integrations = [] } = useIntegrationList();
+  const { openComposer } = useOpenComposer();
   const setList = useCallback(async () => {
     return (await fetch('/sets')).json();
   }, [fetch]);
@@ -48,8 +45,6 @@ export const NewPost = ({
   const t = useT();
 
   const createAPost = useCallback(async () => {
-    const date = (await (await fetch('/posts/find-slot')).json()).date;
-
     const set: any = !sets.length
       ? undefined
       : await new Promise((resolve) => {
@@ -80,23 +75,12 @@ export const NewPost = ({
 
     if (set === 'exit') return;
 
-    modal.openModal({
-      ...ADD_EDIT_MODAL_OPTIONS,
-      children: (
-        <AddEditModal
-          allIntegrations={integrations.map((p) => ({
-            ...p,
-          }))}
-          {...(set?.content ? { set: JSON.parse(set.content) } : {})}
-          reopenModal={createAPost}
-          mutate={reloadCalendarView}
-          integrations={integrations}
-          date={dayjs.utc(date).local()}
-        />
-      ),
-      title: ``,
+    await openComposer({
+      integrations,
+      mutate: reloadCalendarView,
+      set: set?.content ? JSON.parse(set.content) : undefined,
     });
-  }, [integrations, sets]);
+  }, [integrations, modal, openComposer, reloadCalendarView, sets, t]);
   return (
     <button
       onClick={createAPost}

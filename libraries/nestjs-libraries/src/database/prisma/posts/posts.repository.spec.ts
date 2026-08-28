@@ -408,4 +408,56 @@ describe('Posts repository scheduling regressions', () => {
       data: expect.objectContaining({ deletedAt: expect.any(Date) }),
     });
   });
+
+  it('persists a reference only on the root post', async () => {
+    const upsert = jest
+      .fn()
+      .mockResolvedValueOnce({ id: 'root' })
+      .mockResolvedValueOnce({ id: 'comment' });
+    const posts = new PostsRepository(
+      { model: { post: { upsert, findFirst: jest.fn() } } } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: { tagsPosts: { deleteMany: jest.fn() } } } as any,
+      { model: {} } as any
+    );
+
+    await posts.createOrUpdatePost(
+      'schedule',
+      'org',
+      '2026-08-10T12:00:00.000Z',
+      {
+        integration: { id: 'channel-a' },
+        settings: {},
+        value: [
+          {
+            id: 'root',
+            content: 'Root',
+            image: [],
+            reference: {
+              type: 'quote',
+              providerIdentifier: 'x',
+              externalId: '123',
+            },
+          },
+          { id: 'comment', content: 'Comment', image: [] },
+        ],
+      } as any,
+      [],
+      'WEB' as any
+    );
+
+    expect(upsert.mock.calls[0][0].create.reference).toEqual({
+      type: 'quote',
+      providerIdentifier: 'x',
+      externalId: '123',
+    });
+    expect(upsert.mock.calls[1][0].create.reference).toBeUndefined();
+    expect(upsert.mock.calls[0][0].update.reference).toEqual({
+      type: 'quote',
+      providerIdentifier: 'x',
+      externalId: '123',
+    });
+  });
 });
