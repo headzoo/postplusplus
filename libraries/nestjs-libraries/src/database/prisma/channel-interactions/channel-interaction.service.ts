@@ -51,11 +51,17 @@ import {
   AudienceProfile,
   ChannelInteractionRepository,
   DesiredInteractionSubscription,
+  HotPickInput,
+  CultivatePickInput,
   RelationshipGradeBatch,
   RelationshipGradeSnapshotInput,
   RelationshipGradeStrategySelection,
   utcHourKey,
 } from './channel-interaction.repository';
+import {
+  MANUAL_TRIAGE_PICK_REASON,
+  MANUAL_TRIAGE_PICK_SOURCE,
+} from './follower-column-pin';
 import {
   classifyHotPickVisibility,
   HotPickAuditMember,
@@ -1815,6 +1821,37 @@ export class ChannelInteractionService {
     );
   }
 
+  private mergeManualTriagePins(params: {
+    pins: Array<{ counterpartyExternalId: string }>;
+    autoPicks: Array<HotPickInput | CultivatePickInput>;
+    pickLimit: number;
+  }): Array<HotPickInput | CultivatePickInput> {
+    if (!params.pins.length) {
+      return params.autoPicks.slice(0, params.pickLimit);
+    }
+    const pinnedIds = new Set(
+      params.pins.map((pin) => pin.counterpartyExternalId)
+    );
+    const manualPicks = params.pins.map((pin, index) => ({
+      counterpartyExternalId: pin.counterpartyExternalId,
+      rulesRank: index + 1,
+      finalRank: index + 1,
+      rulesReason: MANUAL_TRIAGE_PICK_REASON,
+      suggestedAction: MANUAL_TRIAGE_PICK_REASON,
+      source: MANUAL_TRIAGE_PICK_SOURCE,
+    }));
+    const remainingSlots = Math.max(params.pickLimit - manualPicks.length, 0);
+    const autoPicks = params.autoPicks
+      .filter((pick) => !pinnedIds.has(pick.counterpartyExternalId))
+      .slice(0, remainingSlots)
+      .map((pick, index) => ({
+        ...pick,
+        rulesRank: manualPicks.length + index + 1,
+        finalRank: manualPicks.length + index + 1,
+      }));
+    return [...manualPicks, ...autoPicks];
+  }
+
   private async rerankTriageCandidates<
     T extends {
       externalId: string;
@@ -2015,17 +2052,14 @@ export class ChannelInteractionService {
       pickLimit: config.profile.hot.pickLimit,
       candidates: rules,
     });
-    const result = await this._repository.replaceHotPickBatch({
+    const pins = await this._repository.listColumnPins({
       organizationId,
       integrationId,
-      hour,
-      strategyId: config.strategyId,
-      strategyVersion: config.strategyVersion,
-      materializationVersion: config.materializationVersion,
-      candidateCount: candidates.length,
-      source: reranked.source,
-      completedAt: now,
-      picks: reranked.picks.map((pick) => ({
+      column: 'hot',
+    });
+    const mergedPicks = this.mergeManualTriagePins({
+      pins,
+      autoPicks: reranked.picks.map((pick) => ({
         counterpartyExternalId: pick.externalId,
         rulesRank: pick.rulesRank,
         finalRank: pick.finalRank,
@@ -2035,6 +2069,19 @@ export class ChannelInteractionService {
         suggestedAction: pick.suggestedAction,
         source: pick.source,
       })),
+      pickLimit: config.profile.hot.pickLimit,
+    });
+    const result = await this._repository.replaceHotPickBatch({
+      organizationId,
+      integrationId,
+      hour,
+      strategyId: config.strategyId,
+      strategyVersion: config.strategyVersion,
+      materializationVersion: config.materializationVersion,
+      candidateCount: candidates.length + pins.length,
+      source: pins.length ? 'manual+rules' : reranked.source,
+      completedAt: now,
+      picks: mergedPicks,
     });
     const audit = await this._repository.auditHotPickExclusions({
       organizationId,
@@ -2119,16 +2166,27 @@ export class ChannelInteractionService {
       pickLimit: config.profile.cultivate.pickLimit,
       candidates: ranked,
     });
-    const picks = reranked.picks.map((row) => ({
-      counterpartyExternalId: row.externalId,
-      rulesRank: row.rulesRank,
-      finalRank: row.finalRank,
-      rulesReason: row.rulesReason,
-      ...(row.aiRank != null ? { aiRank: row.aiRank } : {}),
-      ...(row.aiReason ? { aiReason: row.aiReason } : {}),
-      ...(row.suggestedAction ? { suggestedAction: row.suggestedAction } : {}),
-      source: row.source,
-    }));
+    const pins = await this._repository.listColumnPins({
+      organizationId,
+      integrationId,
+      column: 'cultivate',
+    });
+    const picks = this.mergeManualTriagePins({
+      pins,
+      autoPicks: reranked.picks.map((row) => ({
+        counterpartyExternalId: row.externalId,
+        rulesRank: row.rulesRank,
+        finalRank: row.finalRank,
+        rulesReason: row.rulesReason,
+        ...(row.aiRank != null ? { aiRank: row.aiRank } : {}),
+        ...(row.aiReason ? { aiReason: row.aiReason } : {}),
+        ...(row.suggestedAction
+          ? { suggestedAction: row.suggestedAction }
+          : {}),
+        source: row.source,
+      })),
+      pickLimit: config.profile.cultivate.pickLimit,
+    });
     const result = await this._repository.replaceCultivatePickBatch({
       organizationId,
       integrationId,
@@ -2136,8 +2194,8 @@ export class ChannelInteractionService {
       strategyId: config.strategyId,
       strategyVersion: config.strategyVersion,
       materializationVersion: config.materializationVersion,
-      candidateCount: candidates.length,
-      source: reranked.source,
+      candidateCount: candidates.length + pins.length,
+      source: pins.length ? 'manual+rules' : reranked.source,
       completedAt: now,
       picks,
     });
@@ -2775,6 +2833,73 @@ export class ChannelInteractionService {
     if (result.missing === 'member') {
       throw new NotFoundException('Follower was not found');
     }
+  }
+
+  async moveFollowerColumn(
+    organizationId: string,
+    integrationId: string,
+    externalId: string,
+    from: { kind: 'segment'; slug: string } | { kind: 'list'; listId: string },
+    to: { kind: 'segment'; slug: string } | { kind: 'list'; listId: string },
+    createdByUserId?: string
+  ) {
+    this.validateBoundedString(externalId, 'externalId', MAX_ID_LENGTH);
+    if (from.kind === 'list') {
+      this.validateBoundedString(from.listId, 'from.listId', MAX_ID_LENGTH);
+    }
+    if (to.kind === 'list') {
+      this.validateBoundedString(to.listId, 'to.listId', MAX_ID_LENGTH);
+    }
+    if (from.kind === 'segment') {
+      this.validateBoundedString(from.slug, 'from.slug', 64);
+    }
+    if (to.kind === 'segment') {
+      this.validateBoundedString(to.slug, 'to.slug', 64);
+    }
+    const materialization = await this.resolveTriageMaterializationConfig(
+      organizationId,
+      integrationId
+    );
+    const result = await this._repository.moveAudienceMemberColumn({
+      organizationId,
+      integrationId,
+      externalId,
+      createdByUserId,
+      from,
+      to,
+      materialization: {
+        strategyId: materialization.strategyId,
+        strategyVersion: materialization.strategyVersion,
+        materializationVersion: materialization.materializationVersion,
+      },
+    });
+    if ('missing' in result) {
+      if (result.missing === 'list') {
+        throw new NotFoundException('Follower list was not found');
+      }
+      throw new NotFoundException('Follower was not found');
+    }
+    if ('rejected' in result) {
+      if (result.rejected === 'forbidden_target') {
+        throw new BadRequestException(
+          'Cannot move followers into Leads, Followed, or Unfollowed'
+        );
+      }
+      throw new BadRequestException('Follower is already in that column');
+    }
+  }
+
+  async listConvertedColumnPins(
+    organizationId: string,
+    integrationId: string,
+    externalIds?: string[]
+  ) {
+    return this._repository.listColumnPins({
+      organizationId,
+      integrationId,
+      column: 'converted',
+      ...(externalIds?.length ? { externalIds } : {}),
+    });
   }
 
   async markAudienceMemberFollowed(

@@ -1975,6 +1975,60 @@ export class IntegrationService {
     }
   }
 
+  async moveFollowerMemberColumn(
+    org: Organization,
+    user: User,
+    integrationId: string,
+    externalId: string,
+    from: { kind: 'segment' | 'list'; slug?: string; listId?: string },
+    to: { kind: 'segment' | 'list'; slug?: string; listId?: string }
+  ) {
+    await this.getFollowerIntegrationProvider(org, integrationId);
+    const normalize = (value: {
+      kind: 'segment' | 'list';
+      slug?: string;
+      listId?: string;
+    }):
+      | { kind: 'segment'; slug: string }
+      | { kind: 'list'; listId: string } => {
+      if (value.kind === 'list') {
+        if (!value.listId) {
+          throw new HttpException(
+            'listId is required for list columns',
+            HttpStatus.BAD_REQUEST
+          );
+        }
+        return { kind: 'list', listId: value.listId };
+      }
+      if (!value.slug) {
+        throw new HttpException(
+          'slug is required for segment columns',
+          HttpStatus.BAD_REQUEST
+        );
+      }
+      return { kind: 'segment', slug: value.slug };
+    };
+    try {
+      await this._channelInteractionService.moveFollowerColumn(
+        org.id,
+        integrationId,
+        externalId,
+        normalize(from),
+        normalize(to),
+        user.id
+      );
+      return { ok: true };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw new HttpException(error.message, HttpStatus.NOT_FOUND);
+      }
+      if (error instanceof BadRequestException) {
+        throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
+      }
+      throw error;
+    }
+  }
+
   private mapFollowerList(list: {
     id: string;
     name: string;
@@ -3190,27 +3244,69 @@ export class IntegrationService {
     if (query.search && !actorExternalIds?.length) {
       return { items: [], hasMore: false };
     }
-    const ranked = await this._conversionRepository.getConvertedActorsPage(
-      organizationId,
-      integration.id,
-      {
-        limit: query.limit,
-        ...(cursor ? { cursor } : {}),
-        ...(actorExternalIds?.length ? { actorExternalIds } : {}),
-      }
+    const [ranked, convertedPins] = await Promise.all([
+      this._conversionRepository.getConvertedActorsPage(
+        organizationId,
+        integration.id,
+        {
+          limit: query.limit,
+          ...(cursor ? { cursor } : {}),
+          ...(actorExternalIds?.length ? { actorExternalIds } : {}),
+        }
+      ),
+      this._channelInteractionService.listConvertedColumnPins(
+        organizationId,
+        integration.id,
+        actorExternalIds
+      ),
+    ]);
+    const conversionByExternalId = new Map(
+      ranked.items.map((row) => [row.externalId, row])
     );
+    const pinnedOnly = convertedPins
+      .filter((pin) => !conversionByExternalId.has(pin.counterpartyExternalId))
+      .map((pin) => ({
+        externalId: pin.counterpartyExternalId,
+        lastConvertedAt: pin.createdAt,
+        conversionCount: 0,
+        latestConversionType: 'manual',
+      }));
+    const mergedRows = [...ranked.items, ...pinnedOnly].sort((left, right) => {
+      const timeDiff =
+        right.lastConvertedAt.getTime() - left.lastConvertedAt.getTime();
+      if (timeDiff !== 0) {
+        return timeDiff;
+      }
+      return left.externalId.localeCompare(right.externalId);
+    });
+    let pageRows = mergedRows;
+    if (cursor) {
+      const cursorTime = new Date(cursor.lastConvertedAt).getTime();
+      pageRows = mergedRows.filter((row) => {
+        const rowTime = row.lastConvertedAt.getTime();
+        if (rowTime < cursorTime) {
+          return true;
+        }
+        if (rowTime > cursorTime) {
+          return false;
+        }
+        return row.externalId > cursor.externalId;
+      });
+    }
+    const limited = pageRows.slice(0, query.limit);
+    const hasMore = pageRows.length > query.limit || ranked.hasMore;
     const members =
       await this._channelInteractionRepository.getAudienceMembersByExternalIds(
         organizationId,
         integration.id,
-        ranked.items.map((row) => row.externalId),
+        limited.map((row) => row.externalId),
         userId
       );
-    const conversionByExternalId = new Map(
-      ranked.items.map((row) => [row.externalId, row])
+    const conversionLookup = new Map(
+      limited.map((row) => [row.externalId, row])
     );
     const items = members.map((member) => {
-      const conversion = conversionByExternalId.get(member.externalId);
+      const conversion = conversionLookup.get(member.externalId);
       return {
         ...this.mapAudienceMemberProfile(member),
         ...(conversion
@@ -3222,11 +3318,11 @@ export class IntegrationService {
           : {}),
       };
     });
-    const last = ranked.items.at(-1);
+    const last = limited.at(-1);
     return {
       items,
-      hasMore: ranked.hasMore,
-      ...(ranked.hasMore && last
+      hasMore,
+      ...(hasMore && last
         ? {
             nextCursor: this.encodeConvertedAudienceCursor({
               organizationId,

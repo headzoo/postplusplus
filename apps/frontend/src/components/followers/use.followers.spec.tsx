@@ -6,18 +6,24 @@ import {
   applyListMembershipToFollowerPage,
   applyImportedMemberToFollowerPage,
   applyIgnoreToFollowerPage,
+  applyFollowerMoveToAudienceSummary,
   applyMyGradeToFollowerDetail,
   applyMyGradeToFollowerPage,
+  applyPrependFollowerToPage,
   applyRelationshipSnapshotToFollowerPage,
+  applyRemoveFollowerFromPage,
   applyTriageIgnoreToFollowerPage,
   applyUnfollowToFollowerPage,
   buildFollowerDetailHref,
   buildFollowerDetailUrl,
   buildFollowersUrl,
+  followerForOptimisticBoardMove,
   followerListsKey,
   getProfileLinkAutoSnoozeTriages,
   isFollowerChannelCacheKey,
   isFollowerListCacheKey,
+  matchesFollowerBoardColumnCacheKey,
+  revalidateFollowerBoardMoveCaches,
   revalidateFollowerChannelCaches,
 } from './use.followers';
 
@@ -250,6 +256,32 @@ describe('follower list cache updates', () => {
     );
     expect(matcher(followerListsKey('channel-1'))).toBe(true);
     expect(matcher('/followers/channel-2?limit=24')).toBe(false);
+  });
+
+  it('revalidates only from/to board columns and audience on move rollback', async () => {
+    const mutateCache = jest.fn().mockResolvedValue(undefined);
+
+    await revalidateFollowerBoardMoveCaches(
+      mutateCache,
+      'channel-1',
+      { kind: 'segment', slug: 'hot' },
+      { kind: 'segment', slug: 'cultivate' }
+    );
+
+    expect(mutateCache).toHaveBeenCalledTimes(2);
+    const columnMatcher = mutateCache.mock.calls[0][0] as (
+      key: unknown
+    ) => boolean;
+    expect(columnMatcher('/followers/channel-1?limit=24&audience=hot')).toBe(
+      true
+    );
+    expect(
+      columnMatcher('/followers/channel-1?limit=24&audience=cultivate')
+    ).toBe(true);
+    expect(columnMatcher('/followers/channel-1?limit=24&audience=mutual')).toBe(
+      false
+    );
+    expect(mutateCache.mock.calls[1][0]).toBe('/followers/channel-1/audience');
   });
 
   it('patches the matching follower card fields from a refreshed snapshot', () => {
@@ -625,6 +657,102 @@ describe('follower list cache updates', () => {
     ).toEqual({
       items: [{ id: 'follower-2', name: 'Sam', isFollowed: true }],
       hasMore: false,
+    });
+  });
+
+  it('matches board column cache keys for segments and lists', () => {
+    expect(
+      matchesFollowerBoardColumnCacheKey(
+        'channel-1',
+        '/followers/channel-1?limit=24&audience=hot',
+        { kind: 'segment', slug: 'hot' }
+      )
+    ).toBe(true);
+    expect(
+      matchesFollowerBoardColumnCacheKey(
+        'channel-1',
+        '/followers/channel-1?limit=24&triage=over_invested',
+        { kind: 'segment', slug: 'costly' }
+      )
+    ).toBe(true);
+    expect(
+      matchesFollowerBoardColumnCacheKey(
+        'channel-1',
+        '/followers/channel-1?limit=24&listId=list-9',
+        { kind: 'list', listId: 'list-9' }
+      )
+    ).toBe(true);
+    expect(
+      matchesFollowerBoardColumnCacheKey(
+        'channel-1',
+        '/followers/channel-1?limit=24&audience=hot',
+        { kind: 'segment', slug: 'cultivate' }
+      )
+    ).toBe(false);
+  });
+
+  it('moves a follower between board pages and bumps summary counts', () => {
+    const page = {
+      items: [
+        { id: 'follower-1', name: 'Alex' },
+        { id: 'follower-2', name: 'Sam' },
+      ],
+      hasMore: false,
+    };
+    const target = {
+      items: [{ id: 'follower-3', name: 'Pat' }],
+      hasMore: false,
+    };
+    const follower = { id: 'follower-1', name: 'Alex', listIds: ['list-a'] };
+
+    expect(applyRemoveFollowerFromPage(page, 'follower-1')).toEqual({
+      items: [{ id: 'follower-2', name: 'Sam' }],
+      hasMore: false,
+    });
+    expect(
+      applyPrependFollowerToPage(
+        target,
+        followerForOptimisticBoardMove(
+          follower,
+          { kind: 'list', listId: 'list-a' },
+          { kind: 'segment', slug: 'hot' }
+        )
+      )
+    ).toEqual({
+      items: [
+        {
+          id: 'follower-1',
+          name: 'Alex',
+          listIds: [],
+          isHot: true,
+          relationshipTriage: 'hot_lead',
+        },
+        { id: 'follower-3', name: 'Pat' },
+      ],
+      hasMore: false,
+    });
+    expect(
+      applyFollowerMoveToAudienceSummary(
+        {
+          total: 10,
+          totalAsOf: null,
+          totalSource: null,
+          categories: { hot: 2, cultivate: 5 },
+          lists: [{ id: 'list-a', name: 'VIP', total: 4 }],
+          listsTruncated: false,
+          tracking: null,
+        },
+        { kind: 'list', listId: 'list-a' },
+        { kind: 'segment', slug: 'hot' }
+      )
+    ).toEqual({
+      total: 10,
+      totalAsOf: null,
+      totalSource: null,
+      categories: { hot: 3, cultivate: 5 },
+      lists: [{ id: 'list-a', name: 'VIP', total: 3 }],
+      listsTruncated: false,
+      tracking: null,
     });
   });
 });

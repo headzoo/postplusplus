@@ -12,6 +12,7 @@ import {
 import {
   FOLLOWER_BOARD_LIST_MIN_HEIGHT_PX,
   FOLLOWER_BOARD_SEGMENTS,
+  canFollowerBoardAcceptCardDrop,
 } from './follower.segments';
 import { Follower } from './use.followers';
 
@@ -129,7 +130,7 @@ jest.mock('next/navigation', () => ({
 
 jest.mock('react-dnd', () => ({
   useDrag: () => [{ isDragging: false }, jest.fn()],
-  useDrop: () => [{}, jest.fn()],
+  useDrop: () => [{ isCardOver: false }, jest.fn()],
   DndProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
@@ -170,6 +171,14 @@ const followedSegment = FOLLOWER_BOARD_SEGMENTS.find(
 const unfollowedSegment = FOLLOWER_BOARD_SEGMENTS.find(
   (segment) => segment.slug === 'unfollowed'
 )!;
+const hotSegment = FOLLOWER_BOARD_SEGMENTS.find(
+  (segment) => segment.slug === 'hot'
+)!;
+
+const rowColumnProps = (segment: (typeof FOLLOWER_BOARD_SEGMENTS)[number]) => ({
+  columnKey: `segment:${segment.slug}`,
+  columnRef: { kind: 'segment' as const, slug: segment.slug },
+});
 
 describe('FollowerBoard', () => {
   beforeEach(() => {
@@ -306,6 +315,44 @@ describe('FollowerBoard', () => {
     const hotIndex = FOLLOWER_BOARD_SEGMENTS.findIndex((s) => s.slug === 'hot');
     fireEvent.click(menuButtons[hotIndex]);
     expect(screen.queryByTestId('followers-board-column-add')).toBeNull();
+  });
+
+  it('marks Leads, Followed, and Unfollowed as unable to accept card drops', () => {
+    expect(
+      canFollowerBoardAcceptCardDrop({ kind: 'segment', slug: 'leads' })
+    ).toBe(false);
+    expect(
+      canFollowerBoardAcceptCardDrop({ kind: 'segment', slug: 'followed' })
+    ).toBe(false);
+    expect(
+      canFollowerBoardAcceptCardDrop({ kind: 'segment', slug: 'unfollowed' })
+    ).toBe(false);
+    expect(
+      canFollowerBoardAcceptCardDrop({ kind: 'segment', slug: 'hot' })
+    ).toBe(true);
+    expect(canFollowerBoardAcceptCardDrop({ kind: 'list' })).toBe(true);
+
+    render(
+      <FollowerBoard
+        orderedColumns={toOrderedSegmentColumns(
+          [leadsSegment, hotSegment, followedSegment].map((segment) => ({
+            segment,
+            items: [follower({ id: segment.slug })],
+            total: 1,
+            viewAllHref: `/followers/${segment.slug}`,
+          }))
+        )}
+        onReorderLocal={jest.fn()}
+        onDragEnd={jest.fn()}
+        onOpenFollower={jest.fn()}
+        onMoveFollower={jest.fn()}
+      />
+    );
+
+    const columns = screen.getAllByTestId('followers-board-column');
+    expect(columns[0].getAttribute('data-can-accept-card')).toBe('false');
+    expect(columns[1].getAttribute('data-can-accept-card')).toBe('true');
+    expect(columns[2].getAttribute('data-can-accept-card')).toBe('false');
   });
 
   it('renders a scroll wrapper when a column has items', () => {
@@ -451,6 +498,7 @@ describe('FollowerBoardRow', () => {
       <FollowerBoardRow
         follower={follower()}
         segment={leadsSegment}
+        {...rowColumnProps(leadsSegment)}
         onOpen={jest.fn()}
         onDismissTriage={jest.fn()}
       />
@@ -470,6 +518,7 @@ describe('FollowerBoardRow', () => {
           lastConvertedAt: new Date(Date.now() - 60_000).toISOString(),
         })}
         segment={conversionsSegment}
+        {...rowColumnProps(conversionsSegment)}
         onOpen={jest.fn()}
       />
     );
@@ -483,6 +532,7 @@ describe('FollowerBoardRow', () => {
       <FollowerBoardRow
         follower={follower()}
         segment={leadsSegment}
+        {...rowColumnProps(leadsSegment)}
         onOpen={onOpen}
         onDismissTriage={jest.fn()}
       />
@@ -507,6 +557,7 @@ describe('FollowerBoardRow', () => {
           relationshipTriage: 'hot_lead',
         })}
         segment={leadsSegment}
+        {...rowColumnProps(leadsSegment)}
         onOpen={onOpen}
         onDismissTriage={onDismissTriage}
       />
@@ -533,6 +584,7 @@ describe('FollowerBoardRow', () => {
       <FollowerBoardRow
         follower={follower()}
         segment={leadsSegment}
+        {...rowColumnProps(leadsSegment)}
         onOpen={onOpen}
         onDismissTriage={jest.fn()}
       />
@@ -555,6 +607,7 @@ describe('FollowerBoardRow', () => {
       <FollowerBoardRow
         follower={follower()}
         segment={followedSegment}
+        {...rowColumnProps(followedSegment)}
         canUnfollow={true}
         onOpen={onOpen}
         onUnfollow={onUnfollow}
@@ -579,6 +632,7 @@ describe('FollowerBoardRow', () => {
       <FollowerBoardRow
         follower={follower()}
         segment={unfollowedSegment}
+        {...rowColumnProps(unfollowedSegment)}
         canUnfollow={true}
         onOpen={onOpen}
         onUnfollow={onUnfollow}
@@ -600,6 +654,7 @@ describe('FollowerBoardRow', () => {
       <FollowerBoardRow
         follower={follower()}
         segment={leadsSegment}
+        {...rowColumnProps(leadsSegment)}
         onOpen={onOpen}
         onDismissTriage={jest.fn()}
       />

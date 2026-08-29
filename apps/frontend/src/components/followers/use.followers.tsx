@@ -289,15 +289,15 @@ export const FOLLOWER_INTERACTION_WINDOWS: {
   labelKey: string;
   defaultLabel: string;
 }[] = [
-  { value: 'week', labelKey: 'followers_window_week', defaultLabel: 'Week' },
-  { value: 'month', labelKey: 'followers_window_month', defaultLabel: 'Month' },
-  {
-    value: '90_day',
-    labelKey: 'followers_window_90_day',
-    defaultLabel: '90 Day',
-  },
-  { value: 'year', labelKey: 'followers_window_year', defaultLabel: 'Year' },
-];
+    { value: 'week', labelKey: 'followers_window_week', defaultLabel: 'Week' },
+    { value: 'month', labelKey: 'followers_window_month', defaultLabel: 'Month' },
+    {
+      value: '90_day',
+      labelKey: 'followers_window_90_day',
+      defaultLabel: '90 Day',
+    },
+    { value: 'year', labelKey: 'followers_window_year', defaultLabel: 'Year' },
+  ];
 
 export const DEFAULT_FOLLOWER_INTERACTION_WINDOW: ChannelInteractionWindow =
   'month';
@@ -334,13 +334,13 @@ export type UseFollowersParams = {
   search?: string;
   triage?: FollowerTriageFilter;
   audience?:
-    | 'lead'
-    | 'followed'
-    | 'unfollowed'
-    | 'ignored'
-    | 'cultivate'
-    | 'hot'
-    | 'converted';
+  | 'lead'
+  | 'followed'
+  | 'unfollowed'
+  | 'ignored'
+  | 'cultivate'
+  | 'hot'
+  | 'converted';
   listId?: string;
   isBot?: boolean;
 };
@@ -696,10 +696,10 @@ export const applyMyGradeToFollowerPage = (
       item.id !== externalId
         ? item
         : {
-            ...item,
-            myGrade: update.myGrade,
-            adjustedGrade: update.adjustedGrade,
-          }
+          ...item,
+          myGrade: update.myGrade,
+          adjustedGrade: update.adjustedGrade,
+        }
     ),
   };
 };
@@ -724,9 +724,9 @@ export const applyMyGradeToFollowerDetail = (
       ...detail.relationship,
       current: current
         ? {
-            ...current,
-            adjustedGrade: update.adjustedGrade,
-          }
+          ...current,
+          adjustedGrade: update.adjustedGrade,
+        }
         : current,
     },
   };
@@ -757,11 +757,11 @@ export const useFollowerGradeMutation = (
       await Promise.all([
         detailKey
           ? mutateCache(
-              detailKey,
-              (detail: FollowerMemberDetail | undefined) =>
-                applyMyGradeToFollowerDetail(detail, update),
-              { revalidate: false }
-            )
+            detailKey,
+            (detail: FollowerMemberDetail | undefined) =>
+              applyMyGradeToFollowerDetail(detail, update),
+            { revalidate: false }
+          )
           : Promise.resolve(),
         mutateCache(
           (key) => isFollowerListCacheKey(integrationId, key),
@@ -782,6 +782,152 @@ export type RelationshipScoreDirection = 'their' | 'your';
 
 export const isFollowerListCacheKey = (integrationId: string, key: unknown) =>
   typeof key === 'string' && key.startsWith(`/followers/${integrationId}?`);
+
+export type FollowerBoardMoveColumnRef =
+  | { kind: 'segment'; slug: string }
+  | { kind: 'list'; listId: string };
+
+export const matchesFollowerBoardColumnCacheKey = (
+  integrationId: string,
+  key: unknown,
+  column: FollowerBoardMoveColumnRef
+): boolean => {
+  if (!isFollowerListCacheKey(integrationId, key) || typeof key !== 'string') {
+    return false;
+  }
+  const queryIndex = key.indexOf('?');
+  const params = new URLSearchParams(
+    queryIndex >= 0 ? key.slice(queryIndex + 1) : ''
+  );
+  if (column.kind === 'list') {
+    return params.get('listId') === column.listId;
+  }
+  switch (column.slug) {
+    case 'leads':
+      return params.get('audience') === 'lead';
+    case 'hot':
+      return params.get('audience') === 'hot';
+    case 'cultivate':
+      return params.get('audience') === 'cultivate';
+    case 'followed':
+      return params.get('audience') === 'followed';
+    case 'conversions':
+      return params.get('audience') === 'converted';
+    case 'ignored':
+      return params.get('audience') === 'ignored';
+    case 'unfollowed':
+      return params.get('audience') === 'unfollowed';
+    case 'mutual':
+      return params.get('triage') === 'mutual';
+    case 'quiet':
+      return params.get('triage') === 'quiet';
+    case 'costly':
+      return params.get('triage') === 'over_invested';
+    case 'bots':
+      return params.get('isBot') === 'true';
+    default:
+      return false;
+  }
+};
+
+export const audienceCategoryKeyForBoardColumn = (
+  column: FollowerBoardMoveColumnRef
+):
+  | { kind: 'category'; key: string }
+  | { kind: 'list'; listId: string }
+  | null => {
+  if (column.kind === 'list') {
+    return { kind: 'list', listId: column.listId };
+  }
+  const categoryBySlug: Record<string, string> = {
+    leads: 'lead',
+    hot: 'hot',
+    cultivate: 'cultivate',
+    followed: 'followed',
+    conversions: 'converted',
+    mutual: 'mutual',
+    quiet: 'quiet',
+    costly: 'over_invested',
+    ignored: 'ignored',
+    unfollowed: 'unfollowed',
+    bots: 'bots',
+  };
+  const key = categoryBySlug[column.slug];
+  return key ? { kind: 'category', key } : null;
+};
+
+export const applyRemoveFollowerFromPage = (
+  page: FollowerPage | undefined,
+  externalId: string
+): FollowerPage | undefined => {
+  if (!page) {
+    return page;
+  }
+  const items = page.items.filter((item) => item.id !== externalId);
+  if (items.length === page.items.length) {
+    return page;
+  }
+  return {
+    ...page,
+    items,
+  };
+};
+
+export const applyPrependFollowerToPage = (
+  page: FollowerPage | undefined,
+  follower: Follower
+): FollowerPage | undefined => {
+  if (!page) {
+    return page;
+  }
+  if (page.items.some((item) => item.id === follower.id)) {
+    return page;
+  }
+  return {
+    ...page,
+    items: [follower, ...page.items],
+  };
+};
+
+export const followerForOptimisticBoardMove = (
+  follower: Follower,
+  from: FollowerBoardMoveColumnRef,
+  to: FollowerBoardMoveColumnRef
+): Follower => {
+  let listIds = follower.listIds ?? [];
+  if (from.kind === 'list') {
+    listIds = listIds.filter((id) => id !== from.listId);
+  }
+  if (to.kind === 'list' && !listIds.includes(to.listId)) {
+    listIds = [...listIds, to.listId];
+  }
+  const next: Follower = { ...follower, listIds };
+  if (to.kind !== 'segment') {
+    return next;
+  }
+  switch (to.slug) {
+    case 'hot':
+      return {
+        ...next,
+        isHot: true,
+        relationshipTriage: 'hot_lead',
+      };
+    case 'cultivate':
+      return { ...next, isCultivate: true };
+    case 'bots':
+      return { ...next, isBot: true };
+    case 'ignored':
+      return { ...next, isIgnored: true };
+    case 'mutual':
+      return { ...next, relationshipTriage: 'mutual' };
+    case 'quiet':
+      return { ...next, relationshipTriage: 'quiet' };
+    case 'costly':
+      return { ...next, relationshipTriage: 'over_invested' };
+    default:
+      return next;
+  }
+};
 
 const isRelationshipSnapshot = (
   value: unknown
@@ -812,18 +958,18 @@ export const applyRelationshipSnapshotToFollowerPage = (
       item.id !== externalId
         ? item
         : {
-            ...item,
-            effortScore: current.effortScore,
-            reciprocationScore: current.reciprocationScore,
-            netGap: current.reciprocationScore - current.effortScore,
-            effortStars: current.effortStars,
-            reciprocationStars: current.reciprocationStars,
-            relationshipGrade: current.grade,
-            relationshipTriage: current.triage,
-            relationshipFormulaVersion: current.formulaVersion,
-            relationshipSnapshotAt: current.snapshotAt,
-            adjustedGrade: current.adjustedGrade,
-          }
+          ...item,
+          effortScore: current.effortScore,
+          reciprocationScore: current.reciprocationScore,
+          netGap: current.reciprocationScore - current.effortScore,
+          effortStars: current.effortStars,
+          reciprocationStars: current.reciprocationStars,
+          relationshipGrade: current.grade,
+          relationshipTriage: current.triage,
+          relationshipFormulaVersion: current.formulaVersion,
+          relationshipSnapshotAt: current.snapshotAt,
+          adjustedGrade: current.adjustedGrade,
+        }
     ),
   };
 };
@@ -888,11 +1034,11 @@ export const useFollowerRelationshipScoreMutation = (
       await Promise.all([
         detailKey
           ? mutateCache(
-              detailKey,
-              (detail: FollowerMemberDetail | undefined) =>
-                applyRelationshipSnapshotToFollowerDetail(detail, current),
-              { revalidate: false }
-            )
+            detailKey,
+            (detail: FollowerMemberDetail | undefined) =>
+              applyRelationshipSnapshotToFollowerDetail(detail, current),
+            { revalidate: false }
+          )
           : Promise.resolve(),
         mutateCache(
           (key) => isFollowerListCacheKey(integrationId, key),
@@ -923,6 +1069,52 @@ export type FollowerAudienceSummary = {
   lists: Array<{ id: string; name: string; total: number | null }>;
   listsTruncated: boolean;
   tracking: FollowerPageTracking | null;
+};
+
+export const applyFollowerMoveToAudienceSummary = (
+  summary: FollowerAudienceSummary | undefined,
+  from: FollowerBoardMoveColumnRef,
+  to: FollowerBoardMoveColumnRef
+): FollowerAudienceSummary | undefined => {
+  if (!summary) {
+    return summary;
+  }
+  const bump = (
+    current: FollowerAudienceSummary,
+    column: FollowerBoardMoveColumnRef,
+    delta: number
+  ): FollowerAudienceSummary => {
+    const target = audienceCategoryKeyForBoardColumn(column);
+    if (!target) {
+      return current;
+    }
+    if (target.kind === 'list') {
+      return {
+        ...current,
+        lists: current.lists.map((list) => {
+          if (list.id !== target.listId || list.total == null) {
+            return list;
+          }
+          return {
+            ...list,
+            total: Math.max(0, list.total + delta),
+          };
+        }),
+      };
+    }
+    const value = current.categories[target.key];
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
+      return current;
+    }
+    return {
+      ...current,
+      categories: {
+        ...current.categories,
+        [target.key]: Math.max(0, value + delta),
+      },
+    };
+  };
+  return bump(bump(summary, from, -1), to, 1);
 };
 
 export const useFollowerAudienceSummary = (integrationId?: string) => {
@@ -975,6 +1167,25 @@ export const revalidateFollowerChannelCaches = (
     undefined,
     { revalidate: true }
   );
+
+export const revalidateFollowerBoardMoveCaches = (
+  mutateCache: ReturnType<typeof useSWRConfig>['mutate'],
+  integrationId: string,
+  from: FollowerBoardMoveColumnRef,
+  to: FollowerBoardMoveColumnRef
+) =>
+  Promise.all([
+    mutateCache(
+      (key) =>
+        matchesFollowerBoardColumnCacheKey(integrationId, key, from) ||
+        matchesFollowerBoardColumnCacheKey(integrationId, key, to),
+      undefined,
+      { revalidate: true }
+    ),
+    mutateCache(followerAudienceKey(integrationId), undefined, {
+      revalidate: true,
+    }),
+  ]);
 
 export const useFollowerLists = (integrationId?: string) => {
   const fetch = useFetch();
@@ -1100,20 +1311,20 @@ export const applyTriageIgnoreToFollowerPage = (
   const items = options?.removeFromPage
     ? page.items.filter((item) => item.id !== externalId)
     : page.items.map((item) => {
-        if (item.id !== externalId) {
-          return item;
-        }
-        if (options?.triage === 'lead') {
-          return { ...item, isLead: false };
-        }
-        if (options?.triage === 'cultivate') {
-          return { ...item, isCultivate: false };
-        }
-        if (options?.triage === 'hot_lead') {
-          return { ...item, relationshipTriage: null, isHot: false };
-        }
-        return { ...item, relationshipTriage: null };
-      });
+      if (item.id !== externalId) {
+        return item;
+      }
+      if (options?.triage === 'lead') {
+        return { ...item, isLead: false };
+      }
+      if (options?.triage === 'cultivate') {
+        return { ...item, isCultivate: false };
+      }
+      if (options?.triage === 'hot_lead') {
+        return { ...item, relationshipTriage: null, isHot: false };
+      }
+      return { ...item, relationshipTriage: null };
+    });
   return {
     ...page,
     items,
@@ -1627,6 +1838,76 @@ export const useFollowerListMutations = (integrationId?: string) => {
     [fetch, integrationId, mutateCache]
   );
 
+  const moveColumn = useCallback(
+    async (
+      follower: Follower,
+      from: FollowerBoardMoveColumnRef,
+      to: FollowerBoardMoveColumnRef
+    ) => {
+      if (!integrationId) {
+        throw new Error('Channel is required');
+      }
+      const externalId = follower.id;
+      const optimistic = followerForOptimisticBoardMove(follower, from, to);
+
+      // Apply cache updates synchronously before the network round-trip so the
+      // card moves in the same frame the drag ends (no disappear/reappear gap).
+      void mutateCache(
+        (key) => matchesFollowerBoardColumnCacheKey(integrationId, key, from),
+        (page: FollowerPage | undefined) =>
+          applyRemoveFollowerFromPage(page, externalId),
+        { revalidate: false }
+      );
+      void mutateCache(
+        (key) => matchesFollowerBoardColumnCacheKey(integrationId, key, to),
+        (page: FollowerPage | undefined) =>
+          applyPrependFollowerToPage(page, optimistic),
+        { revalidate: false }
+      );
+      void mutateCache(
+        followerAudienceKey(integrationId),
+        (summary: FollowerAudienceSummary | undefined) =>
+          applyFollowerMoveToAudienceSummary(summary, from, to),
+        { revalidate: false }
+      );
+
+      try {
+        const response = await fetch(
+          `/followers/${integrationId}/member/move-column`,
+          {
+            method: 'POST',
+            body: JSON.stringify({ externalId, from, to }),
+          }
+        );
+        if (!response.ok) {
+          let message = 'Failed to move follower';
+          try {
+            const body = await response.json();
+            if (typeof body?.message === 'string') {
+              message = body.message;
+            } else if (Array.isArray(body?.message) && body.message[0]) {
+              message = String(body.message[0]);
+            }
+          } catch {
+            // keep default message
+          }
+          throw new Error(message);
+        }
+      } catch (error) {
+        // Only refresh the columns we touched — a full channel revalidate
+        // refetches every board preview and feels like a page refresh.
+        await revalidateFollowerBoardMoveCaches(
+          mutateCache,
+          integrationId,
+          from,
+          to
+        );
+        throw error;
+      }
+    },
+    [fetch, integrationId, mutateCache]
+  );
+
   return {
     createList,
     deleteList,
@@ -1640,6 +1921,7 @@ export const useFollowerListMutations = (integrationId?: string) => {
     unfollowMember,
     ignoreFollower,
     unignoreFollower,
+    moveColumn,
     revalidateLists,
   };
 };

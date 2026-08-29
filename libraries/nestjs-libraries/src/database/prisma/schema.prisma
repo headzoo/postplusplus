@@ -58,6 +58,7 @@ model Organization {
   channelAudienceLists                ChannelAudienceList[]
   channelAudienceListMembers          ChannelAudienceListMember[]
   channelAudienceMemberTriageIgnores  ChannelAudienceMemberTriageIgnore[]
+  channelAudienceMemberColumnPins     ChannelAudienceMemberColumnPin[]
   channelAudienceMemberGrades         ChannelAudienceMemberGrade[]
   channelAudienceLeadFitFeedbacks     ChannelAudienceLeadFitFeedback[]
   channelRelationshipGradeSnapshots   ChannelRelationshipGradeSnapshot[]
@@ -159,6 +160,7 @@ model User {
   channelAudienceLists               ChannelAudienceList[]
   channelAudienceMemberGrades        ChannelAudienceMemberGrade[]
   channelAudienceMemberTriageIgnores ChannelAudienceMemberTriageIgnore[]
+  channelAudienceMemberColumnPins    ChannelAudienceMemberColumnPin[]
   channelAudienceLeadFitFeedbacks    ChannelAudienceLeadFitFeedback[]
   channelAudienceMembersIgnored      ChannelAudienceMember[]             @relation("AudienceMemberIgnoredBy")
   adminPasskeyCredentials            AdminPasskeyCredential[]
@@ -474,6 +476,7 @@ model Integration {
   channelAudienceLists                ChannelAudienceList[]
   channelAudienceListMembers          ChannelAudienceListMember[]
   channelAudienceMemberTriageIgnores  ChannelAudienceMemberTriageIgnore[]
+  channelAudienceMemberColumnPins     ChannelAudienceMemberColumnPin[]
   channelAudienceMemberGrades         ChannelAudienceMemberGrade[]
   channelAudienceLeadFitFeedbacks     ChannelAudienceLeadFitFeedback[]
   channelRelationshipGradeSnapshots   ChannelRelationshipGradeSnapshot[]
@@ -1594,6 +1597,7 @@ model ChannelAudienceMember {
   personalGrades                 ChannelAudienceMemberGrade[]        @relation("AudienceMemberPersonalGrades")
   gradeSnapshots                 ChannelRelationshipGradeSnapshot[]  @relation("AudienceMemberGradeSnapshots")
   triageIgnores                  ChannelAudienceMemberTriageIgnore[] @relation("AudienceMemberTriageIgnores")
+  columnPins                     ChannelAudienceMemberColumnPin[]    @relation("AudienceMemberColumnPins")
   leadFitFeedbacks               ChannelAudienceLeadFitFeedback[]    @relation("AudienceMemberLeadFitFeedbacks")
   leadBridgesAsLead              ChannelAudienceLeadBridge[]         @relation("AudienceLeadBridgesAsLead")
   leadBridgesAsBridge            ChannelAudienceLeadBridge[]         @relation("AudienceLeadBridgesAsBridge")
@@ -2148,6 +2152,25 @@ model ChannelAudienceMemberTriageIgnore {
   @@index([createdByUserId])
   @@index([organizationId])
   @@index([expiresAt])
+}
+
+model ChannelAudienceMemberColumnPin {
+  organizationId         String
+  integrationId          String
+  counterpartyExternalId String
+  column                 String
+  createdAt              DateTime              @default(now())
+  createdByUserId        String?
+  organization           Organization          @relation(fields: [organizationId], references: [id])
+  integration            Integration           @relation(fields: [integrationId], references: [id])
+  createdBy              User?                 @relation(fields: [createdByUserId], references: [id])
+  audienceMember         ChannelAudienceMember @relation("AudienceMemberColumnPins", fields: [integrationId, counterpartyExternalId], references: [integrationId, externalId])
+
+  @@id([organizationId, integrationId, counterpartyExternalId, column])
+  @@index([organizationId, integrationId, column])
+  @@index([integrationId, counterpartyExternalId])
+  @@index([createdByUserId])
+  @@index([organizationId])
 }
 
 model ChannelAudienceLeadFitFeedback {

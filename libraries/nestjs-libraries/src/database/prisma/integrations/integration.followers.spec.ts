@@ -84,6 +84,8 @@ describe('IntegrationService followers', () => {
       getStoredFollowerAudienceCounts: jest.fn(),
       markAudienceMemberFollowed: jest.fn(),
       markAudienceMemberUnfollowed: jest.fn(),
+      listConvertedColumnPins: jest.fn().mockResolvedValue([]),
+      moveFollowerColumn: jest.fn().mockResolvedValue(undefined),
     };
     (service as any)._channelAnalyticsService = {
       getLatestAccountAudienceTotal: jest.fn().mockResolvedValue(null),
@@ -1221,6 +1223,7 @@ describe('IntegrationService followers', () => {
             relationshipEffortScore: 4,
             relationshipReciprocationScore: 12,
             relationshipNetGap: 8,
+            membershipState: 'FOLLOWER',
             relationshipTriage: 'hot_lead',
             relationshipFormulaVersion: 2,
             relationshipSnapshotAt: new Date('2026-08-12T12:00:00.000Z'),
@@ -1288,6 +1291,7 @@ describe('IntegrationService followers', () => {
             relationshipEffortScore: 4,
             relationshipReciprocationScore: 12,
             relationshipNetGap: 8,
+            membershipState: 'FOLLOWER',
             relationshipTriage: 'hot_lead',
             relationshipFormulaVersion: 2,
             relationshipSnapshotAt: new Date('2026-08-12T12:00:00.000Z'),
@@ -3521,7 +3525,6 @@ describe('IntegrationService followers', () => {
           followingCount: null,
           followedAt: null,
           accountCreatedAt: null,
-          membershipState: 'FOLLOWER',
           noteCount: 0,
           likesCount: 0,
           inboundInteractionCount: 0,
@@ -3852,10 +3855,10 @@ describe('IntegrationService followers', () => {
             relationshipEffortScore: 4,
             relationshipReciprocationScore: 12,
             relationshipNetGap: 8,
+            membershipState: 'FOLLOWER',
             relationshipTriage: 'hot_lead',
             relationshipFormulaVersion: 2,
             relationshipSnapshotAt: new Date('2026-08-12T12:00:00.000Z'),
-            membershipState: 'FOLLOWER',
             personalGrades: [],
           },
         ],
@@ -3917,6 +3920,7 @@ describe('IntegrationService followers', () => {
             relationshipEffortScore: 4,
             relationshipReciprocationScore: 12,
             relationshipNetGap: 8,
+            membershipState: 'FOLLOWER',
             relationshipTriage: 'hot_lead',
             relationshipFormulaVersion: 2,
             relationshipSnapshotAt: new Date('2026-08-12T12:00:00.000Z'),
@@ -3940,10 +3944,15 @@ describe('IntegrationService followers', () => {
           id: 'follower-a',
           effortScore: 4,
           reciprocationScore: 12,
-          relationshipTriage: null,
         },
       ],
     });
+    const page = await service.getFollowers(org, user, 'channel-a', {
+      limit: 24,
+      sort: 'their_effort',
+      direction: 'desc',
+    });
+    expect(page.items[0]?.relationshipTriage).toBeUndefined();
   });
 
   it('rejects replaying an audience cursor under another triage filter', async () => {
@@ -4044,7 +4053,8 @@ describe('IntegrationService followers', () => {
           relationshipEffortScore: 0,
           relationshipReciprocationScore: 4,
           relationshipNetGap: 4,
-          relationshipTriage: null,
+          membershipState: 'FOLLOWER',
+          relationshipTriage: 'hot_lead',
           relationshipGrade: null,
           relationshipFormulaVersion: null,
           relationshipSnapshotAt: null,

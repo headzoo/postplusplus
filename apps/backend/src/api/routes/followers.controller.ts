@@ -29,6 +29,7 @@ import { IgnoreFollowerTriageDto } from '@gitroom/nestjs-libraries/dtos/integrat
 import { FollowFollowerMemberDto } from '@gitroom/nestjs-libraries/dtos/integrations/follower-follow.dto';
 import { UnfollowFollowerMemberDto } from '@gitroom/nestjs-libraries/dtos/integrations/follower-unfollow.dto';
 import { IgnoreFollowerDto } from '@gitroom/nestjs-libraries/dtos/integrations/follower-ignore.dto';
+import { MoveFollowerColumnDto } from '@gitroom/nestjs-libraries/dtos/integrations/follower-move-column.dto';
 import { FollowersQueryDto } from '@gitroom/nestjs-libraries/dtos/integrations/followers.query.dto';
 import { GetOrgFromRequest } from '@gitroom/nestjs-libraries/user/org.from.request';
 import { GetUserFromRequest } from '@gitroom/nestjs-libraries/user/user.from.request';
@@ -145,6 +146,23 @@ export class FollowersController {
       user,
       integrationId,
       body.externalId
+    );
+  }
+
+  @Post('/:integrationId/member/move-column')
+  moveFollowerMemberColumn(
+    @GetOrgFromRequest() org: Organization,
+    @GetUserFromRequest() user: User,
+    @Param('integrationId') integrationId: string,
+    @Body() body: MoveFollowerColumnDto
+  ) {
+    return this._integrationService.moveFollowerMemberColumn(
+      org,
+      user,
+      integrationId,
+      body.externalId,
+      body.from,
+      body.to
     );
   }
 

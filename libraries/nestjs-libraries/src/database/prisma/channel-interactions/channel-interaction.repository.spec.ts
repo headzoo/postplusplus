@@ -161,6 +161,13 @@ const createHarness = () => {
       upsert: jest.fn(),
       deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
     },
+    channelAudienceMemberColumnPin: {
+      findFirst: jest.fn().mockResolvedValue(null),
+      findMany: jest.fn().mockResolvedValue([]),
+      deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+      create: jest.fn().mockResolvedValue({}),
+      upsert: jest.fn().mockResolvedValue({}),
+    },
     channelAudienceLeadFitFeedback: {
       upsert: jest.fn().mockResolvedValue({}),
       findMany: jest.fn().mockResolvedValue([]),
@@ -230,6 +237,7 @@ const createHarness = () => {
         channelAudienceHotPick: tx.channelAudienceHotPick,
         channelAudienceCultivatePickBatch: tx.channelAudienceCultivatePickBatch,
         channelAudienceCultivatePick: tx.channelAudienceCultivatePick,
+        channelAudienceMemberColumnPin: tx.channelAudienceMemberColumnPin,
         channelRelationshipGradeSnapshot: tx.channelRelationshipGradeSnapshot,
       },
     } as any,
@@ -3723,6 +3731,15 @@ describe('ChannelInteractionRepository', () => {
         expiresAt: null,
       },
     });
+    expect(tx.channelAudienceMemberColumnPin.deleteMany).toHaveBeenCalledWith({
+      where: {
+        organizationId: 'org',
+        integrationId: 'integration',
+        counterpartyExternalId: 'person-1',
+        column: 'hot',
+      },
+    });
+    expect(tx.channelAudienceHotPick.deleteMany).toHaveBeenCalled();
     expect(tx.channelAudienceLeadFitFeedback.upsert).not.toHaveBeenCalled();
   });
 

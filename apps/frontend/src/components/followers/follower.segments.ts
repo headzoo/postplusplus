@@ -15,6 +15,7 @@ import {
   UsersIcon,
 } from '@gitroom/frontend/components/ui/icons';
 import { FOLLOWER_CATEGORY_DESCRIPTIONS } from '@gitroom/nestjs-libraries/integrations/social/follower.sorts';
+import { isFollowerBoardMoveForbiddenSegment } from '@gitroom/nestjs-libraries/database/prisma/channel-interactions/follower-column-pin';
 import {
   DismissibleTriage,
   FollowerSortDirection,
@@ -350,6 +351,15 @@ export const getFollowerBoardColumnAction = (
     default:
       return null;
   }
+};
+
+export const canFollowerBoardAcceptCardDrop = (
+  column: { kind: 'segment'; slug: FollowerSegmentSlug } | { kind: 'list' }
+): boolean => {
+  if (column.kind === 'list') {
+    return true;
+  }
+  return !isFollowerBoardMoveForbiddenSegment(column.slug);
 };
 
 export const FOLLOWER_TAB_SEGMENTS: Array<{

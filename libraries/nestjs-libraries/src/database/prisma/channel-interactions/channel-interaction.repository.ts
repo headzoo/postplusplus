@@ -46,6 +46,16 @@ import {
   trimCultivatePickAuditForLog,
 } from './cultivate-pick-audit';
 import {
+  FollowerColumnPinColumn,
+  MANUAL_TRIAGE_PICK_REASON,
+  MANUAL_TRIAGE_PICK_SOURCE,
+  columnPinToRelationshipTriage,
+  isFollowerBoardMoveAllowedSegment,
+  isFollowerBoardMoveForbiddenSegment,
+  relationshipTriageToColumnPin,
+  segmentSlugToColumnPin,
+} from './follower-column-pin';
+import {
   RelationshipGradeScheduleConfig,
   relationshipGradeDueCutoff,
 } from '@gitroom/nestjs-libraries/temporal/relationship-grade.schedule';
@@ -532,6 +542,7 @@ export class ChannelInteractionRepository {
       | 'channelAudienceCultivatePick'
       | 'channelAudienceHotPickBatch'
       | 'channelAudienceHotPick'
+      | 'channelAudienceMemberColumnPin'
       | 'channelRelationshipGradeSnapshot'
       | 'conversionEvaluationJob'
     >,
@@ -3753,9 +3764,24 @@ export class ChannelInteractionRepository {
     }
     return this.withSerializableRetry(async (tx) => {
       await this.assertOwnedIntegration(tx, organizationId, integrationId);
+      const pinnedBots = await tx.channelAudienceMemberColumnPin.findMany({
+        where: {
+          organizationId,
+          integrationId,
+          column: 'bots',
+          counterpartyExternalId: {
+            in: projections.map((projection) => projection.externalId),
+          },
+        },
+        select: { counterpartyExternalId: true },
+      });
+      const pinnedBotIds = new Set(
+        pinnedBots.map((pin) => pin.counterpartyExternalId)
+      );
       await Promise.all(
-        projections.map((projection) =>
-          tx.channelAudienceMember.updateMany({
+        projections.map((projection) => {
+          const keepManualBot = pinnedBotIds.has(projection.externalId);
+          return tx.channelAudienceMember.updateMany({
             where: {
               organizationId,
               integrationId,
@@ -3764,13 +3790,13 @@ export class ChannelInteractionRepository {
             },
             data: {
               botGrade: projection.botGrade,
-              isBot: projection.isBot,
+              isBot: keepManualBot ? true : projection.isBot,
               botConfidence: projection.botConfidence,
               botFormulaVersion: projection.botFormulaVersion,
               botGradedAt: gradedAt,
             },
-          })
-        )
+          });
+        })
       );
       return { count: projections.length };
     });
@@ -4697,6 +4723,37 @@ export class ChannelInteractionRepository {
           expiresAt,
         },
       });
+      const pinColumn = relationshipTriageToColumnPin(triage);
+      if (pinColumn && !options?.snooze) {
+        await tx.channelAudienceMemberColumnPin.deleteMany({
+          where: {
+            organizationId,
+            integrationId,
+            counterpartyExternalId: externalId,
+            column: pinColumn,
+          },
+        });
+        if (pinColumn === 'hot') {
+          await tx.channelAudienceHotPick.deleteMany({
+            where: {
+              organizationId,
+              integrationId,
+              hour: utcHourKey(),
+              counterpartyExternalId: externalId,
+            },
+          });
+        }
+        if (pinColumn === 'cultivate') {
+          await tx.channelAudienceCultivatePick.deleteMany({
+            where: {
+              organizationId,
+              integrationId,
+              hour: utcHourKey(),
+              counterpartyExternalId: externalId,
+            },
+          });
+        }
+      }
       if (triage === 'lead' && !options?.snooze) {
         await this.upsertLeadFitFeedback(tx, {
           organizationId,
@@ -4710,6 +4767,698 @@ export class ChannelInteractionRepository {
         });
       }
       return { ok: true as const };
+    });
+  }
+
+  async listColumnPins(params: {
+    organizationId: string;
+    integrationId: string;
+    column?: FollowerColumnPinColumn;
+    externalIds?: string[];
+  }) {
+    return this._dailyAggregate.model.channelAudienceMemberColumnPin.findMany({
+      where: {
+        organizationId: params.organizationId,
+        integrationId: params.integrationId,
+        ...(params.column ? { column: params.column } : {}),
+        ...(params.externalIds?.length
+          ? { counterpartyExternalId: { in: params.externalIds } }
+          : {}),
+      },
+      orderBy: [{ createdAt: 'asc' }, { counterpartyExternalId: 'asc' }],
+      select: {
+        counterpartyExternalId: true,
+        column: true,
+        createdAt: true,
+      },
+    });
+  }
+
+  async deleteColumnPins(
+    organizationId: string,
+    integrationId: string,
+    externalId: string,
+    columns?: FollowerColumnPinColumn[]
+  ) {
+    return this.withSerializableRetry(async (tx) => {
+      await this.assertOwnedIntegration(tx, organizationId, integrationId);
+      await tx.channelAudienceMemberColumnPin.deleteMany({
+        where: {
+          organizationId,
+          integrationId,
+          counterpartyExternalId: externalId,
+          ...(columns?.length ? { column: { in: columns } } : {}),
+        },
+      });
+      return { ok: true as const };
+    });
+  }
+
+  async moveAudienceMemberColumn(params: {
+    organizationId: string;
+    integrationId: string;
+    externalId: string;
+    createdByUserId?: string;
+    from: { kind: 'segment'; slug: string } | { kind: 'list'; listId: string };
+    to: { kind: 'segment'; slug: string } | { kind: 'list'; listId: string };
+    materialization: {
+      strategyId: ChannelStrategyId;
+      strategyVersion: number;
+      materializationVersion: number;
+    };
+    now?: Date;
+  }) {
+    const now = params.now ?? new Date();
+    const hour = utcHourKey(now);
+    const fromKey =
+      params.from.kind === 'list'
+        ? `list:${params.from.listId}`
+        : `segment:${params.from.slug}`;
+    const toKey =
+      params.to.kind === 'list'
+        ? `list:${params.to.listId}`
+        : `segment:${params.to.slug}`;
+    if (fromKey === toKey) {
+      return { rejected: 'same_column' as const };
+    }
+    if (
+      params.to.kind === 'segment' &&
+      isFollowerBoardMoveForbiddenSegment(params.to.slug)
+    ) {
+      return { rejected: 'forbidden_target' as const };
+    }
+    if (
+      params.to.kind === 'segment' &&
+      !isFollowerBoardMoveAllowedSegment(params.to.slug)
+    ) {
+      return { rejected: 'forbidden_target' as const };
+    }
+
+    return this.withSerializableRetry(async (tx) => {
+      await this.assertOwnedIntegration(
+        tx,
+        params.organizationId,
+        params.integrationId
+      );
+      const member = await tx.channelAudienceMember.findFirst({
+        where: {
+          organizationId: params.organizationId,
+          integrationId: params.integrationId,
+          externalId: params.externalId,
+        },
+        select: {
+          externalId: true,
+          name: true,
+          username: true,
+          bio: true,
+          followersCount: true,
+          followingCount: true,
+          leadFitScore: true,
+          leadFitReason: true,
+          leadFitMatchedTopics: true,
+        },
+      });
+      if (!member) {
+        return { missing: 'member' as const };
+      }
+
+      if (params.to.kind === 'list') {
+        const list = await tx.channelAudienceList.findFirst({
+          where: {
+            id: params.to.listId,
+            organizationId: params.organizationId,
+            integrationId: params.integrationId,
+            deletedAt: null,
+          },
+          select: { id: true },
+        });
+        if (!list) {
+          return { missing: 'list' as const };
+        }
+      }
+      if (params.from.kind === 'list') {
+        const list = await tx.channelAudienceList.findFirst({
+          where: {
+            id: params.from.listId,
+            organizationId: params.organizationId,
+            integrationId: params.integrationId,
+            deletedAt: null,
+          },
+          select: { id: true },
+        });
+        if (!list) {
+          return { missing: 'list' as const };
+        }
+      }
+
+      await this.applyColumnMoveTarget(tx, {
+        organizationId: params.organizationId,
+        integrationId: params.integrationId,
+        externalId: params.externalId,
+        createdByUserId: params.createdByUserId,
+        to: params.to,
+        materialization: params.materialization,
+        hour,
+        now,
+        member,
+      });
+
+      await this.leaveColumnMoveSource(tx, {
+        organizationId: params.organizationId,
+        integrationId: params.integrationId,
+        externalId: params.externalId,
+        createdByUserId: params.createdByUserId,
+        from: params.from,
+        hour,
+        member,
+      });
+
+      return { ok: true as const };
+    });
+  }
+
+  private async applyColumnMoveTarget(
+    tx: Prisma.TransactionClient,
+    params: {
+      organizationId: string;
+      integrationId: string;
+      externalId: string;
+      createdByUserId?: string;
+      to: { kind: 'segment'; slug: string } | { kind: 'list'; listId: string };
+      materialization: {
+        strategyId: ChannelStrategyId;
+        strategyVersion: number;
+        materializationVersion: number;
+      };
+      hour: string;
+      now: Date;
+      member: {
+        name: string | null;
+        username: string | null;
+        bio: string | null;
+        followersCount: number | null;
+        followingCount: number | null;
+        leadFitScore: number | null;
+        leadFitReason: string | null;
+        leadFitMatchedTopics: string | null;
+      };
+    }
+  ) {
+    if (params.to.kind === 'list') {
+      await tx.channelAudienceListMember.upsert({
+        where: {
+          listId_counterpartyExternalId: {
+            listId: params.to.listId,
+            counterpartyExternalId: params.externalId,
+          },
+        },
+        create: {
+          organizationId: params.organizationId,
+          integrationId: params.integrationId,
+          listId: params.to.listId,
+          counterpartyExternalId: params.externalId,
+        },
+        update: {},
+      });
+      await this.upsertLeadFitFeedback(tx, {
+        organizationId: params.organizationId,
+        integrationId: params.integrationId,
+        externalId: params.externalId,
+        source: 'list_add',
+        verdict: 'accepted',
+        reasons: [],
+        listId: params.to.listId,
+        createdByUserId: params.createdByUserId,
+        member: params.member,
+      });
+      return;
+    }
+
+    const slug = params.to.slug;
+    if (slug === 'ignored') {
+      await tx.channelAudienceMember.updateMany({
+        where: {
+          organizationId: params.organizationId,
+          integrationId: params.integrationId,
+          externalId: params.externalId,
+        },
+        data: {
+          ignoredAt: params.now,
+          ...(params.createdByUserId
+            ? { ignoredByUserId: params.createdByUserId }
+            : {}),
+        },
+      });
+      return;
+    }
+
+    const pinColumn = segmentSlugToColumnPin(slug);
+    if (!pinColumn) {
+      throw new Error(`Unsupported move target segment: ${slug}`);
+    }
+
+    await tx.channelAudienceMemberColumnPin.deleteMany({
+      where: {
+        organizationId: params.organizationId,
+        integrationId: params.integrationId,
+        counterpartyExternalId: params.externalId,
+      },
+    });
+    await tx.channelAudienceMemberColumnPin.create({
+      data: {
+        organizationId: params.organizationId,
+        integrationId: params.integrationId,
+        counterpartyExternalId: params.externalId,
+        column: pinColumn,
+        ...(params.createdByUserId
+          ? { createdByUserId: params.createdByUserId }
+          : {}),
+      },
+    });
+
+    if (pinColumn === 'hot' || pinColumn === 'cultivate') {
+      await this.ensureManualTriagePick(tx, {
+        organizationId: params.organizationId,
+        integrationId: params.integrationId,
+        externalId: params.externalId,
+        hour: params.hour,
+        triage: pinColumn,
+        materialization: params.materialization,
+        now: params.now,
+      });
+      // Clear dismiss so the pinned pick is visible again.
+      await tx.channelAudienceMemberTriageIgnore.deleteMany({
+        where: {
+          organizationId: params.organizationId,
+          integrationId: params.integrationId,
+          counterpartyExternalId: params.externalId,
+          triage: {
+            in:
+              pinColumn === 'hot'
+                ? ['hot_lead', 'engaged_not_yet']
+                : ['cultivate'],
+          },
+        },
+      });
+      return;
+    }
+
+    if (pinColumn === 'bots') {
+      await tx.channelAudienceMember.updateMany({
+        where: {
+          organizationId: params.organizationId,
+          integrationId: params.integrationId,
+          externalId: params.externalId,
+        },
+        data: { isBot: true },
+      });
+      return;
+    }
+
+    if (pinColumn === 'converted') {
+      return;
+    }
+
+    const triage = columnPinToRelationshipTriage(pinColumn);
+    if (triage) {
+      await tx.channelAudienceMember.updateMany({
+        where: {
+          organizationId: params.organizationId,
+          integrationId: params.integrationId,
+          externalId: params.externalId,
+        },
+        data: { relationshipTriage: triage },
+      });
+      await tx.channelAudienceMemberTriageIgnore.deleteMany({
+        where: {
+          organizationId: params.organizationId,
+          integrationId: params.integrationId,
+          counterpartyExternalId: params.externalId,
+          triage,
+        },
+      });
+    }
+  }
+
+  private async leaveColumnMoveSource(
+    tx: Prisma.TransactionClient,
+    params: {
+      organizationId: string;
+      integrationId: string;
+      externalId: string;
+      createdByUserId?: string;
+      from:
+        | { kind: 'segment'; slug: string }
+        | { kind: 'list'; listId: string };
+      hour: string;
+      member: {
+        name: string | null;
+        username: string | null;
+        bio: string | null;
+        followersCount: number | null;
+        followingCount: number | null;
+        leadFitScore: number | null;
+        leadFitReason: string | null;
+        leadFitMatchedTopics: string | null;
+      };
+    }
+  ) {
+    if (params.from.kind === 'list') {
+      await tx.channelAudienceListMember.deleteMany({
+        where: {
+          organizationId: params.organizationId,
+          integrationId: params.integrationId,
+          listId: params.from.listId,
+          counterpartyExternalId: params.externalId,
+        },
+      });
+      return;
+    }
+
+    const slug = params.from.slug;
+    if (
+      slug === 'followed' ||
+      slug === 'unfollowed' ||
+      slug === 'conversions'
+    ) {
+      if (slug === 'conversions') {
+        await tx.channelAudienceMemberColumnPin.deleteMany({
+          where: {
+            organizationId: params.organizationId,
+            integrationId: params.integrationId,
+            counterpartyExternalId: params.externalId,
+            column: 'converted',
+          },
+        });
+      }
+      return;
+    }
+
+    if (slug === 'ignored') {
+      await tx.channelAudienceMember.updateMany({
+        where: {
+          organizationId: params.organizationId,
+          integrationId: params.integrationId,
+          externalId: params.externalId,
+        },
+        data: { ignoredAt: null, ignoredByUserId: null },
+      });
+      return;
+    }
+
+    if (slug === 'leads') {
+      await tx.channelAudienceMemberTriageIgnore.upsert({
+        where: {
+          organizationId_integrationId_counterpartyExternalId_triage: {
+            organizationId: params.organizationId,
+            integrationId: params.integrationId,
+            counterpartyExternalId: params.externalId,
+            triage: 'lead',
+          },
+        },
+        create: {
+          organizationId: params.organizationId,
+          integrationId: params.integrationId,
+          counterpartyExternalId: params.externalId,
+          triage: 'lead',
+          expiresAt: null,
+          ...(params.createdByUserId
+            ? { createdByUserId: params.createdByUserId }
+            : {}),
+        },
+        update: { expiresAt: null },
+      });
+      await this.upsertLeadFitFeedback(tx, {
+        organizationId: params.organizationId,
+        integrationId: params.integrationId,
+        externalId: params.externalId,
+        source: 'lead_dismiss',
+        verdict: 'rejected',
+        reasons: ['not_a_prospect'],
+        createdByUserId: params.createdByUserId,
+        member: params.member,
+      });
+      return;
+    }
+
+    if (slug === 'hot' || slug === 'cultivate') {
+      const pinColumn = slug === 'hot' ? 'hot' : 'cultivate';
+      const triage = slug === 'hot' ? 'hot_lead' : 'cultivate';
+      await tx.channelAudienceMemberColumnPin.deleteMany({
+        where: {
+          organizationId: params.organizationId,
+          integrationId: params.integrationId,
+          counterpartyExternalId: params.externalId,
+          column: pinColumn,
+        },
+      });
+      if (slug === 'hot') {
+        await tx.channelAudienceHotPick.deleteMany({
+          where: {
+            organizationId: params.organizationId,
+            integrationId: params.integrationId,
+            hour: params.hour,
+            counterpartyExternalId: params.externalId,
+          },
+        });
+      } else {
+        await tx.channelAudienceCultivatePick.deleteMany({
+          where: {
+            organizationId: params.organizationId,
+            integrationId: params.integrationId,
+            hour: params.hour,
+            counterpartyExternalId: params.externalId,
+          },
+        });
+      }
+      await tx.channelAudienceMemberTriageIgnore.upsert({
+        where: {
+          organizationId_integrationId_counterpartyExternalId_triage: {
+            organizationId: params.organizationId,
+            integrationId: params.integrationId,
+            counterpartyExternalId: params.externalId,
+            triage,
+          },
+        },
+        create: {
+          organizationId: params.organizationId,
+          integrationId: params.integrationId,
+          counterpartyExternalId: params.externalId,
+          triage,
+          expiresAt: null,
+          ...(params.createdByUserId
+            ? { createdByUserId: params.createdByUserId }
+            : {}),
+        },
+        update: { expiresAt: null },
+      });
+      return;
+    }
+
+    if (slug === 'bots') {
+      await tx.channelAudienceMemberColumnPin.deleteMany({
+        where: {
+          organizationId: params.organizationId,
+          integrationId: params.integrationId,
+          counterpartyExternalId: params.externalId,
+          column: 'bots',
+        },
+      });
+      await tx.channelAudienceMember.updateMany({
+        where: {
+          organizationId: params.organizationId,
+          integrationId: params.integrationId,
+          externalId: params.externalId,
+        },
+        data: { isBot: null },
+      });
+      return;
+    }
+
+    if (slug === 'mutual' || slug === 'quiet' || slug === 'costly') {
+      const pinColumn = segmentSlugToColumnPin(slug);
+      const triage =
+        slug === 'costly' ? 'over_invested' : (slug as 'mutual' | 'quiet');
+      if (pinColumn) {
+        await tx.channelAudienceMemberColumnPin.deleteMany({
+          where: {
+            organizationId: params.organizationId,
+            integrationId: params.integrationId,
+            counterpartyExternalId: params.externalId,
+            column: pinColumn,
+          },
+        });
+      }
+      await tx.channelAudienceMemberTriageIgnore.upsert({
+        where: {
+          organizationId_integrationId_counterpartyExternalId_triage: {
+            organizationId: params.organizationId,
+            integrationId: params.integrationId,
+            counterpartyExternalId: params.externalId,
+            triage,
+          },
+        },
+        create: {
+          organizationId: params.organizationId,
+          integrationId: params.integrationId,
+          counterpartyExternalId: params.externalId,
+          triage,
+          expiresAt: null,
+          ...(params.createdByUserId
+            ? { createdByUserId: params.createdByUserId }
+            : {}),
+        },
+        update: { expiresAt: null },
+      });
+    }
+  }
+
+  private async ensureManualTriagePick(
+    tx: Prisma.TransactionClient,
+    params: {
+      organizationId: string;
+      integrationId: string;
+      externalId: string;
+      hour: string;
+      triage: 'hot' | 'cultivate';
+      materialization: {
+        strategyId: ChannelStrategyId;
+        strategyVersion: number;
+        materializationVersion: number;
+      };
+      now: Date;
+    }
+  ) {
+    const batchData = {
+      organizationId: params.organizationId,
+      integrationId: params.integrationId,
+      hour: params.hour,
+      strategyId: params.materialization.strategyId,
+      strategyVersion: params.materialization.strategyVersion,
+      materializationVersion: params.materialization.materializationVersion,
+      candidateCount: 1,
+      pickCount: 1,
+      source: MANUAL_TRIAGE_PICK_SOURCE,
+      completedAt: params.now,
+    };
+    const batchUpdate = {
+      strategyId: params.materialization.strategyId,
+      strategyVersion: params.materialization.strategyVersion,
+      materializationVersion: params.materialization.materializationVersion,
+      completedAt: params.now,
+    };
+    const batchWhere = {
+      organizationId_integrationId_hour: {
+        organizationId: params.organizationId,
+        integrationId: params.integrationId,
+        hour: params.hour,
+      },
+    };
+    const pickWhere = {
+      organizationId: params.organizationId,
+      integrationId: params.integrationId,
+      hour: params.hour,
+      counterpartyExternalId: params.externalId,
+    };
+    const pickKey = {
+      organizationId_integrationId_hour_counterpartyExternalId: {
+        organizationId: params.organizationId,
+        integrationId: params.integrationId,
+        hour: params.hour,
+        counterpartyExternalId: params.externalId,
+      },
+    };
+    const pickPatch = {
+      source: MANUAL_TRIAGE_PICK_SOURCE,
+      rulesReason: MANUAL_TRIAGE_PICK_REASON,
+      suggestedAction: MANUAL_TRIAGE_PICK_REASON,
+    };
+
+    if (params.triage === 'hot') {
+      await tx.channelAudienceHotPickBatch.upsert({
+        where: batchWhere,
+        create: batchData,
+        update: batchUpdate,
+      });
+      const existing = await tx.channelAudienceHotPick.findFirst({
+        where: pickWhere,
+        select: { finalRank: true, rulesRank: true },
+      });
+      if (existing) {
+        await tx.channelAudienceHotPick.update({
+          where: pickKey,
+          data: pickPatch,
+        });
+        return;
+      }
+      const maxRank = await tx.channelAudienceHotPick.aggregate({
+        where: {
+          organizationId: params.organizationId,
+          integrationId: params.integrationId,
+          hour: params.hour,
+        },
+        _max: { finalRank: true, rulesRank: true },
+      });
+      const nextRank =
+        Math.max(maxRank._max.finalRank ?? 0, maxRank._max.rulesRank ?? 0) + 1;
+      await tx.channelAudienceHotPick.create({
+        data: {
+          ...pickWhere,
+          rulesRank: nextRank,
+          finalRank: nextRank,
+          ...pickPatch,
+        },
+      });
+      await tx.channelAudienceHotPickBatch.update({
+        where: batchWhere,
+        data: {
+          pickCount: { increment: 1 },
+          candidateCount: { increment: 1 },
+        },
+      });
+      return;
+    }
+
+    await tx.channelAudienceCultivatePickBatch.upsert({
+      where: batchWhere,
+      create: batchData,
+      update: batchUpdate,
+    });
+    const existing = await tx.channelAudienceCultivatePick.findFirst({
+      where: pickWhere,
+      select: { finalRank: true, rulesRank: true },
+    });
+    if (existing) {
+      await tx.channelAudienceCultivatePick.update({
+        where: pickKey,
+        data: pickPatch,
+      });
+      return;
+    }
+    const maxRank = await tx.channelAudienceCultivatePick.aggregate({
+      where: {
+        organizationId: params.organizationId,
+        integrationId: params.integrationId,
+        hour: params.hour,
+      },
+      _max: { finalRank: true, rulesRank: true },
+    });
+    const nextRank =
+      Math.max(maxRank._max.finalRank ?? 0, maxRank._max.rulesRank ?? 0) + 1;
+    await tx.channelAudienceCultivatePick.create({
+      data: {
+        ...pickWhere,
+        rulesRank: nextRank,
+        finalRank: nextRank,
+        ...pickPatch,
+      },
+    });
+    await tx.channelAudienceCultivatePickBatch.update({
+      where: batchWhere,
+      data: {
+        pickCount: { increment: 1 },
+        candidateCount: { increment: 1 },
+      },
     });
   }
 
@@ -6654,8 +7403,22 @@ export class ChannelInteractionRepository {
     options?: { force?: boolean }
   ) {
     return Promise.all(
-      snapshots.map((snapshot) =>
-        tx.channelAudienceMember.updateMany({
+      snapshots.map(async (snapshot) => {
+        const pinnedTriage = await tx.channelAudienceMemberColumnPin.findFirst({
+          where: {
+            organizationId,
+            integrationId,
+            counterpartyExternalId: snapshot.externalId,
+            column: { in: ['mutual', 'quiet', 'costly'] },
+          },
+          select: { column: true },
+        });
+        const pinnedRelationshipTriage = pinnedTriage
+          ? columnPinToRelationshipTriage(
+              pinnedTriage.column as FollowerColumnPinColumn
+            )
+          : null;
+        return tx.channelAudienceMember.updateMany({
           where: {
             organizationId,
             integrationId,
@@ -6682,14 +7445,14 @@ export class ChannelInteractionRepository {
             relationshipReciprocationScore: snapshot.reciprocationScore,
             relationshipNetGap:
               snapshot.reciprocationScore - snapshot.effortScore,
-            relationshipTriage: snapshot.triage,
+            relationshipTriage: pinnedRelationshipTriage ?? snapshot.triage,
             relationshipFormulaVersion: snapshot.formulaVersion,
             relationshipStrategyId: snapshot.strategyId,
             relationshipStrategyVersion: snapshot.strategyVersion,
             relationshipSnapshotAt: snapshotAt,
           },
-        })
-      )
+        });
+      })
     );
   }
 

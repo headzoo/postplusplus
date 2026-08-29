@@ -143,6 +143,9 @@ const createRepository = () => ({
   listHotRefreshExternalIds: jest.fn().mockResolvedValue([]),
   listHotRulesCandidates: jest.fn().mockResolvedValue([]),
   replaceHotPickBatch: jest.fn().mockResolvedValue({ count: 0 }),
+  listColumnPins: jest.fn().mockResolvedValue([]),
+  moveAudienceMemberColumn: jest.fn().mockResolvedValue({ ok: true }),
+  deleteColumnPins: jest.fn().mockResolvedValue({ ok: true }),
   auditHotPickExclusions: jest.fn().mockResolvedValue({
     hour: '2026-08-12T12',
     storedCount: 0,
@@ -2463,6 +2466,70 @@ describe('ChannelInteractionService', () => {
           expect.objectContaining({
             counterpartyExternalId: 'quiet-1',
             rulesReason: 'No outbound attention yet · quiet relationship',
+          }),
+        ],
+      })
+    );
+  });
+
+  it('rejects moving into Leads, Followed, or Unfollowed', async () => {
+    const repository = createRepository();
+    repository.moveAudienceMemberColumn.mockResolvedValue({
+      rejected: 'forbidden_target',
+    });
+    const service = new ChannelInteractionService(repository as any);
+
+    await expect(
+      service.moveFollowerColumn(
+        'org',
+        'integration',
+        'member-1',
+        { kind: 'segment', slug: 'hot' },
+        { kind: 'segment', slug: 'leads' },
+        'user-1'
+      )
+    ).rejects.toThrow(
+      'Cannot move followers into Leads, Followed, or Unfollowed'
+    );
+  });
+
+  it('copy-forwards Hot column pins ahead of rules picks', async () => {
+    const repository = createRepository();
+    repository.listColumnPins.mockResolvedValue([
+      {
+        counterpartyExternalId: 'manual-1',
+        column: 'hot',
+        createdAt: new Date(),
+      },
+    ]);
+    repository.listHotRulesCandidates.mockResolvedValue([
+      {
+        externalId: 'rules-1',
+        name: 'Rules',
+        username: 'rules',
+        bio: null,
+        relationshipNetGap: 8,
+        relationshipReciprocationScore: 12,
+        lastInboundAt: new Date('2026-08-12T11:00:00.000Z'),
+      },
+    ]);
+    repository.replaceHotPickBatch.mockResolvedValue({ count: 2 });
+    const service = new ChannelInteractionService(repository as any);
+
+    await service.materializeHotPicksForIntegration('org', 'integration');
+
+    expect(repository.replaceHotPickBatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        source: 'manual+rules',
+        picks: [
+          expect.objectContaining({
+            counterpartyExternalId: 'manual-1',
+            finalRank: 1,
+            source: 'manual',
+          }),
+          expect.objectContaining({
+            counterpartyExternalId: 'rules-1',
+            finalRank: 2,
           }),
         ],
       })

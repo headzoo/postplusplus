@@ -100,13 +100,13 @@ const FOLLOWER_VIEW_BY_SLUG: Record<
   {
     triage?: FollowerTriageFilter;
     audience?:
-      | 'lead'
-      | 'followed'
-      | 'unfollowed'
-      | 'ignored'
-      | 'cultivate'
-      | 'hot'
-      | 'converted';
+    | 'lead'
+    | 'followed'
+    | 'unfollowed'
+    | 'ignored'
+    | 'cultivate'
+    | 'hot'
+    | 'converted';
     isBot?: true;
   }
 > = {
@@ -132,13 +132,13 @@ type FollowerFilterOption = {
   slug?: string;
   value?: FollowerTriageFilter;
   audience?:
-    | 'lead'
-    | 'followed'
-    | 'unfollowed'
-    | 'cultivate'
-    | 'ignored'
-    | 'hot'
-    | 'converted';
+  | 'lead'
+  | 'followed'
+  | 'unfollowed'
+  | 'cultivate'
+  | 'ignored'
+  | 'hot'
+  | 'converted';
   isBot?: true;
   key: string;
   defaultLabel: string;
@@ -182,13 +182,13 @@ export type FollowerListPath = {
   slug?: string;
   triage?: FollowerTriageFilter;
   audience?:
-    | 'lead'
-    | 'followed'
-    | 'unfollowed'
-    | 'ignored'
-    | 'cultivate'
-    | 'hot'
-    | 'converted';
+  | 'lead'
+  | 'followed'
+  | 'unfollowed'
+  | 'ignored'
+  | 'cultivate'
+  | 'hot'
+  | 'converted';
   isBot?: true;
 };
 
@@ -318,7 +318,7 @@ export const resolveFollowerStrategyDefaults = ({
 
   const slug =
     strategy.ui.defaultFilter !== 'all' &&
-    FOLLOWER_VIEW_BY_SLUG[strategy.ui.defaultFilter]
+      FOLLOWER_VIEW_BY_SLUG[strategy.ui.defaultFilter]
       ? strategy.ui.defaultFilter
       : undefined;
   // Fit is the lead endpoint's established ordering, rather than a generic sort.
@@ -335,9 +335,9 @@ export const resolveFollowerStrategyDefaults = ({
     slug,
     ...(sortOption
       ? {
-          sort: sortOption.key,
-          direction: sortOption.defaultDirection,
-        }
+        sort: sortOption.key,
+        direction: sortOption.defaultDirection,
+      }
       : {}),
   };
 };
@@ -549,14 +549,14 @@ const TrackingNotice: FC<{
         <p className="text-[13px] text-textItemBlur">
           {trackingStartedAt
             ? t(
-                'followers_tracking_no_backfill_since',
-                'Rankings include events received after tracking began on {{date}}. Earlier provider activity is not backfilled.',
-                { date: trackingStartedAt }
-              )
+              'followers_tracking_no_backfill_since',
+              'Rankings include events received after tracking began on {{date}}. Earlier provider activity is not backfilled.',
+              { date: trackingStartedAt }
+            )
             : t(
-                'followers_tracking_no_backfill',
-                'Rankings include only events received after tracking begins. Earlier provider activity is not backfilled.'
-              )}
+              'followers_tracking_no_backfill',
+              'Rankings include only events received after tracking begins. Earlier provider activity is not backfilled.'
+            )}
         </p>
       )}
     </div>
@@ -581,13 +581,13 @@ export const FollowersComponent: FC = () => {
     audience,
     isBot: pathIsBot,
   } = followerPath.type === 'follower'
-    ? {
+      ? {
         slug: undefined,
         triage: undefined,
         audience: undefined,
         isBot: undefined,
       }
-    : followerPath;
+      : followerPath;
   const urlSearch = searchParams.get('search') ?? '';
   const urlListId = searchParams.get('listId') || undefined;
   const urlSort = searchParams.get('sort') || undefined;
@@ -661,7 +661,7 @@ export const FollowersComponent: FC = () => {
     const eligibleIds = channels.map((channel) => channel.id);
     const preferredId =
       followerPath.type === 'follower' &&
-      eligibleIds.includes(followerPath.integrationId)
+        eligibleIds.includes(followerPath.integrationId)
         ? followerPath.integrationId
         : selectedIntegrationId;
     const nextId = resolveChannelId({
@@ -726,16 +726,16 @@ export const FollowersComponent: FC = () => {
 
   const strategyDefaults =
     selectedIntegrationId &&
-    !appliedStrategyDefaultChannelRef.current.has(selectedIntegrationId)
+      !appliedStrategyDefaultChannelRef.current.has(selectedIntegrationId)
       ? resolveFollowerStrategyDefaults({
-          pathname: historyPath || '/followers',
-          search: urlSearch,
-          listId: urlListId,
-          sort: urlSort,
-          direction: urlDirectionParam || undefined,
-          strategy: selectedChannel?.strategy,
-          sorts: selectedChannel?.sorts,
-        })
+        pathname: historyPath || '/followers',
+        search: urlSearch,
+        listId: urlListId,
+        sort: urlSort,
+        direction: urlDirectionParam || undefined,
+        strategy: selectedChannel?.strategy,
+        sorts: selectedChannel?.sorts,
+      })
       : undefined;
   const strategyDefaultView = strategyDefaults?.slug
     ? FOLLOWER_VIEW_BY_SLUG[strategyDefaults.slug]
@@ -994,8 +994,8 @@ export const FollowersComponent: FC = () => {
       resolvedAudience === 'hot' || resolvedAudience === 'converted'
         ? undefined
         : requiresWindow
-        ? window
-        : undefined,
+          ? window
+          : undefined,
     search: trimmedSearch || undefined,
     triage: urlListId ? undefined : resolvedTriage,
     audience: urlListId ? undefined : resolvedAudience,
@@ -1064,19 +1064,45 @@ export const FollowersComponent: FC = () => {
     selectedIntegrationId
   );
 
-  const boardPreviewBySlug = {
-    leads: leadsPreview,
-    hot: hotPreview,
-    mutual: mutualPreview,
-    cultivate: cultivatePreview,
-    followed: followedPreview,
-    conversions: conversionsPreview,
-    quiet: quietPreview,
-    costly: costlyPreview,
-    ignored: ignoredPreview,
-    unfollowed: unfollowedPreview,
-    bots: botsPreview,
-  } as const;
+  const boardPreviewBySlug = useMemo(
+    () => ({
+      leads: leadsPreview,
+      hot: hotPreview,
+      mutual: mutualPreview,
+      cultivate: cultivatePreview,
+      followed: followedPreview,
+      conversions: conversionsPreview,
+      quiet: quietPreview,
+      costly: costlyPreview,
+      ignored: ignoredPreview,
+      unfollowed: unfollowedPreview,
+      bots: botsPreview,
+    }),
+    [
+      botsPreview.data,
+      botsPreview.isLoading,
+      conversionsPreview.data,
+      conversionsPreview.isLoading,
+      costlyPreview.data,
+      costlyPreview.isLoading,
+      cultivatePreview.data,
+      cultivatePreview.isLoading,
+      followedPreview.data,
+      followedPreview.isLoading,
+      hotPreview.data,
+      hotPreview.isLoading,
+      ignoredPreview.data,
+      ignoredPreview.isLoading,
+      leadsPreview.data,
+      leadsPreview.isLoading,
+      mutualPreview.data,
+      mutualPreview.isLoading,
+      quietPreview.data,
+      quietPreview.isLoading,
+      unfollowedPreview.data,
+      unfollowedPreview.isLoading,
+    ]
+  );
 
   useEffect(() => {
     if (!followersPage || !selectedIntegrationId) {
@@ -1104,6 +1130,7 @@ export const FollowersComponent: FC = () => {
     unfollowMember,
     ignoreFollower,
     unignoreFollower,
+    moveColumn,
   } = useFollowerListMutations(selectedIntegrationId);
   const toast = useToaster();
   const canFollowAudienceMember = !!selectedChannel?.canFollowAudienceMember;
@@ -1137,9 +1164,9 @@ export const FollowersComponent: FC = () => {
             error instanceof Error
               ? error.message
               : t(
-                  'followers_lead_follow_error',
-                  'Could not follow this profile'
-                ),
+                'followers_lead_follow_error',
+                'Could not follow this profile'
+              ),
             'warning'
           );
         }
@@ -1203,6 +1230,31 @@ export const FollowersComponent: FC = () => {
     [t, toast, unfollowMember]
   );
 
+  const handleMoveFollower = useCallback(
+    async (
+      follower: Follower,
+      from:
+        | { kind: 'segment'; slug: string }
+        | { kind: 'list'; listId: string },
+      to: { kind: 'segment'; slug: string } | { kind: 'list'; listId: string }
+    ) => {
+      try {
+        await moveColumn(follower, from, to);
+      } catch (error) {
+        toast.show(
+          error instanceof Error
+            ? error.message
+            : t(
+              'followers_board_move_error',
+              'Could not move this follower to that column'
+            ),
+          'warning'
+        );
+      }
+    },
+    [moveColumn, t, toast]
+  );
+
   const activeCategory = !urlListId
     ? resolvedTriage || resolvedAudience
     : undefined;
@@ -1243,33 +1295,33 @@ export const FollowersComponent: FC = () => {
       },
       strategy: selectedChannel?.strategy
         ? {
-            id: selectedChannel.strategy.id,
-            version: selectedChannel.strategy.version,
-            summary: selectedChannel.strategy.summary.defaultValue,
-          }
+          id: selectedChannel.strategy.id,
+          version: selectedChannel.strategy.version,
+          summary: selectedChannel.strategy.summary.defaultValue,
+        }
         : undefined,
       follower:
         followerPath.type === 'follower'
           ? {
-              id: selectedFollower?.id,
-              username: selectedFollower?.username || followerPath.username,
-              name: selectedFollower?.name,
-            }
+            id: selectedFollower?.id,
+            username: selectedFollower?.username || followerPath.username,
+            name: selectedFollower?.name,
+          }
           : undefined,
       category: activeCategory
         ? {
-            key: activeCategory,
-            label: categoryLabel,
-            meaning: FOLLOWER_CATEGORY_DESCRIPTIONS[activeCategory],
-          }
+          key: activeCategory,
+          label: categoryLabel,
+          meaning: FOLLOWER_CATEGORY_DESCRIPTIONS[activeCategory],
+        }
         : undefined,
       search: normalizeFollowerSearch(trimmedSearch),
       list: urlListId
         ? {
-            id: urlListId,
-            name: activeList?.name,
-            status: activeList ? 'current' : 'unknown_or_deleted',
-          }
+          id: urlListId,
+          name: activeList?.name,
+          status: activeList ? 'current' : 'unknown_or_deleted',
+        }
         : undefined,
       availableLists: followerLists.map((list) => ({
         id: list.id,
@@ -1278,25 +1330,25 @@ export const FollowersComponent: FC = () => {
       sort:
         activeSort && effectiveDirection
           ? {
-              key: activeSort.key,
-              label: activeSort.label,
-              scope: activeSort.scope || 'native',
-              direction: effectiveDirection,
-              caveat:
-                activeSort.scope === 'page'
-                  ? 'Sorting applies only to the currently loaded page.'
-                  : undefined,
-            }
+            key: activeSort.key,
+            label: activeSort.label,
+            scope: activeSort.scope || 'native',
+            direction: effectiveDirection,
+            caveat:
+              activeSort.scope === 'page'
+                ? 'Sorting applies only to the currently loaded page.'
+                : undefined,
+          }
           : undefined,
       interactionWindow: requiresWindow ? window : undefined,
       pagination: { size: limit, number: pageNumber },
       tracking: tracking
         ? {
-            availability: tracking.availability,
-            state: tracking.state,
-            computedAt: tracking.computedAt,
-            followerSnapshotAt: tracking.followerSnapshotAt,
-          }
+          availability: tracking.availability,
+          state: tracking.state,
+          computedAt: tracking.computedAt,
+          followerSnapshotAt: tracking.followerSnapshotAt,
+        }
         : undefined,
     });
   }, [
@@ -1335,9 +1387,8 @@ export const FollowersComponent: FC = () => {
       externalId?: string;
       username?: string;
     }) => {
-      const modalId = `follower-detail-${integrationId}-${
-        username || externalId
-      }`;
+      const modalId = `follower-detail-${integrationId}-${username || externalId
+        }`;
       openedFollowerKeyRef.current = modalId;
       modal.openModal({
         id: modalId,
@@ -1503,14 +1554,14 @@ export const FollowersComponent: FC = () => {
       title: t('followers_list_remove_title', 'Remove this list?'),
       description: listName
         ? t(
-            'followers_list_remove_description_named',
-            '"{{name}}" will be deleted. People in it stay as followers.',
-            { name: listName }
-          )
+          'followers_list_remove_description_named',
+          '"{{name}}" will be deleted. People in it stay as followers.',
+          { name: listName }
+        )
         : t(
-            'followers_list_remove_description',
-            'This list will be deleted. People in it stay as followers.'
-          ),
+          'followers_list_remove_description',
+          'This list will be deleted. People in it stay as followers.'
+        ),
       approveLabel: t('yes', 'Yes'),
       cancelLabel: t('cancel', 'Cancel'),
     });
@@ -2235,20 +2286,9 @@ export const FollowersComponent: FC = () => {
               onDragEnd={onBoardDragEnd}
               onOpenFollower={openFollowerDetail}
               onAddLead={openAddLeadModal}
-              onDismissTriage={async (
-                follower,
-                triageValue,
-                reasons,
-                options
-              ) => {
-                await handleDismissTriage(
-                  follower,
-                  triageValue,
-                  reasons,
-                  options
-                );
-              }}
+              onDismissTriage={handleDismissTriage}
               onUnfollow={handleUnfollowFollower}
+              onMoveFollower={handleMoveFollower}
             />
           </DNDProvider>
         )}
@@ -2310,10 +2350,10 @@ export const FollowersComponent: FC = () => {
                     timelineHref={
                       follower.username && selectedIntegrationId
                         ? buildFollowerTimelineHref(
-                            selectedIntegrationId,
-                            follower.username,
-                            follower.id
-                          )
+                          selectedIntegrationId,
+                          follower.username,
+                          follower.id
+                        )
                         : undefined
                     }
                     lists={followerLists}
