@@ -14,6 +14,8 @@ Each channel strategy exposes an immutable conversion profile through `getConver
 | `brand_awareness` | amplification | `amplification_threshold` | Rolling inbound mention/repost score over 7 UTC days |
 | `customer_support` | customer support | `support_sla_hit`, `support_issue_resolved` | First outbound within 24h SLA; explicit resolution |
 
+Interacting or manually added leads are stored as `NOT_FOLLOWER` once membership evidence exists (completed follower sync, bridge discovery, or Add lead), so a later follow-back is recorded as `follower_gained`.
+
 Strategy changes affect only future evidence. Existing ledger rows, queued jobs, click attributions, and support cases keep their captured `strategyId` and `strategyVersion`.
 
 ## HTTP Surfaces

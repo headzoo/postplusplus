@@ -982,11 +982,33 @@ describe('ChannelInteractionRepository', () => {
       },
       data: { membershipState: ChannelAudienceMembership.FOLLOWER },
     });
-    expect(tx.channelAudienceMember.updateMany).toHaveBeenCalledWith({
+    expect(tx.channelAudienceMember.updateMany).toHaveBeenNthCalledWith(2, {
       where: {
         organizationId: 'org',
         integrationId: 'integration',
         membershipState: ChannelAudienceMembership.FOLLOWER,
+        AND: [
+          {
+            OR: [
+              { followerSyncGeneration: null },
+              { followerSyncGeneration: { not: 'generation-2' } },
+            ],
+          },
+          {
+            OR: [
+              { membershipEvidenceGeneration: null },
+              { membershipEvidenceGeneration: { not: 'generation-2' } },
+            ],
+          },
+        ],
+      },
+      data: { membershipState: ChannelAudienceMembership.NOT_FOLLOWER },
+    });
+    expect(tx.channelAudienceMember.updateMany).toHaveBeenNthCalledWith(3, {
+      where: {
+        organizationId: 'org',
+        integrationId: 'integration',
+        membershipState: ChannelAudienceMembership.UNKNOWN,
         AND: [
           {
             OR: [
@@ -1013,6 +1035,45 @@ describe('ChannelInteractionRepository', () => {
         completedAt: new Date('2026-08-12T12:00:00.000Z'),
       },
     });
+  });
+
+  it('stamps interacting non-followers as NOT_FOLLOWER after a completed sync', async () => {
+    const { repository, tx } = createHarness();
+    tx.channelFollowerSyncState.findFirst.mockResolvedValue({
+      completedAt: new Date('2026-08-12T00:00:00.000Z'),
+    });
+    tx.channelAudienceMember.findFirst.mockResolvedValue({
+      membershipState: ChannelAudienceMembership.UNKNOWN,
+    });
+
+    await repository.recordNormalizedEvent('org', 'integration', event());
+
+    expect(tx.channelAudienceMember.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          membershipState: ChannelAudienceMembership.NOT_FOLLOWER,
+        }),
+        update: expect.objectContaining({
+          membershipState: ChannelAudienceMembership.NOT_FOLLOWER,
+        }),
+      })
+    );
+  });
+
+  it('does not demote followers when stamping lead membership after sync', async () => {
+    const { repository, tx } = createHarness();
+    tx.channelFollowerSyncState.findFirst.mockResolvedValue({
+      completedAt: new Date('2026-08-12T00:00:00.000Z'),
+    });
+    tx.channelAudienceMember.findFirst.mockResolvedValue({
+      membershipState: ChannelAudienceMembership.FOLLOWER,
+    });
+
+    await repository.recordNormalizedEvent('org', 'integration', event());
+
+    expect(
+      tx.channelAudienceMember.upsert.mock.calls[0][0].update
+    ).not.toHaveProperty('membershipState');
   });
 
   it('preserves a follow received during the active follower sync', async () => {
@@ -2671,6 +2732,16 @@ describe('ChannelInteractionRepository', () => {
 
     expect(tx.channelAudienceLeadBridge.upsert).toHaveBeenCalledTimes(2);
     expect(tx.channelAudienceMember.upsert).toHaveBeenCalledTimes(2);
+    expect(tx.channelAudienceMember.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          membershipState: ChannelAudienceMembership.NOT_FOLLOWER,
+        }),
+        update: expect.objectContaining({
+          membershipState: ChannelAudienceMembership.NOT_FOLLOWER,
+        }),
+      })
+    );
   });
 
   it('clears all discovered lead bridges and deletes orphan lead-only members', async () => {
@@ -4283,12 +4354,14 @@ describe('ChannelInteractionRepository', () => {
           username: 'HarborClient',
           profileUrl: 'https://x.com/HarborClient',
           createdAt: expect.any(Date),
+          membershipState: ChannelAudienceMembership.NOT_FOLLOWER,
         }),
         update: expect.objectContaining({
           name: 'Harbor',
           username: 'HarborClient',
           profileUrl: 'https://x.com/HarborClient',
           createdAt: expect.any(Date),
+          membershipState: ChannelAudienceMembership.NOT_FOLLOWER,
         }),
       })
     );

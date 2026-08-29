@@ -662,12 +662,19 @@ export class ChannelInteractionRepository {
             event.counterparty.externalId
           )
         : null;
+      const membershipForUpsert = await this.resolveMembershipForAudienceUpsert(
+        tx,
+        organizationId,
+        integrationId,
+        event.counterparty.externalId,
+        event.membershipUpdate
+      );
       await this.upsertAudienceMember(
         tx,
         organizationId,
         integrationId,
         event.counterparty,
-        event.membershipUpdate
+        membershipForUpsert
       );
       await this.enqueueInteractionJob(
         tx,
@@ -859,12 +866,19 @@ export class ChannelInteractionRepository {
             event.counterparty.externalId
           )
         : null;
+      const membershipForUpsert = await this.resolveMembershipForAudienceUpsert(
+        tx,
+        organizationId,
+        integrationId,
+        event.counterparty.externalId,
+        event.membershipUpdate
+      );
       await this.upsertAudienceMember(
         tx,
         organizationId,
         integrationId,
         event.counterparty,
-        event.membershipUpdate
+        membershipForUpsert
       );
       await this.enqueueInteractionJob(
         tx,
@@ -1352,6 +1366,30 @@ export class ChannelInteractionRepository {
           organizationId,
           integrationId,
           membershipState: ChannelAudienceMembership.FOLLOWER,
+          AND: [
+            {
+              OR: [
+                { followerSyncGeneration: null },
+                { followerSyncGeneration: { not: generation } },
+              ],
+            },
+            {
+              OR: [
+                { membershipEvidenceGeneration: null },
+                { membershipEvidenceGeneration: { not: generation } },
+              ],
+            },
+          ],
+        },
+        data: { membershipState: ChannelAudienceMembership.NOT_FOLLOWER },
+      });
+      // After a completed sync, UNKNOWN means "not on the follower list" —
+      // stamp NOT_FOLLOWER so a later follow-back can convert.
+      await tx.channelAudienceMember.updateMany({
+        where: {
+          organizationId,
+          integrationId,
+          membershipState: ChannelAudienceMembership.UNKNOWN,
           AND: [
             {
               OR: [
@@ -2162,7 +2200,8 @@ export class ChannelInteractionRepository {
           tx,
           params.organizationId,
           params.integrationId,
-          lead
+          lead,
+          ChannelAudienceMembership.NOT_FOLLOWER
         );
         await tx.channelAudienceLeadBridge.upsert({
           where: {
@@ -4409,11 +4448,13 @@ export class ChannelInteractionRepository {
           integrationId,
           externalId: profile.externalId,
           createdAt: listedAt,
+          membershipState: ChannelAudienceMembership.NOT_FOLLOWER,
           ...profileData,
         },
         update: {
           ...profileData,
           createdAt: listedAt,
+          membershipState: ChannelAudienceMembership.NOT_FOLLOWER,
         },
       });
 
@@ -6745,6 +6786,48 @@ export class ChannelInteractionRepository {
       select: { membershipState: true },
     });
     return member?.membershipState ?? null;
+  }
+
+  /**
+   * After a completed follower sync, interacting non-followers are leads and
+   * must be stored as NOT_FOLLOWER so a later follow-back can convert.
+   * Never demotes FOLLOWER; leaves UNKNOWN before the first sync.
+   */
+  private async resolveMembershipForAudienceUpsert(
+    tx: Prisma.TransactionClient,
+    organizationId: string,
+    integrationId: string,
+    actorExternalId: string,
+    membershipUpdate?: ChannelAudienceMembership
+  ): Promise<ChannelAudienceMembership | undefined> {
+    if (membershipUpdate) {
+      return membershipUpdate;
+    }
+    const sync = await tx.channelFollowerSyncState.findFirst({
+      where: {
+        organizationId,
+        integrationId,
+        completedAt: { not: null },
+      },
+      select: { completedAt: true },
+    });
+    if (!sync) {
+      return undefined;
+    }
+    const prior = await this.findMembership(
+      tx,
+      organizationId,
+      integrationId,
+      actorExternalId
+    );
+    if (
+      prior === null ||
+      prior === ChannelAudienceMembership.UNKNOWN ||
+      prior === ChannelAudienceMembership.NOT_FOLLOWER
+    ) {
+      return ChannelAudienceMembership.NOT_FOLLOWER;
+    }
+    return undefined;
   }
 
   private async enqueueInteractionJob(
