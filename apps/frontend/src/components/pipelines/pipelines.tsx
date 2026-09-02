@@ -1,14 +1,6 @@
 'use client';
 
-import {
-  FC,
-  KeyboardEvent,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { FC, KeyboardEvent, useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import clsx from 'clsx';
 import { useClickOutside } from '@mantine/hooks';
@@ -39,10 +31,7 @@ import {
   ChannelMenu,
   ChannelsSidebar,
 } from '@gitroom/frontend/components/launches/channels.sidebar';
-import {
-  setLastChannelId,
-  resolveChannelId,
-} from '@gitroom/frontend/components/launches/helpers/last-channel';
+import { setLastChannelId } from '@gitroom/frontend/components/launches/helpers/last-channel';
 import {
   IntegrationListItem,
   useIntegrationList,
@@ -232,26 +221,10 @@ export const Pipelines: FC = () => {
   const deletePipeline = useDeletePipeline();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [selectedChannelId, setSelectedChannelId] = useState<string>();
-  const hasRestoredChannel = useRef(false);
   const visiblePipelines = useMemo(
     () => filterPipelinesByChannel(data || [], selectedChannelId),
     [data, selectedChannelId]
   );
-
-  useEffect(() => {
-    if (hasRestoredChannel.current || !integrations.length) {
-      return;
-    }
-    hasRestoredChannel.current = true;
-    const restored = resolveChannelId({
-      eligibleIds: integrations.map((integration) => integration.id),
-      currentId: undefined,
-      fallbackId: integrations[0]?.id,
-    });
-    if (restored) {
-      setSelectedChannelId(restored);
-    }
-  }, [integrations]);
 
   const handleChannelSelect = useCallback(
     (integration: IntegrationListItem) => {
@@ -317,13 +290,10 @@ export const Pipelines: FC = () => {
     (pipeline: PipelineSummary) => async () => {
       const approved = await decision.open({
         title: t('delete_pipeline', 'Delete Pipeline?'),
-        description: `Deleting "${
-          pipeline.name
-        }" will remove the Pipeline schedule. ${
-          pipeline.queueCount
-        } queued item${
-          pipeline.queueCount === 1 ? '' : 's'
-        } will be preserved as drafts in your calendar — no content will be deleted.`,
+        description: `Deleting "${pipeline.name
+          }" will remove the Pipeline schedule. ${pipeline.queueCount
+          } queued item${pipeline.queueCount === 1 ? '' : 's'
+          } will be preserved as drafts in your calendar — no content will be deleted.`,
         approveLabel: t('delete_pipeline_confirm', 'Delete Pipeline'),
         cancelLabel: t('cancel', 'Cancel'),
       });
