@@ -136,11 +136,9 @@ export const PipelineDetailView: FC<{ pipelineId: string }> = ({
     }
     const approved = await decision.open({
       title: t('delete_pipeline', 'Delete Pipeline?'),
-      description: `Deleting "${
-        data.name
-      }" will remove the Pipeline schedule. ${queueCount} queued item${
-        queueCount === 1 ? '' : 's'
-      } will be preserved as drafts in your calendar — no content will be deleted.`,
+      description: `Deleting "${data.name
+        }" will remove the Pipeline schedule. ${queueCount} queued item${queueCount === 1 ? '' : 's'
+        } will be preserved as drafts in your calendar — no content will be deleted.`,
       approveLabel: t('delete_pipeline_confirm', 'Delete Pipeline'),
       cancelLabel: t('cancel', 'Cancel'),
     });
@@ -279,7 +277,7 @@ export const PipelineDetailView: FC<{ pipelineId: string }> = ({
         </div>
       </div>
 
-      <div className="rounded-[12px] border border-newBorder bg-newBgColor overflow-hidden">
+      <div className="shrink-0 rounded-[12px] border border-newBorder bg-newBgColor overflow-hidden">
         <div className="flex flex-col gap-[10px] border-b border-newBorder px-[20px] py-[14px] sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="text-[16px] font-[600]">

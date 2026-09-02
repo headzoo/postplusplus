@@ -11,8 +11,6 @@ import {
 } from 'react';
 import clsx from 'clsx';
 import Link from 'next/link';
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
 import { useDrag, useDrop } from 'react-dnd';
 import ImageWithFallback from '@gitroom/react/helpers/image.with.fallback';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
@@ -50,8 +48,6 @@ import {
 } from '@gitroom/frontend/components/followers/use.followers';
 import { LeadFitDismissReason } from '@gitroom/nestjs-libraries/dtos/integrations/lead-fit-feedback.types';
 
-dayjs.extend(relativeTime);
-
 const followerBoardColumnDragType = 'follower-board-column';
 const followerBoardCardDragType = 'follower-board-card';
 
@@ -85,21 +81,6 @@ export type FollowerBoardListColumnData = {
 export type FollowerBoardOrderedColumn =
   | FollowerBoardSegmentColumn
   | FollowerBoardListColumnData;
-
-const CONVERSION_TYPE_LABELS: Record<string, string> = {
-  follower_gained: 'Follower gained',
-  website_goal: 'Website goal',
-  amplification_threshold: 'Amplification',
-  support_sla_hit: 'Support SLA',
-  support_issue_resolved: 'Support resolved',
-};
-
-const formatConversionTypeLabel = (conversionType: string) =>
-  CONVERSION_TYPE_LABELS[conversionType] ??
-  conversionType
-    .split('_')
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
 
 const BOARD_GRID_CLASS =
   'grid grid-cols-1 gap-[12px] sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5';
@@ -179,15 +160,6 @@ export const FollowerBoardRow: FC<{
       : null;
     const displayName =
       follower.name || handle || t('followers_unknown', 'Unknown');
-    const conversionSubtitle =
-      segment.slug === 'conversions' &&
-        follower.latestConversionType &&
-        follower.lastConvertedAt
-        ? t('followers_board_conversion_subtitle', '{{type}} · {{when}}', {
-          type: formatConversionTypeLabel(follower.latestConversionType),
-          when: dayjs(follower.lastConvertedAt).fromNow(),
-        })
-        : null;
 
     const handleRowClick = () => {
       if (suppressClickRef.current) {
@@ -314,18 +286,13 @@ export const FollowerBoardRow: FC<{
                 rel="noreferrer noopener"
                 onClick={handleProfileLinkClick}
                 onKeyDown={stopNestedAction}
-                className="block truncate text-[12px] text-textItemBlur hover:underline hover:opacity-80"
+                className="inline-block w-fit max-w-full truncate text-[12px] text-textItemBlur hover:underline hover:opacity-80"
               >
                 {handle}
               </a>
             ) : (
               <p className="truncate text-[12px] text-textItemBlur">{handle}</p>
             ))}
-          {conversionSubtitle && (
-            <p className="truncate text-[11px] text-textItemBlur">
-              {conversionSubtitle}
-            </p>
-          )}
         </div>
         {showMenu && (
           <button

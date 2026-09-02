@@ -451,7 +451,7 @@ export const PipelineAutopostPanel: FC<{
   }
 
   return (
-    <div className="rounded-[12px] border border-newBorder bg-newBgColor overflow-hidden">
+    <div className="shrink-0 rounded-[12px] border border-newBorder bg-newBgColor overflow-hidden">
       <div className="flex flex-col gap-[10px] border-b border-newBorder px-[20px] py-[14px] sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="text-[16px] font-[600]">

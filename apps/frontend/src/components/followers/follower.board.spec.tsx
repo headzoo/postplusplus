@@ -510,7 +510,7 @@ describe('FollowerBoardRow', () => {
     expect(screen.getByTestId('followers-board-row-menu')).toBeTruthy();
   });
 
-  it('shows conversion subtitle in the conversions column', () => {
+  it('does not show conversion subtitle in the conversions column', () => {
     render(
       <FollowerBoardRow
         follower={follower({
@@ -523,7 +523,7 @@ describe('FollowerBoardRow', () => {
       />
     );
 
-    expect(screen.getByText(/Follower gained · /)).toBeTruthy();
+    expect(screen.queryByText(/Follower gained/)).toBeNull();
   });
 
   it('does not open the modal when avatar or username profile links are clicked', () => {

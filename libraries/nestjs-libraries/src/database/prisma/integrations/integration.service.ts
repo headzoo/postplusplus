@@ -1263,17 +1263,28 @@ export class IntegrationService {
       if (!resolvedExternalId) {
         throw new HttpException('Follower was not found', HttpStatus.NOT_FOUND);
       }
-      const details = await this._channelInteractionService.getFollowerDetails(
-        org.id,
-        integrationId,
-        resolvedExternalId,
-        actor && 'userId' in actor
-          ? actor.userId
-          : actor && 'id' in actor
-          ? actor.id
-          : undefined
+      const [details, conversionPage] = await Promise.all([
+        this._channelInteractionService.getFollowerDetails(
+          org.id,
+          integrationId,
+          resolvedExternalId,
+          actor && 'userId' in actor
+            ? actor.userId
+            : actor && 'id' in actor
+            ? actor.id
+            : undefined
+        ),
+        this._conversionRepository.getConvertedActorsPage(
+          org.id,
+          integrationId,
+          { limit: 1, actorExternalIds: [resolvedExternalId] }
+        ),
+      ]);
+      return this.mapFollowerMemberDetails(
+        details,
+        provider,
+        conversionPage.items[0]
       );
-      return this.mapFollowerMemberDetails(details, provider);
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw new HttpException('Follower was not found', HttpStatus.NOT_FOUND);
@@ -2251,7 +2262,12 @@ export class IntegrationService {
       };
       myGrade?: number | null;
     },
-    provider: SocialProvider
+    provider: SocialProvider,
+    conversion?: {
+      lastConvertedAt: Date;
+      conversionCount: number;
+      latestConversionType: string;
+    }
   ): FollowerMemberDetail {
     const myGrade = details.myGrade ?? null;
     const now = Date.now();
@@ -2301,6 +2317,13 @@ export class IntegrationService {
           : {}),
         ...this.mapLeadBridges(details.member.leadBridgesAsLead),
         ...(details.member.ignoredAt ? { isIgnored: true } : {}),
+        ...(conversion
+          ? {
+              lastConvertedAt: conversion.lastConvertedAt.toISOString(),
+              latestConversionType: conversion.latestConversionType,
+              conversionCount: conversion.conversionCount,
+            }
+          : {}),
       },
       notes: details.notes.map((note) => this.mapFollowerMemberNote(note)),
       interactions: details.events.map((event) =>

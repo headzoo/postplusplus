@@ -10,7 +10,7 @@ jest.mock('@gitroom/nestjs-libraries/redis/redis.service', () => ({
   },
 }));
 jest.mock('@gitroom/nestjs-libraries/integrations/integration.manager', () => ({
-  IntegrationManager: class IntegrationManager {},
+  IntegrationManager: class IntegrationManager { },
 }));
 
 describe('IntegrationService followers', () => {
@@ -1783,6 +1783,77 @@ describe('IntegrationService followers', () => {
       }),
     ]);
     expect(result.relationship.formulaVersion).toBe(2);
+  });
+
+  it('merges conversion fields onto follower member details', async () => {
+    const service = createService([integration], {
+      supported: { followers: jest.fn() },
+    });
+    const lastConvertedAt = new Date('2026-08-27T12:00:00.000Z');
+    (
+      service as any
+    )._channelInteractionService.getFollowerDetails.mockResolvedValue({
+      member: {
+        externalId: 'follower-a',
+        name: 'Follower A',
+        username: 'follower',
+        picture: null,
+        profileUrl: null,
+        bio: null,
+        followersCount: null,
+        followingCount: null,
+        followedAt: null,
+        accountCreatedAt: null,
+        noteCount: 0,
+        relationshipGrade: null,
+        relationshipEffortScore: null,
+        relationshipReciprocationScore: null,
+        relationshipNetGap: null,
+        relationshipTriage: null,
+        relationshipFormulaVersion: null,
+        relationshipSnapshotAt: null,
+      },
+      snapshots: [],
+      notes: [],
+      events: [],
+      tracking: {
+        followerSync: null,
+        subscriptions: [],
+      },
+    });
+    (
+      service as any
+    )._conversionRepository.getConvertedActorsPage.mockResolvedValue({
+      items: [
+        {
+          externalId: 'follower-a',
+          lastConvertedAt,
+          conversionCount: 2,
+          latestConversionType: 'follower_gained',
+        },
+      ],
+      hasMore: false,
+    });
+
+    const result = await service.getFollowerMemberDetails(
+      org,
+      user,
+      'channel-a',
+      'follower-a'
+    );
+
+    expect(result.follower).toMatchObject({
+      id: 'follower-a',
+      lastConvertedAt: lastConvertedAt.toISOString(),
+      latestConversionType: 'follower_gained',
+      conversionCount: 2,
+    });
+    expect(
+      (service as any)._conversionRepository.getConvertedActorsPage
+    ).toHaveBeenCalledWith('org-a', 'channel-a', {
+      limit: 1,
+      actorExternalIds: ['follower-a'],
+    });
   });
 
   it('maps lead fit fields on follower member details', async () => {

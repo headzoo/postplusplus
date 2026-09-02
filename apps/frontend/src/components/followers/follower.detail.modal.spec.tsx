@@ -363,6 +363,31 @@ describe('FollowerDetailModal', () => {
     expect(screen.getByRole('link', { name: 'Timeline' })).toBeTruthy();
   });
 
+  it('shows conversion type and date in the header metadata', () => {
+    swrDetail = {
+      ...detail,
+      follower: {
+        ...detail.follower,
+        latestConversionType: 'follower_gained',
+        lastConvertedAt: '2026-08-27T12:00:00.000Z',
+      },
+    };
+
+    render(
+      <FollowerDetailModal integrationId="channel-1" externalId="follower-1" />
+    );
+
+    const conversion = screen.getByTestId('followers-conversion-recorded');
+    expect(conversion.textContent).toContain('Follower gained');
+    expect(conversion.textContent).toContain(
+      new Date('2026-08-27T12:00:00.000Z').toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      })
+    );
+  });
+
   it('renders effort-first relationship details and accessible star labels', () => {
     render(
       <FollowerDetailModal integrationId="channel-1" externalId="follower-1" />
