@@ -113,75 +113,72 @@ const PipelineListCard: FC<{
       onClick={onSchedule}
       onKeyDown={handleCardKeyDown}
       className={clsx(
-        'relative flex flex-col rounded-[12px] border border-newTableBorder bg-newTableHeader',
-        'transition-all duration-200 hover:border-newTextColor/20',
+        'relative flex flex-col gap-[12px] h-full',
+        'bg-newTableHeader border border-newTableBorder rounded-[12px]',
+        'p-[16px] transition-all duration-200 hover:border-newTextColor/20',
         'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-newTextColor/30',
         pending && 'opacity-70 pointer-events-none'
       )}
     >
-      <div className="flex flex-col gap-[12px] p-[16px]">
-        <div className="flex flex-col gap-[12px] lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex flex-col gap-[10px] min-w-0 flex-1">
-            <div className="flex items-center gap-[8px] flex-wrap min-w-0">
-              <span className="text-[18px] font-[600] truncate min-w-0">
-                {pipeline.name}
-              </span>
-              <div
-                className="w-[12px] h-[12px] rounded-full shrink-0 border border-newBorder"
-                style={{ backgroundColor: pipeline.color }}
-                aria-hidden="true"
-              />
-            </div>
-
-            <div className="flex flex-wrap items-center gap-[6px]">
-              {pipeline.channels.length > 0 && (
-                <span className={clsx(pipelineMetaChipClass, 'py-[2px]')}>
-                  <PipelineChannels channels={pipeline.channels} stacked />
-                </span>
-              )}
-              <span className={pipelineMetaChipClass}>
-                <span className="font-[600] text-textColor">
-                  {pipeline.queueCount}
-                </span>
-                {` ${t('queued', 'queued')}`}
-              </span>
-              <span className={pipelineMetaChipClass} title={pipeline.timezone}>
-                {formatPipelineTimezoneLabel(pipeline.timezone)}
-              </span>
-              <span
-                className={clsx(
-                  pipelineMetaChipClass,
-                  !pipeline.active && 'opacity-70'
-                )}
-              >
-                {nextSlotLabel}
-              </span>
-              {!!pipeline.contextDocuments?.length && (
-                <PipelineContextDocumentsPanel
-                  documents={pipeline.contextDocuments}
-                  compact
-                />
-              )}
-            </div>
-          </div>
-
+      <div className="flex items-start justify-between gap-[8px] min-w-0">
+        <div className="flex items-center gap-[8px] min-w-0 flex-1">
+          <h3 className="text-[18px] font-[600] text-newTextColor truncate min-w-0">
+            {pipeline.name}
+          </h3>
           <div
-            className="flex items-center gap-[8px] shrink-0"
-            onClick={(event) => event.stopPropagation()}
-            onKeyDown={(event) => event.stopPropagation()}
-          >
-            <Slider
-              value={pipeline.active ? 'on' : 'off'}
-              onChange={onToggleActive}
-              fill={true}
-            />
-            <PipelineActionsMenu
-              disabled={pending}
-              onEdit={onEdit}
-              onDelete={onDelete}
-            />
-          </div>
+            className="w-[12px] h-[12px] rounded-full shrink-0 border border-newBorder"
+            style={{ backgroundColor: pipeline.color }}
+            aria-hidden="true"
+          />
         </div>
+        <span className={pipelineMetaChipClass}>
+          <span className="font-[600] text-textColor">
+            {pipeline.queueCount}
+          </span>
+          {` ${t('queued', 'queued')}`}
+        </span>
+        <span
+          className={clsx(
+            pipelineMetaChipClass,
+            !pipeline.active && 'opacity-70'
+          )}
+        >
+          {nextSlotLabel}
+        </span>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-[6px]">
+        {pipeline.channels.length > 0 && (
+          <span className={clsx(pipelineMetaChipClass, 'py-[2px]')}>
+            <PipelineChannels channels={pipeline.channels} stacked />
+          </span>
+        )}
+      </div>
+
+      <div className="flex flex-wrap flex-grow items-center gap-[6px]">
+        {!!pipeline.contextDocuments?.length && (
+          <PipelineContextDocumentsPanel
+            documents={pipeline.contextDocuments}
+            compact
+          />
+        )}
+      </div>
+
+      <div
+        className="flex justify-end gap-[8px] shrink-0"
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => event.stopPropagation()}
+      >
+        <Slider
+          value={pipeline.active ? 'on' : 'off'}
+          onChange={onToggleActive}
+          fill={true}
+        />
+        <PipelineActionsMenu
+          disabled={pending}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
       </div>
     </article>
   );
@@ -403,7 +400,10 @@ export const Pipelines: FC = () => {
             </div>
           </div>
         ) : (
-          <div className="flex flex-col gap-[16px]">
+          <div
+            className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-[16px]"
+            data-testid="pipelines-grid"
+          >
             {visiblePipelines.map((pipeline) => (
               <PipelineListCard
                 key={pipeline.id}

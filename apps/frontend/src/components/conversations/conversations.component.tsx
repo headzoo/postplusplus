@@ -6,6 +6,11 @@ import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { LoadingComponent } from '@gitroom/frontend/components/layout/loading';
 import {
+  ChannelMenu,
+  ChannelsSidebar,
+} from '@gitroom/frontend/components/launches/channels.sidebar';
+import { setLastChannelId } from '@gitroom/frontend/components/launches/helpers/last-channel';
+import {
   IntegrationListItem,
   useIntegrationList,
 } from '@gitroom/frontend/components/launches/helpers/use.integration.list';
@@ -55,23 +60,23 @@ const UnsupportedConversation: FC<{ conversation: Conversation }> = ({
 export const ConversationsComponent: FC = () => {
   const t = useT();
   const toaster = useToaster();
-  const [integrationId, setIntegrationId] = useState('');
+  const [integrationId, setIntegrationId] = useState<string>();
   const [cursorHistory, setCursorHistory] = useState<string[]>([]);
   const [repostingId, setRepostingId] = useState<string>();
   const [repostedIds, setRepostedIds] = useState<Set<string>>(() => new Set());
   const hydrated = useRef(new Set<string>());
   const cursor = cursorHistory[cursorHistory.length - 1];
   const { data: integrations = [] } = useIntegrationList();
+  const conversationIntegrations = useMemo(
+    () =>
+      integrations.filter((integration) =>
+        supportsConversationProvider(integration.identifier)
+      ),
+    [integrations]
+  );
   const composerIntegrations = useMemo(
     () => integrations.map(toComposerIntegration),
     [integrations]
-  );
-  const supportedIntegrations = useMemo(
-    () =>
-      composerIntegrations.filter((integration) =>
-        supportsConversationProvider(integration.identifier)
-      ),
-    [composerIntegrations]
   );
   const integrationById = useMemo(
     () =>
@@ -100,10 +105,18 @@ export const ConversationsComponent: FC = () => {
     hydrate(ids).catch(() => undefined);
   }, [data?.items, hydrate]);
 
-  const handleFilter = useCallback((value: string) => {
-    setIntegrationId(value);
-    setCursorHistory([]);
-  }, []);
+  const handleChannelSelect = useCallback(
+    (integration: IntegrationListItem) => {
+      const nextId =
+        integrationId === integration.id ? undefined : integration.id;
+      if (nextId) {
+        setLastChannelId(nextId);
+      }
+      setIntegrationId(nextId);
+      setCursorHistory([]);
+    },
+    [integrationId]
+  );
   const handleNext = useCallback(() => {
     if (data?.nextCursor)
       setCursorHistory((history) => [...history, data.nextCursor!]);
@@ -176,62 +189,20 @@ export const ConversationsComponent: FC = () => {
     [repost, t, toaster]
   );
 
-  return (
-    <div className="mx-auto flex w-full max-w-[760px] flex-col gap-[20px] px-[16px] py-[24px]">
-      <div className="flex flex-wrap items-end justify-between gap-[12px]">
-        <div>
+  if (!conversationIntegrations.length) {
+    return (
+      <div className="bg-newBgColorInner flex flex-1 flex-col gap-[20px] p-[20px] min-w-0 min-h-0 overflow-y-auto">
+        <div className="flex flex-col gap-[6px]">
           <h1 className="text-[24px] font-[600] text-newTextColor">
             {t('conversations', 'Conversations')}
           </h1>
-          <p className="mt-[4px] text-[14px] text-newTableText">
+          <p className="text-[14px] text-newTableText">
             {t(
               'conversations_description',
               'Stay on top of reactions to your posts.'
             )}
           </p>
         </div>
-        {supportedIntegrations.length > 0 && (
-          <label className="flex flex-col gap-[4px] text-[13px] text-newTableText">
-            {t('conversations_channel', 'Channel')}
-            <select
-              value={integrationId}
-              onChange={(event) => handleFilter(event.target.value)}
-              className="h-[38px] rounded-[8px] border border-newTableBorder bg-newBgColorInner px-[10px] text-[14px] text-newTextColor outline-none"
-            >
-              <option value="">
-                {t('conversations_all_channels', 'All channels')}
-              </option>
-              {supportedIntegrations.map((integration) => (
-                <option key={integration.id} value={integration.id}>
-                  {integration.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-      </div>
-
-      {error ? (
-        <div className="rounded-[12px] border border-newTableBorder bg-newTableHeader p-[24px] text-center">
-          <p className="text-[15px] text-newTextColor">
-            {t(
-              'conversations_load_error',
-              'We could not load conversations right now.'
-            )}
-          </p>
-          <Button
-            secondary
-            className="mx-auto mt-[12px]"
-            onClick={() => mutate()}
-          >
-            {t('followers_retry', 'Retry')}
-          </Button>
-        </div>
-      ) : isLoading ? (
-        <div className="flex min-h-[240px] items-center justify-center">
-          <LoadingComponent />
-        </div>
-      ) : !supportedIntegrations.length ? (
         <div className="rounded-[12px] border border-newTableBorder bg-newTableHeader p-[28px] text-center">
           <p className="text-[18px] text-newTextColor">
             {t(
@@ -246,54 +217,107 @@ export const ConversationsComponent: FC = () => {
             )}
           </p>
         </div>
-      ) : !data?.items.length ? (
-        <div className="rounded-[12px] border border-newTableBorder bg-newTableHeader p-[28px] text-center text-[14px] text-newTableText">
-          {t('conversations_empty', 'No conversations yet.')}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <ChannelsSidebar
+        integrationCount={conversationIntegrations.length}
+        showAddProvider={false}
+      >
+        {(collapsed) => (
+          <ChannelMenu
+            collapsed={collapsed}
+            integrations={conversationIntegrations}
+            selectedIds={integrationId ? [integrationId] : undefined}
+            onSelect={handleChannelSelect}
+          />
+        )}
+      </ChannelsSidebar>
+      <div className="bg-newBgColorInner flex flex-1 flex-col gap-[20px] p-[20px] min-w-0 min-h-0 overflow-y-auto overflow-x-hidden">
+        <div className="flex flex-col gap-[6px]">
+          <h1 className="text-[24px] font-[600] text-newTextColor">
+            {t('conversations', 'Conversations')}
+          </h1>
+          <p className="text-[14px] text-newTableText">
+            {t(
+              'conversations_description',
+              'Stay on top of reactions to your posts.'
+            )}
+          </p>
         </div>
-      ) : (
-        <>
-          <div className="flex flex-col gap-[12px]">
-            {data.items.map((conversation) => {
-              const Renderer = getConversationProviderRenderer(
-                conversation.provider
-              );
-              return Renderer ? (
-                <Renderer
-                  key={conversation.id}
-                  conversation={conversation}
-                  integration={integrationById.get(conversation.channel.id)}
-                  reposting={repostingId === conversation.id}
-                  reposted={repostedIds.has(conversation.id)}
-                  onRepost={() => handleRepost(conversation.id)}
-                />
-              ) : (
-                <UnsupportedConversation
-                  key={conversation.id}
-                  conversation={conversation}
-                />
-              );
-            })}
+
+        {error ? (
+          <div className="rounded-[12px] border border-newTableBorder bg-newTableHeader p-[24px] text-center">
+            <p className="text-[15px] text-newTextColor">
+              {t(
+                'conversations_load_error',
+                'We could not load conversations right now.'
+              )}
+            </p>
+            <Button
+              secondary
+              className="mx-auto mt-[12px]"
+              onClick={() => mutate()}
+            >
+              {t('followers_retry', 'Retry')}
+            </Button>
           </div>
-          {(cursorHistory.length > 0 || data.nextCursor) && (
-            <div className="flex items-center justify-between gap-[12px]">
-              <Button
-                secondary
-                disabled={!cursorHistory.length}
-                onClick={handlePrevious}
-              >
-                {t('followers_previous_page', 'Previous')}
-              </Button>
-              <Button
-                secondary
-                disabled={!data.nextCursor}
-                onClick={handleNext}
-              >
-                {t('followers_next_page', 'Next')}
-              </Button>
+        ) : isLoading ? (
+          <div className="flex min-h-[240px] items-center justify-center">
+            <LoadingComponent />
+          </div>
+        ) : !data?.items.length ? (
+          <div className="rounded-[12px] border border-newTableBorder bg-newTableHeader p-[28px] text-center text-[14px] text-newTableText">
+            {t('conversations_empty', 'No conversations yet.')}
+          </div>
+        ) : (
+          <>
+            <div className="mx-auto flex w-full max-w-[760px] flex-col gap-[12px]">
+              {data.items.map((conversation) => {
+                const Renderer = getConversationProviderRenderer(
+                  conversation.provider
+                );
+                return Renderer ? (
+                  <Renderer
+                    key={conversation.id}
+                    conversation={conversation}
+                    integration={integrationById.get(conversation.channel.id)}
+                    reposting={repostingId === conversation.id}
+                    reposted={repostedIds.has(conversation.id)}
+                    onRepost={() => handleRepost(conversation.id)}
+                  />
+                ) : (
+                  <UnsupportedConversation
+                    key={conversation.id}
+                    conversation={conversation}
+                  />
+                );
+              })}
             </div>
-          )}
-        </>
-      )}
-    </div>
+            {(cursorHistory.length > 0 || data.nextCursor) && (
+              <div className="mx-auto flex w-full max-w-[760px] items-center justify-between gap-[12px]">
+                <Button
+                  secondary
+                  disabled={!cursorHistory.length}
+                  onClick={handlePrevious}
+                >
+                  {t('followers_previous_page', 'Previous')}
+                </Button>
+                <Button
+                  secondary
+                  disabled={!data.nextCursor}
+                  onClick={handleNext}
+                >
+                  {t('followers_next_page', 'Next')}
+                </Button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </>
   );
 };

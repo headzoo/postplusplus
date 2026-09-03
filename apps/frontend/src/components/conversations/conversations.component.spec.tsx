@@ -37,6 +37,35 @@ jest.mock('@gitroom/react/form/button', () => ({
 jest.mock('@gitroom/frontend/components/layout/loading', () => ({
   LoadingComponent: () => <div>Loading</div>,
 }));
+jest.mock('@gitroom/frontend/components/launches/channels.sidebar', () => ({
+  ChannelsSidebar: ({
+    children,
+  }: {
+    children: (collapsed: boolean) => React.ReactNode;
+  }) => <div>{children(false)}</div>,
+  ChannelMenu: ({
+    integrations,
+    onSelect,
+  }: {
+    integrations: { id: string; name: string }[];
+    onSelect: (integration: { id: string }) => void;
+  }) => (
+    <div data-testid="channel-menu">
+      {integrations.map((integration) => (
+        <button
+          key={integration.id}
+          type="button"
+          onClick={() => onSelect(integration)}
+        >
+          {integration.name}
+        </button>
+      ))}
+    </div>
+  ),
+}));
+jest.mock('@gitroom/frontend/components/launches/helpers/last-channel', () => ({
+  setLastChannelId: jest.fn(),
+}));
 jest.mock(
   '@gitroom/frontend/components/launches/helpers/use.integration.list',
   () => ({
@@ -242,6 +271,30 @@ describe('ConversationsComponent', () => {
       limit: 20,
     });
     expect(screen.getByRole('button', { name: 'Previous' })).toBeTruthy();
+  });
+
+  it('toggles channel filter from the sidebar', () => {
+    render(<ConversationsComponent />);
+
+    expect(mockUseConversations).toHaveBeenLastCalledWith({
+      integrationId: undefined,
+      cursor: undefined,
+      limit: 20,
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'X Channel' }));
+    expect(mockUseConversations).toHaveBeenLastCalledWith({
+      integrationId: 'channel-1',
+      cursor: undefined,
+      limit: 20,
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'X Channel' }));
+    expect(mockUseConversations).toHaveBeenLastCalledWith({
+      integrationId: undefined,
+      cursor: undefined,
+      limit: 20,
+    });
   });
 
   it('keeps the repost action in flight until its mutation resolves', async () => {
