@@ -6,7 +6,6 @@ import dayjs from 'dayjs';
 import { useDrag, useDrop } from 'react-dnd';
 import { useClickOutside } from '@mantine/hooks';
 import { Button } from '@gitroom/react/form/button';
-import { DatePicker } from '@gitroom/frontend/components/launches/helpers/date.picker';
 import { DNDProvider } from '@gitroom/frontend/components/launches/helpers/dnd.provider';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import {
@@ -228,7 +227,7 @@ const QueueItem: FC<{
     action: 'remove' | 'delete' | 'publish-now'
   ) => void;
   onMoveTo: (item: PipelineQueueItem, pipelineId: string) => void;
-  onSchedule: (item: PipelineQueueItem, date: string) => void;
+  onSchedule: (item: PipelineQueueItem) => void;
   onEdit: (item: PipelineQueueItem) => void;
   destinations: PipelineSummary[];
 }> = ({
@@ -248,8 +247,6 @@ const QueueItem: FC<{
   onEdit,
   destinations,
 }) => {
-  const [showSchedule, setShowSchedule] = useState(false);
-  const [date, setDate] = useState(dayjs());
   const locked = pending || item.status === 'PUBLISHING';
   const queued = item.status === 'QUEUED';
   const canSchedule = pipelineQueueItemCanSchedule(item.status);
@@ -357,7 +354,7 @@ const QueueItem: FC<{
               cleanupAllowed={cleanupAllowed}
               onEdit={() => onEdit(item)}
               onNow={() => onAction(item, 'publish-now')}
-              onSchedule={() => setShowSchedule((current) => !current)}
+              onSchedule={() => onSchedule(item)}
               onRemove={() => onAction(item, 'remove')}
               onDelete={() => onAction(item, 'delete')}
             />
@@ -408,17 +405,6 @@ const QueueItem: FC<{
           </div>
         </div>
       </div>
-      {showSchedule && (
-        <div className="absolute top-full start-0 end-0 z-[20] mt-[8px] p-[10px] border border-newBorder rounded-[8px] bg-newBgColor flex gap-[8px] items-center flex-wrap">
-          <DatePicker date={date} onChange={setDate} />
-          <Button
-            disabled={!canSchedule || locked}
-            onClick={() => onSchedule(item, date.toISOString())}
-          >
-            Confirm schedule
-          </Button>
-        </div>
-      )}
     </div>
   );
 };
@@ -656,12 +642,12 @@ export const PipelineQueue: FC<{
     [fetch, refresh, toaster]
   );
   const schedule = useCallback(
-    async (item: PipelineQueueItem, date: string) => {
+    async (item: PipelineQueueItem) => {
       if (item.status === 'PUBLISHED') {
         const approved = await decision.open({
-          title: 'Reschedule this published post?',
+          title: 'Queue this published post again?',
           description:
-            'This post was already published. Rescheduling will publish it again to the connected channels at the selected time and remove it from the Pipeline history.',
+            'This post was already published. Scheduling will move it to the end of the Pipeline queue so it publishes again in the next available recurring slot.',
           approveLabel: 'Confirm',
           cancelLabel: 'Cancel',
         });
@@ -669,14 +655,28 @@ export const PipelineQueue: FC<{
       }
       setPending(true);
       try {
-        await fetch(`/pipelines/items/${item.id}/schedule`, {
-          method: 'POST',
-          body: JSON.stringify({
-            date,
-            ...(item.status === 'PUBLISHED' ? { republish: true } : {}),
-          }),
-        });
+        const response = await fetch(
+          `/pipelines/items/${item.id}/queue-at-end`,
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              ...(item.status === 'PUBLISHED' ? { republish: true } : {}),
+            }),
+          }
+        );
+        const result = await response.json().catch(() => ({}));
         await refresh();
+        if (result?.projectedFor) {
+          toaster.show(
+            `Queued for ${formatPipelineSlot(
+              result.projectedFor,
+              pipeline.timezone
+            )}.`,
+            'success'
+          );
+        } else {
+          toaster.show('Moved to the end of the Pipeline queue.', 'success');
+        }
       } catch (error: any) {
         toaster.show(
           error?.message || 'Unable to schedule queue item.',
@@ -686,7 +686,7 @@ export const PipelineQueue: FC<{
         setPending(false);
       }
     },
-    [decision, fetch, refresh, toaster]
+    [decision, fetch, pipeline.timezone, refresh, toaster]
   );
   const edit = useCallback(
     (item: PipelineQueueItem) => {
@@ -710,6 +710,9 @@ export const PipelineQueue: FC<{
               posts: channels[0]?.posts || [],
               settings: channels[0]?.settings || {},
               channels,
+              pipelineId: pipeline.id,
+              pipelineQueueItemId: item.id,
+              pipelineQueueItemStatus: item.status,
             }}
           >
             <AddEditModal
@@ -723,7 +726,7 @@ export const PipelineQueue: FC<{
         ),
       });
     },
-    [modal, pipeline.channels, refresh]
+    [modal, pipeline.channels, pipeline.id, refresh]
   );
 
   return (

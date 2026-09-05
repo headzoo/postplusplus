@@ -45,6 +45,7 @@ import { useSWRConfig } from 'swr';
 import { useCalendar } from '@gitroom/frontend/components/launches/calendar.context';
 import {
   formatPipelineSlot,
+  shouldHideComposerDatePicker,
   shouldHideComposerScheduleControls,
 } from '@gitroom/frontend/components/pipelines/pipeline.utils';
 import {
@@ -264,9 +265,15 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
     rootPost?.state === 'QUEUE' ||
     (rootPost?.state === 'DRAFT' && !!rootPost?.publishDate);
   const isPublished = rootPost?.state === 'PUBLISHED';
+  const hasPipelineQueueItem = !!existingData?.pipelineQueueItemId;
   const hideScheduleControls = shouldHideComposerScheduleControls({
     isEditingExistingPost,
     isAlreadyScheduled,
+    hasPipelineQueueItem,
+  });
+  const hideDatePicker = shouldHideComposerDatePicker({
+    hideScheduleControls,
+    hasPipelineQueueItem,
   });
   const publishedRoots = (
     existingData?.channels?.length
@@ -434,8 +441,74 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
   const schedule = useCallback(
     (type: 'draft' | 'now' | 'schedule' | 'update') => async () => {
       const shouldEnqueueInPipeline = pipelineMode && type === 'schedule';
+      let shouldQueueAtEnd =
+        !!existingData?.pipelineQueueItemId && type === 'schedule';
       let republish = false;
-      if (
+      if (shouldQueueAtEnd) {
+        if (existingData?.pipelineQueueItemStatus === 'PUBLISHED') {
+          const channels = selectedIntegrations
+            .map((p) => p.integration.name)
+            .join(', ');
+          const whatToDo = await new Promise((resolve) => {
+            modal.openModal({
+              title: t('what_do_you_want_to_do', 'What do you want to do?'),
+              children: (
+                <div className="flex flex-col">
+                  <div className="text-[20px] mb-[20px]">
+                    {t(
+                      'post_already_published_pipeline_requeue_warning',
+                      'This post was already published. Scheduling will move it to the end of the Pipeline queue so it publishes again to'
+                    )}{' '}
+                    {channels}{' '}
+                    {t(
+                      'pipeline_next_available_slot_suffix',
+                      'in the next available recurring slot.'
+                    )}
+                  </div>
+                  <div className="flex w-full gap-[10px]">
+                    <div className="flex-1 flex">
+                      <Button
+                        type="button"
+                        className="flex-1"
+                        onClick={() => resolve('update')}
+                      >
+                        {t(
+                          'just_update_post_details',
+                          'Just update the post details'
+                        )}
+                      </Button>
+                    </div>
+                    <div className="flex-1 flex">
+                      <Button
+                        type="button"
+                        className="flex-1"
+                        onClick={() => resolve('republish')}
+                      >
+                        {t(
+                          'queue_at_next_pipeline_slot',
+                          'Queue at next Pipeline slot'
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ),
+            });
+          });
+
+          if (whatToDo === 'update') {
+            type = 'update';
+            shouldQueueAtEnd = false;
+          }
+
+          if (whatToDo === 'republish') {
+            republish = true;
+            type = 'update';
+          }
+        } else {
+          type = 'draft';
+        }
+      } else if (
         !shouldEnqueueInPipeline &&
         (type === 'now' || type === 'schedule') &&
         (existingData?.posts?.[0]?.state === 'PUBLISHED' ||
@@ -660,7 +733,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
 
       const data = {
         type,
-        ...(republish ? { republish } : {}),
+        ...(!shouldQueueAtEnd && republish ? { republish } : {}),
         ...(repeater ? { inter: repeater } : {}),
         tags,
         shortLink,
@@ -709,12 +782,39 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
               );
             }
           } else {
-            addEditSets
-              ? addEditSets(data)
-              : await fetch('/posts', {
+            const skipPostSave =
+              shouldQueueAtEnd &&
+              existingData?.pipelineQueueItemStatus === 'PUBLISHED' &&
+              cannotEditPublished;
+            if (addEditSets) {
+              addEditSets(data);
+            } else if (!skipPostSave) {
+              await fetch('/posts', {
+                method: 'POST',
+                body: JSON.stringify(data),
+              });
+            }
+            if (shouldQueueAtEnd && existingData?.pipelineQueueItemId) {
+              const response = await fetch(
+                `/pipelines/items/${existingData.pipelineQueueItemId}/queue-at-end`,
+                {
                   method: 'POST',
-                  body: JSON.stringify(data),
-                });
+                  body: JSON.stringify({
+                    ...(republish ||
+                    existingData.pipelineQueueItemStatus === 'PUBLISHED'
+                      ? { republish: true }
+                      : {}),
+                  }),
+                }
+              );
+              if (!response.ok) {
+                const error = await response.json().catch(() => undefined);
+                throw new Error(
+                  error?.message ||
+                    'Unable to move this item to the end of the Pipeline queue.'
+                );
+              }
+            }
           }
         } catch (error: any) {
           toaster.show(
@@ -727,16 +827,25 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
 
         if (!addEditSets) {
           mutate();
-          if (shouldEnqueueInPipeline) {
+          if (shouldEnqueueInPipeline || shouldQueueAtEnd) {
+            const detailPipelineId =
+              selectedPipeline?.id || existingData?.pipelineId;
             await Promise.all([
               mutateSWR(PIPELINES_KEY),
-              mutateSWR(pipelineDetailKey(selectedPipeline!.id)),
+              ...(detailPipelineId
+                ? [mutateSWR(pipelineDetailKey(detailPipelineId))]
+                : []),
             ]);
             reloadCalendarView();
           }
           toaster.show(
             shouldEnqueueInPipeline
               ? t('added_to_pipeline', 'Added to Pipeline')
+              : shouldQueueAtEnd
+              ? t(
+                  'queued_at_end_of_pipeline',
+                  'Moved to the end of the Pipeline queue'
+                )
               : !existingData.integration
               ? t('added_successfully', 'Added successfully')
               : t('updated_successfully', 'Updated successfully')
@@ -786,6 +895,10 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
       resetForNextPost,
       selectPipeline,
       postReference,
+      cannotEditPublished,
+      selectedIntegrations,
+      modal,
+      t,
     ]
   );
 
@@ -947,7 +1060,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                   )}
                 </>
               )}
-              {!pipelineMode && !hideScheduleControls && (
+              {!pipelineMode && !hideDatePicker && (
                 <DatePicker onChange={setDate} date={date} />
               )}
               {pipelineMode && (
@@ -959,6 +1072,16 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                           selectedPipeline!.projectedEnqueueFor,
                           selectedPipeline!.timezone
                         )}
+                  </div>
+                </div>
+              )}
+              {!pipelineMode && hasPipelineQueueItem && (
+                <div className="h-[44px] max-w-[320px] px-[16px] bg-newBgColorInner border border-newBorder rounded-[8px] flex items-center text-[15px] font-[600] text-textColor min-w-0">
+                  <div className="truncate">
+                    {t(
+                      'pipeline_next_available_slot',
+                      'Next available Pipeline slot'
+                    )}
                   </div>
                 </div>
               )}

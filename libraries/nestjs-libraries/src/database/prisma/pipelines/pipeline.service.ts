@@ -509,6 +509,38 @@ export class PipelineService {
     );
   }
 
+  async queueItemAtEnd(orgId: string, itemId: string, republish = false) {
+    const current = await this._pipelineRepository.getSchedulableQueueItem(
+      orgId,
+      itemId
+    );
+    if (!current) {
+      throw new NotFoundException('Queued Pipeline item not found');
+    }
+    if (current.status === 'PUBLISHED' && !republish) {
+      throw new BadRequestException(
+        'This Pipeline item was already published. To intentionally queue it again, pass republish: true.'
+      );
+    }
+    const result = await this._pipelineRepository.queueItemAtEnd(orgId, itemId);
+    if (!result) {
+      throw new NotFoundException('Queued Pipeline item not found');
+    }
+    const slots = result.active
+      ? getUpcomingPipelineSlots(
+          result.scheduleSlots,
+          result.timezone,
+          new Date(),
+          result.queuedCount
+        )
+      : [];
+    const projectedFor = slots[result.queuedCount - 1];
+    return {
+      id: result.id,
+      projectedFor: projectedFor ? projectedFor.toISOString() : undefined,
+    };
+  }
+
   async scheduleItem(
     orgId: string,
     itemId: string,

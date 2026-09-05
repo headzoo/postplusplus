@@ -184,6 +184,12 @@ export class ManualSchedulePipelineItemDto {
   republish?: boolean;
 }
 
+export class QueuePipelineItemAtEndDto {
+  @IsBoolean()
+  @IsOptional()
+  republish?: boolean;
+}
+
 export class PipelineItemActionDto {
   @IsIn(['remove', 'delete', 'publish-now'])
   @IsDefined()

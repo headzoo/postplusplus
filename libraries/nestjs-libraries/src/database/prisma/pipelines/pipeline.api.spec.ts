@@ -1384,6 +1384,73 @@ describe('Pipeline API boundaries', () => {
     ]);
   });
 
+  it('requires republish when queueing a published Pipeline item at end', async () => {
+    const repository = {
+      getSchedulableQueueItem: jest.fn().mockResolvedValue({
+        id: 'item',
+        status: 'PUBLISHED',
+      }),
+      queueItemAtEnd: jest.fn(),
+    };
+    const service = new PipelineService(repository as any, {} as any);
+
+    await expect(service.queueItemAtEnd('org', 'item')).rejects.toMatchObject({
+      message:
+        'This Pipeline item was already published. To intentionally queue it again, pass republish: true.',
+    });
+    expect(repository.queueItemAtEnd).not.toHaveBeenCalled();
+  });
+
+  it('queues a published Pipeline item at end when republish is confirmed', async () => {
+    const repository = {
+      getSchedulableQueueItem: jest.fn().mockResolvedValue({
+        id: 'item',
+        status: 'PUBLISHED',
+      }),
+      queueItemAtEnd: jest.fn().mockResolvedValue({
+        id: 'item',
+        queuedCount: 1,
+        timezone: 'UTC',
+        active: true,
+        scheduleSlots: [{ dayOfWeek: 1, minuteOfDay: 12 * 60 }],
+      }),
+    };
+    const service = new PipelineService(repository as any, {} as any);
+
+    await expect(service.queueItemAtEnd('org', 'item', true)).resolves.toEqual(
+      expect.objectContaining({
+        id: 'item',
+        projectedFor: expect.any(String),
+      })
+    );
+    expect(repository.queueItemAtEnd).toHaveBeenCalledWith('org', 'item');
+  });
+
+  it('moves a queued Pipeline item to the end without republish', async () => {
+    const repository = {
+      getSchedulableQueueItem: jest.fn().mockResolvedValue({
+        id: 'item',
+        status: 'QUEUED',
+      }),
+      queueItemAtEnd: jest.fn().mockResolvedValue({
+        id: 'item',
+        queuedCount: 2,
+        timezone: 'UTC',
+        active: true,
+        scheduleSlots: [{ dayOfWeek: 1, minuteOfDay: 12 * 60 }],
+      }),
+    };
+    const service = new PipelineService(repository as any, {} as any);
+
+    await expect(service.queueItemAtEnd('org', 'item')).resolves.toEqual(
+      expect.objectContaining({
+        id: 'item',
+        projectedFor: expect.any(String),
+      })
+    );
+    expect(repository.queueItemAtEnd).toHaveBeenCalledWith('org', 'item');
+  });
+
   it('rejects scheduling Pipeline items that are not queued or published', async () => {
     const repository = {
       getSchedulableQueueItem: jest.fn().mockResolvedValue(null),
@@ -1607,6 +1674,83 @@ describe('Pipeline API boundaries', () => {
         data: expect.objectContaining({ status: 'REMOVED' }),
       })
     );
+  });
+
+  it('requeues a published Pipeline item at the end and resets posts to draft', async () => {
+    const postUpdateMany = jest.fn().mockResolvedValue({ count: 1 });
+    const queueItemUpdate = jest.fn().mockResolvedValue({
+      id: 'item',
+      status: 'QUEUED',
+      position: 2048,
+    });
+    const transaction = {
+      model: {
+        $transaction: jest.fn(async (callback: any) =>
+          callback({
+            pipelineQueueItem: {
+              findFirst: jest
+                .fn()
+                .mockResolvedValueOnce({
+                  id: 'item',
+                  pipelineId: 'pipeline',
+                  status: 'PUBLISHED',
+                  pipeline: {
+                    timezone: 'UTC',
+                    active: true,
+                    scheduleSlots: [{ dayOfWeek: 1, minuteOfDay: 60 }],
+                  },
+                })
+                .mockResolvedValueOnce({ id: 'queued-last' }),
+              update: queueItemUpdate,
+              findMany: jest
+                .fn()
+                .mockResolvedValue([{ id: 'queued-last', position: 1024 }]),
+              count: jest.fn().mockResolvedValue(2),
+            },
+            post: { updateMany: postUpdateMany },
+          })
+        ),
+      },
+    };
+    const repository = new PipelineRepository(
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      transaction as any
+    );
+
+    await expect(repository.queueItemAtEnd('org', 'item')).resolves.toEqual({
+      id: 'item',
+      queuedCount: 2,
+      timezone: 'UTC',
+      active: true,
+      scheduleSlots: [{ dayOfWeek: 1, minuteOfDay: 60 }],
+    });
+    expect(postUpdateMany).toHaveBeenCalledWith({
+      where: {
+        pipelineQueueItemId: 'item',
+        organizationId: 'org',
+        deletedAt: null,
+      },
+      data: expect.objectContaining({
+        state: 'DRAFT',
+        releaseId: null,
+        releaseURL: null,
+        error: null,
+      }),
+    });
+    expect(queueItemUpdate).toHaveBeenCalledWith({
+      where: { id: 'item' },
+      data: expect.objectContaining({
+        status: 'QUEUED',
+        publishedAt: null,
+        failedAt: null,
+        error: null,
+        claimedAt: null,
+      }),
+    });
   });
 
   it('reports workflow-start failures after scheduling posts', async () => {

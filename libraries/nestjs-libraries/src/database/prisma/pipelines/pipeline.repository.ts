@@ -953,6 +953,96 @@ export class PipelineRepository {
     });
   }
 
+  async queueItemAtEnd(orgId: string, itemId: string) {
+    return this.withSerializableRetry(async (tx) => {
+      const item = await tx.pipelineQueueItem.findFirst({
+        where: {
+          id: itemId,
+          status: { in: ['QUEUED', 'PUBLISHED'] },
+          deletedAt: null,
+          pipeline: { organizationId: orgId, deletedAt: null },
+        },
+        include: {
+          pipeline: {
+            select: {
+              timezone: true,
+              active: true,
+              scheduleSlots: {
+                orderBy: [{ dayOfWeek: 'asc' }, { minuteOfDay: 'asc' }],
+              },
+            },
+          },
+        },
+      });
+      if (!item) {
+        return null;
+      }
+
+      const lastQueued = await tx.pipelineQueueItem.findFirst({
+        where: {
+          pipelineId: item.pipelineId,
+          status: PipelineQueueItemStatus.QUEUED,
+          deletedAt: null,
+          id: { not: itemId },
+        },
+        orderBy: [{ position: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }],
+        select: { id: true },
+      });
+      const position = await this.positionFor(
+        tx,
+        item.pipelineId,
+        item.status === 'QUEUED' ? itemId : undefined,
+        undefined,
+        lastQueued?.id
+      );
+
+      if (item.status === 'PUBLISHED') {
+        await tx.post.updateMany({
+          where: {
+            pipelineQueueItemId: item.id,
+            organizationId: orgId,
+            deletedAt: null,
+          },
+          data: {
+            state: 'DRAFT',
+            publishDate: new Date(),
+            releaseId: null,
+            releaseURL: null,
+            error: null,
+          },
+        });
+      }
+
+      await tx.pipelineQueueItem.update({
+        where: { id: item.id },
+        data: {
+          status: PipelineQueueItemStatus.QUEUED,
+          position,
+          publishedAt: null,
+          failedAt: null,
+          error: null,
+          claimedAt: null,
+        },
+      });
+
+      const queuedCount = await tx.pipelineQueueItem.count({
+        where: {
+          pipelineId: item.pipelineId,
+          status: PipelineQueueItemStatus.QUEUED,
+          deletedAt: null,
+        },
+      });
+
+      return {
+        id: item.id,
+        queuedCount,
+        timezone: item.pipeline.timezone,
+        active: item.pipeline.active,
+        scheduleSlots: item.pipeline.scheduleSlots,
+      };
+    });
+  }
+
   async detachPublishedQueueItem(orgId: string, itemId: string) {
     return this.withSerializableRetry(async (tx) => {
       const item = await tx.pipelineQueueItem.findFirst({

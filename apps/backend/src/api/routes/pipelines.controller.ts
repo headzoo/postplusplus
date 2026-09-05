@@ -24,6 +24,7 @@ import {
   MovePipelineScheduleSlotDto,
   PipelineItemActionDto,
   PipelineStatusDto,
+  QueuePipelineItemAtEndDto,
   ReorderPipelineQueueDto,
   ReorderPipelineQueueItemDto,
   UpdatePipelineScheduleDto,
@@ -112,6 +113,19 @@ export class PipelinesController {
       org.id,
       itemId,
       body.date,
+      !!body.republish
+    );
+  }
+
+  @Post('/items/:itemId/queue-at-end')
+  queueItemAtEnd(
+    @GetOrgFromRequest() org: Organization,
+    @Param('itemId') itemId: string,
+    @Body() body: QueuePipelineItemAtEndDto
+  ) {
+    return this._pipelineService.queueItemAtEnd(
+      org.id,
+      itemId,
       !!body.republish
     );
   }

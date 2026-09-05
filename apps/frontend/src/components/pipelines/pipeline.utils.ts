@@ -22,10 +22,20 @@ export const pipelineQueueItemCanCleanup = (
 export const shouldHideComposerScheduleControls = ({
   isEditingExistingPost,
   isAlreadyScheduled,
+  hasPipelineQueueItem,
 }: {
   isEditingExistingPost: boolean;
   isAlreadyScheduled: boolean;
-}) => isEditingExistingPost && isAlreadyScheduled;
+  hasPipelineQueueItem?: boolean;
+}) => isEditingExistingPost && isAlreadyScheduled && !hasPipelineQueueItem;
+
+export const shouldHideComposerDatePicker = ({
+  hideScheduleControls,
+  hasPipelineQueueItem,
+}: {
+  hideScheduleControls: boolean;
+  hasPipelineQueueItem?: boolean;
+}) => hideScheduleControls || !!hasPipelineQueueItem;
 
 export const PIPELINE_DAYS = [
   { dayOfWeek: 0, label: 'Sunday' },

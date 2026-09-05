@@ -13,6 +13,14 @@ interface ExistingData {
   posts: Array<Post & { canEdit?: boolean }>;
   settings: Record<string, unknown>;
   channels?: ExistingDataChannel[];
+  pipelineId?: string;
+  pipelineQueueItemId?: string;
+  pipelineQueueItemStatus?:
+    | 'QUEUED'
+    | 'PUBLISHING'
+    | 'FAILED'
+    | 'PUBLISHED'
+    | 'REMOVED';
 }
 
 const ExistingDataContext = createContext<ExistingData>({

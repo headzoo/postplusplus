@@ -26,6 +26,7 @@ import {
   PIPELINE_DEFAULT_COLOR,
   PIPELINE_SCHEDULE_DRAG_TYPE,
   resolveCalendarPostHeaderColor,
+  shouldHideComposerDatePicker,
   shouldHideComposerScheduleControls,
 } from './pipeline.utils';
 
@@ -647,5 +648,36 @@ describe('published pipeline queue actions', () => {
         isAlreadyScheduled: true,
       })
     ).toBe(true);
+  });
+
+  it('keeps schedule button available for pipeline queue edits', () => {
+    expect(
+      shouldHideComposerScheduleControls({
+        isEditingExistingPost: true,
+        isAlreadyScheduled: true,
+        hasPipelineQueueItem: true,
+      })
+    ).toBe(false);
+  });
+
+  it('hides the date picker for pipeline queue edits', () => {
+    expect(
+      shouldHideComposerDatePicker({
+        hideScheduleControls: false,
+        hasPipelineQueueItem: true,
+      })
+    ).toBe(true);
+    expect(
+      shouldHideComposerDatePicker({
+        hideScheduleControls: true,
+        hasPipelineQueueItem: false,
+      })
+    ).toBe(true);
+    expect(
+      shouldHideComposerDatePicker({
+        hideScheduleControls: false,
+        hasPipelineQueueItem: false,
+      })
+    ).toBe(false);
   });
 });
