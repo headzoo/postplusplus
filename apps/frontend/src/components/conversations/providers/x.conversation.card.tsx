@@ -91,7 +91,7 @@ const XPostPreview: FC<{ post: ConversationPost; nested?: boolean }> = ({
     <div
       className={clsx(
         nested &&
-        'mt-[10px] rounded-[12px] border border-newTableBorder p-[12px]'
+          'mt-[10px] rounded-[12px] border border-newTableBorder p-[12px]'
       )}
     >
       <div className="flex items-start gap-[10px]">
@@ -200,8 +200,8 @@ export const XConversationCard: FC<ConversationCardProps> = ({
   const repostLabel = reposted
     ? t('conversation_reposted_action', 'Reposted')
     : reposting
-      ? t('conversation_reposting', 'Reposting…')
-      : t('conversation_repost', 'Repost');
+    ? t('conversation_reposting', 'Reposting…')
+    : t('conversation_repost', 'Repost');
 
   const quote = useCallback(async () => {
     if (!post || !integration || !canQuote) return;

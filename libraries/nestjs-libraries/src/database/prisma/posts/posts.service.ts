@@ -57,6 +57,7 @@ import { hasExtension } from '@gitroom/helpers/utils/has.extension';
 import { stripLinks } from '@gitroom/helpers/utils/strip.links';
 import { appendUtmParamsToText } from '@gitroom/helpers/utils/utm.params';
 import { ConversionService } from '@gitroom/nestjs-libraries/database/prisma/conversions/conversion.service';
+import { PipelineRepository } from '@gitroom/nestjs-libraries/database/prisma/pipelines/pipeline.repository';
 import { validate } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
 import { stripHtmlValidation } from '@gitroom/helpers/utils/strip.html.validation';
@@ -81,7 +82,8 @@ export class PostsService {
     private _temporalService: TemporalService,
     private _refreshIntegrationService: RefreshIntegrationService,
     private _channelInteractionService: ChannelInteractionService,
-    private _conversionService: ConversionService
+    private _conversionService: ConversionService,
+    private _pipelineRepository: PipelineRepository
   ) {}
 
   searchForMissingThreeHoursPosts() {
@@ -1189,6 +1191,7 @@ export class PostsService {
     keepGroup = false
   ): Promise<any[]> {
     const postList = [];
+    let publishedPipelineItemIdToDetach: string | undefined;
     for (const post of body.posts) {
       const queuedPipelineItem = post.group
         ? await this._postRepository.getPipelineQueueItemForGroup(
@@ -1206,6 +1209,14 @@ export class PostsService {
         pipelineQueueItem?.status === 'QUEUED' && !pipelineQueueItem.deletedAt
           ? pipelineQueueItem.id
           : undefined;
+      if (
+        body.republish &&
+        (body.type === 'schedule' || body.type === 'now') &&
+        pipelineQueueItem?.status === 'PUBLISHED' &&
+        !pipelineQueueItem.deletedAt
+      ) {
+        publishedPipelineItemIdToDetach = pipelineQueueItem.id;
+      }
       if (
         (body.type === 'schedule' || body.type === 'now') &&
         !body.republish &&
@@ -1332,6 +1343,13 @@ export class PostsService {
         postId: posts[0].id,
         integration: post.integration.id,
       });
+    }
+
+    if (publishedPipelineItemIdToDetach) {
+      await this._pipelineRepository.detachPublishedQueueItem(
+        orgId,
+        publishedPipelineItemIdToDetach
+      );
     }
 
     return postList;

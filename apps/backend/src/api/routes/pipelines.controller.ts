@@ -94,7 +94,7 @@ export class PipelinesController {
     @Body() body: PipelineItemActionDto
   ) {
     if (body.action === 'publish-now') {
-      return this._pipelineService.publishNow(org.id, itemId);
+      return this._pipelineService.publishNow(org.id, itemId, !!body.republish);
     }
     if (body.action === 'delete') {
       return this._pipelineService.deleteItem(org.id, itemId);
@@ -108,7 +108,12 @@ export class PipelinesController {
     @Param('itemId') itemId: string,
     @Body() body: ManualSchedulePipelineItemDto
   ) {
-    return this._pipelineService.scheduleItem(org.id, itemId, body.date);
+    return this._pipelineService.scheduleItem(
+      org.id,
+      itemId,
+      body.date,
+      !!body.republish
+    );
   }
 
   @Get('/:id')

@@ -178,10 +178,18 @@ export class ManualSchedulePipelineItemDto {
   @IsDateString()
   @IsDefined()
   date: string;
+
+  @IsBoolean()
+  @IsOptional()
+  republish?: boolean;
 }
 
 export class PipelineItemActionDto {
   @IsIn(['remove', 'delete', 'publish-now'])
   @IsDefined()
   action: 'remove' | 'delete' | 'publish-now';
+
+  @IsBoolean()
+  @IsOptional()
+  republish?: boolean;
 }

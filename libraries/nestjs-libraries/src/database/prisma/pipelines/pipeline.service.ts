@@ -500,14 +500,36 @@ export class PipelineService {
     return item;
   }
 
-  async publishNow(orgId: string, itemId: string) {
-    return this.scheduleItem(orgId, itemId, new Date().toISOString());
+  async publishNow(orgId: string, itemId: string, republish = false) {
+    return this.scheduleItem(
+      orgId,
+      itemId,
+      new Date().toISOString(),
+      republish
+    );
   }
 
-  async scheduleItem(orgId: string, itemId: string, date: string) {
+  async scheduleItem(
+    orgId: string,
+    itemId: string,
+    date: string,
+    republish = false
+  ) {
     const scheduledFor = new Date(date);
     if (Number.isNaN(scheduledFor.getTime())) {
       throw new BadRequestException('Pipeline schedule date must be valid');
+    }
+    const current = await this._pipelineRepository.getSchedulableQueueItem(
+      orgId,
+      itemId
+    );
+    if (!current) {
+      throw new NotFoundException('Queued Pipeline item not found');
+    }
+    if (current.status === 'PUBLISHED' && !republish) {
+      throw new BadRequestException(
+        'This Pipeline item was already published. To intentionally publish again, pass republish: true.'
+      );
     }
     const item = await this._pipelineRepository.scheduleItem(
       orgId,
@@ -681,12 +703,21 @@ export class PipelineService {
   }
 
   private toComposerPost(post: any) {
+    const provider = socialIntegrationList.find(
+      (candidate) =>
+        candidate.identifier === post.integration?.providerIdentifier
+    );
+    const canEdit =
+      post.state === 'PUBLISHED' &&
+      !!provider?.supportsEdit?.(post, post.integration);
     return {
       id: post.id,
       parentPostId: post.parentPostId,
       content: post.content,
       delay: post.delay,
       state: post.state,
+      publishDate: post.publishDate,
+      canEdit,
       intervalInDays: post.intervalInDays,
       settings: this.parseJson(post.settings, {}),
       image: this.parseJson(post.image, []),

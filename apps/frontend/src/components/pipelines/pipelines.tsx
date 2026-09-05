@@ -287,10 +287,13 @@ export const Pipelines: FC = () => {
     (pipeline: PipelineSummary) => async () => {
       const approved = await decision.open({
         title: t('delete_pipeline', 'Delete Pipeline?'),
-        description: `Deleting "${pipeline.name
-          }" will remove the Pipeline schedule. ${pipeline.queueCount
-          } queued item${pipeline.queueCount === 1 ? '' : 's'
-          } will be preserved as drafts in your calendar — no content will be deleted.`,
+        description: `Deleting "${
+          pipeline.name
+        }" will remove the Pipeline schedule. ${
+          pipeline.queueCount
+        } queued item${
+          pipeline.queueCount === 1 ? '' : 's'
+        } will be preserved as drafts in your calendar — no content will be deleted.`,
         approveLabel: t('delete_pipeline_confirm', 'Delete Pipeline'),
         cancelLabel: t('cancel', 'Cancel'),
       });

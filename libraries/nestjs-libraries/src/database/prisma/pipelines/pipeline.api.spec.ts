@@ -1302,6 +1302,10 @@ describe('Pipeline API boundaries', () => {
 
   it('uses only queued items for manual scheduling', async () => {
     const repository = {
+      getSchedulableQueueItem: jest.fn().mockResolvedValue({
+        id: 'item',
+        status: 'QUEUED',
+      }),
       scheduleItem: jest.fn().mockResolvedValue({
         id: 'item',
         posts: [{ id: 'root-post', providerIdentifier: 'x' }],
@@ -1326,6 +1330,73 @@ describe('Pipeline API boundaries', () => {
     expect(manager.startScheduledPosts).toHaveBeenCalledWith('org', [
       { id: 'root-post', providerIdentifier: 'x' },
     ]);
+  });
+
+  it('requires republish when scheduling a published Pipeline item', async () => {
+    const repository = {
+      getSchedulableQueueItem: jest.fn().mockResolvedValue({
+        id: 'item',
+        status: 'PUBLISHED',
+      }),
+      scheduleItem: jest.fn(),
+    };
+    const service = new PipelineService(repository as any, {} as any);
+
+    await expect(
+      service.scheduleItem('org', 'item', '2026-08-10T12:00:00.000Z')
+    ).rejects.toMatchObject({
+      message:
+        'This Pipeline item was already published. To intentionally publish again, pass republish: true.',
+    });
+    expect(repository.scheduleItem).not.toHaveBeenCalled();
+  });
+
+  it('schedules a published Pipeline item when republish is confirmed', async () => {
+    const repository = {
+      getSchedulableQueueItem: jest.fn().mockResolvedValue({
+        id: 'item',
+        status: 'PUBLISHED',
+      }),
+      scheduleItem: jest.fn().mockResolvedValue({
+        id: 'item',
+        status: 'PUBLISHED',
+        posts: [{ id: 'root-post', providerIdentifier: 'x' }],
+      }),
+    };
+    const manager = {
+      startScheduledPosts: jest.fn().mockResolvedValue(undefined),
+    };
+    const service = new PipelineService(repository as any, manager as any);
+
+    await expect(
+      service.scheduleItem('org', 'item', '2026-08-10T12:00:00.000Z', true)
+    ).resolves.toEqual({
+      id: 'item',
+      scheduledFor: '2026-08-10T12:00:00.000Z',
+    });
+    expect(repository.scheduleItem).toHaveBeenCalledWith(
+      'org',
+      'item',
+      new Date('2026-08-10T12:00:00.000Z')
+    );
+    expect(manager.startScheduledPosts).toHaveBeenCalledWith('org', [
+      { id: 'root-post', providerIdentifier: 'x' },
+    ]);
+  });
+
+  it('rejects scheduling Pipeline items that are not queued or published', async () => {
+    const repository = {
+      getSchedulableQueueItem: jest.fn().mockResolvedValue(null),
+      scheduleItem: jest.fn(),
+    };
+    const service = new PipelineService(repository as any, {} as any);
+
+    await expect(
+      service.scheduleItem('org', 'item', '2026-08-10T12:00:00.000Z', true)
+    ).rejects.toMatchObject({
+      message: 'Queued Pipeline item not found',
+    });
+    expect(repository.scheduleItem).not.toHaveBeenCalled();
   });
 
   it('projects queued items in order and hides projections while paused', async () => {
@@ -1385,6 +1456,10 @@ describe('Pipeline API boundaries', () => {
 
   it('schedules queued multi-channel content before publishing it now', async () => {
     const repository = {
+      getSchedulableQueueItem: jest.fn().mockResolvedValue({
+        id: 'item',
+        status: 'QUEUED',
+      }),
       scheduleItem: jest.fn().mockResolvedValue({
         id: 'item',
         posts: [

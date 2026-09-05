@@ -136,9 +136,11 @@ export const PipelineDetailView: FC<{ pipelineId: string }> = ({
     }
     const approved = await decision.open({
       title: t('delete_pipeline', 'Delete Pipeline?'),
-      description: `Deleting "${data.name
-        }" will remove the Pipeline schedule. ${queueCount} queued item${queueCount === 1 ? '' : 's'
-        } will be preserved as drafts in your calendar — no content will be deleted.`,
+      description: `Deleting "${
+        data.name
+      }" will remove the Pipeline schedule. ${queueCount} queued item${
+        queueCount === 1 ? '' : 's'
+      } will be preserved as drafts in your calendar — no content will be deleted.`,
       approveLabel: t('delete_pipeline_confirm', 'Delete Pipeline'),
       cancelLabel: t('cancel', 'Cancel'),
     });

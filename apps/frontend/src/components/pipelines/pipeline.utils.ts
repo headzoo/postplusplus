@@ -2,6 +2,7 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import {
+  PipelineQueueItem,
   PipelineScheduleOccurrence,
   PipelineScheduleSlot,
   PipelineSummary,
@@ -9,6 +10,22 @@ import {
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
+
+export const pipelineQueueItemCanSchedule = (
+  status: PipelineQueueItem['status']
+) => status === 'QUEUED' || status === 'PUBLISHED';
+
+export const pipelineQueueItemCanCleanup = (
+  status: PipelineQueueItem['status']
+) => status === 'QUEUED' || status === 'FAILED';
+
+export const shouldHideComposerScheduleControls = ({
+  isEditingExistingPost,
+  isAlreadyScheduled,
+}: {
+  isEditingExistingPost: boolean;
+  isAlreadyScheduled: boolean;
+}) => isEditingExistingPost && isAlreadyScheduled;
 
 export const PIPELINE_DAYS = [
   { dayOfWeek: 0, label: 'Sunday' },
@@ -309,6 +326,65 @@ export const getReadableForegroundColor = (backgroundColor: string): string => {
       : READABLE_FOREGROUND_DARK_PURE;
   }
   return READABLE_FOREGROUND_LIGHT;
+};
+
+const PIPELINE_QUEUE_ERROR_DISPLAY_MAX = 200;
+
+const readErrorMessage = (value: unknown, depth = 0): string | undefined => {
+  if (depth > 6 || value == null) {
+    return undefined;
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed || undefined;
+  }
+
+  if (typeof value !== 'object') {
+    return undefined;
+  }
+
+  const record = value as Record<string, unknown>;
+  if (typeof record.message === 'string' && record.message.trim()) {
+    return record.message.trim();
+  }
+
+  for (const key of ['cause', 'failure', 'details']) {
+    const nested = readErrorMessage(record[key], depth + 1);
+    if (nested) {
+      return nested;
+    }
+  }
+
+  return undefined;
+};
+
+export const formatPipelineQueueError = (
+  error: string
+): { display: string; full: string } => {
+  const full = error.trim();
+  if (!full) {
+    return { display: '', full: '' };
+  }
+
+  let readable = full;
+  if (full.startsWith('{') || full.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(full);
+      readable = readErrorMessage(parsed) || full;
+    } catch {
+      /** keep raw error **/
+    }
+  }
+
+  if (readable.length <= PIPELINE_QUEUE_ERROR_DISPLAY_MAX) {
+    return { display: readable, full };
+  }
+
+  return {
+    display: `${readable.slice(0, PIPELINE_QUEUE_ERROR_DISPLAY_MAX)}…`,
+    full,
+  };
 };
 
 export const parseApiError = async (response: Response): Promise<string> => {

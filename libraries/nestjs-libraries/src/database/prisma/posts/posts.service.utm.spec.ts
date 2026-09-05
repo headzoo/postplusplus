@@ -108,6 +108,9 @@ const createService = ({
           values.map(({ content }) => content)
       ),
       ...conversionService,
+    } as any,
+    {
+      detachPublishedQueueItem: jest.fn().mockResolvedValue(null),
     } as any
   );
 

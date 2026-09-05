@@ -11,18 +11,22 @@ import {
   filterPipelinesByChannel,
   filterScheduleOccurrencesByChannel,
   filterScheduleOccurrencesByPipeline,
+  formatPipelineQueueError,
   formatPipelineSlotShort,
   formatPipelineTimezoneLabel,
   getContrastRatio,
   getPipelineScheduleWeek,
   getReadableForegroundColor,
   loadPipelineGlobalSchedule,
+  pipelineQueueItemCanCleanup,
+  pipelineQueueItemCanSchedule,
   pipelineScheduleSlotKey,
   pipelineScheduleSlotsEqual,
   PIPELINE_COLOR_PALETTE,
   PIPELINE_DEFAULT_COLOR,
   PIPELINE_SCHEDULE_DRAG_TYPE,
   resolveCalendarPostHeaderColor,
+  shouldHideComposerScheduleControls,
 } from './pipeline.utils';
 
 dayjs.extend(utc);
@@ -263,9 +267,13 @@ describe('getReadableForegroundColor', () => {
   });
 
   it('returns light text on dark backgrounds', () => {
-    expect(getReadableForegroundColor('#eb3825')).toBe('#FFFFFF');
     expect(getReadableForegroundColor('#616161')).toBe('#FFFFFF');
     expect(getReadableForegroundColor('#E80000')).toBe('#FFFFFF');
+    expect(getReadableForegroundColor('#1A1A1A')).toBe('#FFFFFF');
+  });
+
+  it('prefers black over white when black has higher contrast on vivid red', () => {
+    expect(getReadableForegroundColor('#eb3825')).toBe('#000000');
   });
 
   it('returns white for invalid hex values', () => {
@@ -352,6 +360,41 @@ describe('loadPipelineGlobalSchedule', () => {
         '/pipelines/schedule?startDate=a&endDate=b'
       )
     ).rejects.toThrow('startDate must be valid, endDate must be valid');
+  });
+});
+
+describe('formatPipelineQueueError', () => {
+  it('returns plain text errors unchanged', () => {
+    expect(formatPipelineQueueError('Provider rejected the post')).toEqual({
+      display: 'Provider rejected the post',
+      full: 'Provider rejected the post',
+    });
+  });
+
+  it('extracts nested Temporal failure messages from JSON errors', () => {
+    const full = JSON.stringify({
+      cause: {
+        failure: {
+          message: 'X is currently unavailable, please try again later',
+          source: 'TypeScriptSDK',
+          stackTrace: 'ActivityFailure: ...',
+        },
+      },
+    });
+
+    expect(formatPipelineQueueError(full)).toEqual({
+      display: 'X is currently unavailable, please try again later',
+      full,
+    });
+  });
+
+  it('truncates long readable messages for card display', () => {
+    const message = 'x'.repeat(250);
+    const result = formatPipelineQueueError(message);
+
+    expect(result.display).toHaveLength(201);
+    expect(result.display.endsWith('…')).toBe(true);
+    expect(result.full).toBe(message);
   });
 });
 
@@ -572,5 +615,37 @@ describe('filterScheduleOccurrencesByPipeline', () => {
     expect(
       filterScheduleOccurrencesByPipeline(occurrences, 'pipeline-missing')
     ).toEqual([]);
+  });
+});
+
+describe('published pipeline queue actions', () => {
+  it('allows schedule actions for queued and published items only', () => {
+    expect(pipelineQueueItemCanSchedule('QUEUED')).toBe(true);
+    expect(pipelineQueueItemCanSchedule('PUBLISHED')).toBe(true);
+    expect(pipelineQueueItemCanSchedule('FAILED')).toBe(false);
+    expect(pipelineQueueItemCanSchedule('PUBLISHING')).toBe(false);
+    expect(pipelineQueueItemCanSchedule('REMOVED')).toBe(false);
+  });
+
+  it('allows cleanup only for queued and failed items', () => {
+    expect(pipelineQueueItemCanCleanup('QUEUED')).toBe(true);
+    expect(pipelineQueueItemCanCleanup('FAILED')).toBe(true);
+    expect(pipelineQueueItemCanCleanup('PUBLISHED')).toBe(false);
+    expect(pipelineQueueItemCanCleanup('PUBLISHING')).toBe(false);
+  });
+
+  it('keeps schedule controls visible when editing a published post', () => {
+    expect(
+      shouldHideComposerScheduleControls({
+        isEditingExistingPost: true,
+        isAlreadyScheduled: false,
+      })
+    ).toBe(false);
+    expect(
+      shouldHideComposerScheduleControls({
+        isEditingExistingPost: true,
+        isAlreadyScheduled: true,
+      })
+    ).toBe(true);
   });
 });

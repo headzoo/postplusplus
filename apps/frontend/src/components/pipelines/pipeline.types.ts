@@ -47,6 +47,8 @@ export interface PipelineQueueItem {
     content: string;
     delay: number;
     state?: string;
+    publishDate?: string | Date | null;
+    canEdit?: boolean;
     intervalInDays?: number | null;
     integration: Integrations;
     settings?: Record<string, unknown>;

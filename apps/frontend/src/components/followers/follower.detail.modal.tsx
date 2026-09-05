@@ -172,11 +172,11 @@ const InteractionRow: FC<{
   const headline = sentence
     ? t(sentence.key, sentence.defaultLabel)
     : t(
-      `followers_interaction_${interaction.kind}_${direction}`,
-      interaction.direction === 'inbound'
-        ? `They ${interaction.kind} you`
-        : `You ${interaction.kind} them`
-    );
+        `followers_interaction_${interaction.kind}_${direction}`,
+        interaction.direction === 'inbound'
+          ? `They ${interaction.kind} you`
+          : `You ${interaction.kind} them`
+      );
   const timestamp = formatDate(interaction.timestamp);
 
   return (
@@ -384,9 +384,9 @@ const FollowerDetailContent: FC<{
             error instanceof Error
               ? error.message
               : t(
-                'followers_lead_follow_error',
-                'Could not follow this profile'
-              ),
+                  'followers_lead_follow_error',
+                  'Could not follow this profile'
+                ),
             'warning'
           );
         }
@@ -609,50 +609,50 @@ const FollowerDetailContent: FC<{
               Number.isFinite(follower.followersCount) ||
               accountCreatedAt ||
               (conversionLabel && convertedAt)) && (
-                <div className="mt-[6px] grid grid-cols-1 gap-x-[20px] gap-y-[6px] text-[13px] sm:grid-cols-2 xl:grid-cols-3">
-                  {Number.isFinite(follower.followingCount) && (
-                    <span className="min-w-0">
-                      <span className="font-[700] text-newTextColor">
-                        {formatCompactCount(follower.followingCount!)}
-                      </span>{' '}
-                      <span className="text-textItemBlur">
-                        {t('followers_following_label', 'Following')}
-                      </span>
+              <div className="mt-[6px] grid grid-cols-1 gap-x-[20px] gap-y-[6px] text-[13px] sm:grid-cols-2 xl:grid-cols-3">
+                {Number.isFinite(follower.followingCount) && (
+                  <span className="min-w-0">
+                    <span className="font-[700] text-newTextColor">
+                      {formatCompactCount(follower.followingCount!)}
+                    </span>{' '}
+                    <span className="text-textItemBlur">
+                      {t('followers_following_label', 'Following')}
                     </span>
-                  )}
-                  {Number.isFinite(follower.followersCount) && (
-                    <span className="min-w-0">
-                      <span className="font-[700] text-newTextColor">
-                        {formatCompactCount(follower.followersCount!)}
-                      </span>{' '}
-                      <span className="text-textItemBlur">
-                        {t('followers_followers_label', 'Followers')}
-                      </span>
+                  </span>
+                )}
+                {Number.isFinite(follower.followersCount) && (
+                  <span className="min-w-0">
+                    <span className="font-[700] text-newTextColor">
+                      {formatCompactCount(follower.followersCount!)}
+                    </span>{' '}
+                    <span className="text-textItemBlur">
+                      {t('followers_followers_label', 'Followers')}
                     </span>
-                  )}
-                  {accountCreatedAt && (
-                    <span className="min-w-0">
-                      <span className="font-[700] text-newTextColor">
-                        {t('followers_joined_label', 'Joined')}
-                      </span>{' '}
-                      <span className="text-textItemBlur">
-                        {accountCreatedAt}
-                      </span>
+                  </span>
+                )}
+                {accountCreatedAt && (
+                  <span className="min-w-0">
+                    <span className="font-[700] text-newTextColor">
+                      {t('followers_joined_label', 'Joined')}
+                    </span>{' '}
+                    <span className="text-textItemBlur">
+                      {accountCreatedAt}
                     </span>
-                  )}
-                  {conversionLabel && convertedAt && (
-                    <span
-                      className="min-w-0"
-                      data-testid="followers-conversion-recorded"
-                    >
-                      <span className="font-[700] text-newTextColor">
-                        {conversionLabel}
-                      </span>{' '}
-                      <span className="text-textItemBlur">{convertedAt}</span>
-                    </span>
-                  )}
-                </div>
-              )}
+                  </span>
+                )}
+                {conversionLabel && convertedAt && (
+                  <span
+                    className="min-w-0"
+                    data-testid="followers-conversion-recorded"
+                  >
+                    <span className="font-[700] text-newTextColor">
+                      {conversionLabel}
+                    </span>{' '}
+                    <span className="text-textItemBlur">{convertedAt}</span>
+                  </span>
+                )}
+              </div>
+            )}
             {follower.bio && (
               <p className="mt-[8px] whitespace-pre-wrap break-words text-[13px] text-newTextColor">
                 {follower.bio}
@@ -698,45 +698,45 @@ const FollowerDetailContent: FC<{
       {(follower.botGrade != null ||
         follower.isBot != null ||
         follower.botConfidence != null) && (
-          <section className="flex flex-col gap-[8px] text-[13px] text-textItemBlur">
-            <h4 className="text-[16px] font-[600] text-newTextColor">
-              {t('followers_bot_classification', 'Bot classification')}
-            </h4>
-            <div className="flex max-w-full flex-wrap items-center gap-x-[8px] gap-y-[4px]">
-              <span className="min-w-0 max-w-full break-words">
-                {follower.isBot === true
-                  ? t('followers_bot_status_likely', 'Likely bot')
-                  : follower.isBot === false
-                    ? t('followers_bot_status_unlikely', 'Likely human')
-                    : t('followers_bot_status_uncertain', 'Not enough data')}
-              </span>
-              {follower.botGrade != null && (
-                <>
-                  <span aria-hidden="true" className="shrink-0">
-                    ·
-                  </span>
-                  <span className="min-w-0 max-w-full break-words">
-                    {t('followers_bot_grade_label', 'Grade {{grade}} of 5', {
-                      grade: String(follower.botGrade),
-                    })}
-                  </span>
-                </>
-              )}
-              {follower.botConfidence != null && (
-                <>
-                  <span aria-hidden="true" className="shrink-0">
-                    ·
-                  </span>
-                  <span className="min-w-0 max-w-full break-words">
-                    {t('followers_bot_confidence_label', 'Confidence {{pct}}%', {
-                      pct: String(Math.round(follower.botConfidence * 100)),
-                    })}
-                  </span>
-                </>
-              )}
-            </div>
-          </section>
-        )}
+        <section className="flex flex-col gap-[8px] text-[13px] text-textItemBlur">
+          <h4 className="text-[16px] font-[600] text-newTextColor">
+            {t('followers_bot_classification', 'Bot classification')}
+          </h4>
+          <div className="flex max-w-full flex-wrap items-center gap-x-[8px] gap-y-[4px]">
+            <span className="min-w-0 max-w-full break-words">
+              {follower.isBot === true
+                ? t('followers_bot_status_likely', 'Likely bot')
+                : follower.isBot === false
+                ? t('followers_bot_status_unlikely', 'Likely human')
+                : t('followers_bot_status_uncertain', 'Not enough data')}
+            </span>
+            {follower.botGrade != null && (
+              <>
+                <span aria-hidden="true" className="shrink-0">
+                  ·
+                </span>
+                <span className="min-w-0 max-w-full break-words">
+                  {t('followers_bot_grade_label', 'Grade {{grade}} of 5', {
+                    grade: String(follower.botGrade),
+                  })}
+                </span>
+              </>
+            )}
+            {follower.botConfidence != null && (
+              <>
+                <span aria-hidden="true" className="shrink-0">
+                  ·
+                </span>
+                <span className="min-w-0 max-w-full break-words">
+                  {t('followers_bot_confidence_label', 'Confidence {{pct}}%', {
+                    pct: String(Math.round(follower.botConfidence * 100)),
+                  })}
+                </span>
+              </>
+            )}
+          </div>
+        </section>
+      )}
 
       <section className="flex min-w-0 flex-col gap-[12px]">
         <div className="grid grid-cols-1 gap-[16px] sm:grid-cols-3">
@@ -840,8 +840,8 @@ const FollowerDetailContent: FC<{
                     current.reciprocationScore - current.effortScore >= 0
                       ? `+${current.reciprocationScore - current.effortScore}`
                       : String(
-                        current.reciprocationScore - current.effortScore
-                      ),
+                          current.reciprocationScore - current.effortScore
+                        ),
                 }
               )}
             </p>

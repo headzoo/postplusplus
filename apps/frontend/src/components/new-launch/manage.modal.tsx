@@ -43,7 +43,10 @@ import { Button } from '@gitroom/react/form/button';
 import { useRouter } from 'next/navigation';
 import { useSWRConfig } from 'swr';
 import { useCalendar } from '@gitroom/frontend/components/launches/calendar.context';
-import { formatPipelineSlot } from '@gitroom/frontend/components/pipelines/pipeline.utils';
+import {
+  formatPipelineSlot,
+  shouldHideComposerScheduleControls,
+} from '@gitroom/frontend/components/pipelines/pipeline.utils';
 import {
   PIPELINES_KEY,
   usePipelineList,
@@ -261,8 +264,10 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
     rootPost?.state === 'QUEUE' ||
     (rootPost?.state === 'DRAFT' && !!rootPost?.publishDate);
   const isPublished = rootPost?.state === 'PUBLISHED';
-  const hideScheduleControls =
-    isEditingExistingPost && (isAlreadyScheduled || isPublished);
+  const hideScheduleControls = shouldHideComposerScheduleControls({
+    isEditingExistingPost,
+    isAlreadyScheduled,
+  });
   const publishedRoots = (
     existingData?.channels?.length
       ? existingData.channels.map((channel) => channel.posts?.[0])
@@ -1043,6 +1048,8 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                         ? t('post_now', 'Post Now')
                         : !existingData?.integration
                         ? t('add_to_calendar', 'Add to calendar')
+                        : isPublished
+                        ? t('schedule', 'Schedule')
                         : existingData?.posts?.[0]?.state === 'DRAFT'
                         ? t('schedule', 'Schedule')
                         : t('update', 'Update')}

@@ -56,6 +56,8 @@ const pipelinePostSelect = {
   content: true,
   delay: true,
   state: true,
+  publishDate: true,
+  releaseId: true,
   settings: true,
   image: true,
   intervalInDays: true,
@@ -892,7 +894,7 @@ export class PipelineRepository {
       const item = await tx.pipelineQueueItem.findFirst({
         where: {
           id: itemId,
-          status: 'QUEUED',
+          status: { in: ['QUEUED', 'PUBLISHED'] },
           deletedAt: null,
           pipeline: { organizationId: orgId, deletedAt: null },
         },
@@ -936,6 +938,45 @@ export class PipelineRepository {
           providerIdentifier: post.integration.providerIdentifier,
         })),
       };
+    });
+  }
+
+  async getSchedulableQueueItem(orgId: string, itemId: string) {
+    return this._queueItem.model.pipelineQueueItem.findFirst({
+      where: {
+        id: itemId,
+        status: { in: ['QUEUED', 'PUBLISHED'] },
+        deletedAt: null,
+        pipeline: { organizationId: orgId, deletedAt: null },
+      },
+      select: { id: true, status: true },
+    });
+  }
+
+  async detachPublishedQueueItem(orgId: string, itemId: string) {
+    return this.withSerializableRetry(async (tx) => {
+      const item = await tx.pipelineQueueItem.findFirst({
+        where: {
+          id: itemId,
+          status: 'PUBLISHED',
+          deletedAt: null,
+          pipeline: { organizationId: orgId, deletedAt: null },
+        },
+      });
+      if (!item) {
+        return null;
+      }
+      await tx.post.updateMany({
+        where: {
+          pipelineQueueItemId: item.id,
+          organizationId: orgId,
+        },
+        data: { pipelineQueueItemId: null },
+      });
+      return tx.pipelineQueueItem.update({
+        where: { id: item.id },
+        data: { status: 'REMOVED', deletedAt: new Date() },
+      });
     });
   }
 

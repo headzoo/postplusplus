@@ -10,7 +10,7 @@ jest.mock('@gitroom/nestjs-libraries/redis/redis.service', () => ({
   },
 }));
 jest.mock('@gitroom/nestjs-libraries/integrations/integration.manager', () => ({
-  IntegrationManager: class IntegrationManager { },
+  IntegrationManager: class IntegrationManager {},
 }));
 
 describe('IntegrationService followers', () => {

@@ -55,10 +55,11 @@ On the Pipeline detail **Queue**:
 
 - Drag or use ↑↓ to reorder; **Shuffle** randomizes order.
 - Menu: **Edit**, **Now**, **Schedule**, **Remove**, **Delete**, and **Move to…** (only Pipelines with the **same channel set**).
-- Statuses include queued, publishing, and failed; non-queued items appear under **Publishing and failed**.
+- Statuses include queued, publishing, published, and failed; non-queued items appear under **Publishing and failed**.
+- For **published** items, **Edit**, **Now**, and **Schedule** stay available so you can change content and republish at a new time. **Remove** and **Delete** stay unavailable for published history.
 - Cards show **Pipeline time:** for the projected slot.
 
-**Remove** takes the item out of the Pipeline but keeps posts as drafts. **Delete** soft-deletes the channel posts. **Publish now** detaches and publishes immediately.
+**Remove** takes the item out of the Pipeline but keeps posts as drafts. **Delete** soft-deletes the channel posts. **Publish now** detaches and publishes immediately. Scheduling or publishing a previously published item republishes it to the connected channels.
 
 ## Pipeline autopost
 

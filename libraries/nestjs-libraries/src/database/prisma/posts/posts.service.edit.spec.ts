@@ -77,7 +77,9 @@ const createService = ({
       getSocialIntegration: jest.fn(),
       ...integrationManager,
     } as any,
-    {} as any,
+    {
+      getIntegrationById: jest.fn().mockResolvedValue({}),
+    } as any,
     {} as any,
     {} as any,
     {} as any,
@@ -97,6 +99,9 @@ const createService = ({
         async ({ values }: { values: { content: string }[] }) =>
           values.map(({ content }) => content)
       ),
+    } as any,
+    {
+      detachPublishedQueueItem: jest.fn().mockResolvedValue(null),
     } as any
   );
 };
@@ -222,6 +227,91 @@ describe('PostsService published post edits', () => {
           }),
         ],
       })
+    );
+  });
+
+  it('detaches a published Pipeline queue item after a confirmed republish', async () => {
+    const detachPublishedQueueItem = jest.fn().mockResolvedValue({
+      id: 'pipeline-item',
+      status: 'REMOVED',
+    });
+    const start = jest.fn().mockResolvedValue(undefined);
+    const service = new PostsService(
+      {
+        getPipelineQueueItemForGroup: jest.fn().mockResolvedValue({
+          pipelineQueueItem: {
+            id: 'pipeline-item',
+            status: 'PUBLISHED',
+            deletedAt: null,
+          },
+        }),
+        getPostById: jest.fn().mockResolvedValue({
+          id: 'post-1',
+          state: 'PUBLISHED',
+          publishDate: new Date('2026-08-01T12:00:00.000Z'),
+          releaseId: 'live-1',
+          integration: { providerIdentifier: 'x' },
+        }),
+        createOrUpdatePost: jest.fn().mockResolvedValue({
+          posts: [{ id: 'post-2', state: 'QUEUE' }],
+        }),
+      } as any,
+      {
+        getSocialIntegration: jest.fn().mockReturnValue({
+          stripLinks: () => false,
+        }),
+      } as any,
+      {
+        getIntegrationById: jest.fn().mockResolvedValue({}),
+      } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {
+        client: {
+          getRawClient: () => ({
+            workflow: { start },
+          }),
+        },
+      } as any,
+      {} as any,
+      {
+        isLikerSyncPausedForIntegration: jest.fn().mockResolvedValue(false),
+      } as any,
+      {
+        prepareLeadCaptureLinks: jest.fn(
+          async ({ values }: { values: { content: string }[] }) =>
+            values.map(({ content }) => content)
+        ),
+      } as any,
+      { detachPublishedQueueItem } as any
+    );
+
+    await service.createPost(
+      'org',
+      {
+        type: 'schedule',
+        date: '2026-08-20T12:00:00',
+        shortLink: false,
+        republish: true,
+        tags: [],
+        posts: [
+          {
+            group: 'group-1',
+            integration: { id: 'int-1' },
+            settings: { __type: 'x' },
+            value: [
+              { id: 'post-1', content: 'Hello again', delay: 0, image: [] },
+            ],
+          },
+        ],
+      } as any,
+      'WEB'
+    );
+
+    expect(detachPublishedQueueItem).toHaveBeenCalledWith(
+      'org',
+      'pipeline-item'
     );
   });
 });
