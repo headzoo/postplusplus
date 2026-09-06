@@ -782,6 +782,84 @@ describe('FollowerDetailModal', () => {
     expect(screen.getByRole('button', { name: 'Add to list' })).toBeTruthy();
   });
 
+  it('removes a follower from a custom list after confirming the badge click', async () => {
+    decisionOpen.mockResolvedValue(true);
+    swrDetail = {
+      ...detail,
+      follower: {
+        ...detail.follower,
+        listIds: ['list-1'],
+      },
+    };
+
+    render(
+      <FollowerDetailModal integrationId="channel-1" externalId="follower-1" />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove VIP badge' }));
+
+    await waitFor(() => {
+      expect(decisionOpen).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Remove VIP badge?',
+          description: 'This follower will be removed from the VIP list.',
+        })
+      );
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/followers/channel-1/lists/list-1/members',
+        expect.objectContaining({
+          method: 'DELETE',
+          body: JSON.stringify({ externalId: 'follower-1' }),
+        })
+      );
+      expect(mutate).toHaveBeenCalled();
+    });
+  });
+
+  it('does not remove a follower from a list when confirmation is cancelled', async () => {
+    decisionOpen.mockResolvedValue(false);
+    swrDetail = {
+      ...detail,
+      follower: {
+        ...detail.follower,
+        listIds: ['list-1'],
+      },
+    };
+
+    render(
+      <FollowerDetailModal integrationId="channel-1" externalId="follower-1" />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove VIP badge' }));
+
+    await waitFor(() => {
+      expect(decisionOpen).toHaveBeenCalled();
+    });
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      '/followers/channel-1/lists/list-1/members',
+      expect.anything()
+    );
+  });
+
+  it('hides already assigned lists from the add menu in the modal', () => {
+    swrDetail = {
+      ...detail,
+      follower: {
+        ...detail.follower,
+        listIds: ['list-1'],
+      },
+    };
+
+    render(
+      <FollowerDetailModal integrationId="channel-1" externalId="follower-1" />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add to list' }));
+
+    expect(screen.queryByRole('menuitem', { name: 'VIP' })).toBeNull();
+    expect(screen.getByText('Already on all lists.')).toBeTruthy();
+  });
+
   it('dismisses a relationship triage badge from the modal header', async () => {
     triageDismissOpen.mockResolvedValue('remove');
 

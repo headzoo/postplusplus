@@ -432,13 +432,82 @@ describe('FollowerCard', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Add to list' }));
-    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'VIP' }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('menuitem', { name: 'VIP' }));
+    });
 
     expect(onOpen).not.toHaveBeenCalled();
     expect(onToggleList).toHaveBeenCalledWith(
       { id: 'list-1', name: 'VIP', createdAt: '', updatedAt: '' },
       false
     );
+  });
+
+  it('hides already assigned lists from the add menu', () => {
+    render(
+      <FollowerCard
+        follower={{ ...baseFollower, listIds: ['list-1'] }}
+        lists={[
+          { id: 'list-1', name: 'VIP', createdAt: '', updatedAt: '' },
+          { id: 'list-2', name: 'Partners', createdAt: '', updatedAt: '' },
+        ]}
+        onToggleList={jest.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add to list' }));
+
+    expect(screen.queryByRole('menuitem', { name: 'VIP' })).toBeNull();
+    expect(screen.getByRole('menuitem', { name: 'Partners' })).toBeTruthy();
+  });
+
+  it('confirms before removing a follower from a custom list badge', async () => {
+    const onOpen = jest.fn();
+    const onToggleList = jest.fn();
+    decisionOpen.mockResolvedValue(true);
+    render(
+      <FollowerCard
+        follower={{ ...baseFollower, listIds: ['list-1'] }}
+        lists={[{ id: 'list-1', name: 'VIP', createdAt: '', updatedAt: '' }]}
+        onToggleList={onToggleList}
+        onOpen={onOpen}
+      />
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Remove VIP badge' }));
+    });
+
+    expect(onOpen).not.toHaveBeenCalled();
+    expect(decisionOpen).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Remove VIP badge?',
+        description: 'This follower will be removed from the VIP list.',
+      })
+    );
+    expect(onToggleList).toHaveBeenCalledWith(
+      { id: 'list-1', name: 'VIP', createdAt: '', updatedAt: '' },
+      true
+    );
+  });
+
+  it('does not remove a follower from a list when confirmation is cancelled', async () => {
+    const onToggleList = jest.fn();
+    decisionOpen.mockResolvedValue(false);
+    render(
+      <FollowerCard
+        follower={{ ...baseFollower, listIds: ['list-1'] }}
+        lists={[{ id: 'list-1', name: 'VIP', createdAt: '', updatedAt: '' }]}
+        onToggleList={onToggleList}
+      />
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Remove VIP badge' }));
+    });
+
+    expect(decisionOpen).toHaveBeenCalled();
+    expect(onToggleList).not.toHaveBeenCalled();
   });
 
   it('confirms before ignoring a follower and does not open the card', async () => {

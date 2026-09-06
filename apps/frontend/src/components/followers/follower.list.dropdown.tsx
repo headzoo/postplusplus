@@ -26,6 +26,7 @@ export const FollowerListDropdown: FC<{
   const [open, setOpen] = useState(false);
   const ref = useClickOutside(() => setOpen(false));
   const assigned = new Set(assignedListIds);
+  const availableLists = lists.filter((list) => !assigned.has(list.id));
 
   const stopCardAction = (event: MouseEvent | KeyboardEvent) => {
     event.stopPropagation();
@@ -106,29 +107,33 @@ export const FollowerListDropdown: FC<{
               />
             </>
           )}
-          {lists.length ? (
-            lists.map((list) => {
-              const isAssigned = assigned.has(list.id);
-              return (
-                <button
-                  key={list.id}
-                  type="button"
-                  role="menuitemcheckbox"
-                  aria-checked={isAssigned}
-                  className="flex w-full items-center justify-between gap-[8px] rounded-[6px] px-[8px] py-[6px] text-start text-[13px] text-newTextColor hover:bg-newTableHeader"
-                  onClick={async (event) => {
-                    event.stopPropagation();
-                    await onToggle(list, isAssigned);
-                  }}
-                >
-                  <span className="truncate">{list.name}</span>
-                  {isAssigned && <CheckmarkIcon size={14} />}
-                </button>
-              );
-            })
+          {availableLists.length ? (
+            availableLists.map((list) => (
+              <button
+                key={list.id}
+                type="button"
+                role="menuitem"
+                className="flex w-full items-center justify-between gap-[8px] rounded-[6px] px-[8px] py-[6px] text-start text-[13px] text-newTextColor hover:bg-newTableHeader"
+                onClick={async (event) => {
+                  event.stopPropagation();
+                  await onToggle(list, false);
+                  setOpen(false);
+                }}
+              >
+                <span className="truncate">{list.name}</span>
+              </button>
+            ))
           ) : (
             <p className="px-[8px] py-[6px] text-[13px] text-textItemBlur">
-              {t('followers_lists_empty_menu', 'Create a custom list first.')}
+              {lists.length
+                ? t(
+                    'followers_lists_all_assigned_menu',
+                    'Already on all lists.'
+                  )
+                : t(
+                    'followers_lists_empty_menu',
+                    'Create a custom list first.'
+                  )}
             </p>
           )}
         </div>

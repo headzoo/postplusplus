@@ -74,7 +74,7 @@ Cultivate highlights warm relationships that need a nudge. You’ll see a reason
 
 1. Click **+** to create a list (**List name** → **Okay**).
 2. Select the list chip to view its members.
-3. Use **+ Add** to paste a profile URL into the list, or use a card’s **+** menu to toggle membership.
+3. Use **+ Add** to paste a profile URL into the list, or use a card’s **+** menu to add someone to a list. Click a list badge on a card (or in follower details) to remove them from that list—you'll get a confirmation first.
 
 Empty list: **No followers in this list**. Opening a custom list clears triage/audience filters.
 

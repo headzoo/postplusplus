@@ -7,6 +7,7 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import ImageWithFallback from '@gitroom/react/helpers/image.with.fallback';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
+import { useDecisionModal } from '@gitroom/frontend/components/layout/new-modal';
 import { useTriageDismissModal } from '@gitroom/frontend/components/followers/triage.dismiss.modal';
 import { useLeadDismissModal } from '@gitroom/frontend/components/followers/lead.dismiss.modal';
 import {
@@ -218,6 +219,34 @@ export const FollowerIdentityBadges: FC<{
   onToggleIgnored,
 }) => {
   const t = useT();
+  const decision = useDecisionModal();
+
+  const handleRemoveFromList = useCallback(
+    async (event: MouseEvent<HTMLButtonElement>, list: FollowerList) => {
+      event.stopPropagation();
+      event.preventDefault();
+      if (!onToggleList) {
+        return;
+      }
+      const approved = await decision.open({
+        title: t('followers_triage_remove_title', 'Remove {{label}} badge?', {
+          label: list.name,
+        }),
+        description: t(
+          'followers_triage_remove_description',
+          'This follower will be removed from the {{label}} list.',
+          { label: list.name }
+        ),
+        approveLabel: t('yes', 'Yes'),
+        cancelLabel: t('cancel', 'Cancel'),
+      });
+      if (!approved) {
+        return;
+      }
+      await onToggleList(list, true);
+    },
+    [decision, onToggleList, t]
+  );
 
   return (
     <>
@@ -288,17 +317,36 @@ export const FollowerIdentityBadges: FC<{
         const listColor =
           (list.color as FollowerSegmentColor | null | undefined) ?? 'neutral';
         const colorClasses = FOLLOWER_SEGMENT_COLOR_CLASSES[listColor];
+        const className = clsx(
+          'inline-flex w-fit shrink-0 items-center rounded-full border px-[8px] py-[2px] text-[11px] font-[600]',
+          colorClasses.border,
+          colorClasses.text,
+          onToggleList && 'cursor-pointer hover:opacity-80'
+        );
+        if (!onToggleList) {
+          return (
+            <span key={list.id} className={className}>
+              {list.name}
+            </span>
+          );
+        }
         return (
-          <span
+          <button
             key={list.id}
-            className={clsx(
-              'inline-flex w-fit shrink-0 items-center rounded-full border px-[8px] py-[2px] text-[11px] font-[600]',
-              colorClasses.border,
-              colorClasses.text
+            type="button"
+            className={className}
+            onClick={(event) => handleRemoveFromList(event, list)}
+            onKeyDown={(event) => event.stopPropagation()}
+            aria-label={t(
+              'followers_triage_remove_aria',
+              'Remove {{label}} badge',
+              {
+                label: list.name,
+              }
             )}
           >
             {list.name}
-          </span>
+          </button>
         );
       })}
       {(onToggleList || onToggleIgnored) && (
