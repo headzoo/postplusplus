@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  CopyPipelineQueueItemDto,
   CreatePipelineDto,
   DeletePipelineScheduleSlotDto,
   GetPipelineScheduleDto,
@@ -486,6 +487,44 @@ export class PipelineService {
         'Queued Pipeline item or destination not found'
       );
     return item;
+  }
+
+  async copyItem(
+    orgId: string,
+    itemId: string,
+    body: CopyPipelineQueueItemDto
+  ) {
+    const result = await this._pipelineRepository.copyItem(
+      orgId,
+      itemId,
+      body.destinationPipelineId
+    );
+    if (result === 'same-pipeline') {
+      throw new BadRequestException(
+        'Choose a different Pipeline as the copy destination'
+      );
+    }
+    if (result === false) {
+      throw new ConflictException(
+        'The destination Pipeline must have exactly the same integrations'
+      );
+    }
+    if (!result) {
+      throw new NotFoundException('Pipeline item or destination not found');
+    }
+    const slots = result.active
+      ? getUpcomingPipelineSlots(
+          result.scheduleSlots,
+          result.timezone,
+          new Date(),
+          result.queuedCount
+        )
+      : [];
+    const projectedFor = slots[result.queuedCount - 1];
+    return {
+      id: result.id,
+      projectedFor: projectedFor ? projectedFor.toISOString() : undefined,
+    };
   }
 
   async detachItem(orgId: string, itemId: string) {

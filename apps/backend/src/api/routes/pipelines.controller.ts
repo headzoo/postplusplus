@@ -15,6 +15,7 @@ import { Organization } from '@prisma/client';
 import { GetOrgFromRequest } from '@gitroom/nestjs-libraries/user/org.from.request';
 import { PipelineService } from '@gitroom/nestjs-libraries/database/prisma/pipelines/pipeline.service';
 import {
+  CopyPipelineQueueItemDto,
   CreatePipelineDto,
   DeletePipelineDto,
   DeletePipelineScheduleSlotDto,
@@ -86,6 +87,15 @@ export class PipelinesController {
     @Body() body: MovePipelineQueueItemDto
   ) {
     return this._pipelineService.moveItem(org.id, itemId, body);
+  }
+
+  @Post('/items/:itemId/copy')
+  copyItem(
+    @GetOrgFromRequest() org: Organization,
+    @Param('itemId') itemId: string,
+    @Body() body: CopyPipelineQueueItemDto
+  ) {
+    return this._pipelineService.copyItem(org.id, itemId, body);
   }
 
   @Post('/items/:itemId/action')

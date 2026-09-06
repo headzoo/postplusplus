@@ -9,6 +9,7 @@ import {
   PrismaTransaction,
 } from '@gitroom/nestjs-libraries/database/prisma/prisma.service';
 import { parseSkillFilename } from '@gitroom/nestjs-libraries/upload/context-document.upload.validation';
+import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
 
 const QUEUE_POSITION_INCREMENT = 1024;
 const TRANSACTION_ATTEMPTS = 3;
@@ -832,6 +833,82 @@ export class PipelineRepository {
     });
   }
 
+  async copyItem(
+    orgId: string,
+    itemId: string,
+    destinationPipelineId: string
+  ): Promise<
+    | {
+        id: string;
+        queuedCount: number;
+        timezone: string;
+        active: boolean;
+        scheduleSlots: { dayOfWeek: number; minuteOfDay: number }[];
+      }
+    | null
+    | false
+    | 'same-pipeline'
+  > {
+    return this.withSerializableRetry(async (tx) => {
+      const item = await tx.pipelineQueueItem.findFirst({
+        where: {
+          id: itemId,
+          status: { in: ['QUEUED', 'PUBLISHED'] },
+          deletedAt: null,
+          pipeline: { organizationId: orgId, deletedAt: null },
+        },
+        include: {
+          posts: {
+            where: { parentPostId: null, deletedAt: null },
+            select: { integrationId: true },
+          },
+        },
+      });
+      if (!item) {
+        return null;
+      }
+      if (item.pipelineId === destinationPipelineId) {
+        return 'same-pipeline';
+      }
+      const destination = await tx.pipeline.findFirst({
+        where: {
+          id: destinationPipelineId,
+          organizationId: orgId,
+          deletedAt: null,
+        },
+        include: {
+          integrations: { select: { integrationId: true } },
+          scheduleSlots: {
+            orderBy: [{ dayOfWeek: 'asc' }, { minuteOfDay: 'asc' }],
+          },
+        },
+      });
+      if (!destination) {
+        return null;
+      }
+      const itemChannels = item.posts
+        .map((post: any) => post.integrationId)
+        .sort();
+      const destinationChannels = destination.integrations
+        .map((entry: any) => entry.integrationId)
+        .sort();
+      if (itemChannels.join(',') !== destinationChannels.join(',')) {
+        return false;
+      }
+      return this.cloneQueueItemPostsToPipeline(
+        tx,
+        orgId,
+        item.id,
+        destination.id,
+        {
+          timezone: destination.timezone,
+          active: destination.active,
+          scheduleSlots: destination.scheduleSlots,
+        }
+      );
+    });
+  }
+
   async detachItem(orgId: string, itemId: string) {
     return this.withSerializableRetry(async (tx) => {
       const item = await tx.pipelineQueueItem.findFirst({
@@ -978,6 +1055,16 @@ export class PipelineRepository {
         return null;
       }
 
+      if (item.status === 'PUBLISHED') {
+        return this.cloneQueueItemPostsToPipeline(
+          tx,
+          orgId,
+          item.id,
+          item.pipelineId,
+          item.pipeline
+        );
+      }
+
       const lastQueued = await tx.pipelineQueueItem.findFirst({
         where: {
           pipelineId: item.pipelineId,
@@ -991,38 +1078,14 @@ export class PipelineRepository {
       const position = await this.positionFor(
         tx,
         item.pipelineId,
-        item.status === 'QUEUED' ? itemId : undefined,
+        itemId,
         undefined,
         lastQueued?.id
       );
 
-      if (item.status === 'PUBLISHED') {
-        await tx.post.updateMany({
-          where: {
-            pipelineQueueItemId: item.id,
-            organizationId: orgId,
-            deletedAt: null,
-          },
-          data: {
-            state: 'DRAFT',
-            publishDate: new Date(),
-            releaseId: null,
-            releaseURL: null,
-            error: null,
-          },
-        });
-      }
-
       await tx.pipelineQueueItem.update({
         where: { id: item.id },
-        data: {
-          status: PipelineQueueItemStatus.QUEUED,
-          position,
-          publishedAt: null,
-          failedAt: null,
-          error: null,
-          claimedAt: null,
-        },
+        data: { position },
       });
 
       const queuedCount = await tx.pipelineQueueItem.count({
@@ -1085,6 +1148,122 @@ export class PipelineRepository {
         },
       },
     });
+  }
+
+  private async cloneQueueItemPostsToPipeline(
+    tx: any,
+    orgId: string,
+    sourceItemId: string,
+    destinationPipelineId: string,
+    destinationPipeline: {
+      timezone: string;
+      active: boolean;
+      scheduleSlots: { dayOfWeek: number; minuteOfDay: number }[];
+    }
+  ) {
+    const sourcePosts = await tx.post.findMany({
+      where: {
+        pipelineQueueItemId: sourceItemId,
+        organizationId: orgId,
+        deletedAt: null,
+      },
+      include: {
+        tags: {
+          select: { tagId: true },
+        },
+      },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    });
+    const roots = sourcePosts.filter((post: any) => !post.parentPostId);
+    if (!roots.length) {
+      return null;
+    }
+
+    const lastQueued = await tx.pipelineQueueItem.findFirst({
+      where: {
+        pipelineId: destinationPipelineId,
+        status: PipelineQueueItemStatus.QUEUED,
+        deletedAt: null,
+      },
+      orderBy: [{ position: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }],
+      select: { id: true },
+    });
+    const position = await this.positionFor(
+      tx,
+      destinationPipelineId,
+      undefined,
+      undefined,
+      lastQueued?.id
+    );
+    const newGroup = makeId(10);
+    const queueItem = await tx.pipelineQueueItem.create({
+      data: {
+        pipelineId: destinationPipelineId,
+        group: newGroup,
+        position,
+        status: PipelineQueueItemStatus.QUEUED,
+      },
+    });
+
+    for (const root of roots) {
+      const thread = this.collectPostThread(sourcePosts, root.id);
+      let parentPostId: string | undefined;
+      for (const [index, source] of thread.entries()) {
+        const created = await tx.post.create({
+          data: {
+            organizationId: orgId,
+            integrationId: source.integrationId,
+            content: source.content,
+            delay: source.delay,
+            group: newGroup,
+            state: 'DRAFT',
+            publishDate: new Date(),
+            settings: source.settings,
+            image: source.image,
+            intervalInDays: source.intervalInDays,
+            creationMethod: source.creationMethod,
+            pipelineQueueItemId: queueItem.id,
+            ...(parentPostId ? { parentPostId } : {}),
+          },
+        });
+        parentPostId = created.id;
+        if (index === 0 && source.tags?.length) {
+          await tx.tagsPosts.createMany({
+            data: source.tags.map((entry: any) => ({
+              postId: created.id,
+              tagId: entry.tagId,
+            })),
+            skipDuplicates: true,
+          });
+        }
+      }
+    }
+
+    const queuedCount = await tx.pipelineQueueItem.count({
+      where: {
+        pipelineId: destinationPipelineId,
+        status: PipelineQueueItemStatus.QUEUED,
+        deletedAt: null,
+      },
+    });
+
+    return {
+      id: queueItem.id,
+      queuedCount,
+      timezone: destinationPipeline.timezone,
+      active: destinationPipeline.active,
+      scheduleSlots: destinationPipeline.scheduleSlots,
+    };
+  }
+
+  private collectPostThread(posts: any[], rootId: string) {
+    const result: any[] = [];
+    let current = posts.find((post) => post.id === rootId);
+    while (current) {
+      result.push(current);
+      current = posts.find((post) => post.parentPostId === current.id);
+    }
+    return result;
   }
 
   private async positionFor(

@@ -54,12 +54,13 @@ There is no “add blank item” button on the Queue panel itself; content enter
 On the Pipeline detail **Queue**:
 
 - Drag or use ↑↓ to reorder; **Shuffle** randomizes order.
-- Menu: **Edit**, **Now**, **Schedule**, **Remove**, **Delete**, and **Move to…** (only Pipelines with the **same channel set**).
+- Menu: **Edit**, **Now**, **Schedule**, **Copy to**, **Remove**, **Delete**, and **Move to…** (only Pipelines with the **same channel set**).
+- **Copy to** opens a modal to pick another Pipeline with the same channels. The post is **cloned** into that Pipeline’s queue (end of queue → next projected slot). The original stays put.
 - Statuses include queued, publishing, published, and failed; non-queued items appear under **Publishing and failed**.
-- For **published** items, **Edit**, **Now**, and **Schedule** stay available. **Schedule** moves the item to the **end of the queue** for the next projected Pipeline slot (it will publish again when that slot runs). **Now** publishes immediately and removes the item from Pipeline history. **Remove** and **Delete** stay unavailable for published history.
+- For **published** items, **Edit**, **Now**, and **Schedule** stay available. **Schedule** clones the content into a new queue entry at the **end of the queue** for the next projected Pipeline slot; the original published item stays in Pipeline history. **Now** publishes immediately and removes the item from Pipeline history. **Remove** and **Delete** stay unavailable for published history.
 - Cards show **Pipeline time:** for the projected slot.
 
-**Remove** takes the item out of the Pipeline but keeps posts as drafts. **Delete** soft-deletes the channel posts. **Publish now** detaches and publishes immediately. Drag a projected item onto the calendar to pin it to an exact time (detaches from the Pipeline). Scheduling a published item back into the queue republishes it on the next available recurring slot.
+**Remove** takes the item out of the Pipeline but keeps posts as drafts. **Delete** soft-deletes the channel posts. **Publish now** detaches and publishes immediately. Drag a projected item onto the calendar to pin it to an exact time (detaches from the Pipeline). Scheduling a published item clones it back into the queue for the next available recurring slot while keeping the published history entry.
 
 ## Pipeline autopost
 

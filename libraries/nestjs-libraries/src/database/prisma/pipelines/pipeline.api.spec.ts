@@ -1451,6 +1451,81 @@ describe('Pipeline API boundaries', () => {
     expect(repository.queueItemAtEnd).toHaveBeenCalledWith('org', 'item');
   });
 
+  it('copies a Pipeline item into another Pipeline queue', async () => {
+    const repository = {
+      copyItem: jest.fn().mockResolvedValue({
+        id: 'copied-item',
+        queuedCount: 1,
+        timezone: 'UTC',
+        active: true,
+        scheduleSlots: [{ dayOfWeek: 1, minuteOfDay: 12 * 60 }],
+      }),
+    };
+    const service = new PipelineService(repository as any, {} as any);
+
+    await expect(
+      service.copyItem('org', 'item', {
+        destinationPipelineId: 'destination',
+      })
+    ).resolves.toEqual(
+      expect.objectContaining({
+        id: 'copied-item',
+        projectedFor: expect.any(String),
+      })
+    );
+    expect(repository.copyItem).toHaveBeenCalledWith(
+      'org',
+      'item',
+      'destination'
+    );
+  });
+
+  it('rejects copying a Pipeline item into the same Pipeline', async () => {
+    const repository = {
+      copyItem: jest.fn().mockResolvedValue('same-pipeline'),
+    };
+    const service = new PipelineService(repository as any, {} as any);
+
+    await expect(
+      service.copyItem('org', 'item', {
+        destinationPipelineId: 'same',
+      })
+    ).rejects.toMatchObject({
+      message: 'Choose a different Pipeline as the copy destination',
+    });
+  });
+
+  it('rejects copying a Pipeline item into a Pipeline with different channels', async () => {
+    const repository = {
+      copyItem: jest.fn().mockResolvedValue(false),
+    };
+    const service = new PipelineService(repository as any, {} as any);
+
+    await expect(
+      service.copyItem('org', 'item', {
+        destinationPipelineId: 'destination',
+      })
+    ).rejects.toMatchObject({
+      message:
+        'The destination Pipeline must have exactly the same integrations',
+    });
+  });
+
+  it('rejects copying a missing Pipeline item', async () => {
+    const repository = {
+      copyItem: jest.fn().mockResolvedValue(null),
+    };
+    const service = new PipelineService(repository as any, {} as any);
+
+    await expect(
+      service.copyItem('org', 'item', {
+        destinationPipelineId: 'destination',
+      })
+    ).rejects.toMatchObject({
+      message: 'Pipeline item or destination not found',
+    });
+  });
+
   it('rejects scheduling Pipeline items that are not queued or published', async () => {
     const repository = {
       getSchedulableQueueItem: jest.fn().mockResolvedValue(null),
@@ -1676,13 +1751,44 @@ describe('Pipeline API boundaries', () => {
     );
   });
 
-  it('requeues a published Pipeline item at the end and resets posts to draft', async () => {
-    const postUpdateMany = jest.fn().mockResolvedValue({ count: 1 });
-    const queueItemUpdate = jest.fn().mockResolvedValue({
-      id: 'item',
+  it('clones a published Pipeline item at the end and leaves the original published', async () => {
+    const sourcePosts = [
+      {
+        id: 'root-x',
+        parentPostId: null,
+        integrationId: 'channel-x',
+        content: 'Hello',
+        delay: 0,
+        settings: '{}',
+        image: '[]',
+        intervalInDays: null,
+        creationMethod: 'API',
+        tags: [{ tagId: 'tag-1' }],
+      },
+      {
+        id: 'child-x',
+        parentPostId: 'root-x',
+        integrationId: 'channel-x',
+        content: 'Reply',
+        delay: 30,
+        settings: '{}',
+        image: '[]',
+        intervalInDays: null,
+        creationMethod: 'API',
+        tags: [],
+      },
+    ];
+    const postCreate = jest
+      .fn()
+      .mockResolvedValueOnce({ id: 'new-root' })
+      .mockResolvedValueOnce({ id: 'new-child' });
+    const tagsPostsCreateMany = jest.fn().mockResolvedValue({ count: 1 });
+    const postFindMany = jest.fn().mockResolvedValue(sourcePosts);
+    const queueItemCreate = jest.fn().mockResolvedValue({
+      id: 'new-item',
       status: 'QUEUED',
-      position: 2048,
     });
+    const queueItemUpdate = jest.fn();
     const transaction = {
       model: {
         $transaction: jest.fn(async (callback: any) =>
@@ -1701,13 +1807,20 @@ describe('Pipeline API boundaries', () => {
                   },
                 })
                 .mockResolvedValueOnce({ id: 'queued-last' }),
+              create: queueItemCreate,
               update: queueItemUpdate,
               findMany: jest
                 .fn()
                 .mockResolvedValue([{ id: 'queued-last', position: 1024 }]),
               count: jest.fn().mockResolvedValue(2),
             },
-            post: { updateMany: postUpdateMany },
+            post: {
+              findMany: postFindMany,
+              create: postCreate,
+            },
+            tagsPosts: {
+              createMany: tagsPostsCreateMany,
+            },
           })
         ),
       },
@@ -1722,35 +1835,213 @@ describe('Pipeline API boundaries', () => {
     );
 
     await expect(repository.queueItemAtEnd('org', 'item')).resolves.toEqual({
-      id: 'item',
+      id: 'new-item',
       queuedCount: 2,
       timezone: 'UTC',
       active: true,
       scheduleSlots: [{ dayOfWeek: 1, minuteOfDay: 60 }],
     });
-    expect(postUpdateMany).toHaveBeenCalledWith({
-      where: {
-        pipelineQueueItemId: 'item',
-        organizationId: 'org',
-        deletedAt: null,
+    expect(postFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          pipelineQueueItemId: 'item',
+          organizationId: 'org',
+        }),
+      })
+    );
+    expect(queueItemCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          pipelineId: 'pipeline',
+          status: 'QUEUED',
+        }),
+      })
+    );
+    expect(postCreate).toHaveBeenCalledTimes(2);
+    expect(tagsPostsCreateMany).toHaveBeenCalledWith({
+      data: [{ postId: 'new-root', tagId: 'tag-1' }],
+      skipDuplicates: true,
+    });
+    expect(queueItemUpdate).not.toHaveBeenCalled();
+  });
+
+  it('copies a queued Pipeline item into another Pipeline without mutating the source', async () => {
+    const sourcePosts = [
+      {
+        id: 'root-x',
+        parentPostId: null,
+        integrationId: 'channel-x',
+        content: 'Hello',
+        delay: 0,
+        settings: '{}',
+        image: '[]',
+        intervalInDays: null,
+        creationMethod: 'API',
+        tags: [{ tagId: 'tag-1' }],
       },
-      data: expect.objectContaining({
-        state: 'DRAFT',
-        releaseId: null,
-        releaseURL: null,
-        error: null,
-      }),
+    ];
+    const postCreate = jest.fn().mockResolvedValue({ id: 'new-root' });
+    const tagsPostsCreateMany = jest.fn().mockResolvedValue({ count: 1 });
+    const postFindMany = jest.fn().mockResolvedValue(sourcePosts);
+    const queueItemCreate = jest.fn().mockResolvedValue({
+      id: 'copied-item',
+      status: 'QUEUED',
     });
-    expect(queueItemUpdate).toHaveBeenCalledWith({
-      where: { id: 'item' },
-      data: expect.objectContaining({
-        status: 'QUEUED',
-        publishedAt: null,
-        failedAt: null,
-        error: null,
-        claimedAt: null,
-      }),
+    const queueItemUpdate = jest.fn();
+    const pipelineFindFirst = jest.fn().mockResolvedValue({
+      id: 'destination',
+      timezone: 'America/New_York',
+      active: true,
+      integrations: [{ integrationId: 'channel-x' }],
+      scheduleSlots: [{ dayOfWeek: 2, minuteOfDay: 120 }],
     });
+    const transaction = {
+      model: {
+        $transaction: jest.fn(async (callback: any) =>
+          callback({
+            pipelineQueueItem: {
+              findFirst: jest
+                .fn()
+                .mockResolvedValueOnce({
+                  id: 'item',
+                  pipelineId: 'source',
+                  status: 'QUEUED',
+                  posts: [{ integrationId: 'channel-x' }],
+                })
+                .mockResolvedValueOnce({ id: 'destination-last' }),
+              create: queueItemCreate,
+              update: queueItemUpdate,
+              findMany: jest
+                .fn()
+                .mockResolvedValue([
+                  { id: 'destination-last', position: 1024 },
+                ]),
+              count: jest.fn().mockResolvedValue(3),
+            },
+            pipeline: {
+              findFirst: pipelineFindFirst,
+            },
+            post: {
+              findMany: postFindMany,
+              create: postCreate,
+            },
+            tagsPosts: {
+              createMany: tagsPostsCreateMany,
+            },
+          })
+        ),
+      },
+    };
+    const repository = new PipelineRepository(
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      transaction as any
+    );
+
+    await expect(
+      repository.copyItem('org', 'item', 'destination')
+    ).resolves.toEqual({
+      id: 'copied-item',
+      queuedCount: 3,
+      timezone: 'America/New_York',
+      active: true,
+      scheduleSlots: [{ dayOfWeek: 2, minuteOfDay: 120 }],
+    });
+    expect(pipelineFindFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: 'destination',
+          organizationId: 'org',
+        }),
+      })
+    );
+    expect(queueItemCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          pipelineId: 'destination',
+          status: 'QUEUED',
+        }),
+      })
+    );
+    expect(postCreate).toHaveBeenCalledTimes(1);
+    expect(queueItemUpdate).not.toHaveBeenCalled();
+  });
+
+  it('rejects copying a Pipeline item into the same Pipeline', async () => {
+    const transaction = {
+      model: {
+        $transaction: jest.fn(async (callback: any) =>
+          callback({
+            pipelineQueueItem: {
+              findFirst: jest.fn().mockResolvedValue({
+                id: 'item',
+                pipelineId: 'same',
+                status: 'PUBLISHED',
+                posts: [{ integrationId: 'channel-x' }],
+              }),
+            },
+            pipeline: {
+              findFirst: jest.fn(),
+            },
+          })
+        ),
+      },
+    };
+    const repository = new PipelineRepository(
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      transaction as any
+    );
+
+    await expect(repository.copyItem('org', 'item', 'same')).resolves.toBe(
+      'same-pipeline'
+    );
+  });
+
+  it('rejects copying a Pipeline item into a Pipeline with different channels', async () => {
+    const transaction = {
+      model: {
+        $transaction: jest.fn(async (callback: any) =>
+          callback({
+            pipelineQueueItem: {
+              findFirst: jest.fn().mockResolvedValue({
+                id: 'item',
+                pipelineId: 'source',
+                status: 'QUEUED',
+                posts: [{ integrationId: 'channel-x' }],
+              }),
+            },
+            pipeline: {
+              findFirst: jest.fn().mockResolvedValue({
+                id: 'destination',
+                timezone: 'UTC',
+                active: true,
+                integrations: [{ integrationId: 'channel-y' }],
+                scheduleSlots: [],
+              }),
+            },
+          })
+        ),
+      },
+    };
+    const repository = new PipelineRepository(
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      transaction as any
+    );
+
+    await expect(
+      repository.copyItem('org', 'item', 'destination')
+    ).resolves.toBe(false);
   });
 
   it('reports workflow-start failures after scheduling posts', async () => {

@@ -168,6 +168,12 @@ export class MovePipelineQueueItemDto {
   afterItemId?: string;
 }
 
+export class CopyPipelineQueueItemDto {
+  @IsString()
+  @IsDefined()
+  destinationPipelineId: string;
+}
+
 export class DeletePipelineDto {
   @IsBoolean()
   @IsDefined()

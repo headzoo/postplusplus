@@ -329,6 +329,7 @@ export const PipelineDetailView: FC<{ pipelineId: string }> = ({
         pipeline={data}
         pipelines={pipelines || []}
         mutate={mutate}
+        mutateList={mutateList}
       />
 
       <PipelineContextDocumentsPanel
