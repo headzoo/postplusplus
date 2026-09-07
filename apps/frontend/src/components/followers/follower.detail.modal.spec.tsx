@@ -149,19 +149,19 @@ const detail: FollowerMemberDetail = {
   relationship: {
     windowDays: 30,
     cadenceDays: 3,
-    formulaVersion: 2,
+    formulaVersion: 5,
     current: {
       snapshotAt: '2026-02-01T00:00:00.000Z',
       windowStartedAt: '2026-01-02T00:00:00.000Z',
       effortScore: 10,
       reciprocationScore: 5,
       reciprocity: 0.5,
-      grade: 3.5,
-      adjustedGrade: 3.5,
+      grade: 3,
+      adjustedGrade: 3,
       effortStars: 2,
       reciprocationStars: 1.5,
       triage: 'over_invested',
-      formulaVersion: 2,
+      formulaVersion: 5,
     },
     history: [
       {
@@ -175,7 +175,7 @@ const detail: FollowerMemberDetail = {
         effortStars: 1,
         reciprocationStars: 1,
         triage: 'quiet',
-        formulaVersion: 2,
+        formulaVersion: 5,
       },
       {
         snapshotAt: '2026-02-01T00:00:00.000Z',
@@ -183,12 +183,12 @@ const detail: FollowerMemberDetail = {
         effortScore: 10,
         reciprocationScore: 5,
         reciprocity: 0.5,
-        grade: 3.5,
-        adjustedGrade: 3.5,
+        grade: 3,
+        adjustedGrade: 3,
         effortStars: 2,
         reciprocationStars: 1.5,
         triage: 'over_invested',
-        formulaVersion: 2,
+        formulaVersion: 5,
       },
     ],
   },
@@ -397,18 +397,53 @@ describe('FollowerDetailModal', () => {
     expect(screen.getByText('Your effort')).toBeTruthy();
     expect(screen.getByText('Your grade')).toBeTruthy();
     expect(
-      screen.getByRole('heading', { name: 'Relationship grade' })
+      screen.getByRole('heading', { name: 'Relationship health grade' })
     ).toBeTruthy();
     expect(screen.queryByText('My grade')).toBeNull();
     expect(screen.getByRole('img', { name: '1.5 out of 5' })).toBeTruthy();
     expect(screen.getByRole('img', { name: '2 out of 5' })).toBeTruthy();
     expect(screen.getByRole('radio', { name: '4.5 out of 5' })).toBeTruthy();
     expect(screen.getByText('Reciprocity: 50%')).toBeTruthy();
-    expect(screen.getByText('E: 10 · R: 5 · Gap: -5')).toBeTruthy();
+    expect(
+      screen.getByText('E (Effort): 10 · R (Reciprocation): 5 · Gap: -5')
+    ).toBeTruthy();
     expect(screen.getByText('Costly')).toBeTruthy();
     expect(screen.queryByText(/out of 5/i)).toBeNull();
     expect(screen.queryByText('Your effort (E): 10')).toBeNull();
     expect(screen.queryByText('Their reciprocation (R): 5')).toBeNull();
+  });
+
+  it('marks a legacy priority grade while relationship health is pending', () => {
+    swrDetail = {
+      ...detail,
+      relationship: {
+        ...detail.relationship,
+        current: {
+          ...detail.relationship.current!,
+          formulaVersion: 4,
+          grade: 5,
+          adjustedGrade: 5,
+        },
+        history: detail.relationship.history.map((snapshot) => ({
+          ...snapshot,
+          formulaVersion: 4,
+        })),
+      },
+    };
+
+    render(
+      <FollowerDetailModal integrationId="channel-1" externalId="follower-1" />
+    );
+
+    expect(
+      screen.getByRole('heading', { name: 'Legacy priority grade' })
+    ).toBeTruthy();
+    expect(
+      screen.getByText('Relationship health update pending for this follower.')
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole('heading', { name: 'Relationship health grade' })
+    ).toBeNull();
   });
 
   it('allows bot classification metadata to wrap on narrow screens', () => {
@@ -445,7 +480,7 @@ describe('FollowerDetailModal', () => {
     expect(
       screen.getByText('No grade (not enough tracked activity)')
     ).toBeTruthy();
-    expect(screen.getByText('3.5')).toBeTruthy();
+    expect(screen.getByText('3')).toBeTruthy();
   });
 
   it('renders the relationship chart from current when history is empty', () => {
@@ -465,8 +500,10 @@ describe('FollowerDetailModal', () => {
     const rows = within(table).getAllByRole('row');
 
     expect(rows).toHaveLength(2);
-    expect(screen.getByText('3.5')).toBeTruthy();
-    expect(screen.getByText('E: 10 · R: 5 · Gap: -5')).toBeTruthy();
+    expect(screen.getByText('3')).toBeTruthy();
+    expect(
+      screen.getByText('E (Effort): 10 · R (Reciprocation): 5 · Gap: -5')
+    ).toBeTruthy();
   });
 
   it('places recent interactions after notes in a 300px scroll area', () => {

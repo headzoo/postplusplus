@@ -217,23 +217,24 @@ describe('ChannelInteractionService', () => {
 
   it.each([
     [0, 0, null, null],
-    [0, 8, 0, 2],
+    [0, 8, 0, 1],
     [8, 0, 0, 1],
-    [8, 6, 0.75, 2],
-    [10, 10, 1, 3],
-    [0, 40, 0, 5],
+    [8, 6, 0.75, 4],
+    [10, 10, 1, 5],
+    [0, 40, 0, 1],
     [40, 0, 0, 1],
     [20, 20, 1, 5],
-    [80, 40, 0.5, 5],
+    [80, 40, 0.5, 3],
+    [85, 26, 26 / 85, 2],
   ])(
-    'calculates formula-v4 relationship grade for effort %i and reciprocation %i',
+    'calculates formula-v5 relationship health for effort %i and reciprocation %i',
     (effortScore, reciprocationScore, reciprocity, grade) => {
       expect(
         calculateRelationshipGrade(effortScore, reciprocationScore)
       ).toEqual({
         reciprocity,
         grade,
-        formulaVersion: 4,
+        formulaVersion: 5,
       });
     }
   );
@@ -2383,6 +2384,7 @@ describe('ChannelInteractionService', () => {
         hour: '2026-08-12T12',
         config: expect.objectContaining({
           warmGradeThreshold: expect.any(Number),
+          meaningfulActivityThreshold: expect.any(Number),
           staleDays: expect.any(Number),
         }),
       })

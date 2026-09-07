@@ -2,6 +2,7 @@ import { HttpException } from '@nestjs/common';
 import { RefreshToken } from '@gitroom/nestjs-libraries/integrations/social.abstract';
 import { ioRedis } from '@gitroom/nestjs-libraries/redis/redis.service';
 import { IntegrationService } from './integration.service';
+import { RELATIONSHIP_FORMULA_VERSION } from '../channel-interactions/channel-interaction.scoring';
 
 jest.mock('@gitroom/nestjs-libraries/redis/redis.service', () => ({
   ioRedis: {
@@ -1651,7 +1652,7 @@ describe('IntegrationService followers', () => {
       relationship: {
         windowDays: 30,
         cadenceDays: 3,
-        formulaVersion: 1,
+        formulaVersion: RELATIONSHIP_FORMULA_VERSION,
         current: {
           snapshotAt: '2026-08-01T00:00:00.000Z',
           windowStartedAt: '2026-07-02T00:00:00.000Z',
@@ -1782,7 +1783,9 @@ describe('IntegrationService followers', () => {
         formulaVersion: 1,
       }),
     ]);
-    expect(result.relationship.formulaVersion).toBe(2);
+    expect(result.relationship.formulaVersion).toBe(
+      RELATIONSHIP_FORMULA_VERSION
+    );
   });
 
   it('merges conversion fields onto follower member details', async () => {
@@ -3670,7 +3673,7 @@ describe('IntegrationService followers', () => {
           relationshipReciprocationScore: 12,
           relationshipNetGap: 12,
           relationshipTriage: 'hot_lead',
-          relationshipFormulaVersion: 4,
+          relationshipFormulaVersion: 5,
           relationshipSnapshotAt: new Date('2026-08-14T12:00:00.000Z'),
           leadBridgeScore: null,
           leadFitScore: null,

@@ -3,6 +3,7 @@ import {
   CULTIVATE_STALE_DAYS,
   CULTIVATE_WARM_GRADE_THRESHOLD,
 } from '@gitroom/nestjs-libraries/temporal/cultivate.schedule';
+import { RELATIONSHIP_MEANINGFUL_ACTIVITY_THRESHOLD } from './channel-interaction.scoring';
 
 export type CultivatePickExclusionReason =
   | 'visible'
@@ -23,6 +24,8 @@ export type CultivatePickAuditMember = {
   isBot: boolean | null;
   relationshipTriage: string | null;
   relationshipGrade: number | null;
+  relationshipEffortScore: number | null;
+  relationshipReciprocationScore: number | null;
   lastOutboundAt: Date | null;
   triageIgnores: Array<{ triage: string; expiresAt: Date | null }>;
 };
@@ -52,6 +55,7 @@ export type CultivatePickAuditResult = {
 
 export type CultivatePickAuditConfig = {
   warmGradeThreshold: number;
+  meaningfulActivityThreshold: number;
   staleDays: number;
 };
 
@@ -61,6 +65,7 @@ export const isCultivateTriageDebugReadLogEnabled = () =>
 export const defaultCultivatePickAuditConfig =
   (): CultivatePickAuditConfig => ({
     warmGradeThreshold: CULTIVATE_WARM_GRADE_THRESHOLD,
+    meaningfulActivityThreshold: RELATIONSHIP_MEANINGFUL_ACTIVITY_THRESHOLD,
     staleDays: CULTIVATE_STALE_DAYS,
   });
 
@@ -74,13 +79,21 @@ export const isActiveCultivateTriageIgnore = (
 export const matchesCultivateWarmSignal = (
   member: Pick<
     CultivatePickAuditMember,
-    'relationshipTriage' | 'relationshipGrade'
+    | 'relationshipTriage'
+    | 'relationshipGrade'
+    | 'relationshipEffortScore'
+    | 'relationshipReciprocationScore'
   >,
-  warmGradeThreshold: number
+  warmGradeThreshold: number,
+  meaningfulActivityThreshold: number
 ) =>
   member.relationshipTriage === 'mutual' ||
   (member.relationshipGrade != null &&
-    member.relationshipGrade >= warmGradeThreshold);
+    member.relationshipGrade >= warmGradeThreshold &&
+    Math.max(
+      member.relationshipEffortScore ?? 0,
+      member.relationshipReciprocationScore ?? 0
+    ) >= meaningfulActivityThreshold);
 
 /** Mutual/quiet picks used when the primary warm+stale pool is empty. */
 export const matchesCultivateFallbackTriage = (
@@ -131,7 +144,13 @@ export const classifyCultivatePickVisibility = (
   if (matchesCultivateFallbackTriage(member)) {
     return 'visible';
   }
-  if (!matchesCultivateWarmSignal(member, config.warmGradeThreshold)) {
+  if (
+    !matchesCultivateWarmSignal(
+      member,
+      config.warmGradeThreshold,
+      config.meaningfulActivityThreshold
+    )
+  ) {
     return 'not_warm';
   }
   if (!isCultivateStaleEnough(member.lastOutboundAt, now, config.staleDays)) {

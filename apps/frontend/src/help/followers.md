@@ -24,7 +24,7 @@ Only channels that expose follower identities show in the left sidebar—not eve
 4. Open **Filters** for **Sort by**, **Direction**, **Time window** (**Week**, **Month**, **90 Day**, **Year**), and **Per page** (12 / 24 / 48).
 5. On a filtered tab or after **View all**, move with **Previous** / **Next**.
 
-**Sort by** options depend on the channel (for example **Recent**, **Interactions**, **Notes**, **Likes**, **Priority grade**, **Your grade**, **Bot grade**, **Their effort**, **Net effort gap**). Some sorts only reorder the **current page**—prefer **Recent** when you need consistent order across pages.
+**Sort by** options depend on the channel (for example **Recent**, **Interactions**, **Notes**, **Likes**, **Relationship health**, **Your grade**, **Bot grade**, **Their effort**, **Net effort gap**). Some sorts only reorder the **current page**—prefer **Recent** when you need consistent order across pages.
 
 Empty search: **No followers match this search**.
 
@@ -84,9 +84,12 @@ Click a card to open **Follower details**:
 
 - Profile and bot classification
 - **Their effort** / **Your effort** (refreshable)
+- Computed **Relationship grade** and reciprocity history
 - **Your grade** (interactive stars)
 - Notes (add, edit, delete)
 - Recent interactions and optional charts
+
+The computed **Relationship grade** measures the health of the relationship through mutuality, not total activity volume. Completely one-sided effort is 1 star; balanced effort is 5 stars; no tracked activity has no grade. Read **Their effort**, **Your effort**, and the net gap separately to understand how much activity produced that health grade.
 
 ## Timeline
 
@@ -127,7 +130,7 @@ Explicit URL routes (`/followers/leads`, `/followers/cultivate`, and similar), c
 
 ### Recomputing grades
 
-After you change strategy in Settings, relationship grades recompute asynchronously. On Followers you may see **Relationship grades are being recomputed for this strategy. Existing grades remain visible until the update finishes.** Prior grades stay on cards until each person is updated with the new strategy keys.
+After you change strategy in Settings, relationship grades recompute asynchronously. On Followers you may see **Relationship health is being recomputed. Legacy priority grades are marked until each follower's health grade is ready.** The **Relationship health** sort includes only followers whose health grade is current; other sorts keep followers available during the update.
 
 To return to shipped defaults, re-select **Grow audience** in Settings.
 

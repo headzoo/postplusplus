@@ -7,7 +7,7 @@ import {
 } from '../channel-strategy.types';
 
 export const GROW_AUDIENCE_PROFILE: RelationshipScoringProfile = {
-  formulaVersion: 4,
+  formulaVersion: 5,
   scoreCap: 40,
   meaningfulActivityThreshold: 8,
   hotDirectionalRatio: 1.5,
@@ -20,10 +20,6 @@ export const GROW_AUDIENCE_PROFILE: RelationshipScoringProfile = {
     reply: { inbound: 8, outbound: 4 },
     follow: { inbound: 10, outbound: 5 },
   },
-  inboundPriorityWeight: 1,
-  reciprocityRewardWeight: 1,
-  outboundExcessPenaltyWeight: 1,
-  selectedOutboundContributionWeight: 0,
 };
 
 const BASE_AGENT_DIRECTIVES = [

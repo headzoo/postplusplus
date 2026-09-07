@@ -644,7 +644,7 @@ export const ChannelStrategySection: FC<{
         <div className="text-[13px] text-newTextColor">
           {t(
             'channel_strategy_description',
-            'Choose how relationship grades and Followers defaults prioritize people on this channel.'
+            'Choose how interaction signals and Followers defaults prioritize people on this channel. Relationship grades measure health through mutuality between the two effort totals.'
           )}
         </div>
         <div className="flex items-center gap-[8px] text-[13px] text-newTextColor">
@@ -662,7 +662,7 @@ export const ChannelStrategySection: FC<{
         <div className="rounded-[10px] border border-sky-500/30 bg-sky-500/10 px-[14px] py-[12px] text-[13px] text-sky-100">
           {t(
             'channel_strategy_recomputing',
-            'Relationship rankings are updating. Existing grades stay visible while the new strategy is applied.'
+            'Relationship health is updating. Legacy priority grades stay marked until the new health grades are ready.'
           )}
         </div>
       )}

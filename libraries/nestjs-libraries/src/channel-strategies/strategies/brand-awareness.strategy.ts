@@ -12,7 +12,6 @@ const brandAwarenessProfile: RelationshipScoringProfile = {
     mention: { inbound: 7, outbound: 2 },
     repost: { inbound: 10, outbound: 3 },
   },
-  inboundPriorityWeight: 1.15,
 };
 
 export const brandAwarenessStrategy = createStrategy(

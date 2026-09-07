@@ -350,7 +350,7 @@ describe('ChannelsSettings', () => {
       );
       expect(
         screen.getByText(
-          'Relationship rankings are updating. Existing grades stay visible while the new strategy is applied.'
+          'Relationship health is updating. Legacy priority grades stay marked until the new health grades are ready.'
         )
       ).toBeTruthy();
     });
@@ -501,7 +501,7 @@ describe('ChannelsSettings', () => {
 
     expect(
       screen.getByText(
-        'Relationship rankings are updating. Existing grades stay visible while the new strategy is applied.'
+        'Relationship health is updating. Legacy priority grades stay marked until the new health grades are ready.'
       )
     ).toBeTruthy();
   });

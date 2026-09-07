@@ -91,7 +91,7 @@ describe('follower.sorts', () => {
       scope: 'database',
     });
     expect(FOLLOWER_DATABASE_RELATIONSHIP_GRADE_SORT.label).toBe(
-      'Priority grade'
+      'Relationship health'
     );
     expect(FOLLOWER_DATABASE_MY_GRADE_SORT.label).toBe('Your grade');
     expect(FOLLOWER_DATABASE_BOT_GRADE_SORT).toMatchObject({

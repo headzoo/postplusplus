@@ -15,8 +15,6 @@ const communityRetentionProfile: RelationshipScoringProfile = {
     reply: { inbound: 8, outbound: 6 },
     follow: { inbound: 10, outbound: 5 },
   },
-  reciprocityRewardWeight: 1.25,
-  selectedOutboundContributionWeight: 0.15,
 };
 
 export const communityRetentionStrategy = createStrategy(

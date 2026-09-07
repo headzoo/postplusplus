@@ -2357,7 +2357,7 @@ model ChannelRelationshipGradeSnapshot {
   integration                 Integration           @relation(fields: [integrationId], references: [id])
   audienceMember              ChannelAudienceMember @relation("AudienceMemberGradeSnapshots", fields: [integrationId, counterpartyExternalId], references: [integrationId, externalId])
 
-  @@unique([integrationId, counterpartyExternalId, snapshotAt])
+  @@unique([integrationId, counterpartyExternalId, snapshotAt, formulaVersion], map: "ChannelRelationshipGradeSnapshot_formula_identity_key")
   @@index([integrationId, counterpartyExternalId, snapshotAt])
   @@index([integrationId, snapshotAt])
   @@index([organizationId])

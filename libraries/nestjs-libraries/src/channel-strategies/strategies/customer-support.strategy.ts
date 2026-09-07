@@ -12,9 +12,6 @@ const customerSupportProfile: RelationshipScoringProfile = {
     mention: { inbound: 7, outbound: 2 },
     reply: { inbound: 10, outbound: 7 },
   },
-  inboundPriorityWeight: 1.25,
-  outboundExcessPenaltyWeight: 0,
-  selectedOutboundContributionWeight: 0.2,
 };
 
 export const customerSupportStrategy = createStrategy(

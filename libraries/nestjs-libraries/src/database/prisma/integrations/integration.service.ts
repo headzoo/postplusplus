@@ -2332,10 +2332,7 @@ export class IntegrationService {
       relationship: {
         windowDays: RELATIONSHIP_WINDOW_DAYS,
         cadenceDays: RELATIONSHIP_CADENCE_DAYS,
-        formulaVersion:
-          current?.formulaVersion ??
-          history.at(-1)?.formulaVersion ??
-          RELATIONSHIP_FORMULA_VERSION,
+        formulaVersion: RELATIONSHIP_FORMULA_VERSION,
         current,
         history,
       },

@@ -449,6 +449,8 @@ const FollowerDetailContent: FC<{
   );
 
   const current = detail.relationship.current;
+  const isCurrentHealthFormula =
+    current?.formulaVersion === detail.relationship.formulaVersion;
   const chartHistory = useMemo(() => {
     if (detail.relationship.history.length) {
       return detail.relationship.history;
@@ -827,12 +829,25 @@ const FollowerDetailContent: FC<{
               </p>
             </div>
             <h4 className="text-[16px] font-[600] text-newTextColor">
-              {t('followers_relationship_grade', 'Relationship grade')}
+              {isCurrentHealthFormula
+                ? t(
+                    'followers_relationship_health_grade',
+                    'Relationship health grade'
+                  )
+                : t('followers_legacy_priority_grade', 'Legacy priority grade')}
             </h4>
+            {!isCurrentHealthFormula && (
+              <p className="text-[13px] text-amber-400">
+                {t(
+                  'followers_health_grade_pending',
+                  'Relationship health update pending for this follower.'
+                )}
+              </p>
+            )}
             <p className="text-[13px] text-textItemBlur">
               {t(
                 'followers_grade_score_metadata',
-                'E: {{effort}} · R: {{reciprocation}} · Gap: {{gap}}',
+                'E (Effort): {{effort}} · R (Reciprocation): {{reciprocation}} · Gap: {{gap}}',
                 {
                   effort: current.effortScore,
                   reciprocation: current.reciprocationScore,

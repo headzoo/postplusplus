@@ -28,6 +28,7 @@ import {
   getChannelInteractionScore,
   RELATIONSHIP_FORMULA_VERSION,
   RELATIONSHIP_HOT_SNOOZE_MS,
+  RELATIONSHIP_MEANINGFUL_ACTIVITY_THRESHOLD,
   RELATIONSHIP_TRIAGE_SNOOZE_MS,
   RELATIONSHIP_WINDOW_MS,
 } from './channel-interaction.scoring';
@@ -1843,9 +1844,43 @@ export class ChannelInteractionRepository {
   ) {
     if (!snapshots.length) return { count: 0 };
     return this.withSerializableRetry(async (tx) => {
-      await this.assertOwnedIntegration(tx, organizationId, integrationId);
+      const integration = await this.assertOwnedIntegration(
+        tx,
+        organizationId,
+        integrationId
+      );
+      const currentStrategy = resolveChannelStrategy(integration.strategyId);
+      const currentSnapshots = snapshots.filter(
+        (snapshot) =>
+          snapshot.strategyId === currentStrategy.id &&
+          snapshot.strategyVersion === currentStrategy.version
+      );
+      if (!currentSnapshots.length) return { count: 0 };
+      const identity = currentSnapshots[0];
+      if (
+        currentSnapshots.some(
+          (snapshot) =>
+            snapshot.formulaVersion !== identity.formulaVersion ||
+            snapshot.strategyVersion !== identity.strategyVersion
+        )
+      ) {
+        throw new Error(
+          'Relationship grade snapshot batches must use one formula and strategy version'
+        );
+      }
+      await tx.channelRelationshipGradeSnapshot.deleteMany({
+        where: {
+          organizationId,
+          integrationId,
+          snapshotAt,
+          formulaVersion: identity.formulaVersion,
+          counterpartyExternalId: {
+            in: currentSnapshots.map((snapshot) => snapshot.externalId),
+          },
+        },
+      });
       const created = await tx.channelRelationshipGradeSnapshot.createMany({
-        data: snapshots.map((snapshot) => ({
+        data: currentSnapshots.map((snapshot) => ({
           organizationId,
           integrationId,
           counterpartyExternalId: snapshot.externalId,
@@ -1868,7 +1903,7 @@ export class ChannelInteractionRepository {
         organizationId,
         integrationId,
         snapshotAt,
-        snapshots
+        currentSnapshots
       );
       return created;
     });
@@ -2359,9 +2394,29 @@ export class ChannelInteractionRepository {
         {
           OR: [
             { relationshipTriage: 'mutual' },
-            { relationshipGrade: { gte: LEAD_BRIDGE_WARM_GRADE_THRESHOLD } },
+            {
+              AND: [
+                {
+                  relationshipGrade: {
+                    gte: LEAD_BRIDGE_WARM_GRADE_THRESHOLD,
+                  },
+                },
+                this.meaningfulRelationshipActivityWhere(),
+              ],
+            },
           ],
         },
+      ],
+    };
+  }
+
+  private meaningfulRelationshipActivityWhere(
+    threshold = RELATIONSHIP_MEANINGFUL_ACTIVITY_THRESHOLD
+  ): Prisma.ChannelAudienceMemberWhereInput {
+    return {
+      OR: [
+        { relationshipEffortScore: { gte: threshold } },
+        { relationshipReciprocationScore: { gte: threshold } },
       ],
     };
   }
@@ -2378,7 +2433,11 @@ export class ChannelInteractionRepository {
 
   private cultivateWarmAndStaleWhere(
     now = new Date(),
-    config?: { warmGradeThreshold: number; staleDays: number }
+    config?: {
+      warmGradeThreshold: number;
+      meaningfulActivityThreshold: number;
+      staleDays: number;
+    }
   ): Prisma.ChannelAudienceMemberWhereInput {
     const staleBefore = new Date(
       now.getTime() -
@@ -2390,10 +2449,18 @@ export class ChannelInteractionRepository {
           OR: [
             { relationshipTriage: 'mutual' },
             {
-              relationshipGrade: {
-                gte:
-                  config?.warmGradeThreshold ?? CULTIVATE_WARM_GRADE_THRESHOLD,
-              },
+              AND: [
+                {
+                  relationshipGrade: {
+                    gte:
+                      config?.warmGradeThreshold ??
+                      CULTIVATE_WARM_GRADE_THRESHOLD,
+                  },
+                },
+                this.meaningfulRelationshipActivityWhere(
+                  config?.meaningfulActivityThreshold
+                ),
+              ],
             },
           ],
         },
@@ -2409,7 +2476,11 @@ export class ChannelInteractionRepository {
 
   private cultivateEligibilityWhere(
     now = new Date(),
-    config?: { warmGradeThreshold: number; staleDays: number }
+    config?: {
+      warmGradeThreshold: number;
+      meaningfulActivityThreshold: number;
+      staleDays: number;
+    }
   ): Prisma.ChannelAudienceMemberWhereInput {
     return {
       ...this.cultivateSafetyWhere(),
@@ -2428,7 +2499,11 @@ export class ChannelInteractionRepository {
   /** Read/count filter: primary eligibility or mutual/quiet fallback safety. */
   private cultivateVisibleWhere(
     now = new Date(),
-    config?: { warmGradeThreshold: number; staleDays: number }
+    config?: {
+      warmGradeThreshold: number;
+      meaningfulActivityThreshold: number;
+      staleDays: number;
+    }
   ): Prisma.ChannelAudienceMemberWhereInput {
     return {
       membershipState: ChannelAudienceMembership.FOLLOWER,
@@ -2509,6 +2584,7 @@ export class ChannelInteractionRepository {
     now?: Date;
     take?: number;
     warmGradeThreshold?: number;
+    meaningfulActivityThreshold?: number;
     staleDays?: number;
   }): Promise<CultivateCandidate[]> {
     const now = params.now ?? new Date();
@@ -2525,9 +2601,13 @@ export class ChannelInteractionRepository {
           integrationId: params.integrationId,
           ...this.cultivateEligibilityWhere(
             now,
-            params.warmGradeThreshold != null && params.staleDays != null
+            params.warmGradeThreshold != null &&
+              params.meaningfulActivityThreshold != null &&
+              params.staleDays != null
               ? {
                   warmGradeThreshold: params.warmGradeThreshold,
+                  meaningfulActivityThreshold:
+                    params.meaningfulActivityThreshold,
                   staleDays: params.staleDays,
                 }
               : undefined
@@ -3223,6 +3303,8 @@ export class ChannelInteractionRepository {
               isBot: true,
               relationshipTriage: true,
               relationshipGrade: true,
+              relationshipEffortScore: true,
+              relationshipReciprocationScore: true,
               lastOutboundAt: true,
               triageIgnores: {
                 select: { triage: true, expiresAt: true },
@@ -3246,6 +3328,10 @@ export class ChannelInteractionRepository {
                 isBot: pick.audienceMember.isBot,
                 relationshipTriage: pick.audienceMember.relationshipTriage,
                 relationshipGrade: pick.audienceMember.relationshipGrade,
+                relationshipEffortScore:
+                  pick.audienceMember.relationshipEffortScore,
+                relationshipReciprocationScore:
+                  pick.audienceMember.relationshipReciprocationScore,
                 lastOutboundAt: pick.audienceMember.lastOutboundAt,
                 triageIgnores: pick.audienceMember.triageIgnores,
               }
@@ -3593,6 +3679,8 @@ export class ChannelInteractionRepository {
                 isBot: true,
                 relationshipTriage: true,
                 relationshipGrade: true,
+                relationshipEffortScore: true,
+                relationshipReciprocationScore: true,
                 lastOutboundAt: true,
                 triageIgnores: {
                   select: { triage: true, expiresAt: true },
@@ -3615,6 +3703,10 @@ export class ChannelInteractionRepository {
                   isBot: pick.audienceMember.isBot,
                   relationshipTriage: pick.audienceMember.relationshipTriage,
                   relationshipGrade: pick.audienceMember.relationshipGrade,
+                  relationshipEffortScore:
+                    pick.audienceMember.relationshipEffortScore,
+                  relationshipReciprocationScore:
+                    pick.audienceMember.relationshipReciprocationScore,
                   lastOutboundAt: pick.audienceMember.lastOutboundAt,
                   triageIgnores: pick.audienceMember.triageIgnores,
                 }
@@ -7435,7 +7527,45 @@ export class ChannelInteractionRepository {
               : {
                   OR: [
                     { relationshipSnapshotAt: null },
-                    { relationshipSnapshotAt: { lte: snapshotAt } },
+                    { relationshipSnapshotAt: { lt: snapshotAt } },
+                    {
+                      AND: [
+                        { relationshipSnapshotAt: snapshotAt },
+                        {
+                          OR: [
+                            { relationshipFormulaVersion: null },
+                            {
+                              relationshipFormulaVersion: {
+                                lt: snapshot.formulaVersion,
+                              },
+                            },
+                            {
+                              relationshipFormulaVersion:
+                                snapshot.formulaVersion,
+                              OR: [
+                                { relationshipStrategyId: null },
+                                {
+                                  relationshipStrategyId: {
+                                    not: snapshot.strategyId,
+                                  },
+                                },
+                                {
+                                  relationshipStrategyId: snapshot.strategyId,
+                                  OR: [
+                                    { relationshipStrategyVersion: null },
+                                    {
+                                      relationshipStrategyVersion: {
+                                        lte: snapshot.strategyVersion,
+                                      },
+                                    },
+                                  ],
+                                },
+                              ],
+                            },
+                          ],
+                        },
+                      ],
+                    },
                   ],
                 }),
           },

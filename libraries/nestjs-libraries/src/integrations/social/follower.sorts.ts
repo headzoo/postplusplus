@@ -238,7 +238,7 @@ export const FOLLOWER_DATABASE_LIKES_SORT: FollowerSort = {
 
 export const FOLLOWER_DATABASE_RELATIONSHIP_GRADE_SORT: FollowerSort = {
   key: 'relationship_grade',
-  label: 'Priority grade',
+  label: 'Relationship health',
   directions: ['asc', 'desc'],
   defaultDirection: 'desc',
   scope: 'database',

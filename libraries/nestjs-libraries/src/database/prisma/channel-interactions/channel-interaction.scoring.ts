@@ -16,7 +16,7 @@ export type {
   RelationshipTriage,
 } from '../../../channel-strategies/channel-strategy.types';
 
-export const RELATIONSHIP_FORMULA_VERSION = 4;
+export const RELATIONSHIP_FORMULA_VERSION = 5;
 export const RELATIONSHIP_SCORE_CAP = 40;
 export const RELATIONSHIP_MEANINGFUL_ACTIVITY_THRESHOLD = 8;
 export const RELATIONSHIP_DIRECTIONAL_RATIO = 1.5;

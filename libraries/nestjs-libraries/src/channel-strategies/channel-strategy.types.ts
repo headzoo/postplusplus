@@ -62,10 +62,6 @@ export type RelationshipScoringProfile = {
     ChannelInteractionScoreKind,
     Record<ChannelInteractionScoreDirection, number>
   >;
-  inboundPriorityWeight: number;
-  reciprocityRewardWeight: number;
-  outboundExcessPenaltyWeight: number;
-  selectedOutboundContributionWeight: number;
 };
 
 export type StrategyScoringInput = {

@@ -1075,6 +1075,8 @@ export class ChannelInteractionService {
       isBot: member.isBot,
       relationshipTriage: member.relationshipTriage,
       relationshipGrade: member.relationshipGrade ?? null,
+      relationshipEffortScore: member.relationshipEffortScore,
+      relationshipReciprocationScore: member.relationshipReciprocationScore,
       lastOutboundAt: member.lastOutboundAt ?? null,
       triageIgnores: member.triageIgnores,
     };
@@ -1148,6 +1150,8 @@ export class ChannelInteractionService {
         ...priorCultivate,
         relationshipTriage: snapshot.triage,
         relationshipGrade: snapshot.grade,
+        relationshipEffortScore: snapshot.effortScore,
+        relationshipReciprocationScore: snapshot.reciprocationScore,
       };
       if (
         wasCultivateVisible &&
@@ -1636,7 +1640,16 @@ export class ChannelInteractionService {
       [],
       new Date()
     );
-    return resolveMaterializationConfig(batch.strategy?.strategyId);
+    const materialization = resolveMaterializationConfig(
+      batch.strategy?.strategyId
+    );
+    const scoring = resolveChannelStrategy(
+      materialization.strategyId
+    ).getScoringProfile();
+    return {
+      ...materialization,
+      meaningfulActivityThreshold: scoring.meaningfulActivityThreshold,
+    };
   }
 
   private async buildTriagePromptContext(params: {
@@ -2142,6 +2155,7 @@ export class ChannelInteractionService {
       now,
       take: config.profile.cultivate.candidatePoolSize,
       warmGradeThreshold: config.profile.cultivate.warmGradeThreshold,
+      meaningfulActivityThreshold: config.meaningfulActivityThreshold,
       staleDays: config.profile.cultivate.staleDays,
     });
     if (!candidates.length) {
@@ -2206,6 +2220,7 @@ export class ChannelInteractionService {
       now,
       config: {
         warmGradeThreshold: config.profile.cultivate.warmGradeThreshold,
+        meaningfulActivityThreshold: config.meaningfulActivityThreshold,
         staleDays: config.profile.cultivate.staleDays,
       },
     });

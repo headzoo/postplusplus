@@ -1,7 +1,6 @@
 'use client';
 
 import { FC, useCallback, useMemo, useState } from 'react';
-import clsx from 'clsx';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import { useCopilotReadable } from '@copilotkit/react-core';
@@ -16,11 +15,11 @@ import {
 } from '@gitroom/nestjs-libraries/integrations/social/follower.sorts';
 import {
   buildFollowerDetailHref,
-  MemberPost,
+  useFollowerChannels,
   useFollowerDetail,
   useFollowerMemberTimeline,
 } from '@gitroom/frontend/components/followers/use.followers';
-import { openExternalPost } from '@gitroom/frontend/components/external-post/open.external.post';
+import { getFollowerTimelinePostRenderer } from '@gitroom/frontend/components/followers/follower.timeline.provider.renderers';
 
 const TIMELINE_PAGE_SIZE = 20;
 
@@ -30,78 +29,6 @@ const decodeFollowerPathSegment = (value: string) => {
   } catch {
     return value;
   }
-};
-
-const formatPostDate = (value: string) => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return null;
-  }
-  return date.toLocaleString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-};
-
-const MemberPostCard: FC<{ post: MemberPost }> = ({ post }) => {
-  const t = useT();
-  const timestamp = formatPostDate(post.publishedAt);
-
-  return (
-    <article
-      className={clsx(
-        'flex flex-col gap-[10px] rounded-[12px] border border-newTableBorder',
-        'bg-newTableHeader p-[16px]'
-      )}
-    >
-      {post.content && (
-        <p className="text-[14px] text-newTextColor whitespace-pre-wrap break-words">
-          {post.content}
-        </p>
-      )}
-      {post.media?.length > 0 && (
-        <div className="flex flex-wrap gap-[8px]">
-          {post.media.map((item, index) => (
-            <a
-              key={`${post.externalId}-${index}`}
-              href={item.url}
-              target="_blank"
-              rel="noreferrer noopener"
-              className="block overflow-hidden rounded-[8px] border border-newTableBorder"
-            >
-              {item.type === 'video' ? (
-                <video
-                  src={item.url}
-                  className="max-h-[240px] max-w-full object-cover"
-                  controls
-                  preload="metadata"
-                />
-              ) : (
-                <img
-                  src={item.url}
-                  alt=""
-                  className="max-h-[240px] max-w-full object-cover"
-                />
-              )}
-            </a>
-          ))}
-        </div>
-      )}
-      <div className="flex flex-wrap items-center gap-x-[16px] gap-y-[4px] text-[12px] text-textItemBlur">
-        {timestamp && <span>{timestamp}</span>}
-        <button
-          type="button"
-          className="text-newTextColor hover:underline"
-          onClick={() => openExternalPost(post.url)}
-        >
-          {t('followers_timeline_view_post', 'View post')}
-        </button>
-      </div>
-    </article>
-  );
 };
 
 export const FollowerTimelineComponent: FC = () => {
@@ -123,6 +50,7 @@ export const FollowerTimelineComponent: FC = () => {
 
   const [cursorHistory, setCursorHistory] = useState<string[]>([]);
   const currentCursor = cursorHistory[cursorHistory.length - 1];
+  const { data: followerChannels = [] } = useFollowerChannels();
 
   const { data: memberDetail } = useFollowerDetail(
     integrationId || undefined,
@@ -225,6 +153,9 @@ export const FollowerTimelineComponent: FC = () => {
   }
 
   const follower = memberDetail?.follower;
+  const PostRenderer = getFollowerTimelinePostRenderer(
+    followerChannels.find((channel) => channel.id === integrationId)?.identifier
+  );
   const displayName = follower?.name || username || externalIdFromQuery || '';
   const handle = follower?.username
     ? `@${follower.username}`
@@ -304,7 +235,20 @@ export const FollowerTimelineComponent: FC = () => {
         <>
           <div className="flex flex-col gap-[12px]">
             {timelinePage.items.map((post) => (
-              <MemberPostCard key={post.externalId} post={post} />
+              <PostRenderer
+                key={post.externalId}
+                post={post}
+                author={{
+                  externalId:
+                    follower?.id ||
+                    externalIdFromQuery ||
+                    username ||
+                    post.externalId,
+                  name: follower?.name,
+                  username: follower?.username || username,
+                  picture: follower?.picture,
+                }}
+              />
             ))}
           </div>
           {(cursorHistory.length > 0 || timelinePage.hasMore) && (

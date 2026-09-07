@@ -14,7 +14,6 @@ const leadCaptureProfile: RelationshipScoringProfile = {
     reply: { inbound: 10, outbound: 4 },
     follow: { inbound: 12, outbound: 5 },
   },
-  inboundPriorityWeight: 1.2,
 };
 
 export const leadCaptureStrategy = createStrategy(

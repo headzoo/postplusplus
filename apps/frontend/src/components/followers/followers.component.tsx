@@ -2301,7 +2301,7 @@ export const FollowersComponent: FC = () => {
           <div className="rounded-[10px] border border-amber-500/30 bg-amber-500/10 px-[14px] py-[10px] text-[13px] text-amber-400">
             {t(
               'followers_strategy_recomputing',
-              'Relationship grades are being recomputed for this strategy. Existing grades remain visible until the update finishes.'
+              "Relationship health is being recomputed. Legacy priority grades are marked until each follower's health grade is ready."
             )}
           </div>
         )}

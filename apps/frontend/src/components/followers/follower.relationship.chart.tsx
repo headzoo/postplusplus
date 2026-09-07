@@ -17,11 +17,23 @@ const formatFormulaLabel = (
   formulaVersion: number,
   t: (key: string, fallback: string) => string
 ) => {
-  if (formulaVersion === 2) {
-    return t('followers_formula_priority_v2', 'Priority (v2)');
+  if (formulaVersion === 1) {
+    return t('followers_formula_reciprocity_v1', 'Reciprocity (v1)');
   }
-  return t('followers_formula_reciprocity_v1', 'Reciprocity (v1)');
+  if (formulaVersion >= 5) {
+    return t(
+      `followers_formula_relationship_health_v${formulaVersion}`,
+      `Relationship health (v${formulaVersion})`
+    );
+  }
+  return t(
+    `followers_formula_priority_v${formulaVersion}`,
+    `Priority (v${formulaVersion})`
+  );
 };
+
+const isHealthFormula = (formulaVersion: number) =>
+  formulaVersion === 1 || formulaVersion >= 5;
 
 const formatGradeLabel = (
   grade: number | null,
@@ -43,11 +55,20 @@ export const FollowerRelationshipChart: FC<{
   const ref = useRef<HTMLCanvasElement | null>(null);
   const chart = useRef<DrawChart | null>(null);
 
-  const visibleHistory = useMemo(
-    () => history.filter((snapshot) => snapshot.formulaVersion !== 1),
-    [history]
+  const hasCurrentHealthFormula = history.some(
+    (snapshot) => snapshot.formulaVersion >= 5
   );
-  const priorityLabel = t('followers_formula_priority_v2', 'Priority (v2)');
+  const visibleHistory = useMemo(() => {
+    if (hasCurrentHealthFormula) {
+      return history.filter((snapshot) =>
+        isHealthFormula(snapshot.formulaVersion)
+      );
+    }
+    return history.filter((snapshot) => snapshot.formulaVersion !== 1);
+  }, [hasCurrentHealthFormula, history]);
+  const relationshipLabel = hasCurrentHealthFormula
+    ? t('followers_relationship_health', 'Relationship health')
+    : t('followers_priority_grade', 'Priority grade');
 
   useEffect(() => {
     if (!ref.current || !visibleHistory.length) {
@@ -134,7 +155,7 @@ export const FollowerRelationshipChart: FC<{
         labels,
         datasets: [
           {
-            label: priorityLabel,
+            label: relationshipLabel,
             data: grades,
             borderColor: '#2563eb',
             backgroundColor: 'rgba(37, 99, 235, 0.15)',
@@ -152,7 +173,7 @@ export const FollowerRelationshipChart: FC<{
       chart.current?.destroy();
       chart.current = null;
     };
-  }, [priorityLabel, t, visibleHistory]);
+  }, [relationshipLabel, t, visibleHistory]);
 
   if (!visibleHistory.length) {
     return null;

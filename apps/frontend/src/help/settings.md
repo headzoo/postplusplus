@@ -53,7 +53,7 @@ Banners may explain partial tracking or missing permissions. Empty: **No channel
 
 ### Channel strategy
 
-For channels that expose follower identities, the channel detail includes **Channel strategy**. Choose how relationship grades and Followers defaults prioritize people on this channel.
+For channels that expose follower identities, the channel detail includes **Channel strategy**. Choose how interaction signals and Followers defaults prioritize people on this channel. Relationship grades measure health through mutuality between the two effort totals.
 
 You always pick one of five strategies—there is no **None** option:
 
@@ -67,7 +67,7 @@ You always pick one of five strategies—there is no **None** option:
 
 Channels that do **not** expose follower identities show **Not available for this channel because it does not expose follower identities**—that is capability N/A, not a strategy choice.
 
-Saving a new strategy is immediate. Relationship grades recompute in the background. While that runs, a banner explains that **Relationship rankings are updating. Existing grades stay visible while the new strategy is applied.** Re-selecting **Grow audience** is the reset-to-default action.
+Saving a new strategy is immediate. Relationship grades recompute in the background. While that runs, a banner explains that **Relationship health is updating. Legacy priority grades stay marked until the new health grades are ready.** Re-selecting **Grow audience** is the reset-to-default action.
 
 See [Followers → Channel strategy](/help/followers#channel-strategy) for how the choice affects default navigation, the assistant, and recomputation banners on the Followers page.
 

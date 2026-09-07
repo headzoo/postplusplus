@@ -115,21 +115,10 @@ export function calculateRelationshipGrade(
   const reciprocity =
     Math.min(effortScore, reciprocationScore) /
     Math.max(effortScore, reciprocationScore);
-  const effort = Math.min(effortScore / profile.scoreCap, 1);
-  const reciprocation = Math.min(reciprocationScore / profile.scoreCap, 1);
-  const priority = Math.min(
-    1,
-    Math.max(
-      0,
-      profile.inboundPriorityWeight * reciprocation +
-        profile.reciprocityRewardWeight * Math.min(effort, reciprocation) +
-        profile.selectedOutboundContributionWeight * effort -
-        profile.outboundExcessPenaltyWeight *
-          Math.max(effort - reciprocation, 0)
-    )
-  );
   return {
-    grade: roundToHalf(1 + 4 * priority),
+    // Health measures balance only. Absolute activity volume stays available
+    // separately through the two directional effort scores.
+    grade: roundToHalf(1 + 4 * reciprocity),
     reciprocity,
     formulaVersion: profile.formulaVersion,
     strategyId,
@@ -148,10 +137,6 @@ export function assertRelationshipScoringProfile(
     profile.hotDirectionalRatio,
     profile.touchedHotDirectionalRatio,
     profile.overInvestedDirectionalRatio,
-    profile.inboundPriorityWeight,
-    profile.reciprocityRewardWeight,
-    profile.outboundExcessPenaltyWeight,
-    profile.selectedOutboundContributionWeight,
     ...Object.values(profile.interactionWeights).flatMap((directions) =>
       Object.values(directions)
     ),

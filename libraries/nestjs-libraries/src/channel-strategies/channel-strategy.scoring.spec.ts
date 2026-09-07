@@ -23,19 +23,20 @@ describe('channel strategy scoring', () => {
   it.each([
     [0, 0, null, null, 'quiet'],
     [8, 0, 1, 0, 'over_invested'],
-    [0, 8, 2, 0, 'hot_lead'],
-    [0, 3, 1.5, 0, 'hot_lead'],
-    [10, 10, 3, 1, 'mutual'],
+    [0, 8, 1, 0, 'hot_lead'],
+    [0, 3, 1, 0, 'hot_lead'],
+    [10, 10, 5, 1, 'mutual'],
     [40, 40, 5, 1, 'mutual'],
-    [30, 10, 1, 1 / 3, 'over_invested'],
+    [30, 10, 2.5, 1 / 3, 'over_invested'],
+    [85, 26, 2, 26 / 85, 'over_invested'],
   ])(
-    'keeps the Grow audience v1 baseline for %i/%i',
+    'grades Grow audience relationship health for %i/%i',
     (effortScore, reciprocationScore, grade, reciprocity, triage) => {
       const result = score('grow_audience', effortScore, reciprocationScore);
       expect(result).toMatchObject({
         grade,
         reciprocity,
-        formulaVersion: 4,
+        formulaVersion: 5,
         strategyId: 'grow_audience',
         strategyVersion: 1,
         triage,
@@ -65,7 +66,6 @@ describe('channel strategy scoring', () => {
     expect(getInteractionScore(support, 'reply', 'outbound')).toBeGreaterThan(
       getInteractionScore(grow, 'reply', 'outbound')
     );
-    expect(support.outboundExcessPenaltyWeight).toBe(0);
     expect(
       getRelationshipTriage({ effortScore: 24, reciprocationScore: 0 }, support)
     ).toBe('over_invested');

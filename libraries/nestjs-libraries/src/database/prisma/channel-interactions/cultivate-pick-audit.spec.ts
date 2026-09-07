@@ -12,6 +12,8 @@ const baseMember = {
   isBot: null,
   relationshipTriage: 'mutual' as const,
   relationshipGrade: 4,
+  relationshipEffortScore: 12,
+  relationshipReciprocationScore: 10,
   lastOutboundAt: null,
   triageIgnores: [] as Array<{ triage: string; expiresAt: Date | null }>,
 };
@@ -47,7 +49,11 @@ describe('cultivate-pick-audit', () => {
           lastOutboundAt: new Date('2026-08-27T10:00:00.000Z'),
         },
         new Date('2026-08-27T11:00:00.000Z'),
-        { warmGradeThreshold: 3.5, staleDays: 14 }
+        {
+          warmGradeThreshold: 3.5,
+          meaningfulActivityThreshold: 8,
+          staleDays: 14,
+        }
       )
     ).toBe('recently_contacted');
     expect(
@@ -55,6 +61,15 @@ describe('cultivate-pick-audit', () => {
         ...baseMember,
         relationshipTriage: 'over_invested',
         relationshipGrade: 2,
+      })
+    ).toBe('not_warm');
+    expect(
+      classifyCultivatePickVisibility({
+        ...baseMember,
+        relationshipTriage: 'over_invested',
+        relationshipGrade: 5,
+        relationshipEffortScore: 1,
+        relationshipReciprocationScore: 1,
       })
     ).toBe('not_warm');
     expect(classifyCultivatePickVisibility(baseMember)).toBe('visible');

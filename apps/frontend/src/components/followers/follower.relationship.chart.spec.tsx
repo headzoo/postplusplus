@@ -48,8 +48,8 @@ const v1History: FollowerRelationshipSnapshot[] = [
     effortScore: 10,
     reciprocationScore: 5,
     reciprocity: 0.5,
-    grade: 3.5,
-    adjustedGrade: 3.5,
+    grade: 3,
+    adjustedGrade: 3,
     effortStars: 2,
     reciprocationStars: 1.5,
     triage: 'over_invested',
@@ -57,7 +57,7 @@ const v1History: FollowerRelationshipSnapshot[] = [
   },
 ];
 
-const mixedHistory: FollowerRelationshipSnapshot[] = [
+const legacyPriorityHistory: FollowerRelationshipSnapshot[] = [
   ...v1History,
   {
     snapshotAt: '2026-03-01T00:00:00.000Z',
@@ -71,6 +71,36 @@ const mixedHistory: FollowerRelationshipSnapshot[] = [
     reciprocationStars: 2,
     triage: 'hot_lead',
     formulaVersion: 2,
+  },
+  {
+    snapshotAt: '2026-04-01T00:00:00.000Z',
+    windowStartedAt: '2026-03-02T00:00:00.000Z',
+    effortScore: 20,
+    reciprocationScore: 10,
+    reciprocity: 0.5,
+    grade: 3.5,
+    adjustedGrade: 3.5,
+    effortStars: 3,
+    reciprocationStars: 2,
+    triage: 'over_invested',
+    formulaVersion: 4,
+  },
+];
+
+const healthHistory: FollowerRelationshipSnapshot[] = [
+  ...legacyPriorityHistory,
+  {
+    snapshotAt: '2026-05-01T00:00:00.000Z',
+    windowStartedAt: '2026-04-01T00:00:00.000Z',
+    effortScore: 85,
+    reciprocationScore: 26,
+    reciprocity: 26 / 85,
+    grade: 2,
+    adjustedGrade: 2,
+    effortStars: 5,
+    reciprocationStars: 3.5,
+    triage: 'over_invested',
+    formulaVersion: 5,
   },
 ];
 
@@ -86,19 +116,29 @@ describe('FollowerRelationshipChart', () => {
     ).toBeNull();
   });
 
-  it('renders only formula v2 snapshots from mixed history', () => {
-    render(<FollowerRelationshipChart history={mixedHistory} />);
+  it('renders legacy priority snapshots with accurate version labels', () => {
+    render(<FollowerRelationshipChart history={legacyPriorityHistory} />);
 
     const table = screen.getByRole('table', { name: 'Relationship history' });
     const rows = within(table).getAllByRole('row');
 
-    expect(rows).toHaveLength(2);
+    expect(rows).toHaveLength(3);
     expect(screen.queryByText('Reciprocity (v1)')).toBeNull();
     expect(screen.getByText('Priority (v2)')).toBeTruthy();
-    expect(screen.getByText('4')).toBeTruthy();
-    expect(screen.getByText('8')).toBeTruthy();
-    expect(screen.getByText('12')).toBeTruthy();
-    expect(screen.getByText('67%')).toBeTruthy();
+    expect(screen.getByText('Priority (v4)')).toBeTruthy();
+  });
+
+  it('shows only comparable health snapshots after formula v5 arrives', () => {
+    render(<FollowerRelationshipChart history={healthHistory} />);
+
+    const table = screen.getByRole('table', { name: 'Relationship history' });
+    const rows = within(table).getAllByRole('row');
+
+    expect(rows).toHaveLength(4);
+    expect(screen.getAllByText('Reciprocity (v1)')).toHaveLength(2);
+    expect(screen.getByText('Relationship health (v5)')).toBeTruthy();
+    expect(screen.queryByText('Priority (v2)')).toBeNull();
+    expect(screen.queryByText('Priority (v4)')).toBeNull();
   });
 
   it('renders nothing when history is empty', () => {

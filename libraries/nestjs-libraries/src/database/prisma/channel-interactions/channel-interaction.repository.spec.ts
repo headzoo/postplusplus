@@ -9,8 +9,12 @@ import {
   ChannelInteractionRepository,
   utcHourKey,
 } from './channel-interaction.repository';
-import { RELATIONSHIP_FORMULA_VERSION } from './channel-interaction.scoring';
+import {
+  RELATIONSHIP_FORMULA_VERSION,
+  RELATIONSHIP_MEANINGFUL_ACTIVITY_THRESHOLD,
+} from './channel-interaction.scoring';
 import { LEAD_FIT_MIN_SCORE } from '@gitroom/nestjs-libraries/temporal/lead-bridge.schedule';
+import { CULTIVATE_WARM_GRADE_THRESHOLD } from '@gitroom/nestjs-libraries/temporal/cultivate.schedule';
 
 const leadFitVisibility = {
   OR: [{ leadFitScore: null }, { leadFitScore: { gte: LEAD_FIT_MIN_SCORE } }],
@@ -1635,7 +1639,7 @@ describe('ChannelInteractionRepository', () => {
     );
   });
 
-  it('persists v2 history and complete current projections idempotently', async () => {
+  it('persists versioned history and complete current projections idempotently', async () => {
     const { repository, tx } = createHarness();
     const snapshotAt = new Date('2026-08-12T12:00:00.000Z');
 
@@ -1643,9 +1647,20 @@ describe('ChannelInteractionRepository', () => {
       'org',
       'integration',
       snapshotAt,
-      [snapshotInput()]
+      [snapshotInput({ formulaVersion: 5, grade: 3.5 })]
     );
 
+    expect(tx.channelRelationshipGradeSnapshot.deleteMany).toHaveBeenCalledWith(
+      {
+        where: {
+          organizationId: 'org',
+          integrationId: 'integration',
+          snapshotAt,
+          formulaVersion: 5,
+          counterpartyExternalId: { in: ['person-1'] },
+        },
+      }
+    );
     expect(tx.channelRelationshipGradeSnapshot.createMany).toHaveBeenCalledWith(
       {
         data: [
@@ -1658,14 +1673,19 @@ describe('ChannelInteractionRepository', () => {
             effortScore: 12,
             reciprocationScore: 8,
             reciprocity: 2 / 3,
-            grade: 2,
-            formulaVersion: 2,
+            grade: 3.5,
+            formulaVersion: 5,
             relationshipStrategyId: 'grow_audience',
             relationshipStrategyVersion: 1,
           },
         ],
         skipDuplicates: true,
       }
+    );
+    expect(
+      tx.channelRelationshipGradeSnapshot.deleteMany.mock.invocationCallOrder[0]
+    ).toBeLessThan(
+      tx.channelRelationshipGradeSnapshot.createMany.mock.invocationCallOrder[0]
     );
     expect(tx.channelAudienceMember.updateMany).toHaveBeenCalledWith({
       where: {
@@ -1675,21 +1695,72 @@ describe('ChannelInteractionRepository', () => {
         integration: growIntegrationFilter,
         OR: [
           { relationshipSnapshotAt: null },
-          { relationshipSnapshotAt: { lte: snapshotAt } },
+          { relationshipSnapshotAt: { lt: snapshotAt } },
+          {
+            AND: [
+              { relationshipSnapshotAt: snapshotAt },
+              {
+                OR: [
+                  { relationshipFormulaVersion: null },
+                  { relationshipFormulaVersion: { lt: 5 } },
+                  {
+                    relationshipFormulaVersion: 5,
+                    OR: [
+                      { relationshipStrategyId: null },
+                      { relationshipStrategyId: { not: 'grow_audience' } },
+                      {
+                        relationshipStrategyId: 'grow_audience',
+                        OR: [
+                          { relationshipStrategyVersion: null },
+                          { relationshipStrategyVersion: { lte: 1 } },
+                        ],
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
         ],
       },
       data: {
-        relationshipGrade: 2,
+        relationshipGrade: 3.5,
         relationshipEffortScore: 12,
         relationshipReciprocationScore: 8,
         relationshipNetGap: -4,
         relationshipTriage: 'over_invested',
-        relationshipFormulaVersion: 2,
+        relationshipFormulaVersion: 5,
         relationshipStrategyId: 'grow_audience',
         relationshipStrategyVersion: 1,
         relationshipSnapshotAt: snapshotAt,
       },
     });
+  });
+
+  it('does not replace snapshots from a batch whose strategy is no longer selected', async () => {
+    const { repository, tx } = createHarness();
+
+    await expect(
+      repository.createRelationshipGradeSnapshots(
+        'org',
+        'integration',
+        new Date('2026-08-12T12:00:00.000Z'),
+        [
+          snapshotInput({
+            strategyId: 'lead_capture',
+            formulaVersion: 5,
+          }),
+        ]
+      )
+    ).resolves.toEqual({ count: 0 });
+
+    expect(
+      tx.channelRelationshipGradeSnapshot.deleteMany
+    ).not.toHaveBeenCalled();
+    expect(
+      tx.channelRelationshipGradeSnapshot.createMany
+    ).not.toHaveBeenCalled();
+    expect(tx.channelAudienceMember.updateMany).not.toHaveBeenCalled();
   });
 
   it('scopes projection writes to the strategy the batch was scored with', async () => {
@@ -1789,7 +1860,32 @@ describe('ChannelInteractionRepository', () => {
         integration: growIntegrationFilter,
         OR: [
           { relationshipSnapshotAt: null },
-          { relationshipSnapshotAt: { lte: snapshotAt } },
+          { relationshipSnapshotAt: { lt: snapshotAt } },
+          {
+            AND: [
+              { relationshipSnapshotAt: snapshotAt },
+              {
+                OR: [
+                  { relationshipFormulaVersion: null },
+                  { relationshipFormulaVersion: { lt: 2 } },
+                  {
+                    relationshipFormulaVersion: 2,
+                    OR: [
+                      { relationshipStrategyId: null },
+                      { relationshipStrategyId: { not: 'grow_audience' } },
+                      {
+                        relationshipStrategyId: 'grow_audience',
+                        OR: [
+                          { relationshipStrategyVersion: null },
+                          { relationshipStrategyVersion: { lte: 1 } },
+                        ],
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
         ],
       },
       data: {
@@ -2955,6 +3051,38 @@ describe('ChannelInteractionRepository', () => {
         take: 50,
       })
     );
+    const where = audienceMemberFindMany.mock.calls[0][0].where;
+    expect(where.AND).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          OR: expect.arrayContaining([
+            expect.objectContaining({
+              AND: [
+                {
+                  relationshipGrade: {
+                    gte: CULTIVATE_WARM_GRADE_THRESHOLD,
+                  },
+                },
+                {
+                  OR: [
+                    {
+                      relationshipEffortScore: {
+                        gte: RELATIONSHIP_MEANINGFUL_ACTIVITY_THRESHOLD,
+                      },
+                    },
+                    {
+                      relationshipReciprocationScore: {
+                        gte: RELATIONSHIP_MEANINGFUL_ACTIVITY_THRESHOLD,
+                      },
+                    },
+                  ],
+                },
+              ],
+            }),
+          ]),
+        }),
+      ])
+    );
   });
 
   it('ranks cultivate candidates by stale age then grade with hour-seeded rotation', () => {
@@ -3987,7 +4115,7 @@ describe('ChannelInteractionRepository', () => {
     }
   );
 
-  it('excludes stale formulas from priority-grade sorting', async () => {
+  it('excludes legacy priority grades from relationship-health sorting', async () => {
     const { repository, audienceMemberFindMany } = createHarness();
     audienceMemberFindMany.mockResolvedValue([]);
 
@@ -3999,15 +4127,12 @@ describe('ChannelInteractionRepository', () => {
       limit: 24,
     });
 
-    expect(audienceMemberFindMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          AND: expect.arrayContaining([
-            { relationshipFormulaVersion: RELATIONSHIP_FORMULA_VERSION },
-            { ignoredAt: null },
-          ]),
-        }),
-      })
+    const where = audienceMemberFindMany.mock.calls[0][0].where;
+    expect(where.AND).toEqual(
+      expect.arrayContaining([
+        { ignoredAt: null },
+        { relationshipFormulaVersion: RELATIONSHIP_FORMULA_VERSION },
+      ])
     );
   });
 
