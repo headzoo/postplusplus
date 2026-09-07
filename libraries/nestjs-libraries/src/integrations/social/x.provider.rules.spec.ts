@@ -9,10 +9,12 @@ describe('XProvider PostRules Capability', () => {
   let mockIntegration: Integration;
   const mockAccessToken = 'mock_access:mock_secret';
   const originalEnv = process.env.DISABLE_X_ANALYTICS;
+  const originalOptionalReads = process.env.DISABLE_X_OPTIONAL_READS;
 
   beforeEach(() => {
     // Ensure X analytics is enabled for tests
     delete process.env.DISABLE_X_ANALYTICS;
+    delete process.env.DISABLE_X_OPTIONAL_READS;
 
     provider = new XProvider();
     mockIntegration = {
@@ -30,6 +32,11 @@ describe('XProvider PostRules Capability', () => {
       process.env.DISABLE_X_ANALYTICS = originalEnv;
     } else {
       delete process.env.DISABLE_X_ANALYTICS;
+    }
+    if (originalOptionalReads !== undefined) {
+      process.env.DISABLE_X_OPTIONAL_READS = originalOptionalReads;
+    } else {
+      delete process.env.DISABLE_X_OPTIONAL_READS;
     }
   });
 
@@ -58,6 +65,19 @@ describe('XProvider PostRules Capability', () => {
       expect(newProvider.postRules).toBeUndefined();
 
       process.env.DISABLE_X_ANALYTICS = originalEnv;
+    });
+
+    it('can stop all optional reads with one emergency flag', () => {
+      process.env.DISABLE_X_OPTIONAL_READS = '1';
+      const guardedProvider = new XProvider();
+
+      expect(guardedProvider.analyticsSnapshot).toBeUndefined();
+      expect(guardedProvider.postRules).toBeUndefined();
+      expect(guardedProvider.allowsReadFeature('follower-snapshot')).toBe(
+        false
+      );
+
+      delete process.env.DISABLE_X_OPTIONAL_READS;
     });
   });
 

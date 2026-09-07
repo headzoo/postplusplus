@@ -227,6 +227,16 @@ export class PostsService {
     }
 
     const getIntegration = post.integration!;
+    const analyticsCacheKey = `integration:${orgId}:${post.id}:${date}`;
+    if (!forceRefresh) {
+      const getIntegrationData = await ioRedis.get(analyticsCacheKey);
+      if (getIntegrationData) {
+        return JSON.parse(getIntegrationData) as AnalyticsData[];
+      }
+    }
+    if (integrationProvider.allowsReadFeature?.('analytics') === false) {
+      return [];
+    }
 
     if (
       dayjs(getIntegration?.tokenExpiration).isBefore(dayjs()) ||
@@ -253,13 +263,6 @@ export class PostsService {
       }
     }
 
-    // const getIntegrationData = await ioRedis.get(
-    //   `integration:${orgId}:${post.id}:${date}`
-    // );
-    // if (getIntegrationData) {
-    //   return JSON.parse(getIntegrationData);
-    // }
-
     try {
       const loadAnalytics = await integrationProvider.postAnalytics(
         getIntegration.internalId,
@@ -268,7 +271,7 @@ export class PostsService {
         date
       );
       await ioRedis.set(
-        `integration:${orgId}:${post.id}:${date}`,
+        analyticsCacheKey,
         JSON.stringify(loadAnalytics),
         'EX',
         !process.env.NODE_ENV || process.env.NODE_ENV === 'development'
@@ -331,6 +334,20 @@ export class PostsService {
     if (!integrationProvider.postLikers) {
       return { supported: false };
     }
+    const cacheKey = `post-likers:${orgId}:${post.id}`;
+    if (!forceRefresh) {
+      const cached = await ioRedis.get(cacheKey);
+      if (cached) {
+        return JSON.parse(cached) as { supported: true; users: PostLiker[] };
+      }
+    }
+    if (integrationProvider.allowsReadFeature?.('post-likers') === false) {
+      return {
+        supported: true,
+        users: [],
+        error: 'Liker reads are disabled by the provider usage budget',
+      };
+    }
 
     const getIntegration = post.integration!;
 
@@ -385,7 +402,16 @@ export class PostsService {
         getIntegration.token,
         post.releaseId
       );
-      return { supported: true, users };
+      const response = { supported: true as const, users };
+      await ioRedis.set(
+        cacheKey,
+        JSON.stringify(response),
+        'EX',
+        !process.env.NODE_ENV || process.env.NODE_ENV === 'development'
+          ? 1
+          : 21600
+      );
+      return response;
     } catch (e) {
       console.log(
         `Failed to load likers for ${getIntegration.providerIdentifier} post ${

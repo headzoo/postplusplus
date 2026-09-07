@@ -7,11 +7,18 @@ jest.mock(
     PostsService: class PostsService {},
   })
 );
+jest.mock('@gitroom/nestjs-libraries/redis/redis.service', () => ({
+  ioRedis: {
+    get: jest.fn(),
+    set: jest.fn(),
+  },
+}));
 
 import {
   IntegrationsController,
   publicProfileUrl,
 } from './integrations.controller';
+import { ioRedis } from '@gitroom/nestjs-libraries/redis/redis.service';
 
 describe('publicProfileUrl', () => {
   it('returns undefined for empty values', () => {
@@ -99,6 +106,69 @@ describe('IntegrationsController utm params settings', () => {
     expect(updateChannelUtmParams).toHaveBeenCalledWith('org-a', 'channel-a', {
       utmParams: 'utm_campaign=spring',
     });
+  });
+});
+
+describe('IntegrationsController lead discovery settings', () => {
+  it('passes the opt-in and quota DTO to the service', async () => {
+    const updateChannelLeadDiscovery = jest.fn().mockResolvedValue({
+      enabled: true,
+      dailyQuota: 3,
+    });
+    const controller = new IntegrationsController(
+      {} as any,
+      { updateChannelLeadDiscovery } as any,
+      {} as any,
+      {} as any,
+      {} as any
+    );
+
+    await expect(
+      controller.updateChannelLeadDiscovery(
+        { id: 'org-a' } as any,
+        'channel-a',
+        { enabled: true, dailyQuota: 3 }
+      )
+    ).resolves.toEqual({ enabled: true, dailyQuota: 3 });
+    expect(updateChannelLeadDiscovery).toHaveBeenCalledWith(
+      'org-a',
+      'channel-a',
+      { enabled: true, dailyQuota: 3 }
+    );
+  });
+});
+
+describe('IntegrationsController mention read cache', () => {
+  it('does not cache provider failures as confirmed misses', async () => {
+    const integrationService = {
+      getIntegrationById: jest.fn().mockResolvedValue({
+        id: 'channel-a',
+        providerIdentifier: 'x',
+      }),
+      getMentions: jest.fn().mockResolvedValue([]),
+    };
+    const controller = new IntegrationsController(
+      {
+        getSocialIntegration: jest.fn().mockReturnValue({
+          allowsReadFeature: jest.fn().mockReturnValue(true),
+        }),
+      } as any,
+      integrationService as any,
+      {} as any,
+      {} as any,
+      {} as any
+    );
+    jest.spyOn(controller, 'functionIntegration').mockResolvedValue(false);
+    (ioRedis.get as jest.Mock).mockResolvedValue(null);
+
+    await expect(
+      controller.mentions({ id: 'org-a' } as any, {
+        id: 'channel-a',
+        name: 'mention',
+        data: { query: 'missing' },
+      })
+    ).resolves.toEqual([]);
+    expect(ioRedis.set).not.toHaveBeenCalled();
   });
 });
 

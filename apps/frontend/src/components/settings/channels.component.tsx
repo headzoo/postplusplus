@@ -594,6 +594,165 @@ const ChannelLinkTrackingSection: FC<{
   );
 };
 
+const ChannelLeadDiscoverySection: FC<{
+  integrationId: string;
+  applicable?: boolean;
+  settings?: { enabled: boolean; dailyQuota: number };
+  loading: boolean;
+  onUpdated: () => Promise<unknown>;
+}> = ({ integrationId, applicable, settings, loading, onUpdated }) => {
+  const t = useT();
+  const toast = useToaster();
+  const fetch = useFetch();
+  const [enabled, setEnabled] = useState(settings?.enabled ?? false);
+  const [dailyQuota, setDailyQuota] = useState(settings?.dailyQuota ?? 5);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setEnabled(settings?.enabled ?? false);
+    setDailyQuota(settings?.dailyQuota ?? 5);
+  }, [integrationId, settings?.dailyQuota, settings?.enabled]);
+
+  if (loading && applicable === undefined) {
+    return (
+      <div className="flex flex-col gap-[16px] border border-newBorder rounded-[8px] p-[16px]">
+        <div className="text-[16px] font-[500]">
+          {t('channel_lead_discovery', 'Lead discovery')}
+        </div>
+        <div className="text-[14px] text-newTextColor">
+          {t('loading', 'Loading...')}
+        </div>
+      </div>
+    );
+  }
+
+  if (!applicable || !settings) {
+    return null;
+  }
+
+  const validQuota =
+    Number.isInteger(dailyQuota) && dailyQuota >= 1 && dailyQuota <= 25;
+  const hasChanges =
+    enabled !== settings.enabled || dailyQuota !== settings.dailyQuota;
+
+  const save = async () => {
+    if (saving || !validQuota || !hasChanges) return;
+    setSaving(true);
+    try {
+      const response = await fetch(
+        `/integrations/${integrationId}/lead-discovery`,
+        {
+          method: 'PUT',
+          body: JSON.stringify({ enabled, dailyQuota }),
+        }
+      );
+      if (!response.ok) throw new Error('lead discovery save failed');
+      await onUpdated();
+      toast.show(
+        t('channel_lead_discovery_saved', 'Lead discovery settings updated.'),
+        'success'
+      );
+    } catch {
+      setEnabled(settings.enabled);
+      setDailyQuota(settings.dailyQuota);
+      toast.show(
+        t(
+          'channel_lead_discovery_save_failed',
+          'Could not update lead discovery settings.'
+        )
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-[16px] border border-newBorder rounded-[8px] p-[16px]">
+      <div className="flex flex-col gap-[8px]">
+        <div className="flex items-center gap-[10px]">
+          <div className="size-9 shrink-0 rounded-full flex items-center justify-center bg-violet-500/15 text-violet-600 dark:text-violet-400">
+            <GlobalIcon size={18} />
+          </div>
+          <div className="text-[16px] font-[500]">
+            {t('channel_lead_discovery', 'Lead discovery')}
+          </div>
+        </div>
+        <div className="text-[13px] text-newTextColor">
+          {t(
+            'channel_lead_discovery_description',
+            'Optionally discover leads through the audiences of strong channel relationships. Each crawl can make a billable provider request.'
+          )}
+        </div>
+      </div>
+
+      <label className="flex items-start gap-[10px] text-[14px] cursor-pointer">
+        <input
+          type="checkbox"
+          checked={enabled}
+          disabled={saving}
+          onChange={(event) => setEnabled(event.target.checked)}
+          className="mt-[2px] size-4 accent-violet-500"
+        />
+        <span>
+          {t(
+            'channel_lead_discovery_opt_in',
+            'Enable automatic lead discovery for this channel'
+          )}
+        </span>
+      </label>
+
+      <div className="flex flex-col gap-[6px]">
+        <label
+          htmlFor={`channel-lead-discovery-quota-${integrationId}`}
+          className="text-[14px]"
+        >
+          {t('channel_lead_discovery_daily_quota', 'Daily crawl quota')}
+        </label>
+        <input
+          id={`channel-lead-discovery-quota-${integrationId}`}
+          type="number"
+          min={1}
+          max={25}
+          step={1}
+          value={dailyQuota}
+          disabled={saving}
+          onChange={(event) => setDailyQuota(Number(event.target.value))}
+          className="bg-input w-full max-w-[180px] p-[12px] outline-none border border-fifth rounded-[4px] text-inputText text-[14px]"
+        />
+        <div className="text-[12px] text-newTextColor">
+          {t(
+            'channel_lead_discovery_quota_help',
+            'Maximum audience crawls per UTC day (1–25). Lower values reduce provider API usage.'
+          )}
+        </div>
+        {!validQuota && (
+          <div className="text-[12px] text-red-400">
+            {t(
+              'channel_lead_discovery_quota_invalid',
+              'Choose a whole number from 1 through 25.'
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          loading={saving}
+          disabled={saving || !hasChanges || !validQuota}
+          onClick={save}
+          aria-label={t(
+            'save_channel_lead_discovery',
+            'Save lead discovery settings'
+          )}
+        >
+          {t('save', 'Save')}
+        </Button>
+      </div>
+    </div>
+  );
+};
+
 const ChannelDetailPanel: FC<{
   integration: IntegrationListItem;
   details?: ChannelDetails;
@@ -708,6 +867,14 @@ const ChannelDetailPanel: FC<{
             utmParams={details?.utmParams ?? integration.utmParams ?? null}
             loading={loading}
             onUtmUpdated={onStrategyUpdated}
+          />
+
+          <ChannelLeadDiscoverySection
+            integrationId={integration.id}
+            applicable={details?.leadDiscoveryApplicable}
+            settings={details?.leadDiscovery}
+            loading={loading}
+            onUpdated={onStrategyUpdated}
           />
 
           <InteractionTrackingSection

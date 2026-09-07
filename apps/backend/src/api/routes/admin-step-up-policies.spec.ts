@@ -21,17 +21,26 @@ const EXPECTED_POLICIES: Record<string, Record<string, Policy>> = {
     listPlatforms: 'general',
     getStats: 'general',
     getRelationshipGradeSchedule: 'general',
+    listScheduleLogs: 'general',
     updateRelationshipGradeSchedule: 'fresh',
     triggerRelationshipGradeSchedule: 'fresh',
     getFollowerBotScoreSchedule: 'general',
     updateFollowerBotScoreSchedule: 'fresh',
     triggerFollowerBotScoreSchedule: 'fresh',
+    getHotTriageSchedule: 'general',
+    updateHotTriageSchedule: 'fresh',
+    triggerHotTriageSchedule: 'fresh',
+    getFollowerCultivateSchedule: 'general',
+    updateFollowerCultivateSchedule: 'fresh',
+    triggerFollowerCultivateSchedule: 'fresh',
     getMissingPostRecoverySchedule: 'general',
     triggerMissingPostRecoverySchedule: 'fresh',
     getPostWorkflowSchedule: 'general',
     triggerPostWorkflowSchedule: 'fresh',
     getAutopostWorkflowSchedule: 'general',
     triggerAutopostWorkflowSchedule: 'fresh',
+    getLeadBridgeSchedule: 'general',
+    triggerLeadBridgeSchedule: 'fresh',
   },
   'users.controller.ts': {
     getImpersonate: 'general',
@@ -61,7 +70,11 @@ const EXPECTED_POLICIES: Record<string, Record<string, Policy>> = {
  */
 const NOT_A_PLATFORM_ADMIN_CAPABILITY: Record<string, string[]> = {
   // Reports `admin: !!user.isSuperAdmin` about the caller's own session.
-  'users.controller.ts': ['getSelf'],
+  'users.controller.ts': [
+    'getSelf',
+    'verifyPasskeyRegistration',
+    'verifyPasskeyAssertion',
+  ],
   // Defence-in-depth helper shared by the class-decorated handlers.
   'admin.controller.ts': ['assertSuperAdmin'],
 };

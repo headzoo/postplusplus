@@ -454,11 +454,17 @@ describe('Pipeline Temporal workflow boundaries', () => {
         }
       }),
     };
+    const scheduleService = {
+      install: jest.fn().mockResolvedValue(undefined),
+    };
     const register = new InfiniteWorkflowRegister(
       {
         client: { getRawClient: () => ({ workflow }) },
       } as any,
-      { install: jest.fn().mockResolvedValue(undefined) } as any
+      scheduleService as any,
+      scheduleService as any,
+      scheduleService as any,
+      scheduleService as any
     );
     const previousRunCron = process.env.RUN_CRON;
     process.env.RUN_CRON = '1';
@@ -495,11 +501,17 @@ describe('Pipeline Temporal workflow boundaries', () => {
         })
       ),
     };
+    const scheduleService = {
+      install: jest.fn().mockResolvedValue(undefined),
+    };
     const register = new InfiniteWorkflowRegister(
       {
         client: { getRawClient: () => ({ workflow }) },
       } as any,
-      { install: jest.fn().mockResolvedValue(undefined) } as any
+      scheduleService as any,
+      scheduleService as any,
+      scheduleService as any,
+      scheduleService as any
     );
     const previousRunCron = process.env.RUN_CRON;
     process.env.RUN_CRON = '1';

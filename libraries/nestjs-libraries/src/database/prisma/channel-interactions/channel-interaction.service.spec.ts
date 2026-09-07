@@ -32,6 +32,7 @@ jest.mock('@gitroom/nestjs-libraries/redis/redis.service', () => ({
     scan: jest.fn().mockResolvedValue(['0', []]),
     incr: jest.fn().mockResolvedValue(1),
     expire: jest.fn().mockResolvedValue(1),
+    eval: jest.fn().mockResolvedValue(1),
   },
 }));
 
@@ -3102,7 +3103,7 @@ describe('ChannelInteractionService', () => {
     );
   });
 
-  it('ignores the daily crawl cap during an admin burst crawl', async () => {
+  it('reserves channel quota for an admin-sized crawl', async () => {
     const repository = createRepository();
     repository.getNextWarmFollowerForLeadBridge = jest.fn().mockResolvedValue({
       externalId: 'warm-1',
@@ -3113,7 +3114,8 @@ describe('ChannelInteractionService', () => {
       skipped: 0,
       appliedExternalIds: Array.from({ length: 20 }, (_, i) => `lead-${i}`),
     });
-    (ioRedis.get as jest.Mock).mockResolvedValue('5');
+    (ioRedis.get as jest.Mock).mockResolvedValue(null);
+    (ioRedis.eval as jest.Mock).mockResolvedValue(1);
     const memberFollowers = jest.fn().mockResolvedValue({
       items: Array.from({ length: 25 }, (_, i) => ({
         id: `lead-${i}`,
@@ -3137,8 +3139,10 @@ describe('ChannelInteractionService', () => {
           organizationId: 'org',
           providerIdentifier: 'x',
           token: 'token',
+          leadDiscoveryEnabled: true,
+          leadDiscoveryDailyQuota: 5,
         } as any,
-        { ignoreDailyLimit: true, maxApplied: 20 }
+        { maxApplied: 20 }
       )
     ).resolves.toEqual(
       expect.objectContaining({
@@ -3150,6 +3154,87 @@ describe('ChannelInteractionService', () => {
     expect(repository.applyLeadBridgeDiscoveries).toHaveBeenCalledWith(
       expect.objectContaining({ maxApplied: 20 })
     );
-    expect(ioRedis.incr).not.toHaveBeenCalled();
+    expect(ioRedis.eval).toHaveBeenCalledWith(
+      expect.any(String),
+      1,
+      'lead-bridge-crawl:integration:2026-08-12',
+      5,
+      86400
+    );
+  });
+
+  it('uses the channel daily quota for automatic lead discovery', async () => {
+    const repository = createRepository();
+    repository.getNextWarmFollowerForLeadBridge = jest.fn().mockResolvedValue({
+      externalId: 'warm-1',
+      relationshipGrade: 4.2,
+    });
+    const memberFollowers = jest.fn();
+    const manager = {
+      getSocialIntegration: jest.fn().mockReturnValue({ memberFollowers }),
+    };
+    (ioRedis.get as jest.Mock).mockResolvedValue(null);
+    (ioRedis.eval as jest.Mock).mockResolvedValue(0);
+    const service = new ChannelInteractionService(
+      repository as any,
+      manager as any
+    );
+
+    await expect(
+      service.crawlLeadBridgesForIntegration({
+        id: 'integration',
+        organizationId: 'org',
+        providerIdentifier: 'x',
+        token: 'token',
+        leadDiscoveryEnabled: true,
+        leadDiscoveryDailyQuota: 2,
+      } as any)
+    ).resolves.toEqual({
+      skipped: true,
+      processed: 0,
+      applied: 0,
+      rateLimited: true,
+    });
+    expect(memberFollowers).not.toHaveBeenCalled();
+  });
+
+  it('counts a failed provider request against the channel quota', async () => {
+    const repository = createRepository();
+    repository.getNextWarmFollowerForLeadBridge = jest.fn().mockResolvedValue({
+      externalId: 'warm-1',
+      relationshipGrade: 4.2,
+    });
+    const memberFollowers = jest.fn().mockRejectedValue(new Error('X failed'));
+    const manager = {
+      getSocialIntegration: jest.fn().mockReturnValue({ memberFollowers }),
+    };
+    (ioRedis.get as jest.Mock).mockResolvedValue(null);
+    (ioRedis.eval as jest.Mock)
+      .mockResolvedValueOnce(1)
+      .mockResolvedValueOnce(0);
+    const service = new ChannelInteractionService(
+      repository as any,
+      manager as any
+    );
+    const integration = {
+      id: 'integration',
+      organizationId: 'org',
+      providerIdentifier: 'x',
+      token: 'token',
+      leadDiscoveryEnabled: true,
+      leadDiscoveryDailyQuota: 1,
+    } as any;
+
+    await expect(
+      service.crawlLeadBridgesForIntegration(integration)
+    ).resolves.toEqual(
+      expect.objectContaining({ skipped: false, failed: true })
+    );
+    await expect(
+      service.crawlLeadBridgesForIntegration(integration)
+    ).resolves.toEqual(
+      expect.objectContaining({ skipped: true, rateLimited: true })
+    );
+    expect(memberFollowers).toHaveBeenCalledTimes(1);
   });
 });

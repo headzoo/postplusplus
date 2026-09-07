@@ -40,6 +40,7 @@ import {
   PostRulesRemovePostResult,
   PostRulesRepostResult,
   PostRulesAddPlugReplyResult,
+  ProviderReadFeature,
   ConversationHydrationRequest,
 } from '@gitroom/nestjs-libraries/integrations/social/social.integrations.interface';
 import {
@@ -68,6 +69,7 @@ import {
   isXLongPostSubscription,
   xMaxLength,
 } from '@gitroom/helpers/utils/count.length';
+import * as Sentry from '@sentry/nestjs';
 
 dayjs.extend(utc);
 
@@ -242,9 +244,29 @@ export class XProvider extends SocialAbstract implements SocialProvider {
   name = 'X';
   isBetweenSteps = false;
   scopes = [] as string[];
+  private _webhookEndpointCache?: {
+    expiresAt: number;
+    value: ProviderWebhookEndpointReconciliationResult;
+  };
+
+  allowsReadFeature(feature: ProviderReadFeature) {
+    if (process.env.DISABLE_X_OPTIONAL_READS) return false;
+    const flagByFeature: Partial<Record<ProviderReadFeature, string>> = {
+      analytics: 'DISABLE_X_ANALYTICS',
+      'post-rules': 'DISABLE_X_ANALYTICS',
+      'conversation-hydration': 'DISABLE_X_CONVERSATION_HYDRATION',
+      'follower-snapshot': 'DISABLE_X_FOLLOWER_SNAPSHOTS',
+      'lead-discovery': 'DISABLE_X_LEAD_DISCOVERY',
+      'member-posts': 'DISABLE_X_MEMBER_POSTS',
+      'mention-search': 'DISABLE_X_MENTION_SEARCH',
+      'post-likers': 'DISABLE_X_POST_LIKERS',
+    };
+    const flag = flagByFeature[feature];
+    return !flag || !process.env[flag];
+  }
 
   get analyticsSnapshot() {
-    if (process.env.DISABLE_X_ANALYTICS) {
+    if (!this.allowsReadFeature('analytics')) {
       return undefined;
     }
 
@@ -255,7 +277,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
   }
 
   get postRules() {
-    if (process.env.DISABLE_X_ANALYTICS) {
+    if (!this.allowsReadFeature('post-rules')) {
       return undefined;
     }
 
@@ -349,6 +371,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
       const requested = requests.slice(0, 100);
       if (!requested.length) return [];
       const client = await this.getClient(accessToken);
+      this.recordXApiCall('conversation-hydration', 'tweets.lookup');
       const response = await client.v2.tweets(
         requested.map((request) => request.externalPostId),
         {
@@ -416,6 +439,11 @@ export class XProvider extends SocialAbstract implements SocialProvider {
     ...API_ORDER_FOLLOWER_SORTS,
     FOLLOWER_DATABASE_INTERACTIONS_SORT,
   ];
+  preferStoredFollowers = true;
+  interactionMaintenance = {
+    followerSnapshotIntervalMs: 7 * 24 * 60 * 60 * 1000,
+    subscriptionReconciliationIntervalMs: 24 * 60 * 60 * 1000,
+  };
   channelInteractionWebhooks = {
     verifyChallenge: async (request: {
       query: Record<string, string | string[] | undefined>;
@@ -1301,6 +1329,23 @@ export class XProvider extends SocialAbstract implements SocialProvider {
   }
 
   private async reconcileInteractionWebhookEndpoint(): Promise<ProviderWebhookEndpointReconciliationResult> {
+    if (
+      this._webhookEndpointCache &&
+      this._webhookEndpointCache.expiresAt > Date.now()
+    ) {
+      return this._webhookEndpointCache.value;
+    }
+    const value = await this.reconcileInteractionWebhookEndpointUncached();
+    if (value.state === 'active') {
+      this._webhookEndpointCache = {
+        expiresAt: Date.now() + 60 * 60 * 1000,
+        value,
+      };
+    }
+    return value;
+  }
+
+  private async reconcileInteractionWebhookEndpointUncached(): Promise<ProviderWebhookEndpointReconciliationResult> {
     const callbackUrl = this.xWebhookCallbackUrl();
     if (!callbackUrl || !process.env.X_WEBHOOK_BEARER_TOKEN) {
       return {
@@ -2014,6 +2059,11 @@ export class XProvider extends SocialAbstract implements SocialProvider {
     accessToken?: string
   ): Promise<T> {
     const method = options.method || 'GET';
+    this.recordXApiCall(
+      'interaction-webhooks',
+      this.xMetricEndpoint(url),
+      method
+    );
     let authorization: string;
     if (authentication === 'bearer') {
       authorization = `Bearer ${process.env.X_WEBHOOK_BEARER_TOKEN || ''}`;
@@ -2225,6 +2275,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
     query: FollowerQuery
   ): Promise<FollowerPage> {
     const client = await this.getClient(accessToken);
+    this.recordXApiCall('followers', 'users.followers');
     const response = await client.v2.followers(externalId, {
       max_results: query.limit,
       ...(query.cursor ? { pagination_token: query.cursor } : {}),
@@ -2335,6 +2386,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
 
     const client = await this.getClient(accessToken);
     try {
+      this.recordXApiCall('profile-resolution', 'users.by_username');
       const data = await client.v2.userByUsername(handle, {
         'user.fields': [
           'created_at',
@@ -2437,6 +2489,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
   ): Promise<MemberPostsPage> {
     const client = await this.getClient(accessToken);
     const limit = Math.min(Math.max(query.limit, 1), 100);
+    this.recordXApiCall('member-posts', 'users.timeline');
     const timeline = await client.v2.userTimeline(externalId, {
       'tweet.fields': ['created_at', 'text'],
       'media.fields': ['url', 'preview_image_url', 'type'],
@@ -2648,6 +2701,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
         accessSecret: accessSecretSplit,
       });
 
+      this.recordXApiCall('post-rules', 'tweets.single');
       const tweet = await client.v2.singleTweet(externalPostId, {
         'tweet.fields': ['public_metrics'],
       });
@@ -4073,6 +4127,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
     since: string,
     token = ''
   ): Promise<TweetV2[]> => {
+    this.recordXApiCall('legacy-analytics', 'users.timeline');
     const tweets = await client.v2.userTimeline(id, {
       'tweet.fields': ['id'],
       'user.fields': [],
@@ -4124,6 +4179,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
           request.integration.internalId,
           snapshotDay
         );
+    this.recordXApiCall('analytics-snapshot', 'users.timeline');
     const timeline = await client.v2.userTimeline(
       request.integration.internalId,
       {
@@ -4151,6 +4207,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
       };
     }
 
+    this.recordXApiCall('analytics-snapshot', 'tweets.lookup');
     const tweets = await client.v2.tweets(tweetIds, {
       'tweet.fields': ['public_metrics'],
     });
@@ -4197,6 +4254,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
     day: string
   ): Promise<ChannelAnalyticsDatedPoint[]> {
     try {
+      this.recordXApiCall('analytics-snapshot', 'users.single');
       const user = await client.v2.user(userId, {
         'user.fields': ['public_metrics'],
       });
@@ -4257,6 +4315,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
         return [];
       }
 
+      this.recordXApiCall('legacy-analytics', 'tweets.lookup');
       const data = await client.v2.tweets(
         tweets.map((p) => p.id),
         {
@@ -4334,6 +4393,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
 
     try {
       // Fetch the specific tweet with public metrics
+      this.recordXApiCall('post-analytics', 'tweets.single');
       const tweet = await client.v2.singleTweet(postId, {
         'tweet.fields': ['public_metrics', 'created_at'],
       });
@@ -4439,7 +4499,9 @@ export class XProvider extends SocialAbstract implements SocialProvider {
 
     const likers: PostLiker[] = [];
     let paginationToken: string | undefined;
+    let pages = 0;
     do {
+      this.recordXApiCall('post-likers', 'tweets.liking_users');
       const response = await client.v2.tweetLikedBy(postId, {
         max_results: 100,
         'user.fields': ['username', 'name', 'profile_image_url'],
@@ -4449,7 +4511,8 @@ export class XProvider extends SocialAbstract implements SocialProvider {
         likers.push(mapUser(user));
       }
       paginationToken = response.meta?.next_token;
-    } while (paginationToken);
+      pages++;
+    } while (paginationToken && pages < 5);
 
     return likers;
   }
@@ -4464,6 +4527,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
     });
 
     try {
+      this.recordXApiCall('mention-search', 'users.by_username');
       const data = await client.v2.userByUsername(d.query, {
         'user.fields': ['username', 'name', 'profile_image_url'],
       });
@@ -4483,6 +4547,26 @@ export class XProvider extends SocialAbstract implements SocialProvider {
       console.log(err);
     }
     return [];
+  }
+
+  private recordXApiCall(feature: string, endpoint: string, method = 'GET') {
+    try {
+      Sentry.metrics.count('x_api_request', 1, {
+        attributes: {
+          endpoint,
+          feature,
+          method: method.toUpperCase(),
+        },
+      });
+    } catch {
+      // Usage telemetry must never interrupt provider work.
+    }
+  }
+
+  private xMetricEndpoint(url: string) {
+    return new URL(url).pathname
+      .replace(/(\/webhooks)\/[^/]+$/, '$1/:id')
+      .replace(/(\/activity\/subscriptions)\/[^/]+$/, '$1/:id');
   }
 
   mentionFormat(idOrHandle: string, name: string) {

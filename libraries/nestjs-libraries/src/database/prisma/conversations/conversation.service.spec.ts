@@ -39,6 +39,7 @@ describe('ConversationService', () => {
     findOwned: jest.fn(),
     findOwnedMany: jest.fn(),
     updateSnapshot: jest.fn(),
+    recordHydrationAttempt: jest.fn(),
   };
   const capability = {
     supported: { kinds: ['mention', 'repost'], actions: { repost: true } },
@@ -141,6 +142,50 @@ describe('ConversationService', () => {
       'org-a',
       'event-a',
       expect.objectContaining({ externalId: 'post-a' })
+    );
+  });
+
+  it('does not repeat a recent unsuccessful hydration attempt', async () => {
+    repository.findOwnedMany
+      .mockResolvedValueOnce([
+        event({
+          postSnapshot: null,
+          metadata: {},
+          relatedObjectId: 'source-a',
+          snapshotHydrationAttemptedAt: new Date(),
+          snapshotHydrationTerminal: false,
+        }),
+      ])
+      .mockResolvedValueOnce([event({ postSnapshot: null })]);
+    capability.getHydrationSourceExternalId.mockReturnValue('source-a');
+
+    await service.hydrate('org-a', ['event-a']);
+
+    expect(capability.hydrate).not.toHaveBeenCalled();
+    expect(repository.recordHydrationAttempt).not.toHaveBeenCalled();
+  });
+
+  it('marks provider-confirmed misses as terminal', async () => {
+    repository.findOwnedMany
+      .mockResolvedValueOnce([
+        event({
+          postSnapshot: null,
+          metadata: {},
+          relatedObjectId: 'source-a',
+          snapshotHydrationAttemptedAt: null,
+          snapshotHydrationTerminal: false,
+        }),
+      ])
+      .mockResolvedValueOnce([event({ postSnapshot: null })]);
+    capability.getHydrationSourceExternalId.mockReturnValue('source-a');
+    capability.hydrate.mockResolvedValue([]);
+
+    await service.hydrate('org-a', ['event-a']);
+
+    expect(repository.recordHydrationAttempt).toHaveBeenCalledWith(
+      'org-a',
+      ['event-a'],
+      true
     );
   });
 

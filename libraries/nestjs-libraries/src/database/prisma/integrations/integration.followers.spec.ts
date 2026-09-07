@@ -27,6 +27,8 @@ describe('IntegrationService followers', () => {
     type: 'social',
     token: 'token',
     tokenExpiration: new Date(Date.now() + 60_000),
+    leadDiscoveryEnabled: false,
+    leadDiscoveryDailyQuota: 5,
   };
 
   const createService = (
@@ -43,6 +45,7 @@ describe('IntegrationService followers', () => {
           ? integrations.find((item) => item.id === integrationId)
           : undefined
       ),
+      updateLeadDiscoverySettings: jest.fn().mockResolvedValue(true),
     };
     (service as any)._integrationManager = {
       getSocialIntegration: jest.fn(
@@ -420,6 +423,8 @@ describe('IntegrationService followers', () => {
       inBetweenSteps: false,
       profileUrl: 'https://x.com/channel',
       strategyApplicable: false,
+      leadDiscoveryApplicable: false,
+      leadDiscovery: { enabled: false, dailyQuota: 5 },
       recomputeRequested: false,
       utmParams: null,
       tracking: expect.objectContaining({
@@ -567,6 +572,35 @@ describe('IntegrationService followers', () => {
     expect(
       (service as any)._relationshipGradeScheduleService.trigger
     ).toHaveBeenCalledTimes(1);
+  });
+
+  it('updates channel-scoped lead discovery opt-in and quota', async () => {
+    const service = createService([integration], {
+      supported: { followers: jest.fn(), memberFollowers: jest.fn() },
+    });
+
+    await expect(
+      service.updateChannelLeadDiscovery(org.id, 'channel-a', {
+        enabled: true,
+        dailyQuota: 3,
+      })
+    ).resolves.toEqual({ enabled: true, dailyQuota: 3 });
+    expect(
+      (service as any)._integrationRepository.updateLeadDiscoverySettings
+    ).toHaveBeenCalledWith(org.id, 'channel-a', true, 3);
+  });
+
+  it('rejects lead discovery for a provider without member audiences', async () => {
+    const service = createService([integration], {
+      supported: { followers: jest.fn() },
+    });
+
+    await expect(
+      service.updateChannelLeadDiscovery(org.id, 'channel-a', {
+        enabled: true,
+        dailyQuota: 3,
+      })
+    ).rejects.toMatchObject({ status: 400 });
   });
 
   it('keeps a changed strategy saved when recomputation fails', async () => {

@@ -132,6 +132,18 @@ const MAX_FUTURE_SKEW_MS = 10 * 60 * 1000;
 const MAX_ID_LENGTH = 512;
 const MAX_PROFILE_TEXT_LENGTH = 4096;
 const MAX_METADATA_VALUE_LENGTH = 2048;
+const RESERVE_LEAD_DISCOVERY_QUOTA = `
+local current = tonumber(redis.call('GET', KEYS[1]) or '0')
+local quota = tonumber(ARGV[1])
+if current >= quota then
+  return 0
+end
+local reserved = redis.call('INCR', KEYS[1])
+if reserved == 1 then
+  redis.call('EXPIRE', KEYS[1], tonumber(ARGV[2]))
+end
+return reserved
+`;
 const MAX_AUDIENCE_NOTE_LENGTH = 4096;
 const MAX_POST_CONTENT_LENGTH = 100000;
 const MAX_SNAPSHOT_CONTENT_LENGTH = 10000;
@@ -527,6 +539,10 @@ export class ChannelInteractionService {
       desiredSubscriptions
     );
     return true;
+  }
+
+  hasActiveInboundLikeTracking(integrationId: string) {
+    return this._repository.hasActiveInboundLikeSubscription(integrationId);
   }
 
   getInteractionAuthorizationCapability(providerIdentifier: string) {
@@ -1421,11 +1437,10 @@ export class ChannelInteractionService {
   async crawlLeadBridgesForIntegration(
     integration: Integration,
     options: {
-      ignoreDailyLimit?: boolean;
       maxApplied?: number;
     } = {}
   ) {
-    if (!this._integrationManager) {
+    if (!this._integrationManager || !integration.leadDiscoveryEnabled) {
       return { skipped: true as const, processed: 0, applied: 0 };
     }
     let provider: SocialProvider;
@@ -1439,18 +1454,16 @@ export class ChannelInteractionService {
     if (!provider.memberFollowers) {
       return { skipped: true as const, processed: 0, applied: 0 };
     }
+    if (provider.allowsReadFeature?.('lead-discovery') === false) {
+      return { skipped: true as const, processed: 0, applied: 0 };
+    }
 
     const day = utcDayKey();
     const countKey = leadBridgeDailyCountKey(integration.id, day);
-    const used = Number((await ioRedis.get(countKey)) || '0');
-    if (!options.ignoreDailyLimit && used >= LEAD_BRIDGE_DAILY_LIMIT) {
-      return {
-        skipped: true as const,
-        processed: 0,
-        applied: 0,
-        rateLimited: true,
-      };
-    }
+    const dailyQuota = Math.max(
+      1,
+      integration.leadDiscoveryDailyQuota || LEAD_BRIDGE_DAILY_LIMIT
+    );
 
     const cursorKey = leadBridgeCursorKey(integration.id);
     const afterExternalId = (await ioRedis.get(cursorKey)) || undefined;
@@ -1461,6 +1474,23 @@ export class ChannelInteractionService {
     );
     if (!warm) {
       return { skipped: true as const, processed: 0, applied: 0 };
+    }
+    const reservation = Number(
+      await ioRedis.eval(
+        RESERVE_LEAD_DISCOVERY_QUOTA,
+        1,
+        countKey,
+        dailyQuota,
+        leadBridgeDailyTtlSeconds()
+      )
+    );
+    if (reservation < 1) {
+      return {
+        skipped: true as const,
+        processed: 0,
+        applied: 0,
+        rateLimited: true,
+      };
     }
 
     let page: Awaited<
@@ -1550,12 +1580,6 @@ export class ChannelInteractionService {
     });
 
     await ioRedis.set(cursorKey, warm.externalId);
-    if (!options.ignoreDailyLimit) {
-      const nextCount = await ioRedis.incr(countKey);
-      if (nextCount === 1) {
-        await ioRedis.expire(countKey, leadBridgeDailyTtlSeconds());
-      }
-    }
 
     return {
       skipped: false as const,

@@ -94,6 +94,7 @@ jest.mock('next/navigation', () => ({
 }));
 
 jest.mock('@gitroom/frontend/components/launches/settings.modal', () => ({
+  isConnectionAdditionalSetting: () => false,
   ChannelAdditionalSettingsForm: () => (
     <div data-testid="channel-additional-settings">
       <div>Context documents</div>
@@ -129,6 +130,8 @@ const baseChannelDetails = {
   disabled: false,
   refreshNeeded: false,
   inBetweenSteps: false,
+  leadDiscoveryApplicable: true,
+  leadDiscovery: { enabled: false, dailyQuota: 5 },
   tracking: {
     state: 'partial',
     noBackfill: true,
@@ -585,6 +588,37 @@ describe('ChannelsSettings', () => {
       expect(globalMutate).toHaveBeenCalledWith('/integrations/list');
       expect(toastShow).toHaveBeenCalledWith(
         'Link tracking params updated.',
+        'success'
+      );
+    });
+  });
+
+  it('opts a channel into lead discovery with its daily quota', async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({}) });
+
+    render(<ChannelsSettings />);
+
+    fireEvent.click(
+      screen.getByLabelText('Enable automatic lead discovery for this channel')
+    );
+    fireEvent.change(screen.getByLabelText('Daily crawl quota'), {
+      target: { value: '3' },
+    });
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Save lead discovery settings' })
+    );
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/integrations/channel-a/lead-discovery',
+        {
+          method: 'PUT',
+          body: JSON.stringify({ enabled: true, dailyQuota: 3 }),
+        }
+      );
+      expect(mutateChannelDetails).toHaveBeenCalled();
+      expect(toastShow).toHaveBeenCalledWith(
+        'Lead discovery settings updated.',
         'success'
       );
     });

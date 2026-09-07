@@ -63,6 +63,11 @@ export type ChannelDetails = {
   recomputing?: boolean;
   recomputeRequested?: boolean;
   utmParams?: string | null;
+  leadDiscoveryApplicable: boolean;
+  leadDiscovery: {
+    enabled: boolean;
+    dailyQuota: number;
+  };
 };
 
 export const useChannelDetails = (integrationId?: string) => {

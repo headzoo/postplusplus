@@ -17,7 +17,9 @@ import {
 
 const CANDIDATE_BATCH_SIZE = 25;
 const PROVIDER_PAGE_SIZE = 100;
-const CAPTURE_WINDOW_DAYS = 180;
+const RECENT_CAPTURE_WINDOW_DAYS = 7;
+const WEEKLY_CAPTURE_WINDOW_DAYS = 30;
+const MONTHLY_CAPTURE_WINDOW_DAYS = 180;
 
 export type ChannelAnalyticsSnapshotCandidate = {
   id: string;
@@ -97,7 +99,16 @@ export class ChannelAnalyticsSnapshotActivity {
       page
     );
 
-    if (page.kind === 'post_lifetime' && provider.postLikers) {
+    const webhookLikesActive = provider.postLikers
+      ? await this._channelInteractionService
+          .hasActiveInboundLikeTracking(request.candidate.id)
+          .catch(() => true)
+      : false;
+    if (
+      page.kind === 'post_lifetime' &&
+      provider.postLikers &&
+      !webhookLikesActive
+    ) {
       const tweetIds = Array.from(
         new Set<string>(page.points.map((point) => point.externalPostId))
       );
@@ -195,7 +206,8 @@ export class ChannelAnalyticsSnapshotActivity {
     try {
       const toDay = utcDay(snapshotAt);
       const fromDay = new Date(toDay);
-      fromDay.setUTCDate(fromDay.getUTCDate() - (CAPTURE_WINDOW_DAYS - 1));
+      const captureWindowDays = this.captureWindowDays(snapshotAt);
+      fromDay.setUTCDate(fromDay.getUTCDate() - (captureWindowDays - 1));
       return await provider.analyticsSnapshot!.capture({
         integration: liveIntegration,
         accessToken: liveIntegration.token,
@@ -248,6 +260,16 @@ export class ChannelAnalyticsSnapshotActivity {
       throw new Error(`${field} must be a valid timestamp`);
     }
     return parsed;
+  }
+
+  private captureWindowDays(snapshotAt: Date) {
+    if (snapshotAt.getUTCDate() === 1) {
+      return MONTHLY_CAPTURE_WINDOW_DAYS;
+    }
+    if (snapshotAt.getUTCDay() === 0) {
+      return WEEKLY_CAPTURE_WINDOW_DAYS;
+    }
+    return RECENT_CAPTURE_WINDOW_DAYS;
   }
 }
 

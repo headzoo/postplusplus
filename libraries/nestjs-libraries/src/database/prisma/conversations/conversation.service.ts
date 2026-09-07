@@ -16,6 +16,7 @@ import { ChannelInteractionService } from '@gitroom/nestjs-libraries/database/pr
 import { ConversationRepository } from './conversation.repository';
 
 const MAX_HYDRATION_EVENTS = 100;
+const HYDRATION_RETRY_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 type ConversationEvent = Awaited<
   ReturnType<ConversationRepository['findOwned']>
@@ -71,9 +72,23 @@ export class ConversationService {
         const provider = this._integrationManager.getSocialIntegration(
           event.integration.providerIdentifier
         );
-        if (!provider?.conversations || !event.integration.token) return;
+        if (
+          !provider?.conversations ||
+          !event.integration.token ||
+          provider.allowsReadFeature?.('conversation-hydration') === false
+        )
+          return;
+        const retryCutoff = Date.now() - HYDRATION_RETRY_COOLDOWN_MS;
         const requests = group.flatMap((candidate) => {
           const snapshot = this.readSnapshot(candidate.postSnapshot);
+          if (
+            snapshot?.completeness === 'complete' ||
+            candidate.snapshotHydrationTerminal ||
+            (candidate.snapshotHydrationAttemptedAt &&
+              candidate.snapshotHydrationAttemptedAt.getTime() > retryCutoff)
+          ) {
+            return [];
+          }
           const sourceExternalId =
             snapshot?.externalId ??
             provider.conversations.getHydrationSourceExternalId(
@@ -91,6 +106,7 @@ export class ConversationService {
             event.integration.token,
             requests
           );
+          const validHydratedIds = new Set<string>();
           for (const result of hydrated) {
             if (group.some((candidate) => candidate.id === result.eventId)) {
               try {
@@ -100,12 +116,27 @@ export class ConversationService {
                     result.postSnapshot
                   )
                 );
+                validHydratedIds.add(result.eventId);
               } catch {
                 // A malformed provider response must never be persisted.
               }
             }
           }
+          await this._repository.recordHydrationAttempt(
+            organizationId,
+            requests
+              .map((request) => request.eventId)
+              .filter((eventId) => !validHydratedIds.has(eventId)),
+            true
+          );
         } catch {
+          await this._repository
+            .recordHydrationAttempt(
+              organizationId,
+              requests.map((request) => request.eventId),
+              false
+            )
+            .catch(() => undefined);
           // Hydration enriches existing records; one channel failure must not
           // make unrelated channels unavailable.
         }

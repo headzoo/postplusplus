@@ -641,6 +641,16 @@ export type MemberPostsPage = {
   hasMore: boolean;
 };
 
+export type ProviderReadFeature =
+  | 'analytics'
+  | 'conversation-hydration'
+  | 'follower-snapshot'
+  | 'lead-discovery'
+  | 'member-posts'
+  | 'mention-search'
+  | 'post-likers'
+  | 'post-rules';
+
 export type FollowerMemberNoteAuthor = {
   id: string;
   name: string;
@@ -923,6 +933,16 @@ export interface SocialProvider
     since: Date
   ): Promise<ChannelNoticeStatus>;
   followerSorts?: FollowerSort[];
+  /** Serve the maintained local follower snapshot instead of reading on page load. */
+  preferStoredFollowers?: boolean;
+  interactionMaintenance?: {
+    /** Full-list reconciliation interval. Webhooks maintain changes between runs. */
+    followerSnapshotIntervalMs?: number;
+    /** Remote subscription audit interval. Explicit reconciliation signals bypass it. */
+    subscriptionReconciliationIntervalMs?: number;
+  };
+  /** Optional emergency cost controls for provider-backed reads. */
+  allowsReadFeature?(feature: ProviderReadFeature): boolean;
   followers?(
     integration: Integration,
     accessToken: string,

@@ -453,6 +453,8 @@ model Integration {
   additionalSettings                  String?                              @default("[]")
   strategyId                          String                               @default("grow_audience")
   strategyVersion                     Int                                  @default(1)
+  leadDiscoveryEnabled                Boolean                              @default(false)
+  leadDiscoveryDailyQuota             Int                                  @default(5)
   utmParams                           String?
   exisingPlugData                     ExisingPlugData[]
   customer                            Customer?                            @relation(fields: [customerId], references: [id])
@@ -1632,25 +1634,27 @@ model ChannelAudienceMember {
 }
 
 model ChannelInteractionEvent {
-  id                     String                      @id @default(cuid())
-  organizationId         String
-  integrationId          String
-  providerEventKey       String
-  counterpartyExternalId String
-  kind                   ChannelInteractionKind
-  direction              ChannelInteractionDirection
-  eventAt                DateTime
-  relatedObjectId        String?
-  conversationExternalId String?
-  metadata               Json?
-  normalizationVersion   Int                         @default(1)
-  postSnapshot           Json?
-  snapshotVersion        Int?
-  snapshotCompleteness   String?
-  createdAt              DateTime                    @default(now())
-  organization           Organization                @relation(fields: [organizationId], references: [id])
-  integration            Integration                 @relation(fields: [integrationId], references: [id])
-  conversionEvents       ConversionEvent[]           @relation("ConversionInteractionEvidence")
+  id                           String                      @id @default(cuid())
+  organizationId               String
+  integrationId                String
+  providerEventKey             String
+  counterpartyExternalId       String
+  kind                         ChannelInteractionKind
+  direction                    ChannelInteractionDirection
+  eventAt                      DateTime
+  relatedObjectId              String?
+  conversationExternalId       String?
+  metadata                     Json?
+  normalizationVersion         Int                         @default(1)
+  postSnapshot                 Json?
+  snapshotVersion              Int?
+  snapshotCompleteness         String?
+  snapshotHydrationAttemptedAt DateTime?
+  snapshotHydrationTerminal    Boolean                     @default(false)
+  createdAt                    DateTime                    @default(now())
+  organization                 Organization                @relation(fields: [organizationId], references: [id])
+  integration                  Integration                 @relation(fields: [integrationId], references: [id])
+  conversionEvents             ConversionEvent[]           @relation("ConversionInteractionEvidence")
 
   @@unique([integrationId, providerEventKey])
   @@index([integrationId, counterpartyExternalId, eventAt])

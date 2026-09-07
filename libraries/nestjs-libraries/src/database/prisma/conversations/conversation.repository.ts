@@ -22,6 +22,8 @@ const conversationSelect = {
   metadata: true,
   postSnapshot: true,
   snapshotCompleteness: true,
+  snapshotHydrationAttemptedAt: true,
+  snapshotHydrationTerminal: true,
   integration: true,
 } satisfies Prisma.ChannelInteractionEventSelect;
 
@@ -129,9 +131,26 @@ export class ConversationRepository {
           postSnapshot: postSnapshot as Prisma.InputJsonValue,
           snapshotVersion: postSnapshot.version,
           snapshotCompleteness: postSnapshot.completeness,
+          snapshotHydrationAttemptedAt: new Date(),
+          snapshotHydrationTerminal: postSnapshot.completeness === 'complete',
         },
       });
     if (!result.count)
       throw new NotFoundException('Conversation was not found');
+  }
+
+  async recordHydrationAttempt(
+    organizationId: string,
+    eventIds: string[],
+    terminal: boolean
+  ) {
+    if (!eventIds.length) return;
+    await this._conversation.model.channelInteractionEvent.updateMany({
+      where: { id: { in: eventIds }, organizationId },
+      data: {
+        snapshotHydrationAttemptedAt: new Date(),
+        snapshotHydrationTerminal: terminal,
+      },
+    });
   }
 }

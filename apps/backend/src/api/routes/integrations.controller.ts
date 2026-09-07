@@ -39,6 +39,7 @@ import { RenameCustomerDto } from '@gitroom/nestjs-libraries/dtos/integrations/c
 import { ChannelTrackingAuthorizationDto } from '@gitroom/nestjs-libraries/dtos/integrations/channel.tracking.authorization.dto';
 import { UpdateChannelStrategyDto } from '@gitroom/nestjs-libraries/dtos/integrations/channel-strategy.dto';
 import { UpdateChannelUtmParamsDto } from '@gitroom/nestjs-libraries/dtos/integrations/channel-utm-params.dto';
+import { UpdateChannelLeadDiscoveryDto } from '@gitroom/nestjs-libraries/dtos/integrations/channel-lead-discovery.dto';
 import { ConversionService } from '@gitroom/nestjs-libraries/database/prisma/conversions/conversion.service';
 
 export const publicProfileUrl = (value: string | undefined) => {
@@ -155,6 +156,19 @@ export class IntegrationsController {
     @Body() body: UpdateChannelUtmParamsDto
   ) {
     return this._integrationService.updateChannelUtmParams(org.id, id, body);
+  }
+
+  @Put('/:id/lead-discovery')
+  async updateChannelLeadDiscovery(
+    @GetOrgFromRequest() org: Organization,
+    @Param('id') id: string,
+    @Body() body: UpdateChannelLeadDiscoveryDto
+  ) {
+    return this._integrationService.updateChannelLeadDiscovery(
+      org.id,
+      id,
+      body
+    );
   }
 
   // Authorizing tracking grants extra permissions on a channel that already
@@ -455,21 +469,60 @@ export class IntegrationsController {
       throw new Error('Invalid integration');
     }
 
+    const query = String(body?.data?.query || '').trim();
+    const list = await this._integrationService.getMentions(
+      getIntegration.providerIdentifier,
+      query
+    );
+    const cachedList = list.map((p) => ({
+      id: p.username,
+      image: p.image,
+      label: p.name,
+    }));
+    const normalizedQuery = query.replace(/^@/, '').toLowerCase();
+    if (
+      normalizedQuery &&
+      cachedList.some(
+        (item) => item.id.replace(/^@/, '').toLowerCase() === normalizedQuery
+      )
+    ) {
+      return cachedList;
+    }
+    if (!normalizedQuery) {
+      return cachedList;
+    }
+    const mentionProvider = this._integrationManager.getSocialIntegration(
+      getIntegration.providerIdentifier
+    );
+    if (mentionProvider.allowsReadFeature?.('mention-search') === false) {
+      return cachedList;
+    }
+
+    const missKey = `mentions-miss:${getIntegration.id}:${encodeURIComponent(
+      normalizedQuery
+    )}`;
     let newList: any[] | { none: true } = [];
-    try {
-      newList = (await this.functionIntegration(org, body)) || [];
-    } catch (err) {
-      console.log(err);
+    let queriedProvider = false;
+    let providerQuerySucceeded = false;
+    if (!(await ioRedis.get(missKey))) {
+      queriedProvider = true;
+      try {
+        const providerResult = await this.functionIntegration(org, body);
+        if (providerResult !== false && providerResult !== undefined) {
+          newList = providerResult || [];
+          providerQuerySucceeded = true;
+        }
+      } catch (err) {
+        console.log(err);
+      }
     }
 
     if (!Array.isArray(newList) && newList?.none) {
-      return newList;
+      if (normalizedQuery && queriedProvider && providerQuerySucceeded) {
+        await ioRedis.set(missKey, '1', 'EX', 86400);
+      }
+      return cachedList.length ? cachedList : newList;
     }
-
-    const list = await this._integrationService.getMentions(
-      getIntegration.providerIdentifier,
-      body?.data?.query
-    );
 
     if (Array.isArray(newList) && newList.length) {
       await this._integrationService.insertMentions(
@@ -483,19 +536,13 @@ export class IntegrationsController {
           }))
           .filter((f: any) => f.name && !f.doNotCache)
       );
+    } else if (normalizedQuery && queriedProvider && providerQuerySucceeded) {
+      await ioRedis.set(missKey, '1', 'EX', 86400);
     }
 
-    return uniqBy(
-      [
-        ...list.map((p) => ({
-          id: p.username,
-          image: p.image,
-          label: p.name,
-        })),
-        ...(newList as any[]),
-      ],
-      (p) => p.id
-    ).filter((f) => f.label && f.id);
+    return uniqBy([...cachedList, ...(newList as any[])], (p) => p.id).filter(
+      (f) => f.label && f.id
+    );
   }
 
   @Post('/function')
@@ -516,6 +563,13 @@ export class IntegrationsController {
     );
     if (!integrationProvider) {
       throw new Error('Invalid provider');
+    }
+
+    if (
+      body.name === 'mention' &&
+      integrationProvider.allowsReadFeature?.('mention-search') === false
+    ) {
+      return [];
     }
 
     // @ts-ignore

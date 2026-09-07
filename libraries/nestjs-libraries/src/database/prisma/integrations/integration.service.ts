@@ -102,6 +102,10 @@ import { ChannelAnalyticsService } from '@gitroom/nestjs-libraries/database/pris
 import { ChannelAnalyticsRepository } from '@gitroom/nestjs-libraries/database/prisma/channel-analytics/channel-analytics.repository';
 import { UpdateChannelStrategyDto } from '@gitroom/nestjs-libraries/dtos/integrations/channel-strategy.dto';
 import { UpdateChannelUtmParamsDto } from '@gitroom/nestjs-libraries/dtos/integrations/channel-utm-params.dto';
+import {
+  CHANNEL_LEAD_DISCOVERY_MAX_DAILY_QUOTA,
+  UpdateChannelLeadDiscoveryDto,
+} from '@gitroom/nestjs-libraries/dtos/integrations/channel-lead-discovery.dto';
 import { normalizeUtmParamsString } from '@gitroom/helpers/utils/utm.params';
 import {
   getChannelStrategy,
@@ -115,6 +119,8 @@ import {
   ConversionRepository,
   ConvertedActorCursor,
 } from '@gitroom/nestjs-libraries/database/prisma/conversions/conversion.repository';
+import { createHash } from 'crypto';
+import { LEAD_BRIDGE_WORKFLOW_ID } from '@gitroom/nestjs-libraries/temporal/lead-bridge.schedule';
 
 dayjs.extend(utc);
 
@@ -280,6 +286,72 @@ export class IntegrationService {
     return {
       strategy: this.publicStrategy(strategy),
       recomputeRequested,
+    };
+  }
+
+  async updateChannelLeadDiscovery(
+    orgId: string,
+    integrationId: string,
+    body: UpdateChannelLeadDiscoveryDto
+  ) {
+    if (
+      !Number.isInteger(body.dailyQuota) ||
+      body.dailyQuota < 1 ||
+      body.dailyQuota > CHANNEL_LEAD_DISCOVERY_MAX_DAILY_QUOTA
+    ) {
+      throw new BadRequestException(
+        `Lead discovery daily quota must be between 1 and ${CHANNEL_LEAD_DISCOVERY_MAX_DAILY_QUOTA}`
+      );
+    }
+    const integration = await this._integrationRepository.getIntegrationById(
+      orgId,
+      integrationId
+    );
+    if (!integration || integration.deletedAt) {
+      throw new NotFoundException('Integration not found');
+    }
+    if (integration.disabled) {
+      throw new BadRequestException(
+        'Disabled channels cannot update lead discovery'
+      );
+    }
+    if (integration.type !== 'social') {
+      throw new BadRequestException(
+        'Lead discovery is only available for social channels'
+      );
+    }
+
+    let provider: SocialProvider | undefined;
+    try {
+      provider = this._integrationManager.getSocialIntegration(
+        integration.providerIdentifier
+      );
+    } catch {
+      provider = undefined;
+    }
+    if (!provider?.memberFollowers) {
+      throw new BadRequestException(
+        'Lead discovery is not available for this channel provider'
+      );
+    }
+
+    const updated =
+      await this._integrationRepository.updateLeadDiscoverySettings(
+        orgId,
+        integrationId,
+        body.enabled,
+        body.dailyQuota
+      );
+    if (!updated) {
+      throw new NotFoundException('Integration not found');
+    }
+    if (body.enabled) {
+      await this.pokeChannelLeadBridge();
+    }
+
+    return {
+      enabled: body.enabled,
+      dailyQuota: body.dailyQuota,
     };
   }
 
@@ -642,6 +714,7 @@ export class IntegrationService {
         }
       : undefined;
     const strategyApplicable = !!provider?.followers;
+    const leadDiscoveryApplicable = !!provider?.memberFollowers;
     const strategy = resolveChannelStrategy(integration.strategyId);
     const recomputing = strategyApplicable
       ? await this._channelInteractionRepository.hasStaleRelationshipProjections(
@@ -670,6 +743,11 @@ export class IntegrationService {
         ? { strategy: this.publicStrategy(strategy), recomputing }
         : {}),
       utmParams: integration.utmParams || null,
+      leadDiscoveryApplicable,
+      leadDiscovery: {
+        enabled: integration.leadDiscoveryEnabled,
+        dailyQuota: integration.leadDiscoveryDailyQuota,
+      },
       recomputeRequested: false,
       tracking,
       subscriptions: this.mapChannelSubscriptions(tracked.subscriptions),
@@ -1031,6 +1109,17 @@ export class IntegrationService {
       );
     }
 
+    if (provider.preferStoredFollowers) {
+      return this.getAudienceFollowerPage(
+        org.id,
+        actorUserId,
+        integration,
+        provider,
+        normalizedQuery,
+        sort
+      );
+    }
+
     try {
       return await this.getFollowerPageWithIgnoredBackfill(
         org.id,
@@ -1339,7 +1428,6 @@ export class IntegrationService {
         HttpStatus.BAD_REQUEST
       );
     }
-
     const resolvedExternalId = externalId
       ? externalId
       : username
@@ -1354,12 +1442,34 @@ export class IntegrationService {
       throw new HttpException('Follower was not found', HttpStatus.NOT_FOUND);
     }
 
-    const page = await this.getMemberPostsPage(
-      integration,
-      provider,
-      resolvedExternalId,
-      { limit, ...(cursor ? { cursor } : {}) }
-    );
+    const cacheKey = `member-posts:${integration.id}:${createHash('sha256')
+      .update(`${resolvedExternalId}:${limit}:${cursor || ''}`)
+      .digest('hex')}`;
+    const cached = await ioRedis.get(cacheKey);
+    if (!cached && provider.allowsReadFeature?.('member-posts') === false) {
+      throw new HttpException(
+        'Member timeline is temporarily disabled',
+        HttpStatus.SERVICE_UNAVAILABLE
+      );
+    }
+    const page = cached
+      ? (JSON.parse(cached) as MemberPostsPage)
+      : await this.getMemberPostsPage(
+          integration,
+          provider,
+          resolvedExternalId,
+          { limit, ...(cursor ? { cursor } : {}) }
+        );
+    if (!cached) {
+      await ioRedis.set(
+        cacheKey,
+        JSON.stringify(page),
+        'EX',
+        !process.env.NODE_ENV || process.env.NODE_ENV === 'development'
+          ? 1
+          : 1800
+      );
+    }
 
     return {
       items: page.items.map((post) => ({
@@ -1480,16 +1590,32 @@ export class IntegrationService {
     actor: FollowerReadActor | User | undefined,
     integrationId: string
   ) {
-    const [all, stored, snapshot, convertedCount] = await Promise.all([
-      this.getFollowers(org, actor, integrationId, { limit: 1 }),
-      this.getStoredFollowerAudienceCounts(org, integrationId),
-      this.getLatestAccountAudienceTotal(org, integrationId).catch(() => null),
-      this._conversionRepository
-        .countDistinctConvertedActorsWithProfiles(org.id, integrationId)
-        .catch(() => 0),
-    ]);
+    const [{ integration, provider }, stored, snapshot, convertedCount] =
+      await Promise.all([
+        this.getFollowerIntegrationProvider(org, integrationId),
+        this.getStoredFollowerAudienceCounts(org, integrationId),
+        this.getLatestAccountAudienceTotal(org, integrationId).catch(
+          () => null
+        ),
+        this._conversionRepository
+          .countDistinctConvertedActorsWithProfiles(org.id, integrationId)
+          .catch(() => 0),
+      ]);
 
-    const listTotal = all.total ?? null;
+    const all = snapshot
+      ? null
+      : await this.getFollowers(org, actor, integrationId, { limit: 1 });
+    const tracking =
+      all?.tracking ??
+      (provider.channelInteractionWebhooks
+        ? await this.getInteractionTracking(
+            org.id,
+            integration.id,
+            provider.channelInteractionWebhooks.getInteractionCoverage()
+          )
+        : this.getUnsupportedTrackingMetadata([]));
+
+    const listTotal = all?.total ?? null;
     const total = snapshot?.value ?? listTotal;
     const totalSource =
       snapshot != null
@@ -1508,7 +1634,7 @@ export class IntegrationService {
       },
       lists: stored.lists,
       listsTruncated: stored.listsTruncated,
-      tracking: all.tracking ?? null,
+      tracking,
     };
   }
 
@@ -6485,6 +6611,17 @@ export class IntegrationService {
         .signal('channelInteractionMaintenance');
     } catch {
       // The workflow may not be running yet; its hourly pass reconciles persisted state.
+    }
+  }
+
+  private async pokeChannelLeadBridge() {
+    try {
+      const workflow = this._temporalService.client?.getRawClient()?.workflow;
+      await workflow
+        ?.getHandle(LEAD_BRIDGE_WORKFLOW_ID)
+        .signal('channelLeadBridge');
+    } catch {
+      // The hourly lead discovery pass picks up the setting if it is not running yet.
     }
   }
 

@@ -8,6 +8,7 @@ import { RefreshToken } from '@gitroom/nestjs-libraries/integrations/social.abst
 import {
   PostRulesCapability,
   PostRulesCapabilityMetadata,
+  PostRulesLoadMetricsResult,
   SocialProvider,
 } from '@gitroom/nestjs-libraries/integrations/social/social.integrations.interface';
 import { PostsService } from '@gitroom/nestjs-libraries/database/prisma/posts/posts.service';
@@ -67,6 +68,8 @@ const METRIC_METADATA_KEYS: Record<
   LIKES: 'likes',
   REPLIES: 'replies',
 };
+const SHARED_METRICS_TTL_MS = 15 * 60 * 1000;
+const SHARED_METRICS_MAX_ENTRIES = 1_000;
 
 const parseJson = <T>(value: string | null | undefined, fallback: T): T => {
   if (!value) {
@@ -86,6 +89,10 @@ const parseJson = <T>(value: string | null | undefined, fallback: T): T => {
  */
 @Injectable()
 export class PostRulesExecutionService {
+  private _sharedMetrics?: Map<
+    string,
+    { expiresAt: number; result: PostRulesLoadMetricsResult }
+  >;
   constructor(
     private _executionRepository: PostRulesExecutionRepository,
     private _integrationManager: IntegrationManager,
@@ -298,8 +305,11 @@ export class PostRulesExecutionService {
     let matched = true;
 
     if (conditions.length) {
-      const loaded = await session.run((live) =>
-        capability.loadMetrics(live, live.token, post.releaseId as string)
+      const loaded = await this.loadSharedMetrics(
+        post.integration,
+        post.releaseId as string,
+        session,
+        capability
       );
 
       if (loaded.status === 'not_found') {
@@ -359,6 +369,36 @@ export class PostRulesExecutionService {
       metrics,
       matched
     );
+  }
+
+  private async loadSharedMetrics(
+    integration: Integration,
+    externalPostId: string,
+    session: {
+      run: <T>(call: (live: Integration) => Promise<T>) => Promise<T>;
+    },
+    capability: PostRulesCapability
+  ) {
+    const cache = (this._sharedMetrics ??= new Map());
+    const key = `${integration.id}:${externalPostId}`;
+    const cached = cache.get(key);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.result;
+    }
+    const loaded = await session.run((live) =>
+      capability.loadMetrics(live, live.token, externalPostId)
+    );
+    if (loaded.status === 'success' || loaded.status === 'not_found') {
+      if (cache.size >= SHARED_METRICS_MAX_ENTRIES && !cache.has(key)) {
+        const oldestKey = cache.keys().next().value;
+        if (oldestKey) cache.delete(oldestKey);
+      }
+      cache.set(key, {
+        expiresAt: Date.now() + SHARED_METRICS_TTL_MS,
+        result: loaded,
+      });
+    }
+    return loaded;
   }
 
   private async runPollingAction(

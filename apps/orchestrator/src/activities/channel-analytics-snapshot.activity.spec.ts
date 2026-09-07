@@ -30,7 +30,10 @@ describe('ChannelAnalyticsSnapshotActivity', () => {
     getSocialIntegration: jest.Mock;
   };
   let refresh: { refresh: jest.Mock };
-  let interactions: { syncInboundLikesFromPosts: jest.Mock };
+  let interactions: {
+    syncInboundLikesFromPosts: jest.Mock;
+    hasActiveInboundLikeTracking: jest.Mock;
+  };
 
   const createActivity = () =>
     new ChannelAnalyticsSnapshotActivity(
@@ -58,6 +61,7 @@ describe('ChannelAnalyticsSnapshotActivity', () => {
     };
     refresh = { refresh: jest.fn() };
     interactions = {
+      hasActiveInboundLikeTracking: jest.fn().mockResolvedValue(false),
       syncInboundLikesFromPosts: jest.fn().mockResolvedValue({
         created: 0,
         duplicates: 0,
@@ -165,7 +169,7 @@ describe('ChannelAnalyticsSnapshotActivity', () => {
     );
   });
 
-  it('uses a fixed UTC 180-day window for every capture page', async () => {
+  it('uses a seven-day UTC window for ordinary daily capture pages', async () => {
     const capture = jest.fn().mockResolvedValue({ kind: 'daily', points: [] });
     manager.getSocialIntegration.mockReturnValue({
       analyticsSnapshot: { capture },
@@ -181,11 +185,59 @@ describe('ChannelAnalyticsSnapshotActivity', () => {
     expect(capture).toHaveBeenCalledWith(
       expect.objectContaining({
         cursor: '100',
-        fromDay: new Date('2026-02-17T00:00:00.000Z'),
+        fromDay: new Date('2026-08-09T00:00:00.000Z'),
         toDay: new Date('2026-08-15T00:00:00.000Z'),
         pageSize: 100,
       })
     );
+  });
+
+  it.each([
+    ['weekly', '2026-08-16T12:00:00.000Z', '2026-07-18T00:00:00.000Z'],
+    ['monthly', '2026-08-01T12:00:00.000Z', '2026-02-03T00:00:00.000Z'],
+  ])(
+    'uses the %s historical capture window',
+    async (_, snapshotAt, fromDay) => {
+      const capture = jest
+        .fn()
+        .mockResolvedValue({ kind: 'daily', points: [] });
+      manager.getSocialIntegration.mockReturnValue({
+        analyticsSnapshot: { capture },
+      });
+
+      await createActivity().capturePersistPage({ candidate, snapshotAt });
+
+      expect(capture).toHaveBeenCalledWith(
+        expect.objectContaining({ fromDay: new Date(fromDay) })
+      );
+    }
+  );
+
+  it('does not poll post likers when inbound like webhooks are active', async () => {
+    interactions.hasActiveInboundLikeTracking.mockResolvedValue(true);
+    const capture = jest.fn().mockResolvedValue({
+      kind: 'post_lifetime',
+      points: [
+        {
+          externalPostId: 'tweet-1',
+          metricKey: 'like_count',
+          label: 'Likes',
+          valueMode: 'sum',
+          value: 2,
+        },
+      ],
+    });
+    manager.getSocialIntegration.mockReturnValue({
+      analyticsSnapshot: { capture },
+      postLikers: jest.fn(),
+    });
+
+    await createActivity().capturePersistPage({
+      candidate,
+      snapshotAt: '2026-08-15T12:00:00.000Z',
+    });
+
+    expect(interactions.syncInboundLikesFromPosts).not.toHaveBeenCalled();
   });
 
   it('refreshes and retries once when capture requests a new token', async () => {

@@ -1056,6 +1056,77 @@ export class ChannelInteractionRepository {
     };
   }
 
+  async isFollowerSnapshotDue(
+    organizationId: string,
+    integrationId: string,
+    intervalMs: number,
+    now = new Date()
+  ) {
+    const integration = await this._integration.model.integration.findFirst({
+      where: { id: integrationId, organizationId, deletedAt: null },
+      select: {
+        channelFollowerSyncState: {
+          select: { status: true, completedAt: true },
+        },
+      },
+    });
+    if (!integration) return false;
+    const state = integration.channelFollowerSyncState;
+    if (
+      !state?.completedAt ||
+      state.status !== ChannelFollowerSyncStatus.COMPLETE
+    ) {
+      return true;
+    }
+    return state.completedAt.getTime() <= now.getTime() - intervalMs;
+  }
+
+  async isSubscriptionReconciliationDue(
+    organizationId: string,
+    integrationId: string,
+    expectedSubscriptions: number,
+    intervalMs: number,
+    now = new Date()
+  ) {
+    const subscriptions =
+      await this._subscription.model.channelInteractionSubscription.findMany({
+        where: { organizationId, integrationId },
+        select: { state: true, updatedAt: true },
+      });
+    if (subscriptions.length !== expectedSubscriptions) return true;
+    if (
+      subscriptions.some((subscription) =>
+        (
+          [
+            ChannelInteractionTrackingState.PROVISIONING,
+            ChannelInteractionTrackingState.REMOVING,
+            ChannelInteractionTrackingState.UNCONFIGURED,
+          ] as ChannelInteractionTrackingState[]
+        ).includes(subscription.state)
+      )
+    ) {
+      return true;
+    }
+    const cutoff = now.getTime() - intervalMs;
+    return subscriptions.some(
+      (subscription) => subscription.updatedAt.getTime() <= cutoff
+    );
+  }
+
+  async hasActiveInboundLikeSubscription(integrationId: string) {
+    const subscription =
+      await this._subscription.model.channelInteractionSubscription.findFirst({
+        where: {
+          integrationId,
+          eventKey: 'like',
+          direction: ChannelInteractionDirection.INBOUND,
+          state: ChannelInteractionTrackingState.ACTIVE,
+        },
+        select: { id: true },
+      });
+    return !!subscription;
+  }
+
   async applySubscriptionReconciliation(
     organizationId: string,
     integrationId: string,
@@ -2098,6 +2169,7 @@ export class ChannelInteractionRepository {
         type: 'social',
         disabled: false,
         deletedAt: null,
+        leadDiscoveryEnabled: true,
         channelFollowerSyncState: {
           is: {
             status: ChannelFollowerSyncStatus.COMPLETE,

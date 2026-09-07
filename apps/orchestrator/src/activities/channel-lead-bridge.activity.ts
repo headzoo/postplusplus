@@ -242,7 +242,6 @@ export class ChannelLeadBridgeActivity {
       await this._channelInteractionService.crawlLeadBridgesForIntegration(
         live,
         {
-          ignoreDailyLimit: true,
           maxApplied,
         }
       );

@@ -933,6 +933,34 @@ describe('PostRulesExecutionService.processEvaluation', () => {
     expect(result.actionResult?.matched).toBe(true);
     expect(result.actionResult?.action).toBe('NOTIFY');
   });
+
+  it('shares a recent provider metric read across rule evaluations', async () => {
+    const { service, capability } = createService();
+    const integration = rootPost().integration;
+    const session = {
+      run: (call: (live: typeof integration) => Promise<unknown>) =>
+        call(integration),
+    };
+    capability.loadMetrics.mockResolvedValue({
+      status: 'success',
+      metrics: { likes: 10, replies: 2 },
+    });
+
+    await (service as any).loadSharedMetrics(
+      integration,
+      'release-1',
+      session,
+      capability
+    );
+    await (service as any).loadSharedMetrics(
+      integration,
+      'release-1',
+      session,
+      capability
+    );
+
+    expect(capability.loadMetrics).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('buildPostRuleNotifyMessage', () => {

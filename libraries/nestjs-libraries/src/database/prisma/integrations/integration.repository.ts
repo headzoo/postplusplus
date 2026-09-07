@@ -498,6 +498,26 @@ export class IntegrationRepository {
     return result.count > 0;
   }
 
+  async updateLeadDiscoverySettings(
+    orgId: string,
+    integrationId: string,
+    enabled: boolean,
+    dailyQuota: number
+  ) {
+    const result = await this._integration.model.integration.updateMany({
+      where: {
+        id: integrationId,
+        organizationId: orgId,
+        deletedAt: null,
+      },
+      data: {
+        leadDiscoveryEnabled: enabled,
+        leadDiscoveryDailyQuota: dailyQuota,
+      },
+    });
+    return result.count > 0;
+  }
+
   async getIntegrationForOrder(
     id: string,
     order: string,

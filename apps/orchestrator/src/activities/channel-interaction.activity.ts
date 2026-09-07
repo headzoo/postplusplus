@@ -58,6 +58,20 @@ export class ChannelInteractionActivity {
     const capability = provider.channelInteractionWebhooks;
     if (!capability) return { supported: false };
 
+    if (
+      !integration.disabled &&
+      !integration.deletedAt &&
+      !(await this._repository.isSubscriptionReconciliationDue(
+        candidate.organizationId,
+        candidate.id,
+        capability.getDesiredSubscriptions(integration).length,
+        provider.interactionMaintenance?.subscriptionReconciliationIntervalMs ??
+          60 * 60 * 1000
+      ))
+    ) {
+      return { supported: true, skipped: true };
+    }
+
     const liveIntegration = await this.withRefreshedToken(
       integration,
       provider
@@ -110,6 +124,16 @@ export class ChannelInteractionActivity {
         integration.providerIdentifier
       );
       if (!provider.followers) return { supported: false };
+      if (provider.allowsReadFeature?.('follower-snapshot') === false) {
+        return { supported: false, skipped: true };
+      }
+      const due = await this._repository.isFollowerSnapshotDue(
+        candidate.organizationId,
+        candidate.id,
+        provider.interactionMaintenance?.followerSnapshotIntervalMs ??
+          60 * 60 * 1000
+      );
+      if (!due) return { supported: false, skipped: true };
     } catch {
       return { supported: false };
     }
