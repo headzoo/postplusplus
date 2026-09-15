@@ -599,12 +599,17 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
             },
             group,
             settings: { ...(post.settings || {}) },
-            value: post.values.map((value: any) => ({
-              ...(value.id ? { id: value.id } : {}),
-              content: value.content,
-              delay: value.delay || 0,
-              image:
-                (value?.media || []).map(
+            value: post.values.map((value: any) => {
+              const mediaItems = Array.isArray(value?.media)
+                ? value.media
+                : Array.isArray(value?.image)
+                ? value.image
+                : [];
+              return {
+                ...(value.id ? { id: value.id } : {}),
+                content: value.content,
+                delay: value.delay || 0,
+                image: mediaItems.map(
                   ({ id, path, alt, thumbnail, thumbnailTimestamp }: any) => ({
                     id,
                     path,
@@ -612,8 +617,9 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                     thumbnail,
                     thumbnailTimestamp,
                   })
-                ) || [],
-            })),
+                ),
+              };
+            }),
           },
           postReference
         )

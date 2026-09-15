@@ -171,11 +171,22 @@ export const withProvider = function <T extends object>(params: {
     );
 
     const value = useMemo(() => {
-      if (internal?.integrationValue?.length) {
-        return internal.integrationValue;
+      const channelValue = internal?.integrationValue?.length
+        ? internal.integrationValue
+        : global;
+      const inheritedMedia = global[0]?.media;
+      if (
+        inheritedMedia?.length &&
+        channelValue[0] &&
+        !(channelValue[0].media && channelValue[0].media.length)
+      ) {
+        return [
+          { ...channelValue[0], media: inheritedMedia },
+          ...channelValue.slice(1),
+        ];
       }
 
-      return global;
+      return channelValue;
     }, [internal, global, isGlobal]);
 
     const hasPreviewContent = value?.some(
