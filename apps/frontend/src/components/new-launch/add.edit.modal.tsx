@@ -219,15 +219,6 @@ export const AddEditModalInnerInner: FC<AddEditModalProps> = (props) => {
         id: post.id,
         media: toComposerMedia(post.image ?? post.media),
       }));
-    const sharedMedia =
-      existingChannels
-        .flatMap((channel) => postsToValues(channel.posts))
-        .find((post) => post.media.length)?.media || [];
-    const withSharedRootMedia = (values: ReturnType<typeof postsToValues>) =>
-      values.map((post, index) => ({
-        ...post,
-        media: post.media.length ? post.media : index === 0 ? sharedMedia : [],
-      }));
     if (existingChannels.length) {
       if (existingChannels[0]?.posts?.[0]?.intervalInDays) {
         setRepeater(existingChannels[0].posts[0].intervalInDays);
@@ -240,11 +231,7 @@ export const AddEditModalInnerInner: FC<AddEditModalProps> = (props) => {
         })) || []
       );
       for (const channel of existingChannels) {
-        addInternalValue(
-          0,
-          channel.integration,
-          withSharedRootMedia(postsToValues(channel.posts))
-        );
+        addInternalValue(0, channel.integration, postsToValues(channel.posts));
       }
       setCurrent(existingChannels[0].integration);
     } else {
@@ -270,12 +257,10 @@ export const AddEditModalInnerInner: FC<AddEditModalProps> = (props) => {
             media: toComposerMedia(p.media ?? p.image),
           }))
         : existingChannels.length
-        ? withSharedRootMedia(postsToValues(existingChannels[0].posts)).map(
-            (post) => ({
-              ...post,
-              id: makeId(10),
-            })
-          )
+        ? postsToValues(existingChannels[0].posts).map((post) => ({
+            ...post,
+            id: makeId(10),
+          }))
         : [
             {
               content: '',

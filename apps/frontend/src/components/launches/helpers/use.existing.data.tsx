@@ -40,3 +40,16 @@ export const ExistingDataContextProvider: FC<{
   );
 };
 export const useExistingData = () => useContext(ExistingDataContext);
+
+// The channels of the post being edited. `channels` is the multi channel shape
+// (a post group spread over several channels), `integration` is the focused
+// channel and the only shape the older single channel flows pass.
+export const useExistingPostChannels = () => {
+  const existingData = useExistingData();
+
+  if (existingData.channels?.length) {
+    return existingData.channels.map((channel) => channel.integration);
+  }
+
+  return existingData.integration ? [existingData.integration] : [];
+};

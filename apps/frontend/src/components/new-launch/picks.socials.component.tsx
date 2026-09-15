@@ -5,7 +5,7 @@ import clsx from 'clsx';
 import SafeImage from '@gitroom/react/helpers/safe.image';
 import { useLaunchStore } from '@gitroom/frontend/components/new-launch/store';
 import { useShallow } from 'zustand/react/shallow';
-import { useExistingData } from '@gitroom/frontend/components/launches/helpers/use.existing.data';
+import { useExistingPostChannels } from '@gitroom/frontend/components/launches/helpers/use.existing.data';
 import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
 import ImageWithFallback from '@gitroom/react/helpers/image.with.fallback';
 
@@ -14,7 +14,7 @@ export const PicksSocialsComponent: FC<{
   disabled?: boolean;
   quoteReferenceActive?: boolean;
 }> = ({ toolTip, disabled = false, quoteReferenceActive = false }) => {
-  const exising = useExistingData();
+  const existingChannels = useExistingPostChannels();
 
   const {
     locked,
@@ -49,8 +49,8 @@ export const PicksSocialsComponent: FC<{
           <div className="flex flex-wrap gap-[12px] flex-1">
             {integrations
               .filter((f) => {
-                if (exising.integration) {
-                  return f.id === exising.integration;
+                if (existingChannels.length) {
+                  return existingChannels.includes(f.id);
                 }
                 return !f.inBetweenSteps && !f.disabled;
               })
@@ -73,7 +73,7 @@ export const PicksSocialsComponent: FC<{
                   >
                     <div
                       onClick={() => {
-                        if (exising.integration || mismatchedReference) {
+                        if (existingChannels.length || mismatchedReference) {
                           return;
                         }
                         addOrRemoveSelectedIntegration(integration, {});

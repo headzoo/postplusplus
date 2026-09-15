@@ -123,6 +123,7 @@ module.exports = {
     '<rootDir>/apps/frontend/src/components/new-launch/open-graph/**/*.spec.ts',
     '<rootDir>/apps/frontend/src/components/new-launch/add.edit.modal.spec.tsx',
     '<rootDir>/apps/frontend/src/components/new-launch/manage.modal.spec.tsx',
+    '<rootDir>/apps/frontend/src/components/new-launch/picks.socials.component.spec.tsx',
     '<rootDir>/apps/frontend/src/components/new-launch/store.spec.ts',
     '<rootDir>/apps/frontend/src/components/conversations/**/*.spec.tsx',
     '<rootDir>/apps/frontend/src/components/external-post/**/*.spec.ts',

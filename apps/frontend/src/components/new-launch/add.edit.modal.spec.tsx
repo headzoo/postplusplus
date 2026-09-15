@@ -194,7 +194,7 @@ describe('AddEditModalInnerInner existing post hydration', () => {
     ]);
   });
 
-  it('copies sibling media onto an Instagram root that was saved without attachments', () => {
+  it('hydrates every channel with its own posts, root ahead of comments', () => {
     render(
       <AddEditModalInnerInner
         {...baseProps}
@@ -202,17 +202,19 @@ describe('AddEditModalInnerInner existing post hydration', () => {
       />
     );
 
-    const instagram = useLaunchStore
-      .getState()
-      .internal.find((item) => item.integration.id === 'instagram-channel');
+    const internal = useLaunchStore.getState().internal;
+    const x = internal.find((item) => item.integration.id === 'x-channel');
+    const instagram = internal.find(
+      (item) => item.integration.id === 'instagram-channel'
+    );
 
+    expect(x?.integrationValue[0].media).toEqual([
+      { id: 'media', path: 'image.jpg' },
+    ]);
     expect(instagram?.integrationValue.map((value) => value.id)).toEqual([
       'ig-root',
       'ig-comment',
     ]);
-    expect(instagram?.integrationValue[0].media).toEqual([
-      { id: 'media', path: 'image.jpg' },
-    ]);
-    expect(instagram?.integrationValue[1].media).toEqual([]);
+    expect(instagram?.integrationValue[0].media).toEqual([]);
   });
 });

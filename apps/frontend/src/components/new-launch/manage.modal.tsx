@@ -15,7 +15,10 @@ import { PicksSocialsComponent } from '@gitroom/frontend/components/new-launch/p
 import { EditorWrapper } from '@gitroom/frontend/components/new-launch/editor';
 import { SelectCurrent } from '@gitroom/frontend/components/new-launch/select.current';
 import { ShowAllProviders } from '@gitroom/frontend/components/new-launch/providers/show.all.providers';
-import { useExistingData } from '@gitroom/frontend/components/launches/helpers/use.existing.data';
+import {
+  useExistingData,
+  useExistingPostChannels,
+} from '@gitroom/frontend/components/launches/helpers/use.existing.data';
 import { useLaunchStore } from '@gitroom/frontend/components/new-launch/store';
 import { DatePicker } from '@gitroom/frontend/components/launches/helpers/date.picker';
 import { useShallow } from 'zustand/react/shallow';
@@ -71,6 +74,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
   const helpPanelOpen = useHelpPanelOpen();
   const ref = useRef(null);
   const existingData = useExistingData();
+  const existingPostChannels = useExistingPostChannels();
   const [loading, setLoading] = useState(false);
   const toaster = useToaster();
   const modal = useModals();
@@ -943,7 +947,9 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                 </div>
               </div>
               <div className="flex flex-1 gap-[6px] flex-col">
-                <div>{!existingData.integration && <SelectCurrent />}</div>
+                <div>
+                  {existingPostChannels.length !== 1 && <SelectCurrent />}
+                </div>
                 <div className="flex-1 flex flex-col">
                   <ComposerPostReferencePreview />
                   {!hide && <EditorWrapper totalPosts={1} value="" />}
