@@ -1,15 +1,26 @@
 #!/usr/bin/env node
 /**
- * Runs lint, format:check, typecheck, and test:changed in parallel.
+ * Runs lint, format:check, typecheck, and test:changed.
+ *
+ * Locally the four steps run one after another so they cannot stack on top of
+ * six tsc processes. CI still runs them in parallel.
  */
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { resolveConcurrency, runPool } from './run-limited.mjs';
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '..'
 );
+
+const steps = [
+  { name: 'lint', script: 'lint' },
+  { name: 'format:check', script: 'format:check' },
+  { name: 'typecheck', script: 'typecheck' },
+  { name: 'test:changed', script: 'test:changed' },
+];
 
 /**
  * Runs a pnpm script asynchronously with output streamed to the console.
@@ -18,7 +29,7 @@ const repoRoot = path.resolve(
  * @param {string} script Script name passed to `pnpm run`.
  * @returns {Promise<{ name: string, status: number }>}
  */
-function runParallel(name, script) {
+function runStep(name, script) {
   return new Promise((resolve) => {
     const child = spawn('pnpm', ['run', script], {
       cwd: repoRoot,
@@ -30,16 +41,20 @@ function runParallel(name, script) {
   });
 }
 
+const concurrency = resolveConcurrency({
+  envName: 'CHECK_CONCURRENCY',
+  localDefault: 1,
+  ciDefault: steps.length,
+  itemCount: steps.length,
+});
+
 console.log(
-  'Running lint, format:check, typecheck, and test:changed in parallel...'
+  `Running lint, format:check, typecheck, and test:changed (concurrency ${concurrency})...`
 );
 
-const results = await Promise.all([
-  runParallel('lint', 'lint'),
-  runParallel('format:check', 'format:check'),
-  runParallel('typecheck', 'typecheck'),
-  runParallel('test:changed', 'test:changed'),
-]);
+const results = await runPool(steps, concurrency, (step) =>
+  runStep(step.name, step.script)
+);
 
 const failures = results.filter((result) => result.status !== 0);
 if (failures.length > 0) {

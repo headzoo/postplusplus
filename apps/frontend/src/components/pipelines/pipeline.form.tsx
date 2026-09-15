@@ -287,8 +287,8 @@ export const PipelineForm: FC<{
       <div className="flex flex-col gap-[8px]">
         <div className="text-[14px] font-[600] text-textColor">Channels</div>
         <div className="text-[13px] opacity-70">
-          Queued posts use exactly these channels. Changing channels may be
-          blocked while items are queued.
+          Adding a channel copies existing queued and scheduled posts to it.
+          Removing a channel is blocked while items are queued.
         </div>
         {!isLoading && !!enabledIntegrations.length && (
           <PickPlatforms

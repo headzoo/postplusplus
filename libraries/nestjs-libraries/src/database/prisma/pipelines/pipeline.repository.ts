@@ -244,20 +244,25 @@ export class PipelineRepository {
           return null;
         }
 
-        const queued = await tx.pipelineQueueItem.findFirst({
-          where: { pipelineId: id, status: 'QUEUED', deletedAt: null },
-          select: { id: true },
-        });
         const oldIds = existing.integrations
           .map((item: any) => item.integrationId)
           .sort();
         const newIds = body.integrations.map((item) => item.id).sort();
         const integrationsChanged = oldIds.join(',') !== newIds.join(',');
+        const addedIntegrationIds = newIds.filter(
+          (integrationId) => !oldIds.includes(integrationId)
+        );
         const removedIntegrationIds = oldIds.filter(
           (integrationId) => !newIds.includes(integrationId)
         );
-        if (queued && integrationsChanged) {
-          return false;
+        if (removedIntegrationIds.length) {
+          const queued = await tx.pipelineQueueItem.findFirst({
+            where: { pipelineId: id, status: 'QUEUED', deletedAt: null },
+            select: { id: true },
+          });
+          if (queued) {
+            return false;
+          }
         }
 
         const documentsChanged = body.contextDocumentIds !== undefined;
@@ -290,7 +295,16 @@ export class PipelineRepository {
           });
         }
 
-        return tx.pipeline.update({
+        const startedPosts = addedIntegrationIds.length
+          ? await this.backportAddedIntegrations(
+              tx,
+              orgId,
+              id,
+              addedIntegrationIds
+            )
+          : [];
+
+        const pipeline = await tx.pipeline.update({
           where: { id },
           data: {
             name: body.name,
@@ -320,6 +334,7 @@ export class PipelineRepository {
               : {}),
           },
         });
+        return { pipeline, startedPosts };
       });
     } catch (error) {
       if (error instanceof PipelineContextDocumentsChangedError) {
@@ -1148,6 +1163,107 @@ export class PipelineRepository {
         },
       },
     });
+  }
+
+  private async backportAddedIntegrations(
+    tx: any,
+    orgId: string,
+    pipelineId: string,
+    addedIntegrationIds: string[]
+  ) {
+    const integrations = await tx.integration.findMany({
+      where: {
+        id: { in: addedIntegrationIds },
+        organizationId: orgId,
+      },
+      select: { id: true, providerIdentifier: true },
+    });
+    const providerById = new Map<string, string>(
+      integrations.map(
+        (integration: { id: string; providerIdentifier: string }) => [
+          integration.id,
+          integration.providerIdentifier,
+        ]
+      )
+    );
+    const items = await tx.pipelineQueueItem.findMany({
+      where: {
+        pipelineId,
+        status: { in: ['QUEUED', 'PUBLISHED', 'REMOVED'] },
+        posts: { some: { deletedAt: null } },
+      },
+      include: {
+        posts: {
+          where: { deletedAt: null },
+          include: {
+            tags: {
+              select: { tagId: true },
+            },
+          },
+          orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+        },
+      },
+    });
+    const startedPosts: Array<{ id: string; providerIdentifier: string }> = [];
+
+    for (const integrationId of addedIntegrationIds) {
+      const providerIdentifier = providerById.get(integrationId);
+      if (!providerIdentifier) {
+        continue;
+      }
+      for (const item of items) {
+        const roots = item.posts.filter((post: any) => !post.parentPostId);
+        if (
+          !roots.length ||
+          roots.some((post: any) => post.integrationId === integrationId)
+        ) {
+          continue;
+        }
+        const sourceRoot = roots[0];
+        if (sourceRoot.state === 'PUBLISHED') {
+          continue;
+        }
+        const thread = this.collectPostThread(item.posts, sourceRoot.id);
+        let parentPostId: string | undefined;
+        for (const [index, source] of thread.entries()) {
+          const created = await tx.post.create({
+            data: {
+              organizationId: orgId,
+              integrationId,
+              content: source.content,
+              delay: source.delay,
+              group: sourceRoot.group,
+              state: sourceRoot.state,
+              publishDate: sourceRoot.publishDate,
+              settings: JSON.stringify({ __type: providerIdentifier }),
+              image: source.image,
+              intervalInDays: source.intervalInDays,
+              creationMethod: source.creationMethod,
+              pipelineQueueItemId: item.id,
+              ...(parentPostId ? { parentPostId } : {}),
+            },
+          });
+          if (index === 0 && source.tags?.length) {
+            await tx.tagsPosts.createMany({
+              data: source.tags.map((entry: any) => ({
+                postId: created.id,
+                tagId: entry.tagId,
+              })),
+              skipDuplicates: true,
+            });
+          }
+          if (index === 0 && sourceRoot.state === 'QUEUE') {
+            startedPosts.push({
+              id: created.id,
+              providerIdentifier,
+            });
+          }
+          parentPostId = created.id;
+        }
+      }
+    }
+
+    return startedPosts;
   }
 
   private async cloneQueueItemPostsToPipeline(

@@ -282,28 +282,34 @@ export class PipelineService {
       this.validateContextDocumentIds(body.contextDocumentIds);
       await this.validateContextDocuments(orgId, body.contextDocumentIds);
     }
-    const pipeline = await this._pipelineRepository.updatePipeline(
+    const result = await this._pipelineRepository.updatePipeline(
       orgId,
       id,
       body
     );
-    if (pipeline === 'invalid-context-documents') {
+    if (result === 'invalid-context-documents') {
       throw new BadRequestException(
         'Pipeline context documents must belong to the organization'
       );
     }
-    if (pipeline === 'skill-context-documents') {
+    if (result === 'skill-context-documents') {
       throw new BadRequestException(
         'Agent skills cannot be attached as pipeline context documents'
       );
     }
-    if (pipeline === false) {
+    if (result === false) {
       throw new ConflictException(
         'Pipeline integrations cannot change while queued items reference them'
       );
     }
-    if (!pipeline) throw new NotFoundException('Pipeline not found');
-    return pipeline;
+    if (!result) throw new NotFoundException('Pipeline not found');
+    if (result.startedPosts.length) {
+      await this._pipelineManager.startScheduledPosts(
+        orgId,
+        result.startedPosts
+      );
+    }
+    return result.pipeline;
   }
 
   async updatePipelineSchedule(

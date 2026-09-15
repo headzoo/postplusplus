@@ -416,7 +416,7 @@ describe('Pipeline API boundaries', () => {
     expect(queueItem.status).toBe('QUEUED');
   });
 
-  it('rejects integration changes when queued content exists', async () => {
+  it('rejects integration removals when queued content exists', async () => {
     const repository = {
       getOwnedIntegrations: jest.fn().mockResolvedValue([{ id: 'channel' }]),
       updatePipeline: jest.fn().mockResolvedValue(false),
@@ -430,6 +430,508 @@ describe('Pipeline API boundaries', () => {
         integrations: [{ id: 'channel' }],
       })
     ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('returns false when a channel is removed while queued items exist', async () => {
+    const update = jest.fn();
+    const transaction = {
+      model: {
+        $transaction: jest.fn(async (callback: any) =>
+          callback({
+            pipeline: {
+              findFirst: jest.fn().mockResolvedValue({
+                id: 'pipeline',
+                integrations: [
+                  { integrationId: 'channel' },
+                  { integrationId: 'instagram' },
+                ],
+              }),
+              update,
+            },
+            pipelineQueueItem: {
+              findFirst: jest.fn().mockResolvedValue({ id: 'queued' }),
+            },
+          })
+        ),
+      },
+    };
+    const repository = new PipelineRepository(
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      transaction as any
+    );
+
+    await expect(
+      repository.updatePipeline('org', 'pipeline', {
+        name: 'Pipeline',
+        timezone: 'UTC',
+        integrations: [{ id: 'channel' }],
+      })
+    ).resolves.toBe(false);
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('back-ports queued drafts when a channel is added', async () => {
+    const publishDate = new Date('2026-08-10T10:00:00.000Z');
+    const postCreate = jest
+      .fn()
+      .mockResolvedValueOnce({ id: 'cloned-root' })
+      .mockResolvedValueOnce({ id: 'cloned-child' });
+    const tagsPostsCreateMany = jest.fn().mockResolvedValue({ count: 1 });
+    const update = jest.fn().mockResolvedValue({ id: 'pipeline' });
+    const queuedPosts = [
+      {
+        id: 'root',
+        parentPostId: null,
+        integrationId: 'channel',
+        content: 'Hello',
+        delay: 0,
+        group: 'group-1',
+        state: 'DRAFT',
+        publishDate,
+        settings: '{"__type":"x"}',
+        image: '[]',
+        intervalInDays: null,
+        creationMethod: 'API',
+        tags: [{ tagId: 'tag-1' }],
+      },
+      {
+        id: 'child',
+        parentPostId: 'root',
+        integrationId: 'channel',
+        content: 'Thread',
+        delay: 5,
+        group: 'group-1',
+        state: 'DRAFT',
+        publishDate,
+        settings: '{"__type":"x"}',
+        image: '[]',
+        intervalInDays: null,
+        creationMethod: 'API',
+        tags: [],
+      },
+    ];
+    const transaction = {
+      model: {
+        $transaction: jest.fn(async (callback: any) =>
+          callback({
+            pipeline: {
+              findFirst: jest.fn().mockResolvedValue({
+                id: 'pipeline',
+                integrations: [{ integrationId: 'channel' }],
+              }),
+              update,
+            },
+            pipelineQueueItem: {
+              findFirst: jest.fn(),
+              findMany: jest
+                .fn()
+                .mockResolvedValue([
+                  { id: 'item', status: 'QUEUED', posts: queuedPosts },
+                ]),
+            },
+            integration: {
+              findMany: jest
+                .fn()
+                .mockResolvedValue([
+                  { id: 'instagram', providerIdentifier: 'instagram' },
+                ]),
+            },
+            post: { create: postCreate },
+            tagsPosts: { createMany: tagsPostsCreateMany },
+          })
+        ),
+      },
+    };
+    const repository = new PipelineRepository(
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      transaction as any
+    );
+
+    await expect(
+      repository.updatePipeline('org', 'pipeline', {
+        name: 'Pipeline',
+        timezone: 'UTC',
+        integrations: [{ id: 'channel' }, { id: 'instagram' }],
+      })
+    ).resolves.toEqual({
+      pipeline: { id: 'pipeline' },
+      startedPosts: [],
+    });
+    expect(postCreate).toHaveBeenNthCalledWith(1, {
+      data: expect.objectContaining({
+        organizationId: 'org',
+        integrationId: 'instagram',
+        content: 'Hello',
+        delay: 0,
+        group: 'group-1',
+        state: 'DRAFT',
+        publishDate,
+        settings: JSON.stringify({ __type: 'instagram' }),
+        image: '[]',
+        pipelineQueueItemId: 'item',
+      }),
+    });
+    expect(postCreate.mock.calls[0][0].data).not.toHaveProperty('parentPostId');
+    expect(postCreate).toHaveBeenNthCalledWith(2, {
+      data: expect.objectContaining({
+        integrationId: 'instagram',
+        content: 'Thread',
+        delay: 5,
+        parentPostId: 'cloned-root',
+        state: 'DRAFT',
+        pipelineQueueItemId: 'item',
+      }),
+    });
+    expect(tagsPostsCreateMany).toHaveBeenCalledWith({
+      data: [{ postId: 'cloned-root', tagId: 'tag-1' }],
+      skipDuplicates: true,
+    });
+    expect(update).toHaveBeenCalledWith({
+      where: { id: 'pipeline' },
+      data: expect.objectContaining({
+        integrations: {
+          deleteMany: {},
+          create: [
+            { integrationId: 'channel' },
+            { integrationId: 'instagram' },
+          ],
+        },
+      }),
+    });
+    expect(update.mock.calls[0][0].data).not.toHaveProperty('scheduleRevision');
+  });
+
+  it('back-ports still-linked scheduled posts when a channel is added', async () => {
+    const publishDate = new Date('2026-08-10T15:00:00.000Z');
+    const postCreate = jest.fn().mockResolvedValue({ id: 'cloned-queue' });
+    const update = jest.fn().mockResolvedValue({ id: 'pipeline' });
+    const transaction = {
+      model: {
+        $transaction: jest.fn(async (callback: any) =>
+          callback({
+            pipeline: {
+              findFirst: jest.fn().mockResolvedValue({
+                id: 'pipeline',
+                integrations: [{ integrationId: 'channel' }],
+              }),
+              update,
+            },
+            pipelineQueueItem: {
+              findMany: jest.fn().mockResolvedValue([
+                {
+                  id: 'removed-item',
+                  status: 'REMOVED',
+                  posts: [
+                    {
+                      id: 'root',
+                      parentPostId: null,
+                      integrationId: 'channel',
+                      content: 'Scheduled',
+                      delay: 0,
+                      group: 'group-1',
+                      state: 'QUEUE',
+                      publishDate,
+                      settings: '{"__type":"x"}',
+                      image: '[]',
+                      intervalInDays: null,
+                      creationMethod: 'API',
+                      tags: [],
+                    },
+                  ],
+                },
+              ]),
+            },
+            integration: {
+              findMany: jest
+                .fn()
+                .mockResolvedValue([
+                  { id: 'instagram', providerIdentifier: 'instagram' },
+                ]),
+            },
+            post: { create: postCreate },
+            tagsPosts: { createMany: jest.fn() },
+          })
+        ),
+      },
+    };
+    const repository = new PipelineRepository(
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      transaction as any
+    );
+
+    await expect(
+      repository.updatePipeline('org', 'pipeline', {
+        name: 'Pipeline',
+        timezone: 'UTC',
+        integrations: [{ id: 'channel' }, { id: 'instagram' }],
+      })
+    ).resolves.toEqual({
+      pipeline: { id: 'pipeline' },
+      startedPosts: [{ id: 'cloned-queue', providerIdentifier: 'instagram' }],
+    });
+    expect(postCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        integrationId: 'instagram',
+        state: 'QUEUE',
+        publishDate,
+        pipelineQueueItemId: 'removed-item',
+        settings: JSON.stringify({ __type: 'instagram' }),
+      }),
+    });
+  });
+
+  it('starts publishing workflows for back-ported scheduled posts', async () => {
+    const startScheduledPosts = jest.fn().mockResolvedValue(undefined);
+    const repository = {
+      getOwnedIntegrations: jest
+        .fn()
+        .mockResolvedValue([{ id: 'channel' }, { id: 'instagram' }]),
+      updatePipeline: jest.fn().mockResolvedValue({
+        pipeline: { id: 'pipeline' },
+        startedPosts: [{ id: 'cloned-queue', providerIdentifier: 'instagram' }],
+      }),
+    };
+    const service = new PipelineService(
+      repository as any,
+      {
+        startScheduledPosts,
+      } as any
+    );
+
+    await expect(
+      service.updatePipeline('org', 'pipeline', {
+        name: 'Pipeline',
+        timezone: 'UTC',
+        integrations: [{ id: 'channel' }, { id: 'instagram' }],
+      })
+    ).resolves.toEqual({ id: 'pipeline' });
+    expect(startScheduledPosts).toHaveBeenCalledWith('org', [
+      { id: 'cloned-queue', providerIdentifier: 'instagram' },
+    ]);
+  });
+
+  it('does not clone posts when the added channel already exists on the item', async () => {
+    const postCreate = jest.fn();
+    const update = jest.fn().mockResolvedValue({ id: 'pipeline' });
+    const transaction = {
+      model: {
+        $transaction: jest.fn(async (callback: any) =>
+          callback({
+            pipeline: {
+              findFirst: jest.fn().mockResolvedValue({
+                id: 'pipeline',
+                integrations: [{ integrationId: 'channel' }],
+              }),
+              update,
+            },
+            pipelineQueueItem: {
+              findMany: jest.fn().mockResolvedValue([
+                {
+                  id: 'item',
+                  status: 'QUEUED',
+                  posts: [
+                    {
+                      id: 'root',
+                      parentPostId: null,
+                      integrationId: 'instagram',
+                      content: 'Hello',
+                      delay: 0,
+                      group: 'group-1',
+                      state: 'DRAFT',
+                      publishDate: new Date('2026-08-10T10:00:00.000Z'),
+                      settings: '{}',
+                      image: '[]',
+                      intervalInDays: null,
+                      creationMethod: 'API',
+                      tags: [],
+                    },
+                  ],
+                },
+              ]),
+            },
+            integration: {
+              findMany: jest
+                .fn()
+                .mockResolvedValue([
+                  { id: 'instagram', providerIdentifier: 'instagram' },
+                ]),
+            },
+            post: { create: postCreate },
+          })
+        ),
+      },
+    };
+    const repository = new PipelineRepository(
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      transaction as any
+    );
+
+    await expect(
+      repository.updatePipeline('org', 'pipeline', {
+        name: 'Pipeline',
+        timezone: 'UTC',
+        integrations: [{ id: 'channel' }, { id: 'instagram' }],
+      })
+    ).resolves.toEqual({
+      pipeline: { id: 'pipeline' },
+      startedPosts: [],
+    });
+    expect(postCreate).not.toHaveBeenCalled();
+  });
+
+  it('does not clone publishing items or published roots when a channel is added', async () => {
+    const postCreate = jest.fn();
+    const findMany = jest.fn().mockResolvedValue([
+      {
+        id: 'published-item',
+        status: 'PUBLISHED',
+        posts: [
+          {
+            id: 'root',
+            parentPostId: null,
+            integrationId: 'channel',
+            content: 'Live',
+            delay: 0,
+            group: 'group-1',
+            state: 'PUBLISHED',
+            publishDate: new Date('2026-08-01T10:00:00.000Z'),
+            settings: '{}',
+            image: '[]',
+            intervalInDays: null,
+            creationMethod: 'API',
+            tags: [],
+          },
+        ],
+      },
+    ]);
+    const update = jest.fn().mockResolvedValue({ id: 'pipeline' });
+    const transaction = {
+      model: {
+        $transaction: jest.fn(async (callback: any) =>
+          callback({
+            pipeline: {
+              findFirst: jest.fn().mockResolvedValue({
+                id: 'pipeline',
+                integrations: [{ integrationId: 'channel' }],
+              }),
+              update,
+            },
+            pipelineQueueItem: { findMany },
+            integration: {
+              findMany: jest
+                .fn()
+                .mockResolvedValue([
+                  { id: 'instagram', providerIdentifier: 'instagram' },
+                ]),
+            },
+            post: { create: postCreate },
+          })
+        ),
+      },
+    };
+    const repository = new PipelineRepository(
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      transaction as any
+    );
+
+    await expect(
+      repository.updatePipeline('org', 'pipeline', {
+        name: 'Pipeline',
+        timezone: 'UTC',
+        integrations: [{ id: 'channel' }, { id: 'instagram' }],
+      })
+    ).resolves.toEqual({
+      pipeline: { id: 'pipeline' },
+      startedPosts: [],
+    });
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          pipelineId: 'pipeline',
+          status: { in: ['QUEUED', 'PUBLISHED', 'REMOVED'] },
+          posts: { some: { deletedAt: null } },
+        },
+      })
+    );
+    expect(postCreate).not.toHaveBeenCalled();
+  });
+
+  it('does not back-port posts for name-only updates', async () => {
+    const postCreate = jest.fn();
+    const queueFindMany = jest.fn();
+    const integrationFindMany = jest.fn();
+    const update = jest.fn().mockResolvedValue({
+      id: 'pipeline',
+      scheduleRevision: 3,
+    });
+    const transaction = {
+      model: {
+        $transaction: jest.fn(async (callback: any) =>
+          callback({
+            pipeline: {
+              findFirst: jest.fn().mockResolvedValue({
+                id: 'pipeline',
+                integrations: [{ integrationId: 'channel' }],
+              }),
+              update,
+            },
+            pipelineQueueItem: { findMany: queueFindMany },
+            integration: { findMany: integrationFindMany },
+            post: { create: postCreate },
+          })
+        ),
+      },
+    };
+    const repository = new PipelineRepository(
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      transaction as any
+    );
+
+    await expect(
+      repository.updatePipeline('org', 'pipeline', {
+        name: 'Renamed Pipeline',
+        timezone: 'UTC',
+        integrations: [{ id: 'channel' }],
+      })
+    ).resolves.toEqual({
+      pipeline: { id: 'pipeline', scheduleRevision: 3 },
+      startedPosts: [],
+    });
+    expect(queueFindMany).not.toHaveBeenCalled();
+    expect(integrationFindMany).not.toHaveBeenCalled();
+    expect(postCreate).not.toHaveBeenCalled();
+    expect(update).toHaveBeenCalledWith({
+      where: { id: 'pipeline' },
+      data: {
+        name: 'Renamed Pipeline',
+        timezone: 'UTC',
+      },
+    });
+    expect(update.mock.calls[0][0].data).not.toHaveProperty('scheduleRevision');
   });
 
   it('creates Pipelines without schedule rows and preserves schedules during metadata updates', async () => {

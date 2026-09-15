@@ -1,19 +1,29 @@
 ---
-description: Run lint, typecheck, and format checks after code changes
+description: Scope format and typecheck while iterating; full suite only at the end
 alwaysApply: true
 ---
 
-After modifying code files, run from the repo root before finishing the task:
+After modifying code files, format only those files and typecheck only the
+projects they belong to:
 
 ```bash
-pnpm lint && pnpm typecheck && pnpm format:check
+pnpm exec prettier --write --cache <changed-files>
+pnpm typecheck:changed
 ```
 
-Fix all reported issues. Before marking work complete, run:
+Do not run `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, or `pnpm check`
+after every edit. Full-repo checks fan out across the monorepo and can exhaust
+RAM or thrash the disk.
+
+Before marking work complete, run the orchestrated suite once from the repo root:
 
 ```bash
 pnpm check
 ```
 
-Use `pnpm format` to auto-fix Prettier issues. Use `pnpm test:changed` for fast test
-iteration when you changed behavior covered by tests.
+`pnpm check` already includes lint, format:check, typecheck, and test:changed.
+Do not run those scripts individually and then also run `pnpm check`.
+
+Use `pnpm format` only when you need to auto-fix Prettier across the repo.
+Use `pnpm test:changed` for fast test iteration when you changed behavior
+covered by tests.

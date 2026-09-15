@@ -44,6 +44,7 @@
     "postinstall": "pnpm run prisma-generate",
     "lint": "node scripts/lint.mjs",
     "typecheck": "node scripts/typecheck.mjs",
+    "typecheck:changed": "node scripts/typecheck.mjs --changed",
     "format": "prettier --write --cache .",
     "format:check": "prettier --check --cache .",
     "check": "node scripts/check.mjs",

@@ -85,25 +85,29 @@ The backend repository is mostly used to write controller, and import files from
 
 ## Linting
 
-Prefer scoped mental focus while iterating (change followers → run checks once at root) so
-concurrent agents do not all hammer the full monorepo suite. All commands run from the repo
-root:
+Prefer scoped checks while iterating so concurrent agents do not hammer the
+full monorepo suite. After editing files, run only:
 
 ```bash
-pnpm lint
-pnpm typecheck
-pnpm format:check
-pnpm test:changed
+pnpm exec prettier --write --cache <changed-files>
+pnpm typecheck:changed
 ```
 
-Before finishing a task, run the orchestrated full suite once from the repo root:
+`pnpm typecheck:changed` typechecks the projects that own the dirty files, one
+`tsc` at a time. Do not run `pnpm typecheck`, `pnpm lint`, `pnpm format:check`,
+or `pnpm check` after every edit.
+
+Before finishing a task, run the orchestrated suite once from the repo root:
 
 ```bash
 pnpm check
 ```
 
-`pnpm check` runs lint, format:check, typecheck, and test:changed in parallel. Fix any
-reported issues before finishing the task. Use `pnpm format` to auto-fix formatting.
+`pnpm check` already runs lint, format:check, typecheck, and test:changed.
+Locally those steps are sequential; CI still parallelizes them. Do not run the
+individual scripts and then also run `pnpm check`. Fix any reported issues
+before finishing the task. Use `pnpm format` only when you need to auto-fix
+Prettier across the repo.
 
 ## Conventions
 

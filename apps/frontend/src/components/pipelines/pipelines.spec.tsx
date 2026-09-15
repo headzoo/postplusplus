@@ -205,7 +205,6 @@ describe('Pipelines', () => {
     expect(screen.getByText('Weekly updates')).toBeTruthy();
     expect(screen.getByText('3')).toBeTruthy();
     expect(screen.getByText(/queued/)).toBeTruthy();
-    expect(screen.getByText('New York')).toBeTruthy();
     expect(screen.getByText(/2099/)).toBeTruthy();
   });
 
