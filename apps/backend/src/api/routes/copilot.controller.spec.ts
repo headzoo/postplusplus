@@ -62,6 +62,15 @@ describe('CopilotController', () => {
             active: true,
             channels: [],
             contextDocuments: [],
+            referenceImages: [
+              {
+                id: 'reference-1',
+                name: 'brand.png',
+                originalName: 'Brand.png',
+                alt: 'Brand reference',
+                path: 'https://untrusted.example/brand.png',
+              },
+            ],
           },
           followerPage: {
             kind: 'list',
@@ -124,8 +133,19 @@ describe('CopilotController', () => {
         type: 'social',
       },
     ]);
-    expect(context.get('pipeline')).toEqual(
-      request.body.variables.properties.pipeline
+    expect(context.get('pipeline')).toEqual({
+      ...request.body.variables.properties.pipeline,
+      referenceImages: [
+        {
+          id: 'reference-1',
+          name: 'brand.png',
+          originalName: 'Brand.png',
+          alt: 'Brand reference',
+        },
+      ],
+    });
+    expect(JSON.stringify(context.get('pipeline'))).not.toContain(
+      'untrusted.example'
     );
     expect(context.get('followerPage')).toEqual(
       expect.objectContaining({

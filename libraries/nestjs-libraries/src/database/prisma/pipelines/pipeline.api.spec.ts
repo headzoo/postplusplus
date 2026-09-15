@@ -404,6 +404,7 @@ describe('Pipeline API boundaries', () => {
       { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
+      { model: {} } as any,
       transaction as any
     );
 
@@ -456,6 +457,7 @@ describe('Pipeline API boundaries', () => {
       },
     };
     const repository = new PipelineRepository(
+      { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
@@ -547,6 +549,7 @@ describe('Pipeline API boundaries', () => {
       },
     };
     const repository = new PipelineRepository(
+      { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
@@ -668,6 +671,7 @@ describe('Pipeline API boundaries', () => {
       { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
+      { model: {} } as any,
       transaction as any
     );
 
@@ -779,6 +783,7 @@ describe('Pipeline API boundaries', () => {
       { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
+      { model: {} } as any,
       transaction as any
     );
 
@@ -851,6 +856,7 @@ describe('Pipeline API boundaries', () => {
       { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
+      { model: {} } as any,
       transaction as any
     );
 
@@ -903,6 +909,7 @@ describe('Pipeline API boundaries', () => {
       },
     };
     const repository = new PipelineRepository(
+      { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
@@ -962,6 +969,7 @@ describe('Pipeline API boundaries', () => {
       { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
+      { model: {} } as any,
       transaction as any
     );
     const body = {
@@ -1014,6 +1022,7 @@ describe('Pipeline API boundaries', () => {
     };
     const repository = new PipelineRepository(
       { model: { pipeline: { create } } } as any,
+      { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
@@ -1104,6 +1113,7 @@ describe('Pipeline API boundaries', () => {
       },
     };
     const repository = new PipelineRepository(
+      { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
@@ -1235,6 +1245,7 @@ describe('Pipeline API boundaries', () => {
       { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
+      { model: {} } as any,
       transaction as any
     );
 
@@ -1274,6 +1285,7 @@ describe('Pipeline API boundaries', () => {
       },
     };
     const repository = new PipelineRepository(
+      { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
@@ -1383,6 +1395,7 @@ describe('Pipeline API boundaries', () => {
       { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
+      { model: {} } as any,
       { model: {} } as any
     );
 
@@ -1457,6 +1470,7 @@ describe('Pipeline API boundaries', () => {
       { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
+      { model: {} } as any,
       transaction as any
     );
 
@@ -1494,6 +1508,7 @@ describe('Pipeline API boundaries', () => {
       },
     };
     const repository = new PipelineRepository(
+      { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
@@ -1581,6 +1596,7 @@ describe('Pipeline API boundaries', () => {
       { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
+      { model: {} } as any,
       transaction as any
     );
 
@@ -1636,6 +1652,7 @@ describe('Pipeline API boundaries', () => {
       },
     };
     const repository = new PipelineRepository(
+      { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
@@ -1723,6 +1740,7 @@ describe('Pipeline API boundaries', () => {
       { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
+      { model: {} } as any,
       staleTransaction as any
     );
     const move = {
@@ -1740,6 +1758,7 @@ describe('Pipeline API boundaries', () => {
 
     const occupiedRevisionUpdate = jest.fn();
     const occupiedRepository = new PipelineRepository(
+      { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
@@ -1772,6 +1791,7 @@ describe('Pipeline API boundaries', () => {
     expect(occupiedRevisionUpdate).not.toHaveBeenCalled();
 
     const raceRepository = new PipelineRepository(
+      { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
@@ -2196,6 +2216,7 @@ describe('Pipeline API boundaries', () => {
       { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
+      { model: {} } as any,
       transaction as any
     );
     const scheduledFor = new Date('2026-08-10T12:00:00.000Z');
@@ -2333,6 +2354,7 @@ describe('Pipeline API boundaries', () => {
       { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
+      { model: {} } as any,
       transaction as any
     );
 
@@ -2440,6 +2462,7 @@ describe('Pipeline API boundaries', () => {
       { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
+      { model: {} } as any,
       transaction as any
     );
 
@@ -2498,6 +2521,7 @@ describe('Pipeline API boundaries', () => {
       { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
+      { model: {} } as any,
       transaction as any
     );
 
@@ -2533,6 +2557,7 @@ describe('Pipeline API boundaries', () => {
       },
     };
     const repository = new PipelineRepository(
+      { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
@@ -2786,6 +2811,7 @@ describe('Pipeline API boundaries', () => {
       { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
+      { model: {} } as any,
       transaction as any
     );
 
@@ -2845,6 +2871,7 @@ describe('Pipeline API boundaries', () => {
       { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
+      { model: {} } as any,
       transaction as any
     );
 
@@ -2869,6 +2896,7 @@ describe('Pipeline API boundaries', () => {
     const create = jest.fn().mockResolvedValue({ id: 'pipeline' });
     const repository = new PipelineRepository(
       { model: { pipeline: { create } } } as any,
+      { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
@@ -2921,6 +2949,7 @@ describe('Pipeline API boundaries', () => {
       },
     };
     const repository = new PipelineRepository(
+      { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
@@ -3057,6 +3086,7 @@ describe('Pipeline API boundaries', () => {
       { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
+      { model: {} } as any,
       transaction as any
     );
     const service = new PipelineService(
@@ -3112,6 +3142,7 @@ describe('Pipeline API boundaries', () => {
       { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
+      { model: {} } as any,
       transaction as any
     );
 
@@ -3133,5 +3164,323 @@ describe('Pipeline API boundaries', () => {
     });
     expect(update.mock.calls[0][0].data).not.toHaveProperty('scheduleRevision');
     expect(update.mock.calls[0][0].data).not.toHaveProperty('scheduleSlots');
+  });
+
+  it('returns ordered reference image metadata without leaking internal fields', async () => {
+    const twitter = {
+      id: 'twitter',
+      name: 'Twitter',
+      providerIdentifier: 'x',
+      token: 'must-not-leak',
+      organizationId: 'organization',
+      disabled: false,
+      deletedAt: null,
+      postingTimes: '[]',
+      profile: null,
+      type: 'SOCIAL',
+      picture: null,
+      additionalSettings: '[]',
+      customer: null,
+    };
+    const referenceImages = [
+      {
+        position: 1,
+        media: {
+          id: 'img-b',
+          name: 'b.png',
+          originalName: 'Brand B.png',
+          path: 'https://cdn.example/b.png',
+          thumbnail: 'https://cdn.example/b-thumb.png',
+          alt: 'Brand B',
+          organizationId: 'must-not-leak',
+          deletedAt: null,
+        },
+      },
+      {
+        position: 0,
+        media: {
+          id: 'img-a',
+          name: 'a.png',
+          originalName: 'Brand A.png',
+          path: 'https://cdn.example/a.png',
+          thumbnail: null,
+          alt: null,
+          organizationId: 'must-not-leak',
+          deletedAt: null,
+        },
+      },
+    ];
+    const repository = {
+      getPipelines: jest.fn().mockResolvedValue([
+        {
+          id: 'pipeline',
+          name: 'Weekly content',
+          timezone: 'UTC',
+          color: '#612BD3',
+          active: true,
+          scheduleRevision: 1,
+          integrations: [{ integration: twitter }],
+          contextDocuments: [],
+          referenceImages,
+          scheduleSlots: [],
+          _count: { queueItems: 0 },
+        },
+      ]),
+      getPipeline: jest.fn().mockResolvedValue({
+        id: 'pipeline',
+        name: 'Weekly content',
+        timezone: 'UTC',
+        color: '#612BD3',
+        active: true,
+        scheduleRevision: 1,
+        scheduleSlots: [],
+        integrations: [{ integration: twitter }],
+        contextDocuments: [],
+        referenceImages,
+        queueItems: [],
+      }),
+    };
+    const service = new PipelineService(repository as any, {} as any);
+    const list = await service.getPipelines('organization');
+    const detail = await service.getPipeline('organization', 'pipeline');
+
+    expect(list[0].referenceImages).toEqual([
+      {
+        id: 'img-a',
+        name: 'a.png',
+        originalName: 'Brand A.png',
+        path: 'https://cdn.example/a.png',
+      },
+      {
+        id: 'img-b',
+        name: 'b.png',
+        originalName: 'Brand B.png',
+        path: 'https://cdn.example/b.png',
+        thumbnail: 'https://cdn.example/b-thumb.png',
+        alt: 'Brand B',
+      },
+    ]);
+    expect(detail.referenceImages).toEqual(list[0].referenceImages);
+    expect(JSON.stringify(list)).not.toContain('must-not-leak');
+    expect(JSON.stringify(detail.referenceImages)).not.toContain(
+      'organizationId'
+    );
+  });
+
+  it('creates pipelines with ordered reference image assignments', async () => {
+    const create = jest.fn().mockResolvedValue({ id: 'pipeline' });
+    const repository = new PipelineRepository(
+      { model: { pipeline: { create } } } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any
+    );
+
+    await repository.createPipeline('org', {
+      name: 'Pipeline',
+      timezone: 'UTC',
+      integrations: [{ id: 'channel' }],
+      referenceImageIds: ['img-a', 'img-b'],
+    });
+
+    expect(create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        referenceImages: {
+          create: [
+            { mediaId: 'img-a', position: 0 },
+            { mediaId: 'img-b', position: 1 },
+          ],
+        },
+      }),
+    });
+  });
+
+  it('replaces reference image assignments on update and preserves them when omitted', async () => {
+    const update = jest.fn().mockResolvedValue({ id: 'pipeline' });
+    const mediaFindMany = jest.fn(async ({ where }: any) =>
+      (where.id?.in || []).map((id: string) => ({
+        id,
+        type: 'image',
+        path: `${id}.png`,
+      }))
+    );
+    const transaction = {
+      model: {
+        $transaction: jest.fn(async (callback: any) =>
+          callback({
+            pipeline: {
+              findFirst: jest.fn().mockResolvedValue({
+                id: 'pipeline',
+                integrations: [{ integrationId: 'channel' }],
+              }),
+              update,
+            },
+            pipelineQueueItem: { findFirst: jest.fn().mockResolvedValue(null) },
+            media: { findMany: mediaFindMany },
+          })
+        ),
+      },
+    };
+    const repository = new PipelineRepository(
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      transaction as any
+    );
+    const base = {
+      name: 'Pipeline',
+      timezone: 'UTC',
+      integrations: [{ id: 'channel' }],
+    };
+
+    await repository.updatePipeline('org', 'pipeline', {
+      ...base,
+      referenceImageIds: ['img-a', 'img-b'],
+    });
+    await repository.updatePipeline('org', 'pipeline', {
+      ...base,
+      referenceImageIds: [],
+    });
+    await repository.updatePipeline('org', 'pipeline', base);
+
+    expect(update).toHaveBeenNthCalledWith(1, {
+      where: { id: 'pipeline' },
+      data: expect.objectContaining({
+        referenceImages: {
+          deleteMany: {},
+          create: [
+            { mediaId: 'img-a', position: 0 },
+            { mediaId: 'img-b', position: 1 },
+          ],
+        },
+      }),
+    });
+    expect(update).toHaveBeenNthCalledWith(2, {
+      where: { id: 'pipeline' },
+      data: expect.objectContaining({
+        referenceImages: { deleteMany: {}, create: [] },
+      }),
+    });
+    expect(update).toHaveBeenNthCalledWith(3, {
+      where: { id: 'pipeline' },
+      data: {
+        name: 'Pipeline',
+        timezone: 'UTC',
+      },
+    });
+    expect(update.mock.calls[2][0].data).not.toHaveProperty('referenceImages');
+  });
+
+  it('rejects duplicate, foreign, and video reference image ids before repository writes', async () => {
+    const repository = {
+      getOwnedIntegrations: jest.fn().mockResolvedValue([{ id: 'channel' }]),
+      getOwnedReferenceImages: jest
+        .fn()
+        .mockResolvedValue([{ id: 'img-a', type: 'image', path: 'a.png' }]),
+      createPipeline: jest.fn(),
+      updatePipeline: jest.fn(),
+    };
+    const service = new PipelineService(repository as any, {} as any);
+    const base = {
+      name: 'Pipeline',
+      timezone: 'UTC',
+      integrations: [{ id: 'channel' }],
+    };
+
+    await expect(
+      service.createPipeline('org', {
+        ...base,
+        referenceImageIds: ['img-a', 'img-a'],
+      })
+    ).rejects.toMatchObject({
+      message: 'Pipeline reference image IDs must be unique',
+    });
+    await expect(
+      service.createPipeline('org', {
+        ...base,
+        referenceImageIds: ['img-a', 'foreign-img'],
+      })
+    ).rejects.toMatchObject({
+      message: 'Pipeline reference images must belong to the organization',
+    });
+    repository.getOwnedReferenceImages = jest.fn().mockResolvedValue([
+      { id: 'img-a', type: 'image', path: 'a.png' },
+      { id: 'video-a', type: 'video', path: 'clip.mp4' },
+    ]);
+    await expect(
+      service.createPipeline('org', {
+        ...base,
+        referenceImageIds: ['img-a', 'video-a'],
+      })
+    ).rejects.toMatchObject({
+      message:
+        'Pipeline reference images must be images from the media library',
+    });
+    expect(repository.createPipeline).not.toHaveBeenCalled();
+  });
+
+  it('rolls back reference image replacement when ownership changes inside the update transaction', async () => {
+    const update = jest.fn();
+    const transaction = {
+      model: {
+        $transaction: jest.fn(async (callback: any) =>
+          callback({
+            pipeline: {
+              findFirst: jest.fn().mockResolvedValue({
+                id: 'pipeline',
+                integrations: [{ integrationId: 'channel' }],
+              }),
+              update,
+            },
+            pipelineQueueItem: { findFirst: jest.fn().mockResolvedValue(null) },
+            media: {
+              findMany: jest
+                .fn()
+                .mockResolvedValue([
+                  { id: 'img-a', type: 'image', path: 'a.png' },
+                ]),
+            },
+          })
+        ),
+      },
+    };
+    const repository = new PipelineRepository(
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      { model: {} } as any,
+      transaction as any
+    );
+    const service = new PipelineService(
+      {
+        getOwnedIntegrations: jest.fn().mockResolvedValue([{ id: 'channel' }]),
+        getOwnedReferenceImages: jest.fn().mockResolvedValue([
+          { id: 'img-a', type: 'image', path: 'a.png' },
+          { id: 'img-b', type: 'image', path: 'b.png' },
+        ]),
+        updatePipeline: repository.updatePipeline.bind(repository),
+      } as any,
+      {} as any
+    );
+
+    await expect(
+      service.updatePipeline('org', 'pipeline', {
+        name: 'Pipeline',
+        timezone: 'UTC',
+        integrations: [{ id: 'channel' }],
+        referenceImageIds: ['img-a', 'img-b'],
+      })
+    ).rejects.toMatchObject({
+      message: 'Pipeline reference images must belong to the organization',
+    });
+    expect(update).not.toHaveBeenCalled();
   });
 });

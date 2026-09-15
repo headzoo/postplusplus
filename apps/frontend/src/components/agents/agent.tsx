@@ -52,6 +52,12 @@ export interface SelectedPipelineContext {
     fileSize: number;
     updatedAt: string;
   }>;
+  referenceImages: Array<{
+    id: string;
+    name: string;
+    originalName?: string | null;
+    alt?: string;
+  }>;
 }
 
 export const defaultAgentSelectionState: AgentSelectionState = {
@@ -82,6 +88,12 @@ export function mapSelectedPipelineContext(
       name: document.name,
       fileSize: document.fileSize,
       updatedAt: document.updatedAt,
+    })),
+    referenceImages: (pipeline.referenceImages || []).map((image) => ({
+      id: image.id,
+      name: image.name,
+      originalName: image.originalName,
+      alt: image.alt,
     })),
   };
 }

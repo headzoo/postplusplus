@@ -54,6 +54,14 @@ const selectedPipeline: SelectedPipelineContext = {
       updatedAt: '2026-08-11T12:00:00.000Z',
     },
   ],
+  referenceImages: [
+    {
+      id: 'reference-1',
+      name: 'brand-reference.png',
+      originalName: 'Brand Reference.png',
+      alt: 'Primary brand image',
+    },
+  ],
 };
 
 describe('renderSelectedPipelineGuidance', () => {
@@ -68,6 +76,9 @@ describe('renderSelectedPipelineGuidance', () => {
     );
     expect(guidance).toContain('listPipelines to refresh and validate');
     expect(guidance).toContain('not as authorization');
+    expect(guidance).toContain('brand-reference.png, id: reference-1');
+    expect(guidance).toContain('uses all current Pipeline reference images');
+    expect(guidance).toContain('explicitly asks for an off-brand result');
   });
 
   it('does not add selected-pipeline guidance without a selection', () => {
@@ -98,8 +109,29 @@ describe('renderSelectedPipelineGuidance', () => {
     expect(withPipeline).toContain('id: pipeline-1');
     expect(withPipeline).toContain('listContextDocuments');
     expect(withPipeline).toContain('readContextDocument');
+    expect(withPipeline).toContain(
+      'generateImageTool with the refreshed pipeline id'
+    );
     expect(withoutPipeline).not.toContain('User-selected pipeline target');
     expect(withoutPipeline).toContain('listContextDocuments');
+  });
+
+  it('documents Pipeline image reference defaults and off-brand opt-out', async () => {
+    const service = new LoadToolsService({ get: jest.fn() } as any);
+    await service.agent();
+
+    const instructions = mockAgentOptions.instructions({
+      requestContext: { get: () => null },
+    });
+
+    expect(instructions).toContain('Pipeline image generation');
+    expect(instructions).toContain('usePipelineReferences: false');
+    expect(instructions).toContain(
+      'novel or unusual prompt is not an off-brand'
+    );
+    expect(instructions).toContain(
+      'Without a selected Pipeline or explicit pipelineId'
+    );
   });
 });
 

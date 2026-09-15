@@ -1,4 +1,5 @@
 import {
+  ArrayMaxSize,
   ArrayMinSize,
   IsArray,
   IsBoolean,
@@ -66,6 +67,12 @@ export class CreatePipelineDto {
   @IsArray()
   @IsString({ each: true })
   contextDocumentIds?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(3)
+  @IsString({ each: true })
+  referenceImageIds?: string[];
 }
 
 export class UpdatePipelineDto extends CreatePipelineDto {}

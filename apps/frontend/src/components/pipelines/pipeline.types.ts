@@ -13,6 +13,15 @@ export interface PipelineContextDocument {
   updatedAt: string;
 }
 
+export interface PipelineReferenceImage {
+  id: string;
+  name: string;
+  originalName?: string | null;
+  path: string;
+  thumbnail?: string;
+  alt?: string;
+}
+
 export interface PipelineSummary {
   id: string;
   name: string;
@@ -25,6 +34,7 @@ export interface PipelineSummary {
   nextSlot?: string;
   projectedEnqueueFor?: string;
   contextDocuments?: PipelineContextDocument[];
+  referenceImages?: PipelineReferenceImage[];
 }
 
 export interface PipelineDetail extends PipelineSummary {
@@ -69,6 +79,7 @@ export interface CreatePipelinePayload {
   color?: string;
   integrations: { id: string }[];
   contextDocumentIds?: string[];
+  referenceImageIds?: string[];
 }
 
 export type UpdatePipelinePayload = CreatePipelinePayload;

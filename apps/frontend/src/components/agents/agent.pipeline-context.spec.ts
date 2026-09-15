@@ -17,6 +17,15 @@ jest.mock('@gitroom/helpers/utils/use.wait.for.class', () => ({
   useWaitForClass: () => false,
 }));
 
+jest.mock('react-hotkeys-hook', () => ({
+  useHotkeys: jest.fn(),
+}));
+
+jest.mock('@gitroom/frontend/components/launches/channels.sidebar', () => ({
+  ChannelMenu: () => null,
+  ChannelsSidebar: () => null,
+}));
+
 jest.mock('@gitroom/frontend/components/pipelines/pipeline.channels', () => ({
   PipelineChannels: () => null,
 }));
@@ -53,6 +62,16 @@ const pipeline: PipelineSummary = {
       updatedAt: '2026-08-11T12:00:00.000Z',
     },
   ],
+  referenceImages: [
+    {
+      id: 'reference-1',
+      name: 'brand-reference.png',
+      originalName: 'Brand Reference.png',
+      path: 'https://example.com/brand-reference.png',
+      thumbnail: 'https://example.com/brand-reference-thumbnail.png',
+      alt: 'Primary brand image',
+    },
+  ],
 };
 
 describe('agent pipeline context transport', () => {
@@ -78,6 +97,14 @@ describe('agent pipeline context transport', () => {
           updatedAt: '2026-08-11T12:00:00.000Z',
         },
       ],
+      referenceImages: [
+        {
+          id: 'reference-1',
+          name: 'brand-reference.png',
+          originalName: 'Brand Reference.png',
+          alt: 'Primary brand image',
+        },
+      ],
     });
   });
 
@@ -95,6 +122,9 @@ describe('agent pipeline context transport', () => {
     expect(metadata).toContain('[--pipeline--]');
     expect(metadata).toContain('"id":"pipeline-1"');
     expect(metadata).toContain('"contextDocuments"');
+    expect(metadata).toContain('"referenceImages"');
+    expect(metadata).not.toContain('brand-reference-thumbnail.png');
+    expect(metadata).not.toContain('https://example.com/brand-reference.png');
     expect(metadata).not.toContain('"queueCount"');
     expect(mapSelectedPipelineContext(pipeline)).not.toHaveProperty(
       'channels.0.additionalSettings'

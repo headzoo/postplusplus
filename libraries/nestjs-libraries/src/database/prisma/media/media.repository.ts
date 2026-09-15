@@ -4,7 +4,10 @@ import { SaveMediaInformationDto } from '@gitroom/nestjs-libraries/dtos/media/sa
 
 @Injectable()
 export class MediaRepository {
-  constructor(private _media: PrismaRepository<'media'>) {}
+  constructor(
+    private _media: PrismaRepository<'media'>,
+    private _pipeline: PrismaRepository<'pipeline'>
+  ) {}
 
   saveFile(
     org: string,
@@ -40,6 +43,34 @@ export class MediaRepository {
     return this._media.model.media.findUnique({
       where: {
         id,
+      },
+    });
+  }
+
+  getPipelineReferenceImages(organizationId: string, pipelineId: string) {
+    return this._pipeline.model.pipeline.findFirst({
+      where: {
+        id: pipelineId,
+        organizationId,
+        deletedAt: null,
+      },
+      select: {
+        referenceImages: {
+          orderBy: {
+            position: 'asc',
+          },
+          select: {
+            position: true,
+            media: {
+              select: {
+                path: true,
+                deletedAt: true,
+                organizationId: true,
+                type: true,
+              },
+            },
+          },
+        },
       },
     });
   }

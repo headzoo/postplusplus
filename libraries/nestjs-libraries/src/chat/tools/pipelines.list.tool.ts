@@ -13,7 +13,7 @@ export class PipelinesListTool implements AgentToolInterface {
   run() {
     return createTool({
       id: 'listPipelines',
-      description: `This tool lists the organization's pipelines (content queues with weekly schedules). Each pipeline may include attached contextDocuments metadata (id, name, description, fileSize, updatedAt) only — use readPipelineContextDocument to load the Markdown content for one relevant attached document before drafting pipeline content. Use a pipeline id with listPostsByPipeline to inspect queued posts, or with enqueuePipelinePost to compose and enqueue new content for every channel on that pipeline.`,
+      description: `This tool lists the organization's pipelines (content queues with weekly schedules). Each pipeline may include attached contextDocuments metadata (id, name, description, fileSize, updatedAt) only — use readPipelineContextDocument to load the Markdown content for one relevant attached document before drafting pipeline content. Pipelines can also include ordered referenceImages metadata (id, name, originalName, alt); image bytes and paths remain server-side. To generate an image aligned to a Pipeline, pass its id to generateImageTool, which uses current Pipeline references by default. Use a pipeline id with listPostsByPipeline to inspect queued posts, or with enqueuePipelinePost to compose and enqueue new content for every channel on that pipeline.`,
       inputSchema: z.object({}),
       mcp: {
         annotations: {
@@ -49,6 +49,14 @@ export class PipelinesListTool implements AgentToolInterface {
                 description: z.string().nullable().optional(),
                 fileSize: z.number(),
                 updatedAt: z.string(),
+              })
+            ),
+            referenceImages: z.array(
+              z.object({
+                id: z.string(),
+                name: z.string(),
+                originalName: z.string().nullable().optional(),
+                alt: z.string().optional(),
               })
             ),
           })
@@ -96,6 +104,19 @@ export class PipelinesListTool implements AgentToolInterface {
                 description: document.description ?? null,
                 fileSize: document.fileSize,
                 updatedAt: new Date(document.updatedAt).toISOString(),
+              })
+            ),
+            referenceImages: (pipeline.referenceImages || []).map(
+              (image: {
+                id: string;
+                name: string;
+                originalName?: string | null;
+                alt?: string;
+              }) => ({
+                id: image.id,
+                name: image.name,
+                originalName: image.originalName ?? null,
+                ...(image.alt ? { alt: image.alt } : {}),
               })
             ),
           })),

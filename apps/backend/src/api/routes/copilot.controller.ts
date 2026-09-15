@@ -75,7 +75,73 @@ const isSelectedPipelineContext = (
   typeof value.timezone === 'string' &&
   typeof value.active === 'boolean' &&
   Array.isArray(value.channels) &&
-  Array.isArray(value.contextDocuments);
+  Array.isArray(value.contextDocuments) &&
+  Array.isArray(value.referenceImages) &&
+  value.referenceImages.every(
+    (image) =>
+      isRecord(image) &&
+      typeof image.id === 'string' &&
+      typeof image.name === 'string' &&
+      (image.originalName === undefined ||
+        image.originalName === null ||
+        typeof image.originalName === 'string') &&
+      (image.alt === undefined || typeof image.alt === 'string')
+  );
+
+const getSelectedPipelineContext = (
+  value: unknown
+): SelectedPipelineContext | null => {
+  if (!isSelectedPipelineContext(value)) {
+    return null;
+  }
+
+  return {
+    id: value.id,
+    name: value.name,
+    timezone: value.timezone,
+    active: value.active,
+    channels: value.channels
+      .filter(
+        (channel): channel is SelectedPipelineContext['channels'][number] =>
+          isRecord(channel) &&
+          typeof channel.id === 'string' &&
+          typeof channel.name === 'string' &&
+          typeof channel.platform === 'string' &&
+          typeof channel.picture === 'string'
+      )
+      .map(({ id, name, platform, picture }) => ({
+        id,
+        name,
+        platform,
+        picture,
+      })),
+    contextDocuments: value.contextDocuments
+      .filter(
+        (
+          document
+        ): document is SelectedPipelineContext['contextDocuments'][number] =>
+          isRecord(document) &&
+          typeof document.id === 'string' &&
+          typeof document.name === 'string' &&
+          typeof document.fileSize === 'number' &&
+          typeof document.updatedAt === 'string'
+      )
+      .map(({ id, name, fileSize, updatedAt }) => ({
+        id,
+        name,
+        fileSize,
+        updatedAt,
+      })),
+    referenceImages: value.referenceImages.map(
+      ({ id, name, originalName, alt }) => ({
+        id,
+        name,
+        ...(originalName !== undefined ? { originalName } : {}),
+        ...(alt !== undefined ? { alt } : {}),
+      })
+    ),
+  };
+};
 
 const isFollowerPageContext = (value: unknown): value is FollowerPageContext =>
   isRecord(value) &&
@@ -121,9 +187,7 @@ export class CopilotController {
       integrations: Array.isArray(properties.integrations)
         ? properties.integrations.filter(isUiIntegrationContext)
         : [],
-      pipeline: isSelectedPipelineContext(properties.pipeline)
-        ? properties.pipeline
-        : null,
+      pipeline: getSelectedPipelineContext(properties.pipeline),
       followerPage: isFollowerPageContext(properties.followerPage)
         ? formatFollowerPageContext(properties.followerPage)
         : null,

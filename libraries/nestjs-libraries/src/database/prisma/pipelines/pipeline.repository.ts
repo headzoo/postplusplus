@@ -10,6 +10,7 @@ import {
 } from '@gitroom/nestjs-libraries/database/prisma/prisma.service';
 import { parseSkillFilename } from '@gitroom/nestjs-libraries/upload/context-document.upload.validation';
 import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
+import { hasExtension } from '@gitroom/helpers/utils/has.extension';
 
 const QUEUE_POSITION_INCREMENT = 1024;
 const TRANSACTION_ATTEMPTS = 3;
@@ -19,6 +20,13 @@ class PipelineScheduleRevisionChangedError extends Error {}
 class PipelineScheduleSourceChangedError extends Error {}
 class PipelineContextDocumentsChangedError extends Error {}
 class PipelineSkillContextDocumentsChangedError extends Error {}
+class PipelineReferenceImagesChangedError extends Error {}
+class PipelineReferenceImagesVideoError extends Error {}
+
+export const isEligiblePipelineReferenceImage = (media: {
+  type: string;
+  path: string;
+}) => media.type === 'image' && !hasExtension(media.path, 'mp4');
 
 export const activePipelineIntegrationWhere = {
   deletedAt: null,
@@ -84,6 +92,19 @@ const pipelineContextDocumentInclude = {
   },
 } satisfies Prisma.PipelineContextDocumentInclude;
 
+const pipelineReferenceImageInclude = {
+  media: {
+    select: {
+      id: true,
+      name: true,
+      originalName: true,
+      path: true,
+      thumbnail: true,
+      alt: true,
+    },
+  },
+} satisfies Prisma.PipelineReferenceImageInclude;
+
 @Injectable()
 export class PipelineRepository {
   constructor(
@@ -92,6 +113,7 @@ export class PipelineRepository {
     private _integration: PrismaRepository<'integration'>,
     private _queueItem: PrismaRepository<'pipelineQueueItem'>,
     private _contextDocument: PrismaRepository<'contextDocument'>,
+    private _media: PrismaRepository<'media'>,
     private _transaction: PrismaTransaction
   ) {}
 
@@ -103,6 +125,11 @@ export class PipelineRepository {
           include: { integration: { select: pipelineIntegrationSelect } },
         },
         contextDocuments: { include: pipelineContextDocumentInclude },
+        referenceImages: {
+          where: { media: { deletedAt: null } },
+          include: pipelineReferenceImageInclude,
+          orderBy: { position: 'asc' },
+        },
         scheduleSlots: {
           orderBy: [{ dayOfWeek: 'asc' }, { minuteOfDay: 'asc' }],
         },
@@ -124,6 +151,11 @@ export class PipelineRepository {
           include: { integration: { select: pipelineIntegrationSelect } },
         },
         contextDocuments: { include: pipelineContextDocumentInclude },
+        referenceImages: {
+          where: { media: { deletedAt: null } },
+          include: pipelineReferenceImageInclude,
+          orderBy: { position: 'asc' },
+        },
         scheduleSlots: {
           orderBy: [{ dayOfWeek: 'asc' }, { minuteOfDay: 'asc' }],
         },
@@ -210,6 +242,20 @@ export class PipelineRepository {
     });
   }
 
+  getOwnedReferenceImages(orgId: string, mediaIds: string[]) {
+    if (!mediaIds.length) {
+      return Promise.resolve([]);
+    }
+    return this._media.model.media.findMany({
+      where: {
+        organizationId: orgId,
+        id: { in: mediaIds },
+        deletedAt: null,
+      },
+      select: { id: true, type: true, path: true },
+    });
+  }
+
   async createPipeline(orgId: string, body: CreatePipelineDto) {
     return this._pipeline.model.pipeline.create({
       data: {
@@ -225,6 +271,16 @@ export class PipelineRepository {
               contextDocuments: {
                 create: body.contextDocumentIds.map((contextDocumentId) => ({
                   contextDocumentId,
+                })),
+              },
+            }
+          : {}),
+        ...(body.referenceImageIds?.length
+          ? {
+              referenceImages: {
+                create: body.referenceImageIds.map((mediaId, position) => ({
+                  mediaId,
+                  position,
                 })),
               },
             }
@@ -286,6 +342,29 @@ export class PipelineRepository {
           }
         }
 
+        const referenceImagesChanged = body.referenceImageIds !== undefined;
+        if (referenceImagesChanged) {
+          const ownedMedia = await tx.media.findMany({
+            where: {
+              organizationId: orgId,
+              id: { in: body.referenceImageIds },
+              deletedAt: null,
+            },
+            select: { id: true, type: true, path: true },
+          });
+          if (ownedMedia.length !== body.referenceImageIds.length) {
+            throw new PipelineReferenceImagesChangedError();
+          }
+          if (
+            ownedMedia.some(
+              (media: { type: string; path: string }) =>
+                !isEligiblePipelineReferenceImage(media)
+            )
+          ) {
+            throw new PipelineReferenceImagesVideoError();
+          }
+        }
+
         if (removedIntegrationIds.length) {
           await tx.pipelinePlug.deleteMany({
             where: {
@@ -332,6 +411,19 @@ export class PipelineRepository {
                   },
                 }
               : {}),
+            ...(referenceImagesChanged
+              ? {
+                  referenceImages: {
+                    deleteMany: {},
+                    create: body.referenceImageIds!.map(
+                      (mediaId, position) => ({
+                        mediaId,
+                        position,
+                      })
+                    ),
+                  },
+                }
+              : {}),
           },
         });
         return { pipeline, startedPosts };
@@ -342,6 +434,12 @@ export class PipelineRepository {
       }
       if (error instanceof PipelineSkillContextDocumentsChangedError) {
         return 'skill-context-documents' as const;
+      }
+      if (error instanceof PipelineReferenceImagesChangedError) {
+        return 'invalid-reference-images' as const;
+      }
+      if (error instanceof PipelineReferenceImagesVideoError) {
+        return 'video-reference-images' as const;
       }
       throw error;
     }

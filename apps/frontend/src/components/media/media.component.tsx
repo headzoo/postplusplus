@@ -206,7 +206,8 @@ export const MediaBox: FC<{
   type?: 'image' | 'video';
   closeModal: () => void;
   onCreatePost?: (media: Media) => void;
-}> = ({ type, standalone, setMedia, onCreatePost }) => {
+  maxSelection?: number;
+}> = ({ type, standalone, setMedia, onCreatePost, maxSelection }) => {
   const [page, setPage] = useState(0);
   const [search, setSearch] = useState('');
   const [debouncedSearch] = useDebounce(search, 300);
@@ -228,10 +229,45 @@ export const MediaBox: FC<{
     loadMedia
   );
   const [selected, setSelected] = useState([]);
+  const selectedRef = useRef<{ id: string; path: string }[]>([]);
+  const setMediaRef = useRef(setMedia);
+  const modalsRef = useRef(modals);
+  const standaloneRef = useRef(standalone);
   const t = useT();
   const uploaderRef = useRef<any>(null);
   const mediaDirectory = useMediaDirectory();
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    selectedRef.current = selected;
+  }, [selected]);
+
+  setMediaRef.current = setMedia;
+  modalsRef.current = modals;
+  standaloneRef.current = standalone;
+
+  const maxSelectionRef = useRef(maxSelection);
+
+  maxSelectionRef.current = maxSelection;
+
+  const capSelection = useCallback((items: { id: string; path: string }[]) => {
+    const cap = maxSelectionRef.current;
+    if (cap === undefined) {
+      return items;
+    }
+    return items.slice(0, cap);
+  }, []);
+
+  const finalizeSelection = useCallback(
+    (items: { id: string; path: string }[]) => {
+      if (standaloneRef.current) {
+        return;
+      }
+      setMediaRef.current(capSelection(items));
+      modalsRef.current.closeCurrent();
+    },
+    [capSelection]
+  );
 
   const uppy = useUppyUploader({
     allowedFileTypes:
@@ -242,12 +278,25 @@ export const MediaBox: FC<{
         : 'image/*,video/mp4',
     onUploadSuccess: async (arr) => {
       await mutate();
-      if (standalone) {
+      if (standaloneRef.current) {
         return;
       }
-      setSelected((prevSelected) => {
-        return [...prevSelected, ...arr];
-      });
+      const cap = maxSelectionRef.current;
+      const merged = [...selectedRef.current, ...arr];
+      if (cap !== undefined && merged.length > cap) {
+        toaster.show(
+          t(
+            'media_selection_limit_reached',
+            'You can select at most {count} item(s).',
+            { count: cap }
+          ),
+          'warning'
+        );
+      }
+      const newSelected = capSelection(merged);
+      selectedRef.current = newSelected;
+      setSelected(newSelected);
+      finalizeSelection(newSelected);
     },
     onStart: () => setLoading(true),
     onEnd: () => setLoading(false),
@@ -263,19 +312,25 @@ export const MediaBox: FC<{
         setSelected(selected.filter((f: any) => f.id !== media.id));
         return;
       }
+      if (maxSelection !== undefined && selected.length >= maxSelection) {
+        toaster.show(
+          t(
+            'media_selection_limit_reached',
+            'You can select at most {count} item(s).',
+            { count: maxSelection }
+          ),
+          'warning'
+        );
+        return;
+      }
       setSelected([...selected, media]);
     },
-    [selected]
+    [maxSelection, selected, standalone, t, toaster]
   );
 
   const addMedia = useCallback(async () => {
-    if (standalone) {
-      return;
-    }
-    // @ts-ignore
-    setMedia(selected);
-    modals.closeCurrent();
-  }, [selected]);
+    finalizeSelection(selected);
+  }, [selected, finalizeSelection]);
 
   const addToUpload = useCallback(
     async (e: ChangeEvent<HTMLInputElement>) => {
@@ -430,10 +485,26 @@ export const MediaBox: FC<{
     async (media: { id: string; path: string }) => {
       await mutate();
       if (!standalone) {
-        setSelected((prev) => [...prev, media]);
+        setSelected((prev) => {
+          if (
+            maxSelectionRef.current !== undefined &&
+            prev.length >= maxSelectionRef.current
+          ) {
+            toaster.show(
+              t(
+                'media_selection_limit_reached',
+                'You can select at most {count} item(s).',
+                { count: maxSelectionRef.current }
+              ),
+              'warning'
+            );
+            return prev;
+          }
+          return capSelection([...prev, media]);
+        });
       }
     },
-    [mutate, standalone]
+    [capSelection, mutate, standalone, t, toaster]
   );
 
   const showAiButton = !!user?.tier?.ai && type !== 'video';
@@ -696,22 +767,37 @@ export const MediaBox: FC<{
           />
         )}
         {!standalone && (
-          <div className="flex justify-end mt-[32px] gap-[8px]">
-            <button
-              onClick={() => modals.closeCurrent()}
-              className="cursor-pointer h-[52px] px-[20px] items-center justify-center border border-newTextColor/10 flex rounded-[10px]"
-            >
-              {t('cancel', 'Cancel')}
-            </button>
-            {!isLoading && !!data?.results?.length && (
-              <button
-                onClick={standalone ? () => {} : addMedia}
-                disabled={selected.length === 0}
-                className="cursor-pointer text-white disabled:opacity-80 disabled:cursor-not-allowed h-[52px] px-[20px] items-center justify-center bg-[#eb3825] flex rounded-[10px]"
-              >
-                {t('add_selected_media', 'Add selected media')}
-              </button>
+          <div className="flex items-center justify-between mt-[32px] gap-[8px]">
+            {maxSelection !== undefined && (
+              <div className="text-[13px] text-newTableText">
+                {t('media_selected_count', '{selected} of {max} selected', {
+                  selected: selected.length,
+                  max: maxSelection,
+                })}
+              </div>
             )}
+            <div
+              className={clsx(
+                'flex justify-end gap-[8px]',
+                maxSelection === undefined && 'ms-auto w-full'
+              )}
+            >
+              <button
+                onClick={() => modals.closeCurrent()}
+                className="cursor-pointer h-[52px] px-[20px] items-center justify-center border border-newTextColor/10 flex rounded-[10px]"
+              >
+                {t('cancel', 'Cancel')}
+              </button>
+              {!isLoading && !!data?.results?.length && (
+                <button
+                  onClick={standalone ? () => {} : addMedia}
+                  disabled={selected.length === 0}
+                  className="cursor-pointer text-white disabled:opacity-80 disabled:cursor-not-allowed h-[52px] px-[20px] items-center justify-center bg-[#eb3825] flex rounded-[10px]"
+                >
+                  {t('add_selected_media', 'Add selected media')}
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>

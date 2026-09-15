@@ -2,7 +2,9 @@ import { Injectable } from '@nestjs/common';
 import OpenAI from 'openai';
 import { shuffle } from 'lodash';
 import { zodResponseFormat } from 'openai/helpers/zod';
+import { toFile } from 'openai/uploads';
 import { z } from 'zod';
+import sharp from 'sharp';
 import { LEAD_FIT_VERSION } from '@gitroom/nestjs-libraries/temporal/lead-bridge.schedule';
 
 const openai = new OpenAI({
@@ -19,6 +21,22 @@ const PicturePrompt = z.object({
 const VoicePrompt = z.object({
   voice: z.string(),
 });
+
+const MAX_REFERENCE_IMAGE_SIZE = 10 * 1024 * 1024;
+const REFERENCE_IMAGE_MIME_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'image/avif',
+  'image/bmp',
+  'image/tiff',
+]);
+const OPENAI_IMAGE_MIME_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+]);
 
 const TriageRerankResponse = z.object({
   candidates: z.array(
@@ -51,18 +69,111 @@ export type TriageRerankInput = {
 
 @Injectable()
 export class OpenaiService {
-  async generateImage(prompt: string, isVertical = false) {
+  private async downloadReferenceImage(path: string) {
+    const response = await fetch(path);
+    if (!response.ok) {
+      throw new Error('Failed to download reference image');
+    }
+
+    const declaredSize = Number(response.headers.get('content-length'));
+    if (declaredSize && declaredSize > MAX_REFERENCE_IMAGE_SIZE) {
+      throw new Error('Reference image is too large');
+    }
+
+    if (!response.body) {
+      throw new Error('Reference image has no body');
+    }
+
+    const reader = response.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      size += value.byteLength;
+      if (size > MAX_REFERENCE_IMAGE_SIZE) {
+        await reader.cancel();
+        throw new Error('Reference image is too large');
+      }
+      chunks.push(value);
+    }
+
+    return Buffer.concat(chunks);
+  }
+
+  private async getReferenceImageUpload(path: string, index: number) {
+    const buffer = await this.downloadReferenceImage(path);
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const detected = await require('file-type').fromBuffer(buffer);
+    if (!detected || !REFERENCE_IMAGE_MIME_TYPES.has(detected.mime)) {
+      throw new Error('Unsupported reference image type');
+    }
+
+    if (OPENAI_IMAGE_MIME_TYPES.has(detected.mime)) {
+      return toFile(buffer, `reference-${index}.${detected.ext}`, {
+        type: detected.mime,
+      });
+    }
+
+    const normalized = await sharp(buffer, { animated: false })
+      .png()
+      .toBuffer();
+    return toFile(normalized, `reference-${index}.png`, { type: 'image/png' });
+  }
+
+  private getImageBase64(response: { b64_json?: string }) {
+    const base64 = response.b64_json;
+    if (
+      !base64 ||
+      !/^[A-Za-z0-9+/]+={0,2}$/.test(base64) ||
+      base64.length % 4 !== 0
+    ) {
+      throw new Error('Invalid image generation response');
+    }
+
+    const decoded = Buffer.from(base64, 'base64');
+    if (!decoded.length || decoded.toString('base64') !== base64) {
+      throw new Error('Invalid image generation response');
+    }
+
+    return base64;
+  }
+
+  async generateImage(
+    prompt: string,
+    isVertical = false,
+    referenceImagePaths: string[] = []
+  ) {
     // gpt-image models always return base64 (b64_json) and do not accept the
     // `response_format` parameter, unlike the deprecated dall-e-3.
-    const generate = (
-      await openai.images.generate({
+    if (!referenceImagePaths.length) {
+      const generate = (
+        await openai.images.generate({
+          prompt,
+          model: 'chatgpt-image-latest',
+          size: isVertical ? '1024x1536' : '1024x1024',
+        })
+      ).data[0];
+
+      return this.getImageBase64(generate);
+    }
+
+    const images = await Promise.all(
+      referenceImagePaths.map((path, index) =>
+        this.getReferenceImageUpload(path, index)
+      )
+    );
+    const edit = (
+      await openai.images.edit({
+        image: images,
         prompt,
         model: 'chatgpt-image-latest',
-        size: isVertical ? '1024x1536' : '1024x1024',
+        size: '1024x1024',
       })
     ).data[0];
 
-    return generate.b64_json;
+    return this.getImageBase64(edit);
   }
 
   async generatePromptForPicture(prompt: string) {

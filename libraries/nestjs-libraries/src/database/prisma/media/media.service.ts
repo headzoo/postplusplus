@@ -19,6 +19,7 @@ import { ssrfSafeDispatcher } from '@gitroom/nestjs-libraries/dtos/webhooks/ssrf
 import { Readable } from 'stream';
 import { OpenGraphRepository } from '@gitroom/nestjs-libraries/database/prisma/media/open.graph.repository';
 import { hasExtension } from '@gitroom/helpers/utils/has.extension';
+import { isEligiblePipelineReferenceImage } from '@gitroom/nestjs-libraries/database/prisma/pipelines/pipeline.repository';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { fromBuffer } = require('file-type');
 
@@ -61,9 +62,28 @@ export class MediaService {
   async generateImage(
     prompt: string,
     org: Organization,
-    generatePromptFirst?: boolean
+    generatePromptFirst?: boolean,
+    pipelineId?: string,
+    usePipelineReferences = true
   ) {
     try {
+      const pipeline =
+        pipelineId && usePipelineReferences
+          ? await this._mediaRepository.getPipelineReferenceImages(
+              org.id,
+              pipelineId
+            )
+          : undefined;
+
+      if (pipelineId && usePipelineReferences && !pipeline) {
+        throw new HttpException('Pipeline not found', 404);
+      }
+
+      const referenceImagePaths = this.resolvePipelineReferenceImagePaths(
+        org.id,
+        pipeline?.referenceImages
+      );
+
       const generating = await this._subscriptionService.useCredit(
         org,
         'ai_images',
@@ -72,7 +92,7 @@ export class MediaService {
             prompt = await this._openAi.generatePromptForPicture(prompt);
             console.log('Prompt:', prompt);
           }
-          return this._openAi.generateImage(prompt);
+          return this._openAi.generateImage(prompt, false, referenceImagePaths);
         }
       );
 
@@ -80,6 +100,46 @@ export class MediaService {
     } catch (err) {
       throw generationError(err);
     }
+  }
+
+  private resolvePipelineReferenceImagePaths(
+    organizationId: string,
+    referenceImages?: Array<{
+      position: number;
+      media: {
+        path: string;
+        deletedAt: Date | null;
+        organizationId: string;
+        type: string;
+      };
+    }>
+  ): string[] {
+    if (!referenceImages?.length) {
+      return [];
+    }
+
+    if (referenceImages.length > 3) {
+      throw new HttpException(
+        'Pipeline reference images cannot exceed three',
+        400
+      );
+    }
+
+    const hasUnavailableReference = referenceImages.some(
+      (reference) =>
+        reference.media.deletedAt !== null ||
+        reference.media.organizationId !== organizationId ||
+        !isEligiblePipelineReferenceImage(reference.media)
+    );
+
+    if (hasUnavailableReference) {
+      throw new HttpException(
+        'One or more Pipeline reference images are unavailable',
+        400
+      );
+    }
+
+    return referenceImages.map((reference) => reference.media.path);
   }
 
   saveFile(

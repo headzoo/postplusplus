@@ -35,8 +35,11 @@ Click a Pipeline in the left list (**Active** or **Paused**). That selection:
 
 - Loads the Pipeline’s channels as the target set
 - Passes the Pipeline’s timezone, name, and attached [context documents](/help/docs) to the agent
+- Uses the Pipeline’s configured reference images automatically when the agent generates an image, so the result follows that Pipeline’s visual direction
 
 Selecting a channel clears the Pipeline selection, and selecting a Pipeline replaces a free-form channel mix. Click the Pipeline again to clear it.
+
+For an explicitly **off-brand** image, tell the agent that you want an off-brand result; it then skips the Pipeline references. An unusual image idea alone does not turn references off.
 
 If you have no Pipelines yet, you’ll see **No Pipelines yet**. Load errors show **Failed to load Pipelines…**
 
@@ -74,6 +77,8 @@ Open **Threads** (panel beside channels, or the **Threads** button on mobile) to
 ## Use Agent outside Post++
 
 You can connect Post++ as an MCP server from other tools (Cursor, Claude, and similar). Set that up under [Settings → Developers](/help/settings#developers-and-approved-apps) (API key, MCP client configuration). See **Settings → Public API** for MCP and Public API details.
+
+MCP clients can use `listPipelines` to discover each Pipeline’s reference-image metadata, then pass that Pipeline ID to `generateImageTool`. Pipeline references are used by default; set `usePipelineReferences` to `false` only for an explicitly off-brand request.
 
 ## Troubleshooting
 

@@ -22,6 +22,11 @@ import {
 import { useCreatePipeline } from '@gitroom/frontend/components/pipelines/use.pipeline.create';
 import { useUpdatePipeline } from '@gitroom/frontend/components/pipelines/use.pipeline.update';
 import { ContextDocumentAssignmentPicker } from '@gitroom/frontend/components/context-documents/context-document.assignment-picker';
+import {
+  PIPELINE_REFERENCE_IMAGE_LIMIT,
+  PipelineReferenceImagePicker,
+} from '@gitroom/frontend/components/pipelines/pipeline-reference-image.picker';
+import { PipelineReferenceImage } from '@gitroom/frontend/components/pipelines/pipeline.types';
 
 dayjs.extend(timezone);
 
@@ -52,6 +57,9 @@ export const PipelineForm: FC<{
       ...(pipeline?.blockedContextDocuments || []),
     ].map((document) => document.id)
   );
+  const [selectedReferenceImages, setSelectedReferenceImages] = useState<
+    PipelineReferenceImage[]
+  >(pipeline?.referenceImages || []);
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
   const blockedContextDocumentIds = useMemo(
@@ -89,6 +97,10 @@ export const PipelineForm: FC<{
       );
       return false;
     }
+    if (selectedReferenceImages.length > PIPELINE_REFERENCE_IMAGE_LIMIT) {
+      setFormError('A Pipeline can have at most three reference images.');
+      return false;
+    }
     setFormError('');
     return true;
   }, [
@@ -96,6 +108,7 @@ export const PipelineForm: FC<{
     name,
     selectedContextDocumentIds,
     selectedIntegrations.length,
+    selectedReferenceImages.length,
     timezoneValue,
   ]);
 
@@ -113,6 +126,7 @@ export const PipelineForm: FC<{
           id: integration.id,
         })),
         contextDocumentIds: selectedContextDocumentIds,
+        referenceImageIds: selectedReferenceImages.map((image) => image.id),
       };
       if (pipeline?.id) {
         await updatePipeline(pipeline.id, payload);
@@ -144,6 +158,7 @@ export const PipelineForm: FC<{
     pipeline?.id,
     selectedContextDocumentIds,
     selectedIntegrations,
+    selectedReferenceImages,
     t,
     timezoneValue,
     toaster,
@@ -313,6 +328,10 @@ export const PipelineForm: FC<{
           ...(pipeline?.contextDocuments || []),
           ...(pipeline?.blockedContextDocuments || []),
         ]}
+      />
+      <PipelineReferenceImagePicker
+        selectedImages={selectedReferenceImages}
+        onChange={setSelectedReferenceImages}
       />
       <div className="flex gap-[10px] justify-end sticky bottom-0 bg-newBgColorInner pt-[12px]">
         <Button type="button" secondary onClick={() => modal.closeAll()}>

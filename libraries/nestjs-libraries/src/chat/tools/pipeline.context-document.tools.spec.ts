@@ -5,12 +5,29 @@ jest.mock(
   })
 );
 
+const mockUploadSimple = jest.fn();
+
+jest.mock(
+  '@gitroom/nestjs-libraries/database/prisma/media/media.service',
+  () => ({
+    MediaService: class MediaService {},
+  })
+);
+
+jest.mock('@gitroom/nestjs-libraries/upload/upload.factory', () => ({
+  UploadFactory: {
+    createStorage: () => ({ uploadSimple: mockUploadSimple }),
+  },
+}));
+
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ContextDocumentRepository } from '@gitroom/nestjs-libraries/database/prisma/context-documents/context-document.repository';
 import { ContextDocumentService } from '@gitroom/nestjs-libraries/database/prisma/context-documents/context-document.service';
 import { PipelineService } from '@gitroom/nestjs-libraries/database/prisma/pipelines/pipeline.service';
 import { PipelinesListTool } from '@gitroom/nestjs-libraries/chat/tools/pipelines.list.tool';
 import { PipelineContextDocumentReadTool } from '@gitroom/nestjs-libraries/chat/tools/pipeline.context-document.read.tool';
+import { GenerateImageTool } from '@gitroom/nestjs-libraries/chat/tools/generate.image.tool';
+import { MediaService } from '@gitroom/nestjs-libraries/database/prisma/media/media.service';
 import { CONTEXT_DOCUMENT_LARGE_WARNING_BYTES } from '@gitroom/nestjs-libraries/upload/context-document.upload.validation';
 
 describe('pipeline context document tools', () => {
@@ -202,6 +219,16 @@ describe('pipeline context document tools', () => {
               updatedAt,
             },
           ],
+          referenceImages: [
+            {
+              id: 'reference-1',
+              name: 'brand.png',
+              originalName: 'Brand.png',
+              path: 'https://cdn.example.com/brand.png',
+              thumbnail: 'https://cdn.example.com/brand-thumb.png',
+              alt: 'Brand reference',
+            },
+          ],
         },
       ]);
 
@@ -223,7 +250,122 @@ describe('pipeline context document tools', () => {
       expect(result.output[0].contextDocuments[0]).not.toHaveProperty(
         'content'
       );
+      expect(result.output[0].referenceImages).toEqual([
+        {
+          id: 'reference-1',
+          name: 'brand.png',
+          originalName: 'Brand.png',
+          alt: 'Brand reference',
+        },
+      ]);
+      expect(JSON.stringify(result.output[0].referenceImages)).not.toContain(
+        'cdn.example.com'
+      );
       expect(pipelineService.getPipelines).toHaveBeenCalledWith(organizationId);
+    });
+  });
+
+  describe('generateImageTool', () => {
+    const createImageTool = (mediaService = createMediaService()) =>
+      new GenerateImageTool(mediaService as unknown as MediaService).run();
+
+    const createMediaService = () => ({
+      generateImage: jest.fn().mockResolvedValue('base64-image'),
+      saveFile: jest.fn().mockResolvedValue({
+        id: 'generated-image',
+        path: 'https://cdn.example.com/generated-image.png',
+      }),
+    });
+
+    const createImageContext = (
+      selectedPipelineId?: string,
+      orgId = organizationId
+    ) => {
+      const context = createContext(orgId);
+      if (selectedPipelineId) {
+        (context.requestContext as any).set('pipeline', {
+          id: selectedPipelineId,
+        });
+      }
+      return context;
+    };
+
+    beforeEach(() => {
+      mockUploadSimple.mockResolvedValue(
+        'https://cdn.example.com/generated-image.png'
+      );
+    });
+
+    it('uses the selected Pipeline with references enabled by default', async () => {
+      const mediaService = createMediaService();
+      const result = await createImageTool(mediaService).execute!(
+        { prompt: 'Product launch hero' },
+        createImageContext(pipelineId)
+      );
+
+      expect(mediaService.generateImage).toHaveBeenCalledWith(
+        'Product launch hero',
+        { id: organizationId },
+        undefined,
+        pipelineId,
+        true
+      );
+      expect(result).toEqual({
+        id: 'generated-image',
+        path: 'https://cdn.example.com/generated-image.png',
+      });
+    });
+
+    it('prefers an explicit Pipeline id over the selected Pipeline', async () => {
+      const mediaService = createMediaService();
+      await createImageTool(mediaService).execute!(
+        { prompt: 'External request', pipelineId: 'pipeline-external' },
+        createImageContext(pipelineId)
+      );
+
+      expect(mediaService.generateImage).toHaveBeenCalledWith(
+        'External request',
+        { id: organizationId },
+        undefined,
+        'pipeline-external',
+        true
+      );
+    });
+
+    it('allows explicit off-brand requests to disable Pipeline references', async () => {
+      const mediaService = createMediaService();
+      await createImageTool(mediaService).execute!(
+        {
+          prompt: 'Explicitly off-brand abstract image',
+          pipelineId,
+          usePipelineReferences: false,
+        },
+        createImageContext()
+      );
+
+      expect(mediaService.generateImage).toHaveBeenCalledWith(
+        'Explicitly off-brand abstract image',
+        { id: organizationId },
+        undefined,
+        pipelineId,
+        false
+      );
+    });
+
+    it('keeps image generation prompt-only without Pipeline context', async () => {
+      const mediaService = createMediaService();
+      await createImageTool(mediaService).execute!(
+        { prompt: 'A mountain at sunrise' },
+        createImageContext(undefined, 'org-2')
+      );
+
+      expect(mediaService.generateImage).toHaveBeenCalledWith(
+        'A mountain at sunrise',
+        { id: 'org-2' },
+        undefined,
+        undefined,
+        true
+      );
     });
   });
 

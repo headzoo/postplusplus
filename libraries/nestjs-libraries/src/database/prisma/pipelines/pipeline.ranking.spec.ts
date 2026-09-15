@@ -63,6 +63,7 @@ function createRankingRepository(
     { model: {} } as any,
     { model: {} } as any,
     { model: {} } as any,
+    { model: {} } as any,
     transaction as any
   );
 
@@ -111,6 +112,7 @@ describe('Pipeline sparse ranking', () => {
       },
     };
     const repository = new PipelineRepository(
+      { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
@@ -275,6 +277,7 @@ describe('Pipeline sparse ranking', () => {
       },
     };
     const repository = new PipelineRepository(
+      { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,
       { model: {} } as any,

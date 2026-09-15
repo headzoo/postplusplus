@@ -16,10 +16,7 @@ export class GenerateImageTool implements AgentToolInterface {
   run() {
     return createTool({
       id: 'generateImageTool',
-      description: `Generate image to use in a post,
-                    in case the user specified a platform that requires attachment and attachment was not provided,
-                    ask if they want to generate a picture of a video.
-      `,
+      description: `Generate an image to use in a post. When generating for a Pipeline, pass pipelineId from listPipelines; the current Pipeline reference images are used by default. Set usePipelineReferences to false only when the user explicitly asks for an off-brand result. If no pipelineId is provided and no Pipeline is selected in-app, generation is prompt-only. In case the user specified a platform that requires attachment and attachment was not provided, ask if they want to generate a picture of a video.`,
       mcp: {
         annotations: {
           title: 'Generate Image',
@@ -31,6 +28,18 @@ export class GenerateImageTool implements AgentToolInterface {
       },
       inputSchema: z.object({
         prompt: z.string(),
+        pipelineId: z
+          .string()
+          .optional()
+          .describe(
+            'Pipeline id from listPipelines for reference-aware generation'
+          ),
+        usePipelineReferences: z
+          .boolean()
+          .default(true)
+          .describe(
+            'Use current Pipeline reference images. Set false only for an explicitly requested off-brand image.'
+          ),
       }),
       outputSchema: z.object({
         id: z.string(),
@@ -41,9 +50,17 @@ export class GenerateImageTool implements AgentToolInterface {
         const org = JSON.parse(
           (context?.requestContext as any)?.get('organization') as string
         );
+        const selectedPipeline = (context?.requestContext as any)?.get(
+          'pipeline'
+        ) as { id?: string } | null;
+        const pipelineId = inputData.pipelineId || selectedPipeline?.id;
+        const usePipelineReferences = inputData.usePipelineReferences ?? true;
         const image = await this._mediaService.generateImage(
           inputData.prompt,
-          org
+          org,
+          undefined,
+          pipelineId,
+          usePipelineReferences
         );
 
         const file = await this.storage.uploadSimple(

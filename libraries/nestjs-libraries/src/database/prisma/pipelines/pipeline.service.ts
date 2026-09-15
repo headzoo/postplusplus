@@ -21,7 +21,10 @@ import {
   getPipelineScheduleOccurrencesInRange,
   getUpcomingPipelineSlots,
 } from './pipeline.schedule';
-import { PipelineRepository } from './pipeline.repository';
+import {
+  isEligiblePipelineReferenceImage,
+  PipelineRepository,
+} from './pipeline.repository';
 import { PipelineManager } from './pipeline.manager';
 import { AutopostService } from '@gitroom/nestjs-libraries/database/prisma/autopost/autopost.service';
 import { socialIntegrationList } from '@gitroom/nestjs-libraries/integrations/integration.manager';
@@ -65,6 +68,7 @@ export class PipelineService {
         contextDocuments: this.toContextDocuments(
           pipeline.contextDocuments || []
         ),
+        referenceImages: this.toReferenceImages(pipeline.referenceImages || []),
         queueCount,
         nextSlot: pipeline.active
           ? getNextPipelineSlot(pipeline.scheduleSlots, pipeline.timezone, now)
@@ -243,6 +247,7 @@ export class PipelineService {
       blockedContextDocuments: this.toBlockedContextDocuments(
         pipeline.contextDocuments || []
       ),
+      referenceImages: this.toReferenceImages(pipeline.referenceImages || []),
       queueItems: pipeline.queueItems.map((item) => ({
         id: item.id,
         group: item.group,
@@ -269,6 +274,10 @@ export class PipelineService {
       this.validateContextDocumentIds(body.contextDocumentIds);
       await this.validateContextDocuments(orgId, body.contextDocumentIds);
     }
+    if (body.referenceImageIds !== undefined) {
+      this.validateReferenceImageIds(body.referenceImageIds);
+      await this.validateReferenceImages(orgId, body.referenceImageIds);
+    }
     return this._pipelineRepository.createPipeline(orgId, body);
   }
 
@@ -281,6 +290,10 @@ export class PipelineService {
     if (body.contextDocumentIds !== undefined) {
       this.validateContextDocumentIds(body.contextDocumentIds);
       await this.validateContextDocuments(orgId, body.contextDocumentIds);
+    }
+    if (body.referenceImageIds !== undefined) {
+      this.validateReferenceImageIds(body.referenceImageIds);
+      await this.validateReferenceImages(orgId, body.referenceImageIds);
     }
     const result = await this._pipelineRepository.updatePipeline(
       orgId,
@@ -295,6 +308,16 @@ export class PipelineService {
     if (result === 'skill-context-documents') {
       throw new BadRequestException(
         'Agent skills cannot be attached as pipeline context documents'
+      );
+    }
+    if (result === 'invalid-reference-images') {
+      throw new BadRequestException(
+        'Pipeline reference images must belong to the organization'
+      );
+    }
+    if (result === 'video-reference-images') {
+      throw new BadRequestException(
+        'Pipeline reference images must be images from the media library'
       );
     }
     if (result === false) {
@@ -642,6 +665,39 @@ export class PipelineService {
     }
   }
 
+  private validateReferenceImageIds(mediaIds: string[]) {
+    if (mediaIds.length > 3) {
+      throw new BadRequestException(
+        'Pipeline reference images cannot exceed three'
+      );
+    }
+    if (new Set(mediaIds).size !== mediaIds.length) {
+      throw new BadRequestException(
+        'Pipeline reference image IDs must be unique'
+      );
+    }
+  }
+
+  private async validateReferenceImages(orgId: string, mediaIds: string[]) {
+    if (!mediaIds.length) {
+      return;
+    }
+    const media = await this._pipelineRepository.getOwnedReferenceImages(
+      orgId,
+      mediaIds
+    );
+    if (media.length !== mediaIds.length) {
+      throw new BadRequestException(
+        'Pipeline reference images must belong to the organization'
+      );
+    }
+    if (media.some((item) => !isEligiblePipelineReferenceImage(item))) {
+      throw new BadRequestException(
+        'Pipeline reference images must be images from the media library'
+      );
+    }
+  }
+
   private async validateContextDocuments(orgId: string, documentIds: string[]) {
     if (!documentIds.length) {
       return;
@@ -714,6 +770,31 @@ export class PipelineService {
           first.name.localeCompare(second.name) ||
           first.id.localeCompare(second.id)
       );
+  }
+
+  private toReferenceImages(
+    assignments: Array<{
+      position: number;
+      media: {
+        id: string;
+        name: string;
+        originalName: string | null;
+        path: string;
+        thumbnail: string | null;
+        alt: string | null;
+      };
+    }>
+  ) {
+    return [...assignments]
+      .sort((first, second) => first.position - second.position)
+      .map(({ media }) => ({
+        id: media.id,
+        name: media.name,
+        originalName: media.originalName ?? null,
+        path: media.path,
+        ...(media.thumbnail ? { thumbnail: media.thumbnail } : {}),
+        ...(media.alt ? { alt: media.alt } : {}),
+      }));
   }
 
   private toScheduleSlots(

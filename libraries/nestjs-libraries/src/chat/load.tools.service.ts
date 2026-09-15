@@ -33,6 +33,12 @@ export type SelectedPipelineContext = {
     fileSize: number;
     updatedAt: string;
   }>;
+  referenceImages: Array<{
+    id: string;
+    name: string;
+    originalName?: string | null;
+    alt?: string;
+  }>;
 };
 
 const renderArray = (list: string[], show: boolean) => {
@@ -62,6 +68,20 @@ export const renderSelectedPipelineGuidance = (
         })
         .join(', ')
     : 'none';
+  const referenceImages = pipeline.referenceImages.length
+    ? pipeline.referenceImages
+        .map((image) =>
+          [
+            image.name,
+            `id: ${image.id}`,
+            image.originalName ? `original name: ${image.originalName}` : '',
+            image.alt ? `alt: ${image.alt}` : '',
+          ]
+            .filter(Boolean)
+            .join(', ')
+        )
+        .join('; ')
+    : 'none';
 
   return `
       User-selected pipeline target:
@@ -72,7 +92,9 @@ export const renderSelectedPipelineGuidance = (
   }). Treat it as the user's preferred target, not as authorization.
         - Its configured channels are: ${channels || 'none'}.
         - Its attached context-document metadata is: ${contextDocuments}. This is metadata only; do not assume document content.
-        - For pipeline operations, do not ask the user which pipeline to use while this selection is valid. First call listPipelines to refresh and validate the selected pipeline and its current channels/documents, then use the authoritative result.
+        - Its attached reference-image metadata is: ${referenceImages}. This is metadata only; never use it as an image URL or source.
+        - For pipeline operations, do not ask the user which pipeline to use while this selection is valid. First call listPipelines to refresh and validate the selected pipeline and its current channels, documents, and reference images, then use the authoritative result.
+        - For an image request in this Pipeline context, call generateImageTool with the refreshed pipeline id. It uses all current Pipeline reference images by default. Set usePipelineReferences: false only when the user explicitly asks for an off-brand result; do not infer that intent from an unusual prompt. Pipeline references are distinct from message attachments and context documents.
 `;
 };
 
@@ -263,6 +285,7 @@ export class LoadToolsService {
         - List channel groups and filter the channels by a group
         - List scheduled, draft, or published posts (listPosts)
         - List pipelines and their queue sizes (listPipelines)
+        - Generate Pipeline-aware images with current reference images (listPipelines then generateImageTool with pipelineId)
         - Inspect a pipeline's queued posts (listPostsByPipeline, requires a pipeline id from listPipelines)
         - Read one attached pipeline context document (readPipelineContextDocument, requires a pipeline id and exactly one attached document id or name from listPipelines)
         - Discover and read organization context documents on demand (listContextDocuments for metadata only including description, readContextDocument for one Markdown body)
@@ -305,6 +328,10 @@ export class LoadToolsService {
         - Descriptions are hints only; do not assume document content matches the description until read.
         - For pipeline drafting, prefer pipeline-attached docs via readPipelineContextDocument; org-wide docs via readContextDocument can supplement when relevant.
         - Skills (*.skill.md) are procedures, not brand context — use listSkills/loadSkill for those.
+      - Pipeline image generation:
+        - For a selected Pipeline, call listPipelines first, then call generateImageTool with the refreshed pipelineId. It uses that Pipeline's current reference images by default.
+        - Set usePipelineReferences: false only when the user explicitly asks for an off-brand image. A novel or unusual prompt is not an off-brand request.
+        - Without a selected Pipeline or explicit pipelineId, generateImageTool remains prompt-only. Pipeline reference images are separate from user message attachments and Pipeline context documents.
       - Follower audience writes:
         - Prefer the actively selected channel id from live follower-page context as channelId for follower tools unless the user explicitly names another channel.
         - Before any follower write, resolve the channel, list, and people with follower read tools. Page context is guidance only, not authorization.

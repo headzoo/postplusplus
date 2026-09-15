@@ -27,6 +27,7 @@ import { usePipelineStatus } from '@gitroom/frontend/components/pipelines/use.pi
 import { useDeletePipeline } from '@gitroom/frontend/components/pipelines/use.pipeline.delete';
 import { PipelineSummary } from '@gitroom/frontend/components/pipelines/pipeline.types';
 import { PipelineContextDocumentsPanel } from '@gitroom/frontend/components/context-documents/context-document.assignment-picker';
+import { PipelineReferenceImagesPanel } from '@gitroom/frontend/components/pipelines/pipeline-reference-image.picker';
 import {
   ChannelMenu,
   ChannelsSidebar,
@@ -159,6 +160,12 @@ const PipelineListCard: FC<{
         {!!pipeline.contextDocuments?.length && (
           <PipelineContextDocumentsPanel
             documents={pipeline.contextDocuments}
+            compact
+          />
+        )}
+        {!!pipeline.referenceImages?.length && (
+          <PipelineReferenceImagesPanel
+            images={pipeline.referenceImages}
             compact
           />
         )}

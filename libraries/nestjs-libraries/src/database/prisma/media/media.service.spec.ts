@@ -47,6 +47,13 @@ import { OpenGraphRepository } from './open.graph.repository';
 
 const org = { id: 'org-1' } as Organization;
 
+const eligibleReferenceMedia = (path: string) => ({
+  path,
+  deletedAt: null,
+  organizationId: 'org-1',
+  type: 'image',
+});
+
 const imageMedia = {
   id: 'media-1',
   organizationId: 'org-1',
@@ -55,6 +62,222 @@ const imageMedia = {
   thumbnail: null,
   thumbnailTimestamp: null,
 };
+
+describe('MediaService.generateImage', () => {
+  let getPipelineReferenceImages: jest.Mock;
+  let generateImage: jest.Mock;
+  let generatePromptForPicture: jest.Mock;
+  let useCredit: jest.Mock;
+  let service: MediaService;
+
+  beforeEach(() => {
+    getPipelineReferenceImages = jest.fn();
+    generateImage = jest.fn().mockResolvedValue('aW1hZ2U=');
+    generatePromptForPicture = jest.fn().mockResolvedValue('expanded prompt');
+    useCredit = jest.fn(async (_organization, _type, func) => func());
+
+    service = new MediaService(
+      { getPipelineReferenceImages } as unknown as MediaRepository,
+      {
+        generateImage,
+        generatePromptForPicture,
+      } as unknown as OpenaiService,
+      { useCredit } as unknown as SubscriptionService,
+      {} as VideoManager,
+      {} as GiphyService,
+      {} as OpenGraphRepository
+    );
+  });
+
+  it('uses prompt-only generation when no Pipeline is supplied', async () => {
+    await expect(service.generateImage('A cat', org)).resolves.toBe('aW1hZ2U=');
+
+    expect(getPipelineReferenceImages).not.toHaveBeenCalled();
+    expect(generateImage).toHaveBeenCalledWith('A cat', false, []);
+    expect(useCredit).toHaveBeenCalledTimes(1);
+    expect(useCredit).toHaveBeenCalledWith(
+      org,
+      'ai_images',
+      expect.any(Function)
+    );
+  });
+
+  it('uses every Pipeline reference in stored order', async () => {
+    getPipelineReferenceImages.mockResolvedValue({
+      referenceImages: [
+        {
+          position: 0,
+          media: eligibleReferenceMedia('https://cdn.example.com/first.jpg'),
+        },
+        {
+          position: 1,
+          media: eligibleReferenceMedia('https://cdn.example.com/second.jpg'),
+        },
+        {
+          position: 2,
+          media: eligibleReferenceMedia('https://cdn.example.com/third.jpg'),
+        },
+      ],
+    });
+
+    await service.generateImage('A cat', org, false, 'pipeline-1');
+
+    expect(getPipelineReferenceImages).toHaveBeenCalledWith(
+      'org-1',
+      'pipeline-1'
+    );
+    expect(generateImage).toHaveBeenCalledWith('A cat', false, [
+      'https://cdn.example.com/first.jpg',
+      'https://cdn.example.com/second.jpg',
+      'https://cdn.example.com/third.jpg',
+    ]);
+    expect(useCredit).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects missing, foreign, or deleted Pipelines without charging', async () => {
+    getPipelineReferenceImages.mockResolvedValue(null);
+
+    await expect(
+      service.generateImage('A cat', org, false, 'foreign-pipeline')
+    ).rejects.toMatchObject({ status: 404 });
+
+    expect(useCredit).not.toHaveBeenCalled();
+    expect(generateImage).not.toHaveBeenCalled();
+  });
+
+  it('honors an explicit reference opt-out', async () => {
+    await service.generateImage('A cat', org, false, 'pipeline-1', false);
+
+    expect(getPipelineReferenceImages).not.toHaveBeenCalled();
+    expect(generateImage).toHaveBeenCalledWith('A cat', false, []);
+  });
+
+  it('uses prompt-only generation when a Pipeline has no reference images', async () => {
+    getPipelineReferenceImages.mockResolvedValue({
+      referenceImages: [],
+    });
+
+    await service.generateImage('A cat', org, false, 'pipeline-1');
+
+    expect(generateImage).toHaveBeenCalledWith('A cat', false, []);
+    expect(useCredit).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects soft-deleted Pipeline references before charging credits', async () => {
+    getPipelineReferenceImages.mockResolvedValue({
+      referenceImages: [
+        {
+          position: 0,
+          media: {
+            ...eligibleReferenceMedia('https://cdn.example.com/deleted.jpg'),
+            deletedAt: new Date(),
+          },
+        },
+      ],
+    });
+
+    await expect(
+      service.generateImage('A cat', org, false, 'pipeline-1')
+    ).rejects.toMatchObject({ status: 400 });
+
+    expect(useCredit).not.toHaveBeenCalled();
+    expect(generateImage).not.toHaveBeenCalled();
+  });
+
+  it('rejects mixed valid and deleted references without calling OpenAI', async () => {
+    getPipelineReferenceImages.mockResolvedValue({
+      referenceImages: [
+        {
+          position: 0,
+          media: eligibleReferenceMedia('https://cdn.example.com/valid.jpg'),
+        },
+        {
+          position: 1,
+          media: {
+            ...eligibleReferenceMedia('https://cdn.example.com/deleted.jpg'),
+            deletedAt: new Date(),
+          },
+        },
+      ],
+    });
+
+    await expect(
+      service.generateImage('A cat', org, false, 'pipeline-1')
+    ).rejects.toMatchObject({ status: 400 });
+
+    expect(useCredit).not.toHaveBeenCalled();
+    expect(generateImage).not.toHaveBeenCalled();
+  });
+
+  it('rejects foreign, non-image, and excess Pipeline references before charging', async () => {
+    getPipelineReferenceImages.mockResolvedValue({
+      referenceImages: [
+        {
+          position: 0,
+          media: {
+            ...eligibleReferenceMedia('https://cdn.example.com/foreign.jpg'),
+            organizationId: 'org-other',
+          },
+        },
+      ],
+    });
+
+    await expect(
+      service.generateImage('A cat', org, false, 'pipeline-1')
+    ).rejects.toMatchObject({ status: 400 });
+    expect(useCredit).not.toHaveBeenCalled();
+
+    getPipelineReferenceImages.mockResolvedValue({
+      referenceImages: [
+        {
+          position: 0,
+          media: {
+            ...eligibleReferenceMedia('https://cdn.example.com/clip.mp4'),
+            type: 'video',
+          },
+        },
+      ],
+    });
+
+    await expect(
+      service.generateImage('A cat', org, false, 'pipeline-1')
+    ).rejects.toMatchObject({ status: 400 });
+    expect(useCredit).not.toHaveBeenCalled();
+
+    getPipelineReferenceImages.mockResolvedValue({
+      referenceImages: Array.from({ length: 4 }, (_, position) => ({
+        position,
+        media: eligibleReferenceMedia(
+          `https://cdn.example.com/${position}.jpg`
+        ),
+      })),
+    });
+
+    await expect(
+      service.generateImage('A cat', org, false, 'pipeline-1')
+    ).rejects.toMatchObject({ status: 400 });
+    expect(useCredit).not.toHaveBeenCalled();
+    expect(generateImage).not.toHaveBeenCalled();
+  });
+
+  it('rewrites prompts before reference-aware generation', async () => {
+    getPipelineReferenceImages.mockResolvedValue({
+      referenceImages: [
+        {
+          position: 0,
+          media: eligibleReferenceMedia('https://cdn.example.com/cat.jpg'),
+        },
+      ],
+    });
+
+    await service.generateImage('A cat', org, true, 'pipeline-1');
+
+    expect(generatePromptForPicture).toHaveBeenCalledWith('A cat');
+    expect(generateImage).toHaveBeenCalledWith('expanded prompt', false, [
+      'https://cdn.example.com/cat.jpg',
+    ]);
+  });
+});
 
 describe('MediaService.generateAlt', () => {
   const originalStripe = process.env.STRIPE_PUBLISHABLE_KEY;

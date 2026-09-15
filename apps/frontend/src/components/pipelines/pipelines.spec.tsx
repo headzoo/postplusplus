@@ -142,6 +142,23 @@ jest.mock(
   })
 );
 
+jest.mock('./pipeline-reference-image.picker', () => ({
+  PipelineReferenceImagesPanel: ({
+    images,
+    compact,
+  }: {
+    images?: Array<{ id: string; name: string }>;
+    compact?: boolean;
+  }) =>
+    compact && images?.length ? (
+      <div data-testid="pipeline-reference-thumbnails">
+        {images.map((image) => (
+          <span key={image.id}>{image.name}</span>
+        ))}
+      </div>
+    ) : null,
+}));
+
 jest.mock('./pipeline.form', () => ({
   PipelineForm: () => <div>Pipeline form</div>,
 }));
@@ -235,5 +252,28 @@ describe('Pipelines', () => {
     expect(push).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'Edit' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Delete' })).toBeTruthy();
+  });
+
+  it('shows compact reference image thumbnails on pipeline cards', () => {
+    usePipelineList.mockReturnValue({
+      data: [
+        {
+          ...pipeline,
+          referenceImages: [
+            { id: 'img-a', name: 'brand-a.png', path: '/a.png' },
+            { id: 'img-b', name: 'brand-b.png', path: '/b.png' },
+          ],
+        },
+      ],
+      error: null,
+      isLoading: false,
+      mutate,
+    });
+
+    render(<Pipelines />);
+
+    expect(screen.getByTestId('pipeline-reference-thumbnails')).toBeTruthy();
+    expect(screen.getByText('brand-a.png')).toBeTruthy();
+    expect(screen.getByText('brand-b.png')).toBeTruthy();
   });
 });

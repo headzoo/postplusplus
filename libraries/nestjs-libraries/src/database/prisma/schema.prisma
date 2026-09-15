@@ -336,10 +336,11 @@ model Media {
   alt                String?
   thumbnailTimestamp Int?
   hidden             Boolean             @default(false)
-  organization       Organization        @relation(fields: [organizationId], references: [id])
-  agencies           SocialMediaAgency[]
-  userPicture        User[]
-  oauthApps          OAuthApp[]
+  organization            Organization              @relation(fields: [organizationId], references: [id])
+  agencies                SocialMediaAgency[]
+  userPicture             User[]
+  oauthApps               OAuthApp[]
+  pipelineReferenceImages PipelineReferenceImage[]
 
   @@index([name])
   @@index([organizationId])
@@ -1057,6 +1058,7 @@ model Pipeline {
   queueItems        PipelineQueueItem[]
   slotExecutions    PipelineSlotExecution[]
   contextDocuments  PipelineContextDocument[]
+  referenceImages   PipelineReferenceImage[]
   plugs             PipelinePlug[]
   autoposts         AutoPost[]
   postRulePipelines PostRulePipeline[]
@@ -1169,6 +1171,20 @@ model PipelineContextDocument {
 
   @@id([pipelineId, contextDocumentId])
   @@index([contextDocumentId, pipelineId])
+}
+
+model PipelineReferenceImage {
+  pipelineId String
+  mediaId    String
+  position   Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  pipeline   Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  media      Media    @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@id([pipelineId, mediaId])
+  @@unique([pipelineId, position])
+  @@index([mediaId, pipelineId])
 }
 
 model IntegrationContextDocument {
