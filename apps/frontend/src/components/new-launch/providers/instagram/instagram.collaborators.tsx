@@ -53,7 +53,6 @@ const InstagramCollaborators: FC<{
           value: 'post',
         })}
       >
-        <option value="">{t('select_post_type', 'Select Post Type...')}</option>
         {postType.map((item) => (
           <option key={item.value} value={item.value}>
             {item.label}
@@ -120,6 +119,9 @@ export default withProvider<InstagramDto>({
   SettingsComponent: InstagramCollaborators,
   CustomPreviewComponent: InstagramPreview,
   dto: InstagramDto,
+  defaultSettings: {
+    post_type: 'post',
+  },
   maximumCharacters: 2200,
   comments: 'no-media',
 });

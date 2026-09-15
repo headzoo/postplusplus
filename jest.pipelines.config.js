@@ -60,6 +60,7 @@ module.exports = {
     '<rootDir>/libraries/nestjs-libraries/src/dtos/admin/relationship-grade.schedule.dto.spec.ts',
     '<rootDir>/libraries/nestjs-libraries/src/dtos/admin/follower-bot-score.schedule.dto.spec.ts',
     '<rootDir>/libraries/nestjs-libraries/src/dtos/posts/post-reference.dto.spec.ts',
+    '<rootDir>/libraries/nestjs-libraries/src/dtos/posts/providers-settings/instagram.dto.spec.ts',
     '<rootDir>/libraries/nestjs-libraries/src/configuration/admin-webauthn.configuration.spec.ts',
     '<rootDir>/libraries/nestjs-libraries/src/database/prisma/admin-passkeys/**/*.spec.ts',
     '<rootDir>/apps/backend/src/api/routes/admin-auth.controller.spec.ts',

@@ -50,6 +50,7 @@ export const withProvider = function <T extends object>(params: {
     maximumCharacters?: number;
   }>;
   dto?: any;
+  defaultSettings?: Record<string, unknown>;
   maximumCharacters?: number | ((settings: any) => number);
 }) {
   const {
@@ -57,6 +58,7 @@ export const withProvider = function <T extends object>(params: {
     SettingsComponent,
     CustomPreviewComponent,
     dto,
+    defaultSettings,
     maximumCharacters,
   } = params;
 
@@ -182,8 +184,14 @@ export const withProvider = function <T extends object>(params: {
 
     const form = useForm({
       resolver: classValidatorResolver(dto || Empty),
+      ...(defaultSettings ? { defaultValues: defaultSettings as any } : {}),
       ...(Object.keys(selectedIntegration.settings).length > 0
-        ? { values: { ...selectedIntegration.settings } }
+        ? {
+            values: {
+              ...(defaultSettings || {}),
+              ...selectedIntegration.settings,
+            },
+          }
         : {}),
       mode: 'all',
       criteriaMode: 'all',

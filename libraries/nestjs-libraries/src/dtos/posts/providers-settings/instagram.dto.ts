@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import {
   IsArray,
   IsDefined,
@@ -49,9 +49,10 @@ export class InstagramAudio {
   video_volume?: number;
 }
 export class InstagramDto {
+  @Transform(({ value }) => (value === '' ? 'post' : value))
   @IsIn(['post', 'story'])
-  @IsDefined()
-  post_type: 'post' | 'story';
+  @IsOptional()
+  post_type?: 'post' | 'story';
 
   @IsOptional()
   is_trial_reel?: boolean;
