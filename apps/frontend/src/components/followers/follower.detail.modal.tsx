@@ -5,6 +5,10 @@ import clsx from 'clsx';
 import Link from 'next/link';
 import ImageWithFallback from '@gitroom/react/helpers/image.with.fallback';
 import { Button } from '@gitroom/react/form/button';
+import {
+  EXTERNAL_POST_TAB_NAME,
+  openExternalPostFromAnchor,
+} from '@gitroom/frontend/components/external-post/open.external.post';
 import { Textarea } from '@gitroom/react/form/textarea';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { useToaster } from '@gitroom/react/toaster/toaster';
@@ -533,6 +537,7 @@ const FollowerDetailContent: FC<{
 
   const follower = detail.follower;
   const handle = follower.username ? `@${follower.username}` : undefined;
+  const profileUrl = follower.profileUrl;
   const accountCreatedAt = follower.accountCreatedAt
     ? formatShortDate(follower.accountCreatedAt)
     : null;
@@ -547,11 +552,11 @@ const FollowerDetailContent: FC<{
     <div className="flex w-full min-w-0 max-w-full flex-col gap-[20px] overflow-x-hidden">
       <div className="flex items-start justify-between gap-[12px]">
         <div className="flex items-start gap-[12px] min-w-0 flex-1">
-          {follower.profileUrl ? (
+          {profileUrl ? (
             <a
-              href={follower.profileUrl}
-              target="_blank"
-              rel="noreferrer noopener"
+              href={profileUrl}
+              target={EXTERNAL_POST_TAB_NAME}
+              onClick={(event) => openExternalPostFromAnchor(event, profileUrl)}
               className="shrink-0 rounded-full hover:opacity-80"
               aria-label={t(
                 'followers_view_profile_for',
@@ -593,11 +598,13 @@ const FollowerDetailContent: FC<{
               />
             </div>
             {handle &&
-              (follower.profileUrl ? (
+              (profileUrl ? (
                 <a
-                  href={follower.profileUrl}
-                  target="_blank"
-                  rel="noreferrer noopener"
+                  href={profileUrl}
+                  target={EXTERNAL_POST_TAB_NAME}
+                  onClick={(event) =>
+                    openExternalPostFromAnchor(event, profileUrl)
+                  }
                   className="inline-block w-fit max-w-full text-[13px] text-textItemBlur truncate hover:underline hover:opacity-80"
                 >
                   {handle}

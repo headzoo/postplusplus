@@ -488,9 +488,25 @@ it('exposes a drag handle on the column icon and title', () => {
 });
 
 describe('FollowerBoardRow', () => {
+  const focus = jest.fn();
+  let tab: { closed: boolean; focus: jest.Mock; location: { href: string } };
+  let open: jest.SpyInstance;
+
   beforeEach(() => {
     dismissTriage.mockClear();
     unfollowConfirmOpen.mockClear();
+    focus.mockReset();
+    tab = {
+      closed: false,
+      focus,
+      location: { href: '' },
+    };
+    open = jest.spyOn(window, 'open').mockReturnValue(tab as unknown as Window);
+  });
+
+  afterEach(() => {
+    tab.closed = true;
+    open.mockRestore();
   });
 
   it('shows name and handle without interaction count', () => {
@@ -544,6 +560,31 @@ describe('FollowerBoardRow', () => {
     fireEvent.click(screen.getByText('@alex'));
 
     expect(onOpen).not.toHaveBeenCalled();
+  });
+
+  it('opens profile links in the shared named tab', () => {
+    render(
+      <FollowerBoardRow
+        follower={follower()}
+        segment={leadsSegment}
+        {...rowColumnProps(leadsSegment)}
+        onOpen={jest.fn()}
+        onDismissTriage={jest.fn()}
+      />
+    );
+
+    fireEvent.click(
+      screen.getByRole('link', { name: 'View profile for Alex Rivera' })
+    );
+    fireEvent.click(screen.getByText('@alex'));
+
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(open).toHaveBeenCalledWith(
+      'https://example.com/alex',
+      'postplusplus-external-post'
+    );
+    expect(tab.location.href).toBe('https://example.com/alex');
+    expect(focus).toHaveBeenCalledTimes(2);
   });
 
   it('snoozes Hot and Cultivate triages when a profile link is clicked', async () => {

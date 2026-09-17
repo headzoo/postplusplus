@@ -47,6 +47,10 @@ import {
   useFollowers,
 } from '@gitroom/frontend/components/followers/use.followers';
 import { LeadFitDismissReason } from '@gitroom/nestjs-libraries/dtos/integrations/lead-fit-feedback.types';
+import {
+  EXTERNAL_POST_TAB_NAME,
+  openExternalPostFromAnchor,
+} from '@gitroom/frontend/components/external-post/open.external.post';
 
 const followerBoardColumnDragType = 'follower-board-column';
 const followerBoardCardDragType = 'follower-board-card';
@@ -185,7 +189,11 @@ export const FollowerBoardRow: FC<{
   const handleProfileLinkClick = async (
     event: MouseEvent<HTMLAnchorElement>
   ) => {
-    event.stopPropagation();
+    const profileUrl = follower.profileUrl;
+    if (!profileUrl) {
+      return;
+    }
+    openExternalPostFromAnchor(event, profileUrl);
     if (!onDismissTriage) {
       return;
     }
@@ -257,8 +265,7 @@ export const FollowerBoardRow: FC<{
         {follower.profileUrl ? (
           <a
             href={follower.profileUrl}
-            target="_blank"
-            rel="noreferrer noopener"
+            target={EXTERNAL_POST_TAB_NAME}
             onClick={handleProfileLinkClick}
             onKeyDown={stopNestedAction}
             className="block h-full w-full hover:opacity-80"
@@ -282,8 +289,7 @@ export const FollowerBoardRow: FC<{
           (follower.profileUrl ? (
             <a
               href={follower.profileUrl}
-              target="_blank"
-              rel="noreferrer noopener"
+              target={EXTERNAL_POST_TAB_NAME}
               onClick={handleProfileLinkClick}
               onKeyDown={stopNestedAction}
               className="inline-block w-fit max-w-full truncate text-[12px] text-textItemBlur hover:underline hover:opacity-80"

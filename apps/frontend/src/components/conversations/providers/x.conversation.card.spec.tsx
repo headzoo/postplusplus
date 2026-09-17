@@ -23,6 +23,14 @@ jest.mock(
   () => ({
     isSafeHttpUrl: (url: string) => /^https?:\/\//.test(url),
     openExternalPost: mockOpenExternalPost,
+    openExternalPostFromAnchor: (
+      event: { preventDefault(): void; stopPropagation(): void },
+      url: string
+    ) => {
+      event.preventDefault();
+      event.stopPropagation();
+      mockOpenExternalPost(url);
+    },
   })
 );
 

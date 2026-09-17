@@ -20,6 +20,10 @@ import {
   useFollowerMemberTimeline,
 } from '@gitroom/frontend/components/followers/use.followers';
 import { getFollowerTimelinePostRenderer } from '@gitroom/frontend/components/followers/follower.timeline.provider.renderers';
+import {
+  EXTERNAL_POST_TAB_NAME,
+  openExternalPostFromAnchor,
+} from '@gitroom/frontend/components/external-post/open.external.post';
 
 const TIMELINE_PAGE_SIZE = 20;
 
@@ -162,6 +166,7 @@ export const FollowerTimelineComponent: FC = () => {
     : username
     ? `@${username}`
     : undefined;
+  const profileUrl = follower?.profileUrl;
 
   return (
     <div className="flex flex-col gap-[20px] max-w-[720px] mx-auto w-full py-[24px] px-[16px]">
@@ -186,11 +191,13 @@ export const FollowerTimelineComponent: FC = () => {
             <h1 className="text-[20px] font-[600] text-newTextColor truncate">
               {displayName}
             </h1>
-            {follower?.profileUrl ? (
+            {profileUrl ? (
               <a
-                href={follower.profileUrl}
-                target="_blank"
-                rel="noreferrer noopener"
+                href={profileUrl}
+                target={EXTERNAL_POST_TAB_NAME}
+                onClick={(event) =>
+                  openExternalPostFromAnchor(event, profileUrl)
+                }
                 className="text-[13px] text-textItemBlur hover:underline"
               >
                 {handle}

@@ -24,6 +24,10 @@ import {
 } from '@gitroom/frontend/components/followers/follower.segments';
 import { TimelineIcon, RobotIcon } from '@gitroom/frontend/components/ui/icons';
 import { LeadFitDismissReason } from '@gitroom/nestjs-libraries/dtos/integrations/lead-fit-feedback.types';
+import {
+  EXTERNAL_POST_TAB_NAME,
+  openExternalPostFromAnchor,
+} from '@gitroom/frontend/components/external-post/open.external.post';
 
 dayjs.extend(relativeTime);
 
@@ -482,7 +486,11 @@ export const FollowerCard: FC<{
   const handleProfileLinkClick = async (
     event: MouseEvent<HTMLAnchorElement>
   ) => {
-    event.stopPropagation();
+    const profileUrl = follower.profileUrl;
+    if (!profileUrl) {
+      return;
+    }
+    openExternalPostFromAnchor(event, profileUrl);
     if (!onDismissTriage) {
       return;
     }
@@ -544,8 +552,7 @@ export const FollowerCard: FC<{
         {follower.profileUrl ? (
           <a
             href={follower.profileUrl}
-            target="_blank"
-            rel="noreferrer noopener"
+            target={EXTERNAL_POST_TAB_NAME}
             onClick={handleProfileLinkClick}
             onKeyDown={stopProfileKeyboard}
             className="shrink-0 rounded-full hover:opacity-80"
@@ -593,8 +600,7 @@ export const FollowerCard: FC<{
               (follower.profileUrl ? (
                 <a
                   href={follower.profileUrl}
-                  target="_blank"
-                  rel="noreferrer noopener"
+                  target={EXTERNAL_POST_TAB_NAME}
                   onClick={handleProfileLinkClick}
                   onKeyDown={stopProfileKeyboard}
                   className="mt-[2px] inline-block w-fit max-w-full shrink-0 text-[13px] text-textItemBlur truncate hover:underline hover:opacity-80"

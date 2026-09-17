@@ -59,6 +59,10 @@ const baseFollower: Follower = {
 };
 
 describe('FollowerCard', () => {
+  const focus = jest.fn();
+  let tab: { closed: boolean; focus: jest.Mock; location: { href: string } };
+  let open: jest.SpyInstance;
+
   beforeEach(() => {
     decisionOpen.mockReset();
     decisionOpen.mockResolvedValue(false);
@@ -66,6 +70,18 @@ describe('FollowerCard', () => {
     triageDismissOpen.mockResolvedValue(null);
     leadDismissOpen.mockReset();
     leadDismissOpen.mockResolvedValue(null);
+    focus.mockReset();
+    tab = {
+      closed: false,
+      focus,
+      location: { href: '' },
+    };
+    open = jest.spyOn(window, 'open').mockReturnValue(tab as unknown as Window);
+  });
+
+  afterEach(() => {
+    tab.closed = true;
+    open.mockRestore();
   });
 
   it('opens the detail modal on card click', () => {
@@ -117,9 +133,26 @@ describe('FollowerCard', () => {
     expect(onOpen).not.toHaveBeenCalled();
     links.forEach((link) => {
       expect(link.getAttribute('href')).toBe('https://example.com/alex');
-      expect(link.getAttribute('target')).toBe('_blank');
-      expect(link.getAttribute('rel')).toBe('noreferrer noopener');
+      expect(link.getAttribute('target')).toBe('postplusplus-external-post');
+      expect(link.getAttribute('rel')).toBeNull();
     });
+  });
+
+  it('opens profile links in the shared named tab', () => {
+    render(<FollowerCard follower={baseFollower} onOpen={jest.fn()} />);
+
+    fireEvent.click(
+      screen.getByRole('link', { name: 'View profile for Alex Example' })
+    );
+    fireEvent.click(screen.getByText('@alex'));
+
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(open).toHaveBeenCalledWith(
+      'https://example.com/alex',
+      'postplusplus-external-post'
+    );
+    expect(tab.location.href).toBe('https://example.com/alex');
+    expect(focus).toHaveBeenCalledTimes(2);
   });
 
   it('snoozes Hot triage when a profile link is clicked', async () => {

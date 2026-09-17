@@ -1,12 +1,12 @@
 'use client';
 
-import { FC, Fragment, MouseEvent } from 'react';
+import { FC, Fragment } from 'react';
 import clsx from 'clsx';
 import ImageWithFallback from '@gitroom/react/helpers/image.with.fallback';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import {
   isSafeHttpUrl,
-  openExternalPost,
+  openExternalPostFromAnchor,
 } from '@gitroom/frontend/components/external-post/open.external.post';
 
 export type XPostData = {
@@ -25,15 +25,6 @@ export type XPostData = {
   repostedPost?: XPostData;
 };
 
-const openLinkedDestination = (
-  event: MouseEvent<HTMLAnchorElement>,
-  url: string
-) => {
-  event.preventDefault();
-  event.stopPropagation();
-  openExternalPost(url);
-};
-
 const linkifyContent = (content: string) =>
   content
     .split(/(https?:\/\/[^\s]+|@[a-zA-Z0-9_]+|#[\p{L}\p{N}_]+)/gu)
@@ -44,7 +35,7 @@ const linkifyContent = (content: string) =>
             key={`url-${index}`}
             href={part}
             className="text-blue-500 hover:underline"
-            onClick={(event) => openLinkedDestination(event, part)}
+            onClick={(event) => openExternalPostFromAnchor(event, part)}
           >
             {part}
           </a>
@@ -58,7 +49,7 @@ const linkifyContent = (content: string) =>
             key={`mention-${index}`}
             href={href}
             className="text-blue-500 hover:underline"
-            onClick={(event) => openLinkedDestination(event, href)}
+            onClick={(event) => openExternalPostFromAnchor(event, href)}
           >
             {part}
           </a>
@@ -72,7 +63,7 @@ const linkifyContent = (content: string) =>
             key={`hashtag-${index}`}
             href={href}
             className="text-blue-500 hover:underline"
-            onClick={(event) => openLinkedDestination(event, href)}
+            onClick={(event) => openExternalPostFromAnchor(event, href)}
           >
             {part}
           </a>
@@ -135,7 +126,7 @@ export const XPost: FC<{ post: XPostData; nested?: boolean }> = ({
                 className="text-newTableText hover:underline"
                 title={new Date(post.publishedAt).toLocaleString()}
                 aria-label={t('conversation_view_post', 'View post')}
-                onClick={(event) => openLinkedDestination(event, postLink)}
+                onClick={(event) => openExternalPostFromAnchor(event, postLink)}
               >
                 · {timestamp}
               </a>
