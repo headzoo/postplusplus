@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { AutopostRepository } from '@gitroom/nestjs-libraries/database/prisma/autopost/autopost.repository';
 import {
   AutopostDto,
@@ -21,6 +21,7 @@ import { TemporalService } from 'nestjs-temporal-core';
 import { TypedSearchAttributes } from '@temporalio/common';
 import { organizationId } from '@gitroom/nestjs-libraries/temporal/temporal.search.attribute';
 import { PipelineManager } from '@gitroom/nestjs-libraries/database/prisma/pipelines/pipeline.manager';
+import { NotificationService } from '@gitroom/nestjs-libraries/database/prisma/notifications/notification.service';
 const parser = new Parser();
 
 interface WorkflowChannelsState {
@@ -62,12 +63,15 @@ const dallePrompt = z.object({
 
 @Injectable()
 export class AutopostService {
+  private readonly _logger = new Logger(AutopostService.name);
+
   constructor(
     private _autopostsRepository: AutopostRepository,
     private _temporalService: TemporalService,
     private _integrationService: IntegrationService,
     private _postsService: PostsService,
-    private _pipelineManager: PipelineManager
+    private _pipelineManager: PipelineManager,
+    private _notificationService: NotificationService
   ) {}
 
   async stopAll(org: string) {
@@ -441,6 +445,28 @@ export class AutopostService {
 
   listActiveAutopostIds(after?: string, take = 50) {
     return this._autopostsRepository.listActiveAutopostIds(after, take);
+  }
+
+  async notifyAutopostFailure(id: string, errorMessage: string) {
+    const autopost = await this._autopostsRepository.getAutopostForWorkflow(id);
+    if (!autopost) {
+      return;
+    }
+
+    const kind = autopost.pipelineId ? 'pipeline autodraft' : 'autopost';
+    const subject = `We couldn't create a ${kind} from ${autopost.title}`;
+    const message = `${subject}: ${errorMessage}`;
+    this._logger.error(
+      `Autopost failed org=${autopost.organizationId} id=${autopost.id} title=${autopost.title}: ${errorMessage}`
+    );
+    await this._notificationService.inAppNotification(
+      autopost.organizationId,
+      subject,
+      message,
+      true,
+      false,
+      'fail'
+    );
   }
 
   async startAutopost(id: string) {

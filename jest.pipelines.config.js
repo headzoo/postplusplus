@@ -36,6 +36,7 @@ module.exports = {
     '<rootDir>/apps/backend/src/api/routes/channel-webhooks.controller.spec.ts',
     '<rootDir>/apps/orchestrator/src/activities/post.activity.spec.ts',
     '<rootDir>/apps/orchestrator/src/activities/pipeline.activity.spec.ts',
+    '<rootDir>/apps/orchestrator/src/activities/autopost.activity.spec.ts',
     '<rootDir>/apps/orchestrator/src/activities/channel-relationship-grade.activity.spec.ts',
     '<rootDir>/apps/orchestrator/src/workflows/autopost.workflow.v2.spec.ts',
     '<rootDir>/apps/frontend/src/components/settings/logs.component.spec.tsx',

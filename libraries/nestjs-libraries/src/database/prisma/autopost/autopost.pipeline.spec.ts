@@ -52,7 +52,8 @@ describe('Pipeline autopost boundaries', () => {
         temporal as any,
         {} as any,
         {} as any,
-        {} as any
+        {} as any,
+        { inAppNotification: jest.fn() } as any
       ),
     };
   };

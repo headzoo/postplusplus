@@ -13,6 +13,7 @@ const pipelineFeed = {
   id: 'feed',
   organizationId: 'org',
   pipelineId: 'pipeline',
+  title: 'My RSS',
   active: true,
   url: 'https://example.com/rss.xml',
   lastUrl: 'previous-url',
@@ -57,12 +58,16 @@ describe('AutopostService feed processing', () => {
     const pipelineManager = {
       enqueue: jest.fn().mockResolvedValue({ id: 'queue-item' }),
     };
+    const notifications = {
+      inAppNotification: jest.fn().mockResolvedValue(undefined),
+    };
     const service = new AutopostService(
       repository as any,
       {} as any,
       { getIntegrationsList: jest.fn().mockResolvedValue([]) } as any,
       posts as any,
-      pipelineManager as any
+      pipelineManager as any,
+      notifications as any
     );
     jest.spyOn(service, 'loadXML').mockResolvedValue({
       success: true,
@@ -70,7 +75,7 @@ describe('AutopostService feed processing', () => {
       url: 'new-url',
       description: 'RSS entry',
     });
-    return { service, repository, posts, pipelineManager };
+    return { service, repository, posts, pipelineManager, notifications };
   };
 
   it('enqueues one grouped Pipeline item for every enabled channel then checkpoints', async () => {
@@ -97,7 +102,8 @@ describe('AutopostService feed processing', () => {
   });
 
   it('does not checkpoint when Pipeline enqueue fails', async () => {
-    const { service, repository, pipelineManager } = createService();
+    const { service, repository, pipelineManager, notifications } =
+      createService();
     pipelineManager.enqueue.mockRejectedValue(new Error('queue unavailable'));
 
     await expect(service.startAutopost('feed')).rejects.toThrow(
@@ -105,6 +111,34 @@ describe('AutopostService feed processing', () => {
     );
 
     expect(repository.updateUrl).not.toHaveBeenCalled();
+    expect(notifications.inAppNotification).not.toHaveBeenCalled();
+  });
+
+  it('notifies the organization about a failed autodraft', async () => {
+    const { service, notifications } = createService();
+
+    await service.notifyAutopostFailure(
+      'feed',
+      'Sean Hickey: who_can_reply_post must be one of the following values: everyone, following, mentionedUsers, subscribers, verified'
+    );
+
+    expect(notifications.inAppNotification).toHaveBeenCalledWith(
+      'org',
+      "We couldn't create a pipeline autodraft from My RSS",
+      "We couldn't create a pipeline autodraft from My RSS: Sean Hickey: who_can_reply_post must be one of the following values: everyone, following, mentionedUsers, subscribers, verified",
+      true,
+      false,
+      'fail'
+    );
+  });
+
+  it('skips notification when the feed no longer exists', async () => {
+    const { service, repository, notifications } = createService();
+    repository.getAutopostForWorkflow.mockResolvedValue(null);
+
+    await service.notifyAutopostFailure('feed', 'queue unavailable');
+
+    expect(notifications.inAppNotification).not.toHaveBeenCalled();
   });
 
   it('reuses the same queue idempotency key when checkpointing retries', async () => {
