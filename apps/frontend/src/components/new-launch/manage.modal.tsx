@@ -799,10 +799,16 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
             if (addEditSets) {
               addEditSets(data);
             } else if (!skipPostSave) {
-              await fetch('/posts', {
+              const response = await fetch('/posts', {
                 method: 'POST',
                 body: JSON.stringify(data),
               });
+              if (!response.ok) {
+                const error = await response.json().catch(() => undefined);
+                throw new Error(
+                  error?.message || 'Unable to save this content.'
+                );
+              }
             }
             if (shouldQueueAtEnd && existingData?.pipelineQueueItemId) {
               const response = await fetch(

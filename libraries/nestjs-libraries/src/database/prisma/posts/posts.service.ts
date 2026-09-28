@@ -895,7 +895,8 @@ export class PostsService {
     postId: string,
     orgId: string,
     state: State,
-    throwOnFailure = false
+    throwOnFailure = false,
+    postNow = false
   ) {
     try {
       const workflows = this._temporalService.client
@@ -924,30 +925,33 @@ export class PostsService {
     }
 
     try {
-      await this._temporalService.client
-        .getRawClient()
-        ?.workflow.start('postWorkflowV109', {
-          workflowId: `post_${postId}`,
-          taskQueue: 'main',
-          workflowIdConflictPolicy: 'TERMINATE_EXISTING',
-          args: [
-            {
-              taskQueue: taskQueue,
-              postId: postId,
-              organizationId: orgId,
-            },
-          ],
-          typedSearchAttributes: new TypedSearchAttributes([
-            {
-              key: postIdSearchParam,
-              value: postId,
-            },
-            {
-              key: organizationId,
-              value: orgId,
-            },
-          ]),
-        });
+      const client = this._temporalService.client.getRawClient();
+      if (!client) {
+        throw new Error('Temporal client unavailable');
+      }
+      await client.workflow.start('postWorkflowV109', {
+        workflowId: `post_${postId}`,
+        taskQueue: 'main',
+        workflowIdConflictPolicy: 'TERMINATE_EXISTING',
+        args: [
+          {
+            taskQueue: taskQueue,
+            postId: postId,
+            organizationId: orgId,
+            postNow,
+          },
+        ],
+        typedSearchAttributes: new TypedSearchAttributes([
+          {
+            key: postIdSearchParam,
+            value: postId,
+          },
+          {
+            key: organizationId,
+            value: orgId,
+          },
+        ]),
+      });
     } catch (err) {
       if (throwOnFailure) {
         throw err;
@@ -1336,7 +1340,7 @@ export class PostsService {
       const { posts } = await this._postRepository.createOrUpdatePost(
         body.type,
         orgId,
-        body.type === 'now' ? dayjs().format('YYYY-MM-DDTHH:mm:00') : body.date,
+        body.type === 'now' ? new Date().toISOString() : body.date,
         post,
         body.tags,
         creationMethod,
@@ -1350,12 +1354,20 @@ export class PostsService {
       }
 
       if (body.type !== 'update') {
-        this.startWorkflow(
+        const postNow = body.type === 'now';
+        const start = this.startWorkflow(
           post.settings.__type.split('-')[0].toLowerCase(),
           posts[0].id,
           orgId,
-          posts[0].state
-        ).catch((err) => {});
+          posts[0].state,
+          postNow,
+          postNow
+        );
+        if (postNow) {
+          await start;
+        } else {
+          start.catch((err) => {});
+        }
       } else if (posts[0].state === 'PUBLISHED') {
         this.startEditWorkflow(
           post.settings.__type.split('-')[0].toLowerCase(),

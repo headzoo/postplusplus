@@ -171,6 +171,109 @@ describe('PostsService published post edits', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
+  it('starts the post workflow immediately for Post now', async () => {
+    const start = jest.fn().mockResolvedValue(undefined);
+    const createOrUpdatePost = jest.fn().mockResolvedValue({
+      posts: [{ id: 'post-1', state: 'QUEUE' }],
+    });
+    const service = createService({
+      repository: { createOrUpdatePost },
+      integrationManager: {
+        getSocialIntegration: jest.fn().mockReturnValue({
+          stripLinks: () => false,
+        }),
+      },
+      temporal: { start },
+    });
+
+    await service.createPost(
+      'org',
+      {
+        type: 'now',
+        date: '2026-09-28T12:00:00.000Z',
+        shortLink: false,
+        tags: [],
+        posts: [
+          {
+            group: 'group-1',
+            integration: { id: 'int-1' },
+            settings: { __type: 'x' },
+            value: [{ id: 'post-1', content: 'Hello', delay: 0, image: [] }],
+          },
+        ],
+      } as any,
+      'WEB'
+    );
+
+    const [, , date] = createOrUpdatePost.mock.calls[0];
+    expect(Date.parse(date)).not.toBeNaN();
+    expect(Math.abs(Date.parse(date) - Date.now())).toBeLessThan(5000);
+    expect(start).toHaveBeenCalledWith(
+      'postWorkflowV109',
+      expect.objectContaining({
+        workflowId: 'post_post-1',
+        args: [
+          expect.objectContaining({
+            taskQueue: 'x',
+            postId: 'post-1',
+            organizationId: 'org',
+            postNow: true,
+          }),
+        ],
+      })
+    );
+  });
+
+  it('starts a scheduled post workflow without posting immediately', async () => {
+    const start = jest.fn().mockResolvedValue(undefined);
+    const service = createService({
+      repository: {
+        createOrUpdatePost: jest.fn().mockResolvedValue({
+          posts: [{ id: 'post-2', state: 'QUEUE' }],
+        }),
+      },
+      integrationManager: {
+        getSocialIntegration: jest.fn().mockReturnValue({
+          stripLinks: () => false,
+        }),
+      },
+      temporal: { start },
+    });
+
+    await service.createPost(
+      'org',
+      {
+        type: 'schedule',
+        date: '2026-09-28T18:00:00.000Z',
+        shortLink: false,
+        tags: [],
+        posts: [
+          {
+            group: 'group-1',
+            integration: { id: 'int-1' },
+            settings: { __type: 'instagram' },
+            value: [{ id: 'post-2', content: 'Hello', delay: 0, image: [] }],
+          },
+        ],
+      } as any,
+      'WEB'
+    );
+
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(start).toHaveBeenCalledWith(
+      'postWorkflowV109',
+      expect.objectContaining({
+        args: [
+          expect.objectContaining({
+            taskQueue: 'instagram',
+            postId: 'post-2',
+            postNow: false,
+          }),
+        ],
+      })
+    );
+  });
+
   it('starts the edit workflow for a published post that can be edited', async () => {
     const start = jest.fn().mockResolvedValue(undefined);
     const service = createService({
