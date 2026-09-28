@@ -9,6 +9,39 @@ const SAFETY_VIOLATIONS_REGEX = /safety_violations=\[([^\]]*)\]/i;
 const SAFETY_MESSAGE_REGEX =
   /safety system|safety_violations|content[ _]policy|rejected as a result of our safety|moderation/i;
 
+const OPENAI_QUOTA_EXCEEDED_REGEX =
+  /no credits remaining|insufficient_quota|exceeded your current quota/i;
+
+function openAiErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === 'string') {
+      return message;
+    }
+  }
+  return String(error ?? '');
+}
+
+/** True when OpenAI rejected the call for billing/quota, not a transient rate limit. */
+export function isOpenAiQuotaExceededError(error: unknown): boolean {
+  const message = openAiErrorMessage(error);
+  if (OPENAI_QUOTA_EXCEEDED_REGEX.test(message)) {
+    return true;
+  }
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+  const err = error as { status?: number; code?: string | null };
+  return (
+    err.status === 429 &&
+    (err.code === 'insufficient_quota' ||
+      OPENAI_QUOTA_EXCEEDED_REGEX.test(message))
+  );
+}
+
 /**
  * Normalizes errors thrown by AI generation providers (OpenAI image/chat,
  * LangChain DALL-E, Fal, Veo3, HeyGen, ElevenLabs, ...) into a clean

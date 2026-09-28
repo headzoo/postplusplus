@@ -2941,6 +2941,103 @@ describe('ChannelInteractionService', () => {
     );
   });
 
+  it('pauses lead fit scoring after OpenAI credits are exhausted', async () => {
+    const repository = createRepository();
+    repository.listUnscoredLeadExternalIds.mockResolvedValue([
+      {
+        externalId: 'lead-1',
+        name: 'Lead One',
+        username: 'leadone',
+        bio: null,
+        followersCount: null,
+        followingCount: null,
+        leadBridgesAsLead: [],
+      },
+      {
+        externalId: 'lead-2',
+        name: 'Lead Two',
+        username: 'leadtwo',
+        bio: null,
+        followersCount: null,
+        followingCount: null,
+        leadBridgesAsLead: [],
+      },
+    ]);
+    const quotaError = Object.assign(
+      new Error(
+        '429 You have no credits remaining. Add credits to continue using the API.'
+      ),
+      { status: 429, code: 'insufficient_quota' }
+    );
+    const openaiService = {
+      scoreLeadFit: jest.fn().mockRejectedValue(quotaError),
+    };
+    const contextDocumentService = {
+      listAttachedDocumentsForIntegration: jest.fn().mockResolvedValue([]),
+    };
+    const service = new ChannelInteractionService(
+      repository as any,
+      undefined,
+      undefined,
+      undefined,
+      openaiService as any,
+      contextDocumentService as any
+    );
+
+    await expect(
+      service.scoreLeadFitBatch({
+        organizationId: 'org',
+        integrationId: 'integration',
+        externalIds: ['lead-1', 'lead-2'],
+      })
+    ).resolves.toEqual({ scored: 0, skipped: 2 });
+    expect(openaiService.scoreLeadFit).toHaveBeenCalledTimes(1);
+    expect(ioRedis.set).toHaveBeenCalledWith(
+      'openai-triage-pause',
+      '1',
+      'EX',
+      expect.any(Number)
+    );
+    expect(repository.updateAudienceLeadFit).not.toHaveBeenCalled();
+  });
+
+  it('skips lead fit scoring while an OpenAI quota pause is active', async () => {
+    const repository = createRepository();
+    repository.listUnscoredLeadExternalIds.mockResolvedValue([
+      {
+        externalId: 'lead-1',
+        name: 'Lead One',
+        username: 'leadone',
+        bio: null,
+        followersCount: null,
+        followingCount: null,
+        leadBridgesAsLead: [],
+      },
+    ]);
+    (ioRedis.get as jest.Mock).mockResolvedValueOnce('1');
+    const openaiService = { scoreLeadFit: jest.fn() };
+    const contextDocumentService = {
+      listAttachedDocumentsForIntegration: jest.fn().mockResolvedValue([]),
+    };
+    const service = new ChannelInteractionService(
+      repository as any,
+      undefined,
+      undefined,
+      undefined,
+      openaiService as any,
+      contextDocumentService as any
+    );
+
+    await expect(
+      service.scoreLeadFitBatch({
+        organizationId: 'org',
+        integrationId: 'integration',
+        externalIds: ['lead-1'],
+      })
+    ).resolves.toEqual({ scored: 0, skipped: 1 });
+    expect(openaiService.scoreLeadFit).not.toHaveBeenCalled();
+  });
+
   it('leaves leads unscored when AI scoring fails', async () => {
     const repository = createRepository();
     repository.listUnscoredLeadExternalIds.mockResolvedValue([

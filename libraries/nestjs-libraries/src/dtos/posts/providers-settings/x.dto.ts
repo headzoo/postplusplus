@@ -8,7 +8,7 @@ import {
   ValidateIf,
   ValidateNested,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { JSONSchema } from 'class-validator-jsonschema';
 import { MediaDto } from '@gitroom/nestjs-libraries/dtos/media/media.dto';
 
@@ -20,9 +20,11 @@ export class XDto {
   })
   community?: string;
 
+  @Transform(({ value }) => (value === '' ? 'everyone' : value))
   @ValidateIf((o) => o.post_type !== 'article')
   @IsIn(['everyone', 'following', 'mentionedUsers', 'subscribers', 'verified'])
-  who_can_reply_post:
+  @IsOptional()
+  who_can_reply_post?:
     | 'everyone'
     | 'following'
     | 'mentionedUsers'

@@ -46,6 +46,7 @@ import {
   OpenaiService,
   TriageRerankInput,
 } from '@gitroom/nestjs-libraries/openai/openai.service';
+import { isOpenAiQuotaExceededError } from '@gitroom/nestjs-libraries/openai/generation.error';
 import { ContextDocumentService } from '@gitroom/nestjs-libraries/database/prisma/context-documents/context-document.service';
 import {
   AudienceProfile,
@@ -153,6 +154,7 @@ const MAX_SNAPSHOT_MEDIA = 8;
 const AUTHORIZATION_REFRESH_SKEW_MS = 60 * 1000;
 const AUTHORIZATION_REFRESH_LOCK_SECONDS = 60;
 const LIKER_SYNC_PAUSE_FALLBACK_SECONDS = 15 * 60;
+const OPENAI_TRIAGE_PAUSE_FALLBACK_SECONDS = 6 * 60 * 60;
 const TRIAGE_DOCUMENT_MAX_COUNT = 8;
 const TRIAGE_DOCUMENT_MAX_CONTENT_LENGTH = 6_000;
 const TRIAGE_REASON_MAX_LENGTH = 280;
@@ -162,6 +164,7 @@ const TRIAGE_CANDIDATE_BIO_MAX_LENGTH = 1_000;
 const TRIAGE_CANDIDATE_RULES_REASON_MAX_LENGTH = 500;
 const likerSyncPauseKey = (integrationId: string) =>
   `channel-interaction-liker-sync:${integrationId}`;
+const openAiTriagePauseKey = () => 'openai-triage-pause';
 
 function getProviderErrorStatus(error: unknown): number | undefined {
   if (!error || typeof error !== 'object') {
@@ -905,6 +908,17 @@ export class ChannelInteractionService {
   private async pauseLikerSync(integrationId: string, resetMs: number) {
     const ttlSeconds = Math.max(1, Math.ceil((resetMs - Date.now()) / 1000));
     await ioRedis.set(likerSyncPauseKey(integrationId), '1', 'EX', ttlSeconds);
+  }
+
+  private async isOpenAiTriagePaused() {
+    return !!(await ioRedis.get(openAiTriagePauseKey()));
+  }
+
+  private async pauseOpenAiTriage(resetMs?: number) {
+    const until =
+      resetMs ?? Date.now() + OPENAI_TRIAGE_PAUSE_FALLBACK_SECONDS * 1000;
+    const ttlSeconds = Math.max(1, Math.ceil((until - Date.now()) / 1000));
+    await ioRedis.set(openAiTriagePauseKey(), '1', 'EX', ttlSeconds);
   }
 
   private async refreshRelationshipGradeProjections(
@@ -1799,6 +1813,12 @@ export class ChannelInteractionService {
     });
     const rejectedExamples = feedbackExamples.rejected.map(toExample);
     const acceptedExamples = feedbackExamples.accepted.map(toExample);
+    if (await this.isOpenAiTriagePaused()) {
+      this._logger.warn(
+        `Lead fit scoring skipped for integration ${integrationId}: OpenAI quota/billing pause is active`
+      );
+      return 0;
+    }
     let scored = 0;
     for (const candidate of candidates) {
       try {
@@ -1841,9 +1861,17 @@ export class ChannelInteractionService {
         });
         scored++;
       } catch (error) {
-        this._logger.error(
-          `Lead fit scoring failed for ${integrationId}/${candidate.externalId}`,
-          error instanceof Error ? error.stack : String(error)
+        if (isOpenAiQuotaExceededError(error)) {
+          await this.pauseOpenAiTriage();
+          this._logger.warn(
+            `Lead fit scoring paused after OpenAI credits were exhausted; skipped remaining candidates for integration ${integrationId}`
+          );
+          break;
+        }
+        this._logger.warn(
+          `Lead fit scoring failed for ${integrationId}/${
+            candidate.externalId
+          }: ${error instanceof Error ? error.message : String(error)}`
         );
       }
     }
@@ -1919,6 +1947,9 @@ export class ChannelInteractionService {
     if (!this.shouldUseTriageReranking()) {
       return { picks: rules, source: 'rules' as const };
     }
+    if (await this.isOpenAiTriagePaused()) {
+      return { picks: rules, source: 'rules' as const };
+    }
     try {
       const context = await this.buildTriagePromptContext({
         organizationId: params.organizationId,
@@ -1989,6 +2020,9 @@ export class ChannelInteractionService {
       });
       return { picks, source: 'ai' as const };
     } catch (error) {
+      if (isOpenAiQuotaExceededError(error)) {
+        await this.pauseOpenAiTriage();
+      }
       this._logger.warn(
         `Triage AI rerank failed for ${params.integrationId}/${
           params.triage
