@@ -131,6 +131,41 @@ const underlineMap = {
   '0': '0̲',
 };
 
+const standardizeNewlines = (value: string) =>
+  value
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .replace(/\u2028|\u2029/g, '\n');
+
+// One newline between blocks, and no extra break after the last block.
+// A paragraph or div whose only content is <br> stays a single blank line.
+const convertBlockBreaks = (
+  html: string,
+  blocks = 'p|div',
+  unwrapLists = false
+) => {
+  const source = unwrapLists ? html.replace(/<\/?(?:ul|ol)[^>]*>/gi, '') : html;
+
+  return source
+    .replace(
+      new RegExp(`<(${blocks})[^>]*>\\s*<br\\s*/?>\\s*</\\1>`, 'gi'),
+      '\n'
+    )
+    .replace(new RegExp(`^<(?:${blocks})[^>]*>`, 'i'), '')
+    .replace(new RegExp(`<(?:${blocks})[^>]*>`, 'gi'), '\n')
+    .replace(new RegExp(`</(?:${blocks})>`, 'gi'), '')
+    .replace(/<br\s*\/?>/gi, '\n');
+};
+
+const decodeEntities = (value: string) =>
+  value
+    .replace(/&gt;/gi, '>')
+    .replace(/&lt;/gi, '<')
+    .replace(/&amp;/gi, '&')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'");
+
 export const stripHtmlValidation = (
   type: 'none' | 'normal' | 'markdown' | 'html',
   val: string,
@@ -140,100 +175,105 @@ export const stripHtmlValidation = (
   convertMentionFunction?: (idOrHandle: string, name: string) => string
 ): string => {
   if (plain) {
-    return val;
+    return standardizeNewlines(val);
   }
 
   const value = serialize(parseFragment(val));
 
   if (type === 'none') {
-    return striptags(value)
-      .replace(/&gt;/gi, '>')
-      .replace(/&lt;/gi, '<')
-      .replace(/&amp;/gi, '&')
-      .replace(/&nbsp;/gi, ' ')
-      .replace(/&quot;/gi, '"')
-      .replace(/&#39;/gi, "'");
+    return standardizeNewlines(
+      decodeEntities(
+        striptags(
+          convertBlockBreaks(
+            convertBlockBreaks(value, 'p|div'),
+            'h1|h2|h3|li|blockquote',
+            true
+          )
+        )
+      )
+    );
   }
 
   if (type === 'html') {
-    return striptags(convertMention(value, convertMentionFunction), [
-      'ul',
-      'li',
-      'h1',
-      'h2',
-      'h3',
-      'p',
-      'strong',
-      'u',
-      'a',
-    ])
-      .replace(/&gt;/gi, '>')
-      .replace(/&lt;/gi, '<')
-      .replace(/&amp;/gi, '&')
-      .replace(/&nbsp;/gi, ' ')
-      .replace(/&quot;/gi, '"')
-      .replace(/&#39;/gi, "'");
+    return standardizeNewlines(
+      decodeEntities(
+        striptags(convertMention(value, convertMentionFunction), [
+          'ul',
+          'li',
+          'h1',
+          'h2',
+          'h3',
+          'p',
+          'br',
+          'strong',
+          'u',
+          'a',
+        ])
+      )
+    );
   }
 
   if (type === 'markdown') {
-    return striptags(
-      convertMention(
-        value
-          .replace(/<h1>([.\s\S]*?)<\/h1>/g, (match, p1) => {
-            return `<h1># ${p1}</h1>\n`;
-          })
-          .replace(/&amp;/gi, '&')
-          .replace(/&nbsp;/gi, ' ')
-          .replace(/&quot;/gi, '"')
-          .replace(/&#39;/gi, "'")
-          .replace(/<h2>([.\s\S]*?)<\/h2>/g, (match, p1) => {
-            return `<h2>## ${p1}</h2>\n`;
-          })
-          .replace(/<h3>([.\s\S]*?)<\/h3>/g, (match, p1) => {
-            return `<h3>### ${p1}</h3>\n`;
-          })
-          .replace(/<u>([.\s\S]*?)<\/u>/g, (match, p1) => {
-            return `<u>__${p1}__</u>`;
-          })
-          .replace(/<strong>([.\s\S]*?)<\/strong>/g, (match, p1) => {
-            return `<strong>**${p1}**</strong>`;
-          })
-          .replace(/<li.*?>([.\s\S]*?)<\/li.*?>/gm, (match, p1) => {
-            return `<li>- ${p1.replace(/\n/gm, '')}</li>`;
-          })
-          .replace(/<p>([.\s\S]*?)<\/p>/g, (match, p1) => {
-            return `<p>${p1}</p>\n`;
-          })
-          .replace(
-            /<a.*?href="([.\s\S]*?)".*?>([.\s\S]*?)<\/a>/g,
-            (match, p1, p2) => {
-              return `<a href="${p1}">[${p2}](${p1})</a>`;
-            }
-          ),
-        convertMentionFunction
+    return standardizeNewlines(
+      decodeEntities(
+        striptags(
+          convertMention(
+            value
+              .replace(/<div([^>]*)>/gi, '<p$1>')
+              .replace(/<\/div>/gi, '</p>')
+              .replace(/<h1>([.\s\S]*?)<\/h1>/g, (match, p1) => {
+                return `<h1># ${p1}</h1>\n`;
+              })
+              .replace(/&amp;/gi, '&')
+              .replace(/&nbsp;/gi, ' ')
+              .replace(/&quot;/gi, '"')
+              .replace(/&#39;/gi, "'")
+              .replace(/<h2>([.\s\S]*?)<\/h2>/g, (match, p1) => {
+                return `<h2>## ${p1}</h2>\n`;
+              })
+              .replace(/<h3>([.\s\S]*?)<\/h3>/g, (match, p1) => {
+                return `<h3>### ${p1}</h3>\n`;
+              })
+              .replace(/<u>([.\s\S]*?)<\/u>/g, (match, p1) => {
+                return `<u>__${p1}__</u>`;
+              })
+              .replace(/<strong>([.\s\S]*?)<\/strong>/g, (match, p1) => {
+                return `<strong>**${p1}**</strong>`;
+              })
+              .replace(/<li.*?>([.\s\S]*?)<\/li.*?>/gm, (match, p1) => {
+                return `<li>- ${p1.replace(/\n/gm, '')}</li>`;
+              })
+              .replace(/<p[^>]*>([.\s\S]*?)<\/p>/g, (match, p1) => {
+                return `<p>${p1}</p>\n`;
+              })
+              .replace(
+                /<a.*?href="([.\s\S]*?)".*?>([.\s\S]*?)<\/a>/g,
+                (match, p1, p2) => {
+                  return `<a href="${p1}">[${p2}](${p1})</a>`;
+                }
+              )
+              .replace(/<br\s*\/?>/gi, '\n'),
+            convertMentionFunction
+          )
+        )
       )
-    )
-      .replace(/&gt;/gi, '>')
-      .replace(/&lt;/gi, '<');
+        .replace(/&gt;/gi, '>')
+        .replace(/&lt;/gi, '<')
+    );
   }
 
-  if (value.indexOf('<p>') === -1 && !none) {
-    return value;
-  }
-
-  const html = (value || '')
-    .replace(/&amp;/gi, '&')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
-    .replace(/<p[^>]*>\s*<br\s*\/?>\s*<\/p>/gi, '\n')
-    .replace(/^<p[^>]*>/i, '')
-    .replace(/<p[^>]*>/gi, '\n')
-    .replace(/<\/p>/gi, '')
-    .replace(/<br\s*\/?>/gi, '\n');
+  const html = convertBlockBreaks(
+    (value || '')
+      .replace(/&amp;/gi, '&')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;/gi, "'")
+  );
 
   if (none) {
-    return striptags(html).replace(/&gt;/gi, '>').replace(/&lt;/gi, '<');
+    return standardizeNewlines(
+      striptags(html).replace(/&gt;/gi, '>').replace(/&lt;/gi, '<')
+    );
   }
 
   if (replaceBold) {
@@ -255,19 +295,23 @@ export const stripHtmlValidation = (
       convertMentionFunction
     );
 
-    return striptags(processedHtml)
-      .replace(/&gt;/gi, '>')
-      .replace(/&lt;/gi, '<')
-      .replace(/&𝗹𝘁;/gi, '<')
-      .replace(/&𝗴𝘁;/gi, '>')
-      .replace(/&g̲t̲;/gi, '>')
-      .replace(/&l̲t̲;/gi, '<');
+    return standardizeNewlines(
+      striptags(processedHtml)
+        .replace(/&gt;/gi, '>')
+        .replace(/&lt;/gi, '<')
+        .replace(/&𝗹𝘁;/gi, '<')
+        .replace(/&𝗴𝘁;/gi, '>')
+        .replace(/&g̲t̲;/gi, '>')
+        .replace(/&l̲t̲;/gi, '<')
+    );
   }
 
   // Strip all other tags
-  return striptags(html, ['ul', 'li', 'h1', 'h2', 'h3'])
-    .replace(/&gt;/gi, '>')
-    .replace(/&lt;/gi, '<');
+  return standardizeNewlines(
+    striptags(html, ['ul', 'li', 'h1', 'h2', 'h3'])
+      .replace(/&gt;/gi, '>')
+      .replace(/&lt;/gi, '<')
+  );
 };
 
 export const convertMention = (

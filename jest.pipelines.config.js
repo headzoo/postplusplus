@@ -110,6 +110,7 @@ module.exports = {
     '<rootDir>/libraries/nestjs-libraries/src/dtos/users/dismissed-alert.dto.spec.ts',
     '<rootDir>/libraries/helpers/src/utils/posts.list.minify.spec.ts',
     '<rootDir>/libraries/helpers/src/utils/count.length.spec.ts',
+    '<rootDir>/libraries/helpers/src/utils/strip.html.validation.spec.ts',
     '<rootDir>/libraries/nestjs-libraries/src/imgflip/**/*.spec.ts',
     '<rootDir>/libraries/nestjs-libraries/src/database/prisma/media/media.service.spec.ts',
     '<rootDir>/libraries/nestjs-libraries/src/openai/openai.service.spec.ts',

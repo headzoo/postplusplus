@@ -3545,7 +3545,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
   }
 
   // Converts the editor HTML (already sanitized by stripHtmlValidation's
-  // 'html' mode - only p, h1-h3, ul, li, strong, u and a survive) into the
+  // 'html' mode - only p, h1-h3, ul, li, strong, u, a and br survive) into the
   // content_state the X Articles API expects, embedding the post media as
   // atomic image blocks at the end (the cover travels separately).
   // X's schema is a snake_case Draft.js dialect with additionalProperties
@@ -3554,47 +3554,6 @@ export class XProvider extends SocialAbstract implements SocialProvider {
   private articleContentState(html: string, embeddedMediaIds: string[]) {
     const blocks: any[] = [];
     const entities: any[] = [];
-
-    const walkInline = (
-      node: any,
-      ctx: { text: string; styles: any[]; entityRanges: any[] }
-    ) => {
-      for (const child of node.childNodes || []) {
-        if (child.nodeName === '#text') {
-          ctx.text += child.value || '';
-          continue;
-        }
-
-        const offset = ctx.text.length;
-        walkInline(child, ctx);
-        const length = ctx.text.length - offset;
-        if (!length) {
-          continue;
-        }
-
-        if (child.nodeName === 'strong') {
-          ctx.styles.push({ offset, length, style: 'bold' });
-        }
-
-        if (child.nodeName === 'a') {
-          const url = (child.attrs || []).find(
-            (a: any) => a.name === 'href'
-          )?.value;
-          if (url) {
-            const key = entities.length;
-            entities.push({
-              key: String(key),
-              value: {
-                type: 'link',
-                mutability: 'mutable',
-                data: { url },
-              },
-            });
-            ctx.entityRanges.push({ offset, length, key });
-          }
-        }
-      }
-    };
 
     const makeBlock = (
       text: string,
@@ -3610,12 +3569,140 @@ export class XProvider extends SocialAbstract implements SocialProvider {
     });
 
     const pushBlock = (node: any, type: string) => {
-      const ctx = { text: '', styles: [] as any[], entityRanges: [] as any[] };
-      walkInline(node, ctx);
-      if (!ctx.text.trim()) {
+      const segments: {
+        text: string;
+        styles: any[];
+        entityRanges: any[];
+      }[] = [{ text: '', styles: [], entityRanges: [] }];
+
+      const splitSegment = () => {
+        segments.push({ text: '', styles: [], entityRanges: [] });
+      };
+
+      const appendText = (text: string) => {
+        const parts = text.split('\n');
+        parts.forEach((part, index) => {
+          if (index > 0) {
+            splitSegment();
+          }
+          segments[segments.length - 1].text += part;
+        });
+      };
+
+      const markRange = (
+        child: any,
+        startSegment: number,
+        startOffset: number
+      ) => {
+        const endSegment = segments.length - 1;
+        const ranges: { segment: number; offset: number; length: number }[] =
+          [];
+
+        if (startSegment === endSegment) {
+          ranges.push({
+            segment: startSegment,
+            offset: startOffset,
+            length: segments[startSegment].text.length - startOffset,
+          });
+        } else {
+          ranges.push({
+            segment: startSegment,
+            offset: startOffset,
+            length: segments[startSegment].text.length - startOffset,
+          });
+          for (let index = startSegment + 1; index < endSegment; index++) {
+            ranges.push({
+              segment: index,
+              offset: 0,
+              length: segments[index].text.length,
+            });
+          }
+          ranges.push({
+            segment: endSegment,
+            offset: 0,
+            length: segments[endSegment].text.length,
+          });
+        }
+
+        const styled = ranges.filter((range) => range.length > 0);
+        if (!styled.length) {
+          return;
+        }
+
+        if (child.nodeName === 'strong') {
+          for (const range of styled) {
+            segments[range.segment].styles.push({
+              offset: range.offset,
+              length: range.length,
+              style: 'bold',
+            });
+          }
+        }
+
+        if (child.nodeName === 'a') {
+          const url = (child.attrs || []).find(
+            (attr: any) => attr.name === 'href'
+          )?.value;
+          if (!url) {
+            return;
+          }
+          const key = entities.length;
+          entities.push({
+            key: String(key),
+            value: {
+              type: 'link',
+              mutability: 'mutable',
+              data: { url },
+            },
+          });
+          for (const range of styled) {
+            segments[range.segment].entityRanges.push({
+              offset: range.offset,
+              length: range.length,
+              key,
+            });
+          }
+        }
+      };
+
+      const walkInline = (current: any) => {
+        for (const child of current.childNodes || []) {
+          if (child.nodeName === 'br') {
+            splitSegment();
+            continue;
+          }
+
+          if (child.nodeName === '#text') {
+            appendText(child.value || '');
+            continue;
+          }
+
+          const startSegment = segments.length - 1;
+          const startOffset = segments[startSegment].text.length;
+          walkInline(child);
+          markRange(child, startSegment, startOffset);
+        }
+      };
+
+      walkInline(node);
+
+      if (!segments.some((segment) => segment.text.trim())) {
+        blocks.push(makeBlock('\n', type));
         return;
       }
-      blocks.push(makeBlock(ctx.text, type, ctx.styles, ctx.entityRanges));
+
+      for (const segment of segments) {
+        blocks.push(
+          segment.text
+            ? makeBlock(
+                segment.text,
+                type,
+                segment.styles,
+                segment.entityRanges
+              )
+            : makeBlock('\n', type)
+        );
+      }
     };
 
     const fragment = parseFragment(html) as any;
