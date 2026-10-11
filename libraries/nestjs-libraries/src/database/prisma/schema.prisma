@@ -686,6 +686,7 @@ model Post {
 model Notifications {
   id             String       @id @default(uuid())
   organizationId String
+  idempotencyKey String?
   content        String
   link           String?
   createdAt      DateTime     @default(now())
@@ -693,6 +694,7 @@ model Notifications {
   deletedAt      DateTime?
   organization   Organization @relation(fields: [organizationId], references: [id])
 
+  @@unique([organizationId, idempotencyKey])
   @@index([createdAt])
   @@index([organizationId])
   @@index([deletedAt])

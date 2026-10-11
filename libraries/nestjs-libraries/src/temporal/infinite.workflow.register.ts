@@ -64,28 +64,35 @@ export class InfiniteWorkflowRegister implements OnModuleInit {
       );
     }
 
-    try {
-      const v1 = workflow.getHandle('pipeline-scheduler-workflow-v1');
-      const description = await v1.describe();
-      if (description.status.name === 'RUNNING') {
-        await v1.terminate('Migrating Pipeline scheduler to V2');
-      }
-    } catch (error) {
-      if (!this.isMissingOrClosed(error)) {
-        this._logger.error('Failed to stop Pipeline scheduler V1', error);
-        throw error;
+    for (const version of [1, 2]) {
+      try {
+        const previous = workflow.getHandle(
+          `pipeline-scheduler-workflow-v${version}`
+        );
+        const description = await previous.describe();
+        if (description.status.name === 'RUNNING') {
+          await previous.terminate('Migrating Pipeline scheduler to V3');
+        }
+      } catch (error) {
+        if (!this.isMissingOrClosed(error)) {
+          this._logger.error(
+            `Failed to stop Pipeline scheduler V${version}`,
+            error
+          );
+          throw error;
+        }
       }
     }
 
     try {
-      await workflow.start('pipelineSchedulerWorkflowV2', {
-        workflowId: 'pipeline-scheduler-workflow-v2',
+      await workflow.start('pipelineSchedulerWorkflowV3', {
+        workflowId: 'pipeline-scheduler-workflow-v3',
         taskQueue: 'main',
         args: [{}],
       });
     } catch (error) {
       if (!this.isAlreadyStarted(error)) {
-        this._logger.error('Failed to start Pipeline scheduler V2', error);
+        this._logger.error('Failed to start Pipeline scheduler V3', error);
         throw error;
       }
     }

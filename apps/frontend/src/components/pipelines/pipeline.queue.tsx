@@ -1,6 +1,6 @@
 'use client';
 
-import { FC, useCallback, useMemo, useRef, useState } from 'react';
+import { FC, ReactNode, useCallback, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import dayjs from 'dayjs';
 import { useDrag, useDrop } from 'react-dnd';
@@ -36,6 +36,7 @@ import {
   pipelineQueueItemCanCleanup,
   pipelineQueueItemCanSchedule,
   shuffleQueuedOrder,
+  sortPipelineItemsByStatusDateDescending,
 } from './pipeline.utils';
 import { useReorderPipelineQueue } from './use.pipeline.queue.order';
 import { PipelineCopyToModal } from './pipeline.copy.to.modal';
@@ -426,6 +427,31 @@ const QueueItem: FC<{
   );
 };
 
+const PipelineItemsBox: FC<{
+  title: string;
+  action?: ReactNode;
+  empty: boolean;
+  emptyText: string;
+  children: ReactNode;
+}> = ({ title, action, empty, emptyText, children }) => (
+  <section
+    aria-label={title}
+    className="shrink-0 rounded-[12px] border border-newBorder bg-newBgColor"
+  >
+    <div className="px-[20px] py-[14px] border-b border-newBorder flex items-center justify-between gap-[12px]">
+      <h2 className="text-[16px] font-[600]">{title}</h2>
+      {action}
+    </div>
+    <div className="p-[16px]">
+      {empty ? (
+        <div className="text-[13px] opacity-60">{emptyText}</div>
+      ) : (
+        children
+      )}
+    </div>
+  </section>
+);
+
 export const PipelineQueue: FC<{
   pipeline: PipelineDetail;
   pipelines: PipelineSummary[];
@@ -454,7 +480,16 @@ export const PipelineQueue: FC<{
     [pipeline.projections]
   );
   const queue = items.filter((item) => item.status === 'QUEUED');
-  const otherItems = items.filter((item) => item.status !== 'QUEUED');
+  const nonQueuedItems = items.filter((item) => item.status !== 'QUEUED');
+  const publishingItems = sortPipelineItemsByStatusDateDescending(
+    items.filter((item) => item.status === 'PUBLISHING')
+  );
+  const failedItems = sortPipelineItemsByStatusDateDescending(
+    items.filter((item) => item.status === 'FAILED')
+  );
+  const publishedItems = sortPipelineItemsByStatusDateDescending(
+    items.filter((item) => item.status === 'PUBLISHED')
+  );
   const destinations = pipelines.filter(
     (candidate) =>
       candidate.id !== pipeline.id &&
@@ -532,7 +567,7 @@ export const PipelineQueue: FC<{
       const next = [...queue];
       const [item] = next.splice(from, 1);
       next.splice(to, 0, item);
-      setItems([...next, ...otherItems]);
+      setItems([...next, ...nonQueuedItems]);
       setPending(true);
       try {
         await fetch(`/pipelines/${pipeline.id}/items/${item.id}/reorder`, {
@@ -549,7 +584,7 @@ export const PipelineQueue: FC<{
     },
     [
       fetch,
-      otherItems,
+      nonQueuedItems,
       pending,
       pipeline.id,
       pipeline.queueItems,
@@ -564,7 +599,7 @@ export const PipelineQueue: FC<{
     }
     const shuffled = shuffleQueuedOrder(queue);
     const previousItems = items;
-    setItems([...shuffled, ...otherItems]);
+    setItems([...shuffled, ...nonQueuedItems]);
     setPending(true);
     try {
       await reorderQueue(pipeline.id, {
@@ -581,7 +616,7 @@ export const PipelineQueue: FC<{
     }
   }, [
     items,
-    otherItems,
+    nonQueuedItems,
     pending,
     pipeline.id,
     queue,
@@ -811,81 +846,84 @@ export const PipelineQueue: FC<{
     [modal, pipeline.channels, pipeline.id, refresh]
   );
 
+  const renderItems = (sectionItems: PipelineQueueItem[]) => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[12px]">
+      {sectionItems.map((item, index) => (
+        <QueueItem
+          key={item.id}
+          item={item}
+          index={index}
+          queue={sectionItems}
+          projectedFor={projections.get(item.id)}
+          timezone={pipeline.timezone}
+          pending={pending}
+          onMove={move}
+          onReorderLocal={reorderLocal}
+          onDragStart={beginDrag}
+          onDragEnd={persistDragReorder}
+          onAction={action}
+          onMoveTo={moveTo}
+          onSchedule={schedule}
+          onCopyTo={copyTo}
+          onEdit={edit}
+          destinations={destinations}
+        />
+      ))}
+    </div>
+  );
+
   return (
     <DNDProvider>
-      <div className="shrink-0 rounded-[12px] border border-newBorder bg-newBgColor">
-        <div className="px-[20px] py-[14px] border-b border-newBorder flex items-center justify-between gap-[12px]">
-          <span className="text-[16px] font-[600]">Queue</span>
-          <Button
-            secondary
-            disabled={pending || queue.length < 2}
-            onClick={shuffle}
-            aria-label="Shuffle queued posts"
-            data-tooltip-id="tooltip"
-            data-tooltip-content="Randomize the order of queued posts"
+      <div className="flex flex-col gap-[16px]">
+        <PipelineItemsBox
+          title="Queue"
+          empty={!queue.length}
+          emptyText="No queued items."
+          action={
+            <Button
+              secondary
+              disabled={pending || queue.length < 2}
+              onClick={shuffle}
+              aria-label="Shuffle queued posts"
+              data-tooltip-id="tooltip"
+              data-tooltip-content="Randomize the order of queued posts"
+            >
+              Shuffle
+            </Button>
+          }
+        >
+          {renderItems(queue)}
+        </PipelineItemsBox>
+
+        {!!publishingItems.length && (
+          <PipelineItemsBox
+            title="Publishing"
+            empty={false}
+            emptyText="No publishing items."
           >
-            Shuffle
-          </Button>
-        </div>
-        <div className="p-[16px] flex flex-col gap-[16px]">
-          {queue.length ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[12px]">
-              {queue.map((item, index) => (
-                <QueueItem
-                  key={item.id}
-                  item={item}
-                  index={index}
-                  queue={queue}
-                  projectedFor={projections.get(item.id)}
-                  timezone={pipeline.timezone}
-                  pending={pending}
-                  onMove={move}
-                  onReorderLocal={reorderLocal}
-                  onDragStart={beginDrag}
-                  onDragEnd={persistDragReorder}
-                  onAction={action}
-                  onMoveTo={moveTo}
-                  onSchedule={schedule}
-                  onCopyTo={copyTo}
-                  onEdit={edit}
-                  destinations={destinations}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="text-[13px] opacity-60">No queued items.</div>
-          )}
-          {otherItems.length > 0 && (
-            <>
-              <div className="text-[13px] font-[600] opacity-70">
-                Publishing and failed
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[12px]">
-                {otherItems.map((item) => (
-                  <QueueItem
-                    key={item.id}
-                    item={item}
-                    index={queue.length}
-                    queue={queue}
-                    projectedFor={projections.get(item.id)}
-                    timezone={pipeline.timezone}
-                    pending={pending}
-                    onMove={move}
-                    onReorderLocal={reorderLocal}
-                    onDragStart={beginDrag}
-                    onDragEnd={persistDragReorder}
-                    onAction={action}
-                    onMoveTo={moveTo}
-                    onSchedule={schedule}
-                    onCopyTo={copyTo}
-                    onEdit={edit}
-                    destinations={destinations}
-                  />
-                ))}
-              </div>
-            </>
-          )}
-        </div>
+            {renderItems(publishingItems)}
+          </PipelineItemsBox>
+        )}
+
+        {!!failedItems.length && (
+          <PipelineItemsBox
+            title="Failed"
+            empty={false}
+            emptyText="No failed items."
+          >
+            {renderItems(failedItems)}
+          </PipelineItemsBox>
+        )}
+
+        {!!publishedItems.length && (
+          <PipelineItemsBox
+            title="Published"
+            empty={false}
+            emptyText="No published items."
+          >
+            {renderItems(publishedItems)}
+          </PipelineItemsBox>
+        )}
       </div>
     </DNDProvider>
   );

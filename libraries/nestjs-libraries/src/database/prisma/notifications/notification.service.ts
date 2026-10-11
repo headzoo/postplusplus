@@ -38,6 +38,18 @@ export class NotificationService {
     );
   }
 
+  inAppNotificationOnce(
+    orgId: string,
+    idempotencyKey: string,
+    message: string
+  ) {
+    return this._notificationRepository.createNotificationOnce(
+      orgId,
+      idempotencyKey,
+      message
+    );
+  }
+
   async inAppNotification(
     orgId: string,
     subject: string,

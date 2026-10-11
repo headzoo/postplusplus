@@ -57,7 +57,7 @@ On the Pipeline detail **Queue**:
 - Drag or use ↑↓ to reorder; **Shuffle** randomizes order.
 - Menu: **Edit**, **Now**, **Schedule**, **Copy to**, **Remove**, **Delete**, and **Move to…** (only Pipelines with the **same channel set**).
 - **Copy to** opens a modal to pick another Pipeline with the same channels. The post is **cloned** into that Pipeline’s queue (end of queue → next projected slot). The original stays put.
-- Statuses include queued, publishing, published, and failed; non-queued items appear under **Publishing and failed**.
+- Statuses include queued, publishing, published, and failed. Each status appears in its own panel, with the newest publishing, failed, and published items first.
 - For **published** items, **Edit**, **Now**, and **Schedule** stay available. **Schedule** clones the content into a new queue entry at the **end of the queue** for the next projected Pipeline slot; the original published item stays in Pipeline history. **Now** publishes immediately and removes the item from Pipeline history. **Remove** and **Delete** stay unavailable for published history.
 - Cards show **Pipeline time:** for the projected slot.
 

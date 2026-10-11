@@ -85,7 +85,7 @@ describe('AdminScheduleWorkflowService', () => {
 
     await service.triggerPostWorkflowTick();
     expect(start).toHaveBeenCalledWith(
-      'pipelineSchedulerTickWorkflowV1',
+      'pipelineSchedulerTickWorkflowV2',
       expect.objectContaining({
         taskQueue: 'main',
       })

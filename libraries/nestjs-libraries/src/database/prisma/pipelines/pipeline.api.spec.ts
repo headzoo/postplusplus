@@ -164,6 +164,10 @@ describe('Pipeline API boundaries', () => {
             group: 'group',
             status: 'QUEUED',
             position: 1024,
+            claimedAt: new Date('2026-08-12T10:00:00.000Z'),
+            publishedAt: null,
+            failedAt: null,
+            createdAt: new Date('2026-08-12T09:00:00.000Z'),
             error: null,
             posts: [
               {
@@ -259,6 +263,10 @@ describe('Pipeline API boundaries', () => {
       ],
       queueItems: [
         expect.objectContaining({
+          claimedAt: new Date('2026-08-12T10:00:00.000Z'),
+          publishedAt: null,
+          failedAt: null,
+          createdAt: new Date('2026-08-12T09:00:00.000Z'),
           posts: [
             expect.objectContaining({
               id: 'twitter-root',

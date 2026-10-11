@@ -8,6 +8,7 @@ const getPost = jest.fn();
 const getPostsList = jest.fn();
 const changeState = jest.fn();
 const inAppNotification = jest.fn();
+const inAppPostFailureNotificationV1 = jest.fn();
 const updatePost = jest.fn();
 const sendWebhooks = jest.fn();
 const isCommentable = jest.fn();
@@ -33,6 +34,7 @@ jest.mock('@temporalio/workflow', () => ({
     getPostsList,
     changeState,
     inAppNotification,
+    inAppPostFailureNotificationV1,
     updatePost,
     sendWebhooks,
     isCommentable,
@@ -54,6 +56,7 @@ jest.mock('@temporalio/workflow', () => ({
   continueAsNew,
   defineSignal: (name: string) => name,
   setHandler: jest.fn(),
+  workflowInfo: () => ({ workflowId: 'post_post', runId: 'run-1' }),
   ActivityFailure: class ActivityFailure extends Error {},
   ApplicationFailure: class ApplicationFailure extends Error {},
 }));
@@ -67,8 +70,12 @@ import { pipelineSlotWorkflowV1 } from './pipeline.slot.workflow.v1';
 import { pipelineSchedulerWorkflowV1 } from './pipeline.scheduler.workflow.v1';
 import { pipelineSlotWorkflowV2 } from './pipeline.slot.workflow.v2';
 import { pipelineSchedulerWorkflowV2 } from './pipeline.scheduler.workflow.v2';
+import { pipelineSlotWorkflowV3 } from './pipeline.slot.workflow.v3';
+import { pipelineSchedulerWorkflowV3 } from './pipeline.scheduler.workflow.v3';
+import { pipelineSchedulerTickWorkflowV2 } from '../pipeline-scheduler-tick.workflow.v2';
 import { postWorkflowV108 } from '../post-workflows/post.workflow.v1.0.8';
 import { postWorkflowV109 } from '../post-workflows/post.workflow.v1.0.9';
+import { postWorkflowV110 } from '../post-workflows/post.workflow.v1.0.10';
 import { InfiniteWorkflowRegister } from '@gitroom/nestjs-libraries/temporal/infinite.workflow.register';
 
 describe('Pipeline Temporal workflow boundaries', () => {
@@ -253,7 +260,7 @@ describe('Pipeline Temporal workflow boundaries', () => {
     expect(sleep).toHaveBeenCalledWith(30 * 1000);
   });
 
-  it('dispatches V2 slots through postWorkflowV109', async () => {
+  it('preserves V2 slot dispatch through postWorkflowV109', async () => {
     claimPipelineSlot.mockResolvedValue({
       outcome: 'CLAIMED',
       executionId: 'execution-v2',
@@ -277,6 +284,159 @@ describe('Pipeline Temporal workflow boundaries', () => {
     );
   });
 
+  it('dispatches V3 slots through postWorkflowV110', async () => {
+    claimPipelineSlot.mockResolvedValue({
+      outcome: 'CLAIMED',
+      executionId: 'execution-v3',
+      roots: [{ postId: 'root-v3', organizationId: 'org', taskQueue: 'x' }],
+    });
+    startChild.mockResolvedValue({ result: async () => undefined });
+    finalizePipelineSlot.mockResolvedValue({ outcome: 'PUBLISHED' });
+
+    await pipelineSlotWorkflowV3({
+      pipelineId: 'pipeline',
+      scheduleRevision: 4,
+      scheduledFor: '2026-08-10T12:00:00.000Z',
+    });
+
+    expect(startChild).toHaveBeenCalledWith(
+      postWorkflowV110,
+      expect.objectContaining({
+        workflowId: 'post_root-v3',
+        args: [{ taskQueue: 'x', postId: 'root-v3', organizationId: 'org' }],
+      })
+    );
+  });
+
+  it('notifies once with the provider error after post publishing fails in V110', async () => {
+    const integration = {
+      id: 'integration',
+      organizationId: 'org',
+      providerIdentifier: 'x',
+      name: '@team',
+      disabled: false,
+      refreshNeeded: false,
+    };
+    const post = {
+      id: 'post',
+      organizationId: 'org',
+      state: 'QUEUE',
+      publishDate: new Date(0),
+      settings: '{}',
+      intervalInDays: null,
+      integration,
+    };
+    getPost.mockResolvedValue(post);
+    getPostsList.mockResolvedValue([post]);
+    postSocialPending.mockRejectedValue(new Error('X API rate limit exceeded'));
+
+    await expect(
+      postWorkflowV110({
+        taskQueue: 'x',
+        postId: 'post',
+        organizationId: 'org',
+      })
+    ).resolves.toBe(false);
+
+    expect(postSocialPending).toHaveBeenCalledTimes(5);
+    expect(changeState).toHaveBeenCalledTimes(1);
+    expect(changeState).toHaveBeenCalledWith(
+      'post',
+      'ERROR',
+      expect.any(Error),
+      [post]
+    );
+    expect(inAppPostFailureNotificationV1).toHaveBeenCalledTimes(1);
+    expect(inAppPostFailureNotificationV1).toHaveBeenCalledWith(
+      'org',
+      expect.stringContaining('post-publish-failure:'),
+      'Your post failed to publish on X',
+      expect.stringContaining(
+        'Postiz could not publish your post on X for @team. X API rate limit exceeded'
+      )
+    );
+  });
+
+  it('notifies when a prerequisite activity exhausts its retries in V110', async () => {
+    const post = {
+      id: 'post',
+      organizationId: 'org',
+      state: 'QUEUE',
+      publishDate: new Date(0),
+      integration: {
+        providerIdentifier: 'x',
+        name: '@team',
+      },
+    };
+    getPost.mockResolvedValue(post);
+    getPostsList.mockRejectedValue(new Error('Database unavailable'));
+
+    await expect(
+      postWorkflowV110({
+        taskQueue: 'x',
+        postId: 'post',
+        organizationId: 'org',
+      })
+    ).resolves.toBe(false);
+
+    expect(changeState).toHaveBeenCalledWith(
+      'post',
+      'ERROR',
+      expect.any(Error)
+    );
+    expect(inAppPostFailureNotificationV1).toHaveBeenCalledWith(
+      'org',
+      expect.stringContaining('post-publish-failure:'),
+      'A scheduled post failed to publish on X',
+      expect.stringContaining(
+        'Postiz could not publish the scheduled post (post) on X for @team'
+      )
+    );
+  });
+
+  it('does not report a publishing failure after the post was published in V110', async () => {
+    const integration = {
+      id: 'integration',
+      organizationId: 'org',
+      providerIdentifier: 'x',
+      name: '@team',
+      disabled: false,
+      refreshNeeded: false,
+    };
+    const post = {
+      id: 'post',
+      organizationId: 'org',
+      state: 'QUEUE',
+      publishDate: new Date(0),
+      settings: '{}',
+      intervalInDays: null,
+      integration,
+    };
+    getPost.mockResolvedValue(post);
+    getPostsList.mockResolvedValue([post]);
+    postSocialPending.mockResolvedValue([
+      {
+        id: 'post',
+        postId: 'provider-post',
+        releaseURL: 'https://example.com/post',
+        status: 'success',
+      },
+    ]);
+    sendWebhooks.mockRejectedValue(new Error('Webhook unavailable'));
+
+    await expect(
+      postWorkflowV110({
+        taskQueue: 'x',
+        postId: 'post',
+        organizationId: 'org',
+      })
+    ).rejects.toThrow('Webhook unavailable');
+
+    expect(updatePost).toHaveBeenCalled();
+    expect(changeState).not.toHaveBeenCalled();
+    expect(inAppPostFailureNotificationV1).not.toHaveBeenCalled();
+  });
+
   it('dispatches V2 scheduler occurrences through V2 slots with versioned IDs', async () => {
     discoverDuePipelineSlots.mockResolvedValue({
       candidates: [
@@ -298,6 +458,54 @@ describe('Pipeline Temporal workflow boundaries', () => {
       pipelineSlotWorkflowV2,
       expect.objectContaining({
         workflowId: 'pipeline-v2:pipeline:pipeline:3:2026-08-10T11:00:00.000Z',
+      })
+    );
+  });
+
+  it('dispatches V3 scheduler occurrences through V3 slots with versioned IDs', async () => {
+    discoverDuePipelineSlots.mockResolvedValue({
+      candidates: [
+        {
+          occurrenceId: 'pipeline:pipeline:4:2026-08-10T12:00:00.000Z',
+          pipelineId: 'pipeline',
+          scheduleRevision: 4,
+          scheduledFor: '2026-08-10T12:00:00.000Z',
+        },
+      ],
+    });
+    startChild.mockResolvedValue({});
+    sleep.mockRejectedValue(new Error('stop after first V3 tick'));
+
+    await expect(pipelineSchedulerWorkflowV3()).rejects.toThrow(
+      'stop after first V3 tick'
+    );
+    expect(startChild).toHaveBeenCalledWith(
+      pipelineSlotWorkflowV3,
+      expect.objectContaining({
+        workflowId: 'pipeline-v3:pipeline:pipeline:4:2026-08-10T12:00:00.000Z',
+      })
+    );
+  });
+
+  it('dispatches admin V2 ticks through V3 slots', async () => {
+    discoverDuePipelineSlots.mockResolvedValue({
+      candidates: [
+        {
+          occurrenceId: 'pipeline:pipeline:4:2026-08-10T12:00:00.000Z',
+          pipelineId: 'pipeline',
+          scheduleRevision: 4,
+          scheduledFor: '2026-08-10T12:00:00.000Z',
+        },
+      ],
+    });
+    startChild.mockResolvedValue({});
+
+    await pipelineSchedulerTickWorkflowV2();
+
+    expect(startChild).toHaveBeenCalledWith(
+      pipelineSlotWorkflowV3,
+      expect.objectContaining({
+        workflowId: 'pipeline-v3:pipeline:pipeline:4:2026-08-10T12:00:00.000Z',
       })
     );
   });
@@ -425,7 +633,7 @@ describe('Pipeline Temporal workflow boundaries', () => {
     );
   });
 
-  it('waits for V1 termination before idempotently starting the V2 scheduler', async () => {
+  it('waits for previous scheduler termination before starting V3', async () => {
     const order: string[] = [];
     const v1Handle = {
       describe: jest.fn().mockResolvedValue({ status: { name: 'RUNNING' } }),
@@ -433,10 +641,19 @@ describe('Pipeline Temporal workflow boundaries', () => {
         order.push('terminated-v1');
       }),
     };
+    const v2Handle = {
+      describe: jest.fn().mockResolvedValue({ status: { name: 'RUNNING' } }),
+      terminate: jest.fn().mockImplementation(async () => {
+        order.push('terminated-v2');
+      }),
+    };
     const workflow = {
       getHandle: jest.fn((workflowId: string) => {
         if (workflowId === 'pipeline-scheduler-workflow-v1') {
           return v1Handle;
+        }
+        if (workflowId === 'pipeline-scheduler-workflow-v2') {
+          return v2Handle;
         }
         return {
           describe: jest.fn().mockRejectedValue(
@@ -449,8 +666,8 @@ describe('Pipeline Temporal workflow boundaries', () => {
         };
       }),
       start: jest.fn().mockImplementation(async (workflowType: string) => {
-        if (workflowType === 'pipelineSchedulerWorkflowV2') {
-          order.push('started-v2');
+        if (workflowType === 'pipelineSchedulerWorkflowV3') {
+          order.push('started-v3');
         }
       }),
     };
@@ -479,14 +696,14 @@ describe('Pipeline Temporal workflow boundaries', () => {
       }
     }
 
-    expect(order).toEqual(['terminated-v1', 'started-v2']);
+    expect(order).toEqual(['terminated-v1', 'terminated-v2', 'started-v3']);
     expect(workflow.start).toHaveBeenCalledWith(
-      'pipelineSchedulerWorkflowV2',
-      expect.objectContaining({ workflowId: 'pipeline-scheduler-workflow-v2' })
+      'pipelineSchedulerWorkflowV3',
+      expect.objectContaining({ workflowId: 'pipeline-scheduler-workflow-v3' })
     );
   });
 
-  it('treats missing V1 and already-started V2 as scheduler steady state', async () => {
+  it('treats missing previous schedulers and already-started V3 as steady state', async () => {
     const workflow = {
       getHandle: jest.fn().mockReturnValue({
         describe: jest.fn().mockRejectedValue(

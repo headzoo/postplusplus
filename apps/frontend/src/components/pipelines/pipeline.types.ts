@@ -50,6 +50,10 @@ export interface PipelineQueueItem {
   group: string;
   status: 'QUEUED' | 'PUBLISHING' | 'FAILED' | 'PUBLISHED' | 'REMOVED';
   position: number;
+  claimedAt?: string | Date | null;
+  publishedAt?: string | Date | null;
+  failedAt?: string | Date | null;
+  createdAt?: string | Date;
   error?: string | null;
   posts: Array<{
     id: string;

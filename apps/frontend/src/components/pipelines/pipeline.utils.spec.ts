@@ -2,6 +2,7 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import {
+  PipelineQueueItem,
   PipelineScheduleOccurrence,
   PipelineSummary,
 } from '@gitroom/frontend/components/pipelines/pipeline.types';
@@ -28,6 +29,7 @@ import {
   resolveCalendarPostHeaderColor,
   shouldHideComposerDatePicker,
   shouldHideComposerScheduleControls,
+  sortPipelineItemsByStatusDateDescending,
 } from './pipeline.utils';
 
 dayjs.extend(utc);
@@ -679,5 +681,68 @@ describe('published pipeline queue actions', () => {
         hasPipelineQueueItem: false,
       })
     ).toBe(false);
+  });
+});
+
+describe('sortPipelineItemsByStatusDateDescending', () => {
+  const item = (
+    id: string,
+    status: PipelineQueueItem['status'],
+    position: number,
+    statusDate?: string
+  ): PipelineQueueItem => ({
+    id,
+    group: id,
+    status,
+    position,
+    posts: [],
+    ...(status === 'PUBLISHING' ? { claimedAt: statusDate } : {}),
+    ...(status === 'FAILED' ? { failedAt: statusDate } : {}),
+  });
+
+  it('sorts publishing and failed items newest first without mutating input', () => {
+    const publishing = [
+      item('publishing-old', 'PUBLISHING', 1, '2026-10-09T12:00:00.000Z'),
+      item('publishing-new', 'PUBLISHING', 2, '2026-10-11T12:00:00.000Z'),
+    ];
+    const failed = [
+      item('failed-old', 'FAILED', 3, '2026-10-08T12:00:00.000Z'),
+      item('failed-new', 'FAILED', 4, '2026-10-10T12:00:00.000Z'),
+    ];
+
+    expect(
+      sortPipelineItemsByStatusDateDescending(publishing).map(({ id }) => id)
+    ).toEqual(['publishing-new', 'publishing-old']);
+    expect(
+      sortPipelineItemsByStatusDateDescending(failed).map(({ id }) => id)
+    ).toEqual(['failed-new', 'failed-old']);
+    expect(publishing.map(({ id }) => id)).toEqual([
+      'publishing-old',
+      'publishing-new',
+    ]);
+  });
+
+  it('falls back to descending position when timestamps are unavailable', () => {
+    expect(
+      sortPipelineItemsByStatusDateDescending([
+        item('lower', 'FAILED', 100),
+        item('higher', 'FAILED', 200),
+      ]).map(({ id }) => id)
+    ).toEqual(['higher', 'lower']);
+  });
+
+  it('uses creation time when a status timestamp is unavailable', () => {
+    expect(
+      sortPipelineItemsByStatusDateDescending([
+        {
+          ...item('created-old', 'FAILED', 200),
+          createdAt: '2026-10-08T12:00:00.000Z',
+        },
+        {
+          ...item('created-new', 'FAILED', 100),
+          createdAt: '2026-10-10T12:00:00.000Z',
+        },
+      ]).map(({ id }) => id)
+    ).toEqual(['created-new', 'created-old']);
   });
 });

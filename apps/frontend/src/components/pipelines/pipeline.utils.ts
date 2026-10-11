@@ -19,6 +19,30 @@ export const pipelineQueueItemCanCleanup = (
   status: PipelineQueueItem['status']
 ) => status === 'QUEUED' || status === 'FAILED';
 
+const pipelineItemStatusTime = (item: PipelineQueueItem) => {
+  const statusDate =
+    item.status === 'PUBLISHING'
+      ? item.claimedAt
+      : item.status === 'FAILED'
+      ? item.failedAt
+      : item.status === 'PUBLISHED'
+      ? item.publishedAt
+      : item.createdAt;
+  const value = statusDate ?? item.createdAt;
+  const timestamp = value ? dayjs(value).valueOf() : Number.NaN;
+  return Number.isNaN(timestamp) ? Number.NEGATIVE_INFINITY : timestamp;
+};
+
+export const sortPipelineItemsByStatusDateDescending = (
+  items: PipelineQueueItem[]
+) =>
+  [...items].sort(
+    (left, right) =>
+      pipelineItemStatusTime(right) - pipelineItemStatusTime(left) ||
+      right.position - left.position ||
+      right.id.localeCompare(left.id)
+  );
+
 export const shouldHideComposerScheduleControls = ({
   isEditingExistingPost,
   isAlreadyScheduled,

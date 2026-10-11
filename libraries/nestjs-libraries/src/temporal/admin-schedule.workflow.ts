@@ -5,12 +5,12 @@ export const MISSING_POST_RECOVERY_WORKFLOW_TYPE =
 export const MISSING_POST_RECOVERY_WORKFLOW_ID_PREFIX =
   'missing-post-recovery-v1';
 
-export const PIPELINE_SCHEDULER_WORKFLOW_ID = 'pipeline-scheduler-workflow-v2';
-export const PIPELINE_SCHEDULER_WORKFLOW_TYPE = 'pipelineSchedulerWorkflowV2';
+export const PIPELINE_SCHEDULER_WORKFLOW_ID = 'pipeline-scheduler-workflow-v3';
+export const PIPELINE_SCHEDULER_WORKFLOW_TYPE = 'pipelineSchedulerWorkflowV3';
 export const PIPELINE_SCHEDULER_TICK_WORKFLOW_TYPE =
-  'pipelineSchedulerTickWorkflowV1';
+  'pipelineSchedulerTickWorkflowV2';
 export const PIPELINE_SCHEDULER_TICK_WORKFLOW_ID_PREFIX =
-  'pipeline-scheduler-tick-v1';
+  'pipeline-scheduler-tick-v2';
 
 export const AUTOPOST_ADMIN_TRIGGER_WORKFLOW_TYPE =
   'autopostAdminTriggerWorkflowV1';

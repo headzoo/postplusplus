@@ -209,7 +209,7 @@ describe('PostsService published post edits', () => {
     expect(Date.parse(date)).not.toBeNaN();
     expect(Math.abs(Date.parse(date) - Date.now())).toBeLessThan(5000);
     expect(start).toHaveBeenCalledWith(
-      'postWorkflowV109',
+      'postWorkflowV110',
       expect.objectContaining({
         workflowId: 'post_post-1',
         args: [
@@ -261,7 +261,7 @@ describe('PostsService published post edits', () => {
 
     await new Promise((resolve) => setImmediate(resolve));
     expect(start).toHaveBeenCalledWith(
-      'postWorkflowV109',
+      'postWorkflowV110',
       expect.objectContaining({
         args: [
           expect.objectContaining({

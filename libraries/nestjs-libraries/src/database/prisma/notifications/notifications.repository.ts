@@ -45,6 +45,24 @@ export class NotificationsRepository {
     });
   }
 
+  async createNotificationOnce(
+    organizationId: string,
+    idempotencyKey: string,
+    content: string
+  ) {
+    await this._notifications.model.notifications.upsert({
+      where: {
+        organizationId_idempotencyKey: { organizationId, idempotencyKey },
+      },
+      create: {
+        organizationId,
+        idempotencyKey,
+        content,
+      },
+      update: {},
+    });
+  }
+
   async getNotificationsSince(organizationId: string, since: string) {
     return this._notifications.model.notifications.findMany({
       where: {

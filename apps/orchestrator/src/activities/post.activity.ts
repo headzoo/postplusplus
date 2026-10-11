@@ -95,7 +95,7 @@ export class PostActivity {
     for (const post of list) {
       await this._temporalService.client
         .getRawClient()
-        .workflow.signalWithStart('postWorkflowV109', {
+        .workflow.signalWithStart('postWorkflowV110', {
           workflowId: `post_${post.id}`,
           taskQueue: 'main',
           signal: 'poke',
@@ -545,6 +545,20 @@ export class PostActivity {
       sendEmail,
       digest,
       type
+    );
+  }
+
+  @ActivityMethod()
+  async inAppPostFailureNotificationV1(
+    orgId: string,
+    idempotencyKey: string,
+    _subject: string,
+    message: string
+  ) {
+    await this._notificationService.inAppNotificationOnce(
+      orgId,
+      idempotencyKey,
+      message
     );
   }
 
