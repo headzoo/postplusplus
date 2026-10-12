@@ -64,14 +64,14 @@ export class InfiniteWorkflowRegister implements OnModuleInit {
       );
     }
 
-    for (const version of [1, 2]) {
+    for (const version of [1, 2, 3]) {
       try {
         const previous = workflow.getHandle(
           `pipeline-scheduler-workflow-v${version}`
         );
         const description = await previous.describe();
         if (description.status.name === 'RUNNING') {
-          await previous.terminate('Migrating Pipeline scheduler to V3');
+          await previous.terminate('Migrating Pipeline scheduler to V4');
         }
       } catch (error) {
         if (!this.isMissingOrClosed(error)) {
@@ -85,14 +85,14 @@ export class InfiniteWorkflowRegister implements OnModuleInit {
     }
 
     try {
-      await workflow.start('pipelineSchedulerWorkflowV3', {
-        workflowId: 'pipeline-scheduler-workflow-v3',
+      await workflow.start('pipelineSchedulerWorkflowV4', {
+        workflowId: 'pipeline-scheduler-workflow-v4',
         taskQueue: 'main',
         args: [{}],
       });
     } catch (error) {
       if (!this.isAlreadyStarted(error)) {
-        this._logger.error('Failed to start Pipeline scheduler V3', error);
+        this._logger.error('Failed to start Pipeline scheduler V4', error);
         throw error;
       }
     }

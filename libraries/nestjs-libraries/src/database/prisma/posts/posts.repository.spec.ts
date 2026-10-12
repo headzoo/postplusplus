@@ -34,6 +34,29 @@ describe('Posts repository scheduling regressions', () => {
     );
   });
 
+  it('keeps active Pipeline posts out of generic missing-post recovery', async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const posts = repository({ findMany });
+
+    await posts.searchForMissingThreeHoursPosts();
+
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          state: 'QUEUE',
+          NOT: {
+            pipelineQueueItem: {
+              is: {
+                deletedAt: null,
+                status: { in: ['QUEUED', 'PUBLISHING', 'FAILED'] },
+              },
+            },
+          },
+        }),
+      })
+    );
+  });
+
   it('merges customer filter into integration without dropping org constraints', async () => {
     const findMany = jest.fn().mockResolvedValue([]);
     const posts = repository({ findMany });

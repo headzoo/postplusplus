@@ -1130,6 +1130,7 @@ model PipelineSlotExecution {
   scheduledFor        DateTime
   scheduleRevision    Int
   status              PipelineSlotExecutionStatus @default(SKIPPED)
+  claimOwner          String?
   claimedAt           DateTime?
   completedAt         DateTime?
   failedAt            DateTime?

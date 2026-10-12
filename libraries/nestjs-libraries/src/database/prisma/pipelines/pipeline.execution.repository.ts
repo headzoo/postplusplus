@@ -11,9 +11,14 @@ import {
 import {
   ClaimPipelineSlotRequest,
   ClaimPipelineSlotResponse,
+  ClaimPipelineSlotV2Request,
   DiscoverDuePipelineSlotsRequest,
   DiscoverDuePipelineSlotsResponse,
   FinalizePipelineSlotResponse,
+  GetPipelinePostStateV1Request,
+  PipelinePostStateV1,
+  PipelineSlotFailureContext,
+  RecordPipelineSlotDispatchFailureV1Request,
 } from './pipeline.execution';
 
 const TRANSACTION_ATTEMPTS = 3;
@@ -118,6 +123,19 @@ export class PipelineExecutionRepository {
   claimSlot(
     request: ClaimPipelineSlotRequest
   ): Promise<ClaimPipelineSlotResponse> {
+    return this.claimSlotWithOwner(request);
+  }
+
+  claimSlotV2(
+    request: ClaimPipelineSlotV2Request
+  ): Promise<ClaimPipelineSlotResponse> {
+    return this.claimSlotWithOwner(request, request.claimOwner);
+  }
+
+  private claimSlotWithOwner(
+    request: ClaimPipelineSlotRequest,
+    claimOwner?: string
+  ): Promise<ClaimPipelineSlotResponse> {
     return this.withSerializableRetry(async (tx) => {
       const scheduledFor = new Date(request.scheduledFor);
       const now = new Date(request.nowUtc);
@@ -182,12 +200,39 @@ export class PipelineExecutionRepository {
         },
       });
       if (existing) {
+        const existingClaimOwner = existing.claimOwner || undefined;
+        if (
+          existing.status === 'CLAIMED' &&
+          existingClaimOwner !== claimOwner
+        ) {
+          return {
+            outcome: 'SKIPPED',
+            executionId: existing.id,
+            roots: [],
+            reason: 'DUPLICATE',
+            replayed: true,
+          };
+        }
         if (existing.status === 'CLAIMED' && existing.pipelineQueueItem) {
           return {
             outcome: 'CLAIMED',
             executionId: existing.id,
             queueItemId: existing.pipelineQueueItem.id,
-            roots: this.toRoots(existing.pipelineQueueItem.posts),
+            roots: this.toRoots(
+              existing.pipelineQueueItem.posts.filter(
+                (post: any) => post.state === 'QUEUE'
+              )
+            ),
+            replayed: true,
+          };
+        }
+        if (existing.status === 'FAILED') {
+          return {
+            outcome: 'FAILED',
+            executionId: existing.id,
+            queueItemId: existing.pipelineQueueItemId || undefined,
+            roots: [],
+            reason: existing.error || 'Pipeline publishing failed',
             replayed: true,
           };
         }
@@ -269,6 +314,7 @@ export class PipelineExecutionRepository {
           scheduledFor,
           scheduleRevision: request.scheduleRevision,
           status: 'CLAIMED',
+          claimOwner,
           claimedAt: now,
         },
       });
@@ -314,7 +360,16 @@ export class PipelineExecutionRepository {
           },
         },
       });
-      if (!execution || execution.status !== 'CLAIMED') {
+      if (!execution) {
+        return { outcome: 'NOOP' };
+      }
+      if (execution.status === 'FAILED') {
+        return {
+          outcome: 'FAILED',
+          reason: execution.error || 'Pipeline publishing failed',
+        };
+      }
+      if (execution.status !== 'CLAIMED') {
         return { outcome: 'NOOP' };
       }
 
@@ -324,7 +379,8 @@ export class PipelineExecutionRepository {
         roots.every((post: any) => post.state === 'PUBLISHED');
       const reason = allPublished
         ? undefined
-        : roots.find((post: any) => post.state === 'ERROR')?.error ||
+        : execution.error ||
+          roots.find((post: any) => post.state === 'ERROR')?.error ||
           'One or more Pipeline channel posts did not publish';
       const completedAt = new Date();
 
@@ -353,6 +409,87 @@ export class PipelineExecutionRepository {
         ? { outcome: 'PUBLISHED' }
         : { outcome: 'FAILED', reason };
     });
+  }
+
+  async recordDispatchFailureV1(
+    request: RecordPipelineSlotDispatchFailureV1Request
+  ): Promise<PipelineSlotFailureContext | undefined> {
+    const reason =
+      request.reason.trim().slice(0, 2000) ||
+      `Post workflow ${request.postId} did not start`;
+    await this._execution.model.pipelineSlotExecution.updateMany({
+      where: {
+        id: request.executionId,
+        status: 'CLAIMED',
+        error: null,
+      },
+      data: { error: reason },
+    });
+    return this.getFailureContext(request.executionId);
+  }
+
+  async getPipelinePostStateV1(
+    request: GetPipelinePostStateV1Request
+  ): Promise<PipelinePostStateV1> {
+    const execution =
+      await this._execution.model.pipelineSlotExecution.findUnique({
+        where: { id: request.executionId },
+        select: {
+          pipelineQueueItem: {
+            select: {
+              posts: {
+                where: { id: request.postId, deletedAt: null },
+                select: { state: true },
+                take: 1,
+              },
+            },
+          },
+        },
+      });
+    return (
+      (execution?.pipelineQueueItem?.posts?.[0]
+        ?.state as PipelinePostStateV1) || 'MISSING'
+    );
+  }
+
+  async getFailureContext(
+    executionId: string
+  ): Promise<PipelineSlotFailureContext | undefined> {
+    const execution =
+      await this._execution.model.pipelineSlotExecution.findUnique({
+        where: { id: executionId },
+        include: {
+          pipeline: {
+            select: {
+              id: true,
+              name: true,
+              organizationId: true,
+            },
+          },
+          pipelineQueueItem: {
+            include: {
+              posts: {
+                where: { parentPostId: null, deletedAt: null },
+                select: { id: true, state: true },
+              },
+            },
+          },
+        },
+      });
+    if (!execution) {
+      return undefined;
+    }
+    const posts = execution.pipelineQueueItem?.posts || [];
+    return {
+      executionId: execution.id,
+      pipelineId: execution.pipeline.id,
+      pipelineName: execution.pipeline.name,
+      organizationId: execution.pipeline.organizationId,
+      queueItemId: execution.pipelineQueueItemId || undefined,
+      scheduledFor: execution.scheduledFor.toISOString(),
+      postIds: posts.map((post: any) => post.id),
+      hasPostError: posts.some((post: any) => post.state === 'ERROR'),
+    };
   }
 
   private isCurrentSlot(pipeline: any, scheduledFor: Date): boolean {

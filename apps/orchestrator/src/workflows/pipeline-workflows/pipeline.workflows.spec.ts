@@ -1,5 +1,8 @@
 const claimPipelineSlot = jest.fn();
+const claimPipelineSlotV2 = jest.fn();
 const finalizePipelineSlot = jest.fn();
+const getPipelinePostStateV1 = jest.fn();
+const recordPipelineSlotDispatchFailureV1 = jest.fn();
 const discoverDuePipelineSlots = jest.fn();
 const startChild = jest.fn();
 const sleep = jest.fn();
@@ -28,7 +31,10 @@ const processPostRuleV109 = jest.fn();
 jest.mock('@temporalio/workflow', () => ({
   proxyActivities: () => ({
     claimPipelineSlot,
+    claimPipelineSlotV2,
     finalizePipelineSlot,
+    getPipelinePostStateV1,
+    recordPipelineSlotDispatchFailureV1,
     discoverDuePipelineSlots,
     getPost,
     getPostsList,
@@ -72,10 +78,14 @@ import { pipelineSlotWorkflowV2 } from './pipeline.slot.workflow.v2';
 import { pipelineSchedulerWorkflowV2 } from './pipeline.scheduler.workflow.v2';
 import { pipelineSlotWorkflowV3 } from './pipeline.slot.workflow.v3';
 import { pipelineSchedulerWorkflowV3 } from './pipeline.scheduler.workflow.v3';
+import { pipelineSlotWorkflowV4 } from './pipeline.slot.workflow.v4';
+import { pipelineSchedulerWorkflowV4 } from './pipeline.scheduler.workflow.v4';
 import { pipelineSchedulerTickWorkflowV2 } from '../pipeline-scheduler-tick.workflow.v2';
+import { pipelineSchedulerTickWorkflowV3 } from '../pipeline-scheduler-tick.workflow.v3';
 import { postWorkflowV108 } from '../post-workflows/post.workflow.v1.0.8';
 import { postWorkflowV109 } from '../post-workflows/post.workflow.v1.0.9';
 import { postWorkflowV110 } from '../post-workflows/post.workflow.v1.0.10';
+import { postWorkflowV111 } from '../post-workflows/post.workflow.v1.0.11';
 import { InfiniteWorkflowRegister } from '@gitroom/nestjs-libraries/temporal/infinite.workflow.register';
 
 describe('Pipeline Temporal workflow boundaries', () => {
@@ -308,6 +318,164 @@ describe('Pipeline Temporal workflow boundaries', () => {
     );
   });
 
+  it('allows a new canonical post workflow run for V4 pipeline attempts', async () => {
+    claimPipelineSlotV2.mockResolvedValue({
+      outcome: 'CLAIMED',
+      executionId: 'execution-v4',
+      roots: [{ postId: 'root-v4', organizationId: 'org', taskQueue: 'x' }],
+    });
+    startChild.mockResolvedValue({ result: async () => undefined });
+    finalizePipelineSlot.mockResolvedValue({ outcome: 'PUBLISHED' });
+
+    await pipelineSlotWorkflowV4({
+      pipelineId: 'pipeline',
+      scheduleRevision: 5,
+      scheduledFor: '2026-08-10T13:00:00.000Z',
+    });
+
+    expect(claimPipelineSlotV2).toHaveBeenCalledWith(
+      expect.objectContaining({ claimOwner: 'post_post' })
+    );
+    expect(startChild).toHaveBeenCalledWith(
+      postWorkflowV111,
+      expect.objectContaining({
+        workflowId: 'post_root-v4',
+        workflowIdReusePolicy: 'ALLOW_DUPLICATE',
+        args: [
+          {
+            taskQueue: 'x',
+            postId: 'root-v4',
+            organizationId: 'org',
+            pipelineExecutionId: 'execution-v4',
+          },
+        ],
+      })
+    );
+  });
+
+  it('persists and reports a V4 child workflow start failure', async () => {
+    claimPipelineSlotV2.mockResolvedValue({
+      outcome: 'CLAIMED',
+      executionId: 'execution-v4',
+      roots: [{ postId: 'root-v4', organizationId: 'org', taskQueue: 'x' }],
+    });
+    startChild.mockRejectedValue(new Error('workflow already started'));
+    getPipelinePostStateV1.mockResolvedValue('MISSING');
+    recordPipelineSlotDispatchFailureV1.mockResolvedValue(undefined);
+    finalizePipelineSlot.mockResolvedValue({
+      outcome: 'FAILED',
+      reason: 'workflow already started',
+    });
+
+    await pipelineSlotWorkflowV4({
+      pipelineId: 'pipeline',
+      scheduleRevision: 5,
+      scheduledFor: '2026-08-10T13:00:00.000Z',
+    });
+
+    expect(recordPipelineSlotDispatchFailureV1).toHaveBeenCalledWith({
+      executionId: 'execution-v4',
+      postId: 'root-v4',
+      reason: expect.stringContaining('workflow already started'),
+    });
+    expect(finalizePipelineSlot).toHaveBeenCalledWith({
+      executionId: 'execution-v4',
+    });
+  });
+
+  it('waits for an overlapping canonical workflow instead of dispatching twice', async () => {
+    claimPipelineSlotV2.mockResolvedValue({
+      outcome: 'CLAIMED',
+      executionId: 'execution-v4',
+      roots: [{ postId: 'root-v4', organizationId: 'org', taskQueue: 'x' }],
+      replayed: true,
+    });
+    startChild.mockRejectedValue(
+      Object.assign(new Error('workflow already started'), {
+        name: 'WorkflowExecutionAlreadyStartedError',
+      })
+    );
+    getPipelinePostStateV1
+      .mockResolvedValueOnce('QUEUE')
+      .mockResolvedValueOnce('PUBLISHED');
+    finalizePipelineSlot.mockResolvedValue({ outcome: 'PUBLISHED' });
+
+    await pipelineSlotWorkflowV4({
+      pipelineId: 'pipeline',
+      scheduleRevision: 5,
+      scheduledFor: '2026-08-10T13:00:00.000Z',
+    });
+
+    expect(sleep).toHaveBeenCalledWith('30 seconds');
+    expect(recordPipelineSlotDispatchFailureV1).not.toHaveBeenCalled();
+    expect(finalizePipelineSlot).toHaveBeenCalledWith({
+      executionId: 'execution-v4',
+    });
+  });
+
+  it('treats a post completed by an overlapping V3 workflow as published in V111', async () => {
+    getPost.mockResolvedValue({ state: 'PUBLISHED' });
+
+    await expect(
+      postWorkflowV111({
+        taskQueue: 'x',
+        postId: 'root-v4',
+        organizationId: 'org',
+        pipelineExecutionId: 'execution-v4',
+      })
+    ).resolves.toBe(true);
+
+    expect(startChild).not.toHaveBeenCalled();
+  });
+
+  it('runs V110 under an execution-specific child ID from V111', async () => {
+    getPost.mockResolvedValue({ state: 'QUEUE' });
+    startChild.mockResolvedValue({ result: async () => true });
+
+    await expect(
+      postWorkflowV111({
+        taskQueue: 'x',
+        postId: 'root-v4',
+        organizationId: 'org',
+        pipelineExecutionId: 'execution-v4',
+      })
+    ).resolves.toBe(true);
+
+    expect(startChild).toHaveBeenCalledWith(
+      postWorkflowV110,
+      expect.objectContaining({
+        workflowId: 'post_root-v4_pipeline_execution-v4',
+        workflowIdReusePolicy: 'REJECT_DUPLICATE',
+      })
+    );
+  });
+
+  it('still finalizes V4 when dispatch failure reporting exhausts retries', async () => {
+    claimPipelineSlotV2.mockResolvedValue({
+      outcome: 'CLAIMED',
+      executionId: 'execution-v4',
+      roots: [{ postId: 'root-v4', organizationId: 'org', taskQueue: 'x' }],
+    });
+    startChild.mockRejectedValue(new Error('workflow could not start'));
+    recordPipelineSlotDispatchFailureV1.mockRejectedValue(
+      new Error('notification database unavailable')
+    );
+    finalizePipelineSlot.mockResolvedValue({
+      outcome: 'FAILED',
+      reason: 'One or more Pipeline channel posts did not publish',
+    });
+
+    await pipelineSlotWorkflowV4({
+      pipelineId: 'pipeline',
+      scheduleRevision: 5,
+      scheduledFor: '2026-08-10T13:00:00.000Z',
+    });
+
+    expect(finalizePipelineSlot).toHaveBeenCalledWith({
+      executionId: 'execution-v4',
+    });
+  });
+
   it('notifies once with the provider error after post publishing fails in V110', async () => {
     const integration = {
       id: 'integration',
@@ -510,6 +678,54 @@ describe('Pipeline Temporal workflow boundaries', () => {
     );
   });
 
+  it('dispatches V4 scheduler occurrences through V4 slots', async () => {
+    discoverDuePipelineSlots.mockResolvedValue({
+      candidates: [
+        {
+          occurrenceId: 'pipeline:pipeline:5:2026-08-10T13:00:00.000Z',
+          pipelineId: 'pipeline',
+          scheduleRevision: 5,
+          scheduledFor: '2026-08-10T13:00:00.000Z',
+        },
+      ],
+    });
+    startChild.mockResolvedValue({});
+    sleep.mockRejectedValue(new Error('stop after first V4 tick'));
+
+    await expect(pipelineSchedulerWorkflowV4()).rejects.toThrow(
+      'stop after first V4 tick'
+    );
+    expect(startChild).toHaveBeenCalledWith(
+      pipelineSlotWorkflowV4,
+      expect.objectContaining({
+        workflowId: 'pipeline-v4:pipeline:pipeline:5:2026-08-10T13:00:00.000Z',
+      })
+    );
+  });
+
+  it('dispatches admin V3 ticks through V4 slots', async () => {
+    discoverDuePipelineSlots.mockResolvedValue({
+      candidates: [
+        {
+          occurrenceId: 'pipeline:pipeline:5:2026-08-10T13:00:00.000Z',
+          pipelineId: 'pipeline',
+          scheduleRevision: 5,
+          scheduledFor: '2026-08-10T13:00:00.000Z',
+        },
+      ],
+    });
+    startChild.mockResolvedValue({});
+
+    await pipelineSchedulerTickWorkflowV3();
+
+    expect(startChild).toHaveBeenCalledWith(
+      pipelineSlotWorkflowV4,
+      expect.objectContaining({
+        workflowId: 'pipeline-v4:pipeline:pipeline:5:2026-08-10T13:00:00.000Z',
+      })
+    );
+  });
+
   it('carries plug source through V107 and removes delayed runs by compound identity', async () => {
     const integration = {
       id: 'integration',
@@ -633,7 +849,7 @@ describe('Pipeline Temporal workflow boundaries', () => {
     );
   });
 
-  it('waits for previous scheduler termination before starting V3', async () => {
+  it('waits for previous scheduler termination before starting V4', async () => {
     const order: string[] = [];
     const v1Handle = {
       describe: jest.fn().mockResolvedValue({ status: { name: 'RUNNING' } }),
@@ -647,6 +863,12 @@ describe('Pipeline Temporal workflow boundaries', () => {
         order.push('terminated-v2');
       }),
     };
+    const v3Handle = {
+      describe: jest.fn().mockResolvedValue({ status: { name: 'RUNNING' } }),
+      terminate: jest.fn().mockImplementation(async () => {
+        order.push('terminated-v3');
+      }),
+    };
     const workflow = {
       getHandle: jest.fn((workflowId: string) => {
         if (workflowId === 'pipeline-scheduler-workflow-v1') {
@@ -654,6 +876,9 @@ describe('Pipeline Temporal workflow boundaries', () => {
         }
         if (workflowId === 'pipeline-scheduler-workflow-v2') {
           return v2Handle;
+        }
+        if (workflowId === 'pipeline-scheduler-workflow-v3') {
+          return v3Handle;
         }
         return {
           describe: jest.fn().mockRejectedValue(
@@ -666,8 +891,8 @@ describe('Pipeline Temporal workflow boundaries', () => {
         };
       }),
       start: jest.fn().mockImplementation(async (workflowType: string) => {
-        if (workflowType === 'pipelineSchedulerWorkflowV3') {
-          order.push('started-v3');
+        if (workflowType === 'pipelineSchedulerWorkflowV4') {
+          order.push('started-v4');
         }
       }),
     };
@@ -696,14 +921,19 @@ describe('Pipeline Temporal workflow boundaries', () => {
       }
     }
 
-    expect(order).toEqual(['terminated-v1', 'terminated-v2', 'started-v3']);
+    expect(order).toEqual([
+      'terminated-v1',
+      'terminated-v2',
+      'terminated-v3',
+      'started-v4',
+    ]);
     expect(workflow.start).toHaveBeenCalledWith(
-      'pipelineSchedulerWorkflowV3',
-      expect.objectContaining({ workflowId: 'pipeline-scheduler-workflow-v3' })
+      'pipelineSchedulerWorkflowV4',
+      expect.objectContaining({ workflowId: 'pipeline-scheduler-workflow-v4' })
     );
   });
 
-  it('treats missing previous schedulers and already-started V3 as steady state', async () => {
+  it('treats missing previous schedulers and already-started V4 as steady state', async () => {
     const workflow = {
       getHandle: jest.fn().mockReturnValue({
         describe: jest.fn().mockRejectedValue(

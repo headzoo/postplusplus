@@ -37,6 +37,10 @@ export interface ClaimPipelineSlotRequest {
   readonly nowUtc: string;
 }
 
+export interface ClaimPipelineSlotV2Request extends ClaimPipelineSlotRequest {
+  readonly claimOwner: string;
+}
+
 export interface ClaimedPipelinePostRoot {
   readonly postId: string;
   readonly organizationId: string;
@@ -59,6 +63,35 @@ export interface FinalizePipelineSlotRequest {
 export interface FinalizePipelineSlotResponse {
   readonly outcome: 'PUBLISHED' | 'FAILED' | 'NOOP';
   readonly reason?: string;
+}
+
+export interface RecordPipelineSlotDispatchFailureV1Request {
+  readonly executionId: string;
+  readonly postId: string;
+  readonly reason: string;
+}
+
+export interface GetPipelinePostStateV1Request {
+  readonly executionId: string;
+  readonly postId: string;
+}
+
+export type PipelinePostStateV1 =
+  | 'DRAFT'
+  | 'QUEUE'
+  | 'PUBLISHED'
+  | 'ERROR'
+  | 'MISSING';
+
+export interface PipelineSlotFailureContext {
+  readonly executionId: string;
+  readonly pipelineId: string;
+  readonly pipelineName: string;
+  readonly organizationId: string;
+  readonly queueItemId?: string;
+  readonly scheduledFor: string;
+  readonly postIds: readonly string[];
+  readonly hasPostError: boolean;
 }
 
 export interface PipelineSlotWorkflowV1Request {

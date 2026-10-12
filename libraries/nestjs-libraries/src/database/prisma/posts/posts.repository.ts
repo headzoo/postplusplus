@@ -46,6 +46,14 @@ export class PostsRepository {
           lt: dayjs.utc().toDate(),
         },
         state: 'QUEUE',
+        NOT: {
+          pipelineQueueItem: {
+            is: {
+              deletedAt: null,
+              status: { in: ['QUEUED', 'PUBLISHING', 'FAILED'] },
+            },
+          },
+        },
         deletedAt: null,
         parentPostId: null,
       },

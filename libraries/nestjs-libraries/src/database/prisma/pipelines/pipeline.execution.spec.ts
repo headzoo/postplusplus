@@ -392,6 +392,43 @@ describe('Pipeline execution', () => {
     expect(tx.pipelineSlotExecution.create).toHaveBeenCalledTimes(1);
   });
 
+  it('does not let different workflow owners dispatch an existing claim', async () => {
+    const tx = {
+      pipeline: { findUnique: jest.fn().mockResolvedValue(pipeline()) },
+      pipelineSlotExecution: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'execution',
+          status: 'CLAIMED',
+          claimOwner: null,
+          pipelineQueueItemId: 'item',
+          pipelineQueueItem: {
+            id: 'item',
+            posts: [{ ...queueItem().posts[0], state: 'QUEUE' }],
+          },
+        }),
+      },
+    };
+    const repository = new PipelineExecutionRepository(
+      { model: {} } as any,
+      {
+        model: {
+          $transaction: (run: (value: any) => any) => run(tx),
+        },
+      } as any
+    );
+
+    await expect(
+      repository.claimSlotV2({
+        ...request,
+        claimOwner: 'pipeline-slot-v4',
+      })
+    ).resolves.toMatchObject({
+      outcome: 'SKIPPED',
+      reason: 'DUPLICATE',
+      replayed: true,
+    });
+  });
+
   it.each([
     ['paused', pipeline({ active: false }), 'INACTIVE'],
     ['stale revision', pipeline({ scheduleRevision: 4 }), 'STALE_REVISION'],
@@ -628,7 +665,59 @@ describe('Pipeline execution', () => {
       reason: 'Provider rejected the post',
     });
     await expect(repository.finalizeSlot('execution')).resolves.toEqual({
-      outcome: 'NOOP',
+      outcome: 'FAILED',
+      reason: 'Pipeline publishing failed',
+    });
+  });
+
+  it('preserves the first child dispatch error and returns notification context', async () => {
+    const updateMany = jest.fn().mockResolvedValue({ count: 1 });
+    const findUnique = jest.fn().mockResolvedValue({
+      id: 'execution',
+      pipelineQueueItemId: 'item',
+      scheduledFor: new Date(scheduledFor),
+      pipeline: {
+        id: 'pipeline',
+        name: 'Daily updates',
+        organizationId: 'org',
+      },
+      pipelineQueueItem: {
+        posts: [{ id: 'post-1', state: 'QUEUE' }],
+      },
+    });
+    const repository = new PipelineExecutionRepository(
+      { model: {} } as any,
+      { model: {} } as any,
+      {
+        model: {
+          pipelineSlotExecution: { updateMany, findUnique },
+        },
+      } as any
+    );
+
+    await expect(
+      repository.recordDispatchFailureV1({
+        executionId: 'execution',
+        postId: 'post-1',
+        reason: 'workflow already started',
+      })
+    ).resolves.toEqual({
+      executionId: 'execution',
+      pipelineId: 'pipeline',
+      pipelineName: 'Daily updates',
+      organizationId: 'org',
+      queueItemId: 'item',
+      scheduledFor,
+      postIds: ['post-1'],
+      hasPostError: false,
+    });
+    expect(updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'execution',
+        status: 'CLAIMED',
+        error: null,
+      },
+      data: { error: 'workflow already started' },
     });
   });
 
