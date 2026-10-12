@@ -3,6 +3,7 @@ import {
   getPipelineScheduleOccurrencesInRange,
   getUpcomingPipelineSlots,
   PIPELINE_SCHEDULER_GRACE_WINDOW_MS,
+  PIPELINE_SLOT_ARM_AHEAD_MS,
 } from './pipeline.schedule';
 
 describe('pipeline schedule calculator', () => {
@@ -156,5 +157,9 @@ describe('pipeline schedule calculator', () => {
 
   it('defines the scheduler grace window as two minutes', () => {
     expect(PIPELINE_SCHEDULER_GRACE_WINDOW_MS).toBe(2 * 60 * 1000);
+  });
+
+  it('arms the next slot up to a day before it is due', () => {
+    expect(PIPELINE_SLOT_ARM_AHEAD_MS).toBe(24 * 60 * 60 * 1000);
   });
 });

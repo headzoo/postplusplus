@@ -66,6 +66,7 @@ export class PipelineActivity {
     request: ClaimPipelineSlotRequest
   ): Promise<ClaimPipelineSlotResponse> {
     const result = await this._pipelineExecutionRepository.claimSlot(request);
+    await this.reportSkippedSlot(request, result);
     if (result.outcome === 'FAILED' && result.executionId) {
       const context = await this._pipelineExecutionRepository.getFailureContext(
         result.executionId
@@ -86,6 +87,7 @@ export class PipelineActivity {
     request: ClaimPipelineSlotV2Request
   ): Promise<ClaimPipelineSlotResponse> {
     const result = await this._pipelineExecutionRepository.claimSlotV2(request);
+    await this.reportSkippedSlot(request, result);
     if (result.outcome === 'FAILED' && result.executionId) {
       const context = await this._pipelineExecutionRepository.getFailureContext(
         result.executionId
@@ -116,7 +118,7 @@ export class PipelineActivity {
         context,
         result.reason || 'One or more Pipeline channel posts did not publish',
         'finalize',
-        !context?.hasPostError
+        true
       );
     }
     return result;
@@ -136,6 +138,50 @@ export class PipelineActivity {
     request: GetPipelinePostStateV1Request
   ): Promise<PipelinePostStateV1> {
     return this._pipelineExecutionRepository.getPipelinePostStateV1(request);
+  }
+
+  private async reportSkippedSlot(
+    request: ClaimPipelineSlotRequest,
+    result: ClaimPipelineSlotResponse
+  ) {
+    if (
+      result.outcome !== 'SKIPPED' ||
+      !result.organizationId ||
+      (result.reason !== 'MISSED' &&
+        result.reason !== 'INACTIVE' &&
+        result.reason !== 'STALE_REVISION' &&
+        result.reason !== 'STALE_SLOT')
+    ) {
+      return;
+    }
+    const detail =
+      result.reason === 'MISSED'
+        ? 'The scheduled time passed and the post was not sent.'
+        : result.reason === 'INACTIVE'
+        ? 'The Pipeline is inactive, so this post was not sent.'
+        : result.reason === 'STALE_REVISION'
+        ? 'The Pipeline changed after that time, so this slot was not sent.'
+        : 'That time is no longer on the Pipeline schedule, so this slot was not sent.';
+    const pipelineName = result.pipelineName || 'Pipeline';
+    const meta = {
+      phase: 'claim',
+      pipelineId: request.pipelineId,
+      pipelineName,
+      scheduledFor: request.scheduledFor,
+      reason: result.reason,
+    };
+    this._logger.error(`Pipeline slot skipped: ${JSON.stringify(meta)}`);
+    await this._adminScheduleLogService.append({
+      scheduleKey: 'post-workflows',
+      level: 'ERROR',
+      message: `Pipeline slot skipped: ${result.reason}`,
+      meta,
+    });
+    await this._notificationService.inAppNotificationOnce(
+      result.organizationId,
+      `pipeline-slot-skipped:${request.pipelineId}:${request.scheduledFor}:${result.reason}`,
+      `Postiz did not send the scheduled ${pipelineName} post for ${request.scheduledFor}. ${detail} The post is still in the Pipeline queue.`
+    );
   }
 
   private async reportFailure(

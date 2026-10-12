@@ -6,6 +6,7 @@ import {
 } from '@gitroom/nestjs-libraries/database/prisma/prisma.service';
 import {
   PIPELINE_SCHEDULER_GRACE_WINDOW_MS,
+  PIPELINE_SLOT_ARM_AHEAD_MS,
   getUpcomingPipelineSlots,
 } from './pipeline.schedule';
 import {
@@ -45,7 +46,16 @@ export class PipelineExecutionRepository {
     );
     const pipelines = await this._pipeline.model.pipeline.findMany({
       where: { active: true, deletedAt: null },
-      include: { scheduleSlots: true },
+      include: {
+        scheduleSlots: true,
+        _count: {
+          select: {
+            queueItems: {
+              where: { status: 'QUEUED', deletedAt: null },
+            },
+          },
+        },
+      },
     });
     const graceStart = new Date(
       now.getTime() - PIPELINE_SCHEDULER_GRACE_WINDOW_MS - 1
@@ -55,7 +65,7 @@ export class PipelineExecutionRepository {
         await this._execution.model.pipelineSlotExecution.findMany({
           where: {
             pipelineId: { in: pipelines.map((pipeline: any) => pipeline.id) },
-            scheduledFor: { gt: graceStart, lte: now },
+            scheduledFor: { gt: graceStart },
           },
           select: { pipelineId: true, scheduledFor: true },
         })
@@ -65,31 +75,44 @@ export class PipelineExecutionRepository {
       )
     );
 
-    const candidates = pipelines.flatMap((pipeline: any) =>
-      getUpcomingPipelineSlots(
+    const armAheadEnd = now.getTime() + PIPELINE_SLOT_ARM_AHEAD_MS;
+    const candidates = pipelines.flatMap((pipeline: any) => {
+      const open = getUpcomingPipelineSlots(
         pipeline.scheduleSlots,
         pipeline.timezone,
         graceStart,
-        pipeline.scheduleSlots.length
-      )
+        pipeline.scheduleSlots.length + 1
+      ).filter(
+        (scheduledFor) =>
+          pipeline.updatedAt.getTime() <= scheduledFor.getTime() &&
+          !dispatched.has(`${pipeline.id}:${scheduledFor.toISOString()}`)
+      );
+      const due = open.filter(
+        (scheduledFor) => scheduledFor.getTime() <= now.getTime()
+      );
+      const nextSlot = open
         .filter(
           (scheduledFor) =>
-            scheduledFor.getTime() <= now.getTime() &&
-            pipeline.updatedAt.getTime() <= scheduledFor.getTime() &&
-            !dispatched.has(`${pipeline.id}:${scheduledFor.toISOString()}`)
+            scheduledFor.getTime() > now.getTime() &&
+            scheduledFor.getTime() <= armAheadEnd
         )
-        .map((scheduledFor) => ({
-          occurrenceId: [
-            'pipeline',
-            pipeline.id,
-            pipeline.scheduleRevision,
-            scheduledFor.toISOString(),
-          ].join(':'),
-          pipelineId: pipeline.id,
-          scheduleRevision: pipeline.scheduleRevision,
-          scheduledFor: scheduledFor.toISOString(),
-        }))
-    );
+        .slice(0, 1);
+      let selected = due;
+      if (!selected.length && (pipeline._count?.queueItems || 0) > 0) {
+        selected = nextSlot;
+      }
+      return selected.map((scheduledFor) => ({
+        occurrenceId: [
+          'pipeline',
+          pipeline.id,
+          pipeline.scheduleRevision,
+          scheduledFor.toISOString(),
+        ].join(':'),
+        pipelineId: pipeline.id,
+        scheduleRevision: pipeline.scheduleRevision,
+        scheduledFor: scheduledFor.toISOString(),
+      }));
+    });
 
     const sorted = candidates
       .sort(
@@ -160,14 +183,21 @@ export class PipelineExecutionRepository {
         pipeline.scheduleRevision !== request.scheduleRevision ||
         pipeline.updatedAt.getTime() > scheduledFor.getTime()
       ) {
-        return { outcome: 'SKIPPED', roots: [], reason: 'STALE_REVISION' };
+        return {
+          outcome: 'SKIPPED',
+          roots: [],
+          reason: 'STALE_REVISION',
+          ...this.pipelineIdentity(pipeline),
+        };
       }
+      const overdue =
+        scheduledFor.getTime() <= now.getTime() &&
+        now.getTime() - scheduledFor.getTime() >
+          PIPELINE_SCHEDULER_GRACE_WINDOW_MS;
       if (
         !Number.isFinite(scheduledFor.getTime()) ||
         !Number.isFinite(now.getTime()) ||
-        scheduledFor.getTime() > now.getTime() ||
-        now.getTime() - scheduledFor.getTime() >
-          PIPELINE_SCHEDULER_GRACE_WINDOW_MS
+        overdue
       ) {
         return this.skipIfPossible(
           tx,
@@ -178,7 +208,12 @@ export class PipelineExecutionRepository {
         );
       }
       if (!this.isCurrentSlot(pipeline, scheduledFor)) {
-        return { outcome: 'SKIPPED', roots: [], reason: 'STALE_SLOT' };
+        return {
+          outcome: 'SKIPPED',
+          roots: [],
+          reason: 'STALE_SLOT',
+          ...this.pipelineIdentity(pipeline),
+        };
       }
 
       const existing = await tx.pipelineSlotExecution.findUnique({
@@ -557,6 +592,25 @@ export class PipelineExecutionRepository {
       executionId: execution.id,
       roots: [],
       reason,
+      ...this.pipelineIdentity(
+        await tx.pipeline.findUnique({
+          where: { id: request.pipelineId },
+          select: { organizationId: true, name: true },
+        })
+      ),
+    };
+  }
+
+  private pipelineIdentity(pipeline?: {
+    organizationId?: string;
+    name?: string;
+  }) {
+    if (!pipeline?.organizationId) {
+      return {};
+    }
+    return {
+      organizationId: pipeline.organizationId,
+      pipelineName: pipeline.name || 'Pipeline',
     };
   }
 

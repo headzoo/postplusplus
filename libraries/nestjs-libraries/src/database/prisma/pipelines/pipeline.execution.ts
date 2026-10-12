@@ -54,6 +54,8 @@ export interface ClaimPipelineSlotResponse {
   readonly roots: readonly ClaimedPipelinePostRoot[];
   readonly reason?: PipelineSlotSkipReason | string;
   readonly replayed?: boolean;
+  readonly organizationId?: string;
+  readonly pipelineName?: string;
 }
 
 export interface FinalizePipelineSlotRequest {

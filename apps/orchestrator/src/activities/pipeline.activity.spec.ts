@@ -145,7 +145,7 @@ describe('PipelineActivity failure reporting', () => {
     );
   });
 
-  it('logs but does not duplicate a post-level failure notification', async () => {
+  it('notifies when publishing fails after the post is already marked failed', async () => {
     const repository = {
       finalizeSlot: jest.fn().mockResolvedValue({
         outcome: 'FAILED',
@@ -173,6 +173,48 @@ describe('PipelineActivity failure reporting', () => {
         message: 'Pipeline publish failed during finalize',
       })
     );
-    expect(inAppNotificationOnce).not.toHaveBeenCalled();
+    expect(inAppNotificationOnce).toHaveBeenCalledWith(
+      context.organizationId,
+      `pipeline-publish-failure:${context.executionId}`,
+      expect.stringContaining('X rejected the post')
+    );
+  });
+
+  it('notifies when a due slot is abandoned and the post stays queued', async () => {
+    const repository = {
+      claimSlot: jest.fn().mockResolvedValue({
+        outcome: 'SKIPPED',
+        roots: [],
+        reason: 'MISSED',
+        organizationId: context.organizationId,
+        pipelineName: context.pipelineName,
+      }),
+    };
+    const append = jest.fn().mockResolvedValue(undefined);
+    const inAppNotificationOnce = jest.fn().mockResolvedValue(undefined);
+    const activity = new PipelineActivity(
+      repository as any,
+      { append } as any,
+      { inAppNotificationOnce } as any
+    );
+
+    await activity.claimPipelineSlot({
+      pipelineId: context.pipelineId,
+      scheduleRevision: 1,
+      scheduledFor: context.scheduledFor,
+      nowUtc: context.scheduledFor,
+    });
+
+    expect(append).toHaveBeenCalledWith(
+      expect.objectContaining({
+        level: 'ERROR',
+        message: 'Pipeline slot skipped: MISSED',
+      })
+    );
+    expect(inAppNotificationOnce).toHaveBeenCalledWith(
+      context.organizationId,
+      `pipeline-slot-skipped:${context.pipelineId}:${context.scheduledFor}:MISSED`,
+      expect.stringContaining('still in the Pipeline queue')
+    );
   });
 });

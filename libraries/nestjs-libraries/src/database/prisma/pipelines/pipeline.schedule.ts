@@ -7,6 +7,10 @@ dayjs.extend(timezone);
 
 export const PIPELINE_SCHEDULER_GRACE_WINDOW_MS = 2 * 60 * 1000;
 
+// Claim the next slot once it is this close, so the publish workflow is
+// waiting instead of the calendar only projecting the time.
+export const PIPELINE_SLOT_ARM_AHEAD_MS = 24 * 60 * 60 * 1000;
+
 const MINUTES_PER_DAY = 24 * 60;
 const MAX_TIMEZONE_OFFSET_MINUTES = 16 * 60;
 const MAX_UPCOMING_SLOTS = 366;

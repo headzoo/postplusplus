@@ -484,8 +484,10 @@ describe('Pipeline execution', () => {
     });
   });
 
-  it('does not discover occurrences beyond the outage grace window', async () => {
-    const findMany = jest.fn().mockResolvedValue([pipeline()]);
+  it('arms the next slot while it is still an hour away', async () => {
+    const findMany = jest
+      .fn()
+      .mockResolvedValue([pipeline({ _count: { queueItems: 1 } })]);
     const repository = new PipelineExecutionRepository(
       { model: { pipeline: { findMany } } } as any,
       {} as any,
@@ -498,10 +500,143 @@ describe('Pipeline execution', () => {
 
     await expect(
       repository.discoverDueSlots({
-        nowUtc: '2026-08-10T10:02:01.000Z',
+        nowUtc: '2026-08-10T09:00:00.000Z',
+        maximumCandidates: 100,
+      })
+    ).resolves.toEqual({
+      candidates: [
+        {
+          occurrenceId: 'pipeline:pipeline:3:2026-08-10T10:00:00.000Z',
+          pipelineId: 'pipeline',
+          scheduleRevision: 3,
+          scheduledFor: '2026-08-10T10:00:00.000Z',
+        },
+      ],
+    });
+  });
+
+  it('does not arm a slot that is more than a day away', async () => {
+    const findMany = jest
+      .fn()
+      .mockResolvedValue([pipeline({ _count: { queueItems: 1 } })]);
+    const repository = new PipelineExecutionRepository(
+      { model: { pipeline: { findMany } } } as any,
+      {} as any,
+      {
+        model: {
+          pipelineSlotExecution: { findMany: jest.fn().mockResolvedValue([]) },
+        },
+      } as any
+    );
+
+    await expect(
+      repository.discoverDueSlots({
+        nowUtc: '2026-08-11T10:02:01.000Z',
         maximumCandidates: 100,
       })
     ).resolves.toEqual({ candidates: [] });
+  });
+
+  it('arms only the next slot when a later one is also coming up', async () => {
+    const findMany = jest.fn().mockResolvedValue([
+      pipeline({
+        _count: { queueItems: 1 },
+        scheduleSlots: [
+          { dayOfWeek: 1, minuteOfDay: 600 },
+          { dayOfWeek: 1, minuteOfDay: 900 },
+        ],
+      }),
+    ]);
+    const repository = new PipelineExecutionRepository(
+      { model: { pipeline: { findMany } } } as any,
+      {} as any,
+      {
+        model: {
+          pipelineSlotExecution: { findMany: jest.fn().mockResolvedValue([]) },
+        },
+      } as any
+    );
+
+    await expect(
+      repository.discoverDueSlots({
+        nowUtc: '2026-08-10T09:00:00.000Z',
+        maximumCandidates: 100,
+      })
+    ).resolves.toEqual({
+      candidates: [
+        {
+          occurrenceId: 'pipeline:pipeline:3:2026-08-10T10:00:00.000Z',
+          pipelineId: 'pipeline',
+          scheduleRevision: 3,
+          scheduledFor: '2026-08-10T10:00:00.000Z',
+        },
+      ],
+    });
+  });
+
+  it('leaves a future slot alone until a post is queued', async () => {
+    const findMany = jest
+      .fn()
+      .mockResolvedValue([pipeline({ _count: { queueItems: 0 } })]);
+    const repository = new PipelineExecutionRepository(
+      { model: { pipeline: { findMany } } } as any,
+      {} as any,
+      {
+        model: {
+          pipelineSlotExecution: { findMany: jest.fn().mockResolvedValue([]) },
+        },
+      } as any
+    );
+
+    await expect(
+      repository.discoverDueSlots({
+        nowUtc: '2026-08-10T09:00:00.000Z',
+        maximumCandidates: 100,
+      })
+    ).resolves.toEqual({ candidates: [] });
+  });
+
+  it('claims a slot an hour early and keeps that publish time', async () => {
+    const item = queueItem();
+    const tx = {
+      pipeline: { findUnique: jest.fn().mockResolvedValue(pipeline()) },
+      pipelineSlotExecution: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        create: jest.fn(async ({ data }) => ({ id: 'execution', ...data })),
+      },
+      pipelineQueueItem: {
+        findFirst: jest.fn().mockResolvedValue(item),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+      post: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+    };
+    const repository = new PipelineExecutionRepository(
+      { model: {} } as any,
+      {
+        model: {
+          $transaction: (run: (value: any) => any) => run(tx),
+        },
+      } as any
+    );
+
+    await expect(
+      repository.claimSlot({
+        ...request,
+        nowUtc: '2026-08-10T09:00:00.000Z',
+      })
+    ).resolves.toMatchObject({ outcome: 'CLAIMED' });
+    expect(tx.post.updateMany).toHaveBeenCalledWith({
+      where: {
+        pipelineQueueItemId: 'item-1',
+        state: 'DRAFT',
+        deletedAt: null,
+      },
+      data: {
+        state: 'QUEUE',
+        publishDate: new Date(scheduledFor),
+        error: null,
+      },
+    });
   });
 
   it('projects each current weekly slot in chronological order without catch-up', async () => {
