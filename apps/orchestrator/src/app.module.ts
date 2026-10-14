@@ -6,6 +6,7 @@ import { AutopostService } from '@gitroom/nestjs-libraries/database/prisma/autop
 import { EmailActivity } from '@gitroom/orchestrator/activities/email.activity';
 import { IntegrationsActivity } from '@gitroom/orchestrator/activities/integrations.activity';
 import { HealthController } from '@gitroom/orchestrator/health.controller';
+import { WorkerHealthService } from '@gitroom/orchestrator/worker.health.service';
 import { PipelineActivity } from '@gitroom/orchestrator/activities/pipeline.activity';
 import { ChannelInteractionActivity } from '@gitroom/orchestrator/activities/channel-interaction.activity';
 import { ChannelRelationshipGradeActivity } from '@gitroom/orchestrator/activities/channel-relationship-grade.activity';
@@ -38,7 +39,7 @@ const activities = [
     getTemporalModule(true, require.resolve('./workflows'), activities),
   ],
   controllers: [HealthController],
-  providers: [...activities],
+  providers: [...activities, WorkerHealthService],
   get exports() {
     return [...this.providers, ...this.imports];
   },

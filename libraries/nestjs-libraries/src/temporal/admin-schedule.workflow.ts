@@ -1,5 +1,12 @@
-export const MISSING_POST_WORKFLOW_ID = 'missing-post-workflow';
-export const MISSING_POST_WORKFLOW_TYPE = 'missingPostWorkflow';
+export const MISSING_POST_WORKFLOW_ID = 'missing-post-workflow-v2';
+export const MISSING_POST_WORKFLOW_TYPE = 'missingPostWorkflowV2';
+export const LEGACY_MISSING_POST_WORKFLOW_ID = 'missing-post-workflow';
+
+export const AUTOPOST_WORKFLOW_TYPE = 'autoPostWorkflowV3';
+export const LEGACY_AUTOPOST_WORKFLOW_TYPES = [
+  'autoPostWorkflow',
+  'autoPostWorkflowV2',
+];
 export const MISSING_POST_RECOVERY_WORKFLOW_TYPE =
   'missingPostRecoveryWorkflowV1';
 export const MISSING_POST_RECOVERY_WORKFLOW_ID_PREFIX =

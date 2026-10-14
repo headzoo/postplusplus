@@ -1,3 +1,5 @@
+import { startProcessWatchdog } from '@gitroom/nestjs-libraries/services/process.watchdog';
+const watchdog = startProcessWatchdog('backend');
 import { initializeSentry } from '@gitroom/nestjs-libraries/sentry/initialize.sentry';
 initializeSentry('backend', true);
 import compression from 'compression';
@@ -74,6 +76,7 @@ async function start() {
 
   try {
     await app.listen(port);
+    watchdog.ready();
     console.log('Backend started successfully on port ' + port);
 
     void startMcp(app).catch((error) => {

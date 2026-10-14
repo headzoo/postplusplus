@@ -21,6 +21,13 @@ import {
   CONVERSION_EVALUATION_WORKFLOW_TYPE,
 } from './conversion-evaluation.workflow';
 import { ConversionEvaluationTriggerService } from './conversion-evaluation.trigger.service';
+import {
+  LEGACY_MISSING_POST_WORKFLOW_ID,
+  MISSING_POST_WORKFLOW_ID,
+  MISSING_POST_WORKFLOW_TYPE,
+} from './admin-schedule.workflow';
+import { AutopostService } from '@gitroom/nestjs-libraries/database/prisma/autopost/autopost.service';
+import { OverduePostMonitor } from '@gitroom/nestjs-libraries/database/prisma/posts/overdue.post.monitor';
 
 @Injectable()
 export class InfiniteWorkflowRegister implements OnModuleInit {
@@ -31,19 +38,14 @@ export class InfiniteWorkflowRegister implements OnModuleInit {
     private _relationshipGradeScheduleService: RelationshipGradeScheduleService,
     private _followerBotScoreScheduleService: FollowerBotScoreScheduleService,
     private _hotMaterializationScheduleService: HotMaterializationScheduleService,
-    private _cultivateMaterializationScheduleService: CultivateMaterializationScheduleService
+    private _cultivateMaterializationScheduleService: CultivateMaterializationScheduleService,
+    private _autopostService: AutopostService
   ) {}
 
   async onModuleInit(): Promise<void> {
     if (!!process.env.RUN_CRON) {
-      try {
-        await this._temporalService.client
-          ?.getRawClient()
-          ?.workflow?.start('missingPostWorkflow', {
-            workflowId: 'missing-post-workflow',
-            taskQueue: 'main',
-          });
-      } catch (err) {}
+      await this.startMissingPostRecovery();
+      await this.migrateAutopostWorkflows();
       await this.handoffPipelineScheduler();
       await this.startChannelInteractionMaintenance();
       await this.startChannelRelationshipGrade();
@@ -53,6 +55,47 @@ export class InfiniteWorkflowRegister implements OnModuleInit {
       await this.startChannelAnalyticsSnapshot();
       await this.startChannelHotMaterialization();
       await this.startConversionEvaluation();
+    }
+  }
+
+  private async startMissingPostRecovery() {
+    const workflow = this._temporalService.client?.getRawClient()?.workflow;
+    if (!workflow) {
+      throw new Error(
+        'Temporal workflow client unavailable during missing post recovery start'
+      );
+    }
+    try {
+      const v1 = workflow.getHandle(LEGACY_MISSING_POST_WORKFLOW_ID);
+      const description = await v1.describe();
+      if (description.status.name === 'RUNNING') {
+        await v1.terminate('Migrating missing post recovery to V2');
+      }
+    } catch (error) {
+      if (!this.isMissingOrClosed(error)) {
+        this._logger.error('Failed to stop missing post recovery V1', error);
+        throw error;
+      }
+    }
+
+    try {
+      await workflow.start(MISSING_POST_WORKFLOW_TYPE, {
+        workflowId: MISSING_POST_WORKFLOW_ID,
+        taskQueue: 'main',
+      });
+    } catch (error) {
+      if (!this.isAlreadyStarted(error)) {
+        this._logger.error('Failed to start missing post recovery', error);
+        throw error;
+      }
+    }
+  }
+
+  private async migrateAutopostWorkflows() {
+    try {
+      await this._autopostService.migrateAutopostWorkflows();
+    } catch (error) {
+      this._logger.error('Failed to migrate autopost workflows', error);
     }
   }
 
@@ -307,6 +350,7 @@ export class InfiniteWorkflowRegister implements OnModuleInit {
     CultivateMaterializationScheduleService,
     AdminScheduleWorkflowService,
     ConversionEvaluationTriggerService,
+    OverduePostMonitor,
   ],
   get exports() {
     return this.providers;

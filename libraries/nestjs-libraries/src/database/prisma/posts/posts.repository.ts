@@ -70,6 +70,49 @@ export class PostsRepository {
     });
   }
 
+  getOverduePosts(after: Date, before: Date, cursor?: string, take = 200) {
+    return this._post.model.post.findMany({
+      where: {
+        integration: {
+          deletedAt: null,
+        },
+        publishDate: {
+          gte: after,
+          lt: before,
+        },
+        state: 'QUEUE',
+        NOT: {
+          pipelineQueueItem: {
+            is: {
+              deletedAt: null,
+              status: { in: ['QUEUED', 'FAILED'] },
+            },
+          },
+        },
+        deletedAt: null,
+        parentPostId: null,
+        ...(cursor ? { id: { gt: cursor } } : {}),
+      },
+      orderBy: { id: 'asc' },
+      take,
+      select: {
+        id: true,
+        organizationId: true,
+        publishDate: true,
+        content: true,
+        integration: {
+          select: {
+            name: true,
+            providerIdentifier: true,
+            disabled: true,
+            refreshNeeded: true,
+            inBetweenSteps: true,
+          },
+        },
+      },
+    });
+  }
+
   private titleContentSearchFilter(search?: string) {
     const trimmedSearch = search?.trim();
     if (!trimmedSearch) {

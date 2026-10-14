@@ -1,11 +1,19 @@
 import { Controller, Get, Res } from '@nestjs/common';
 import { Response } from 'express';
 import { Connection } from '@temporalio/client';
+import { WorkerHealthService } from '@gitroom/orchestrator/worker.health.service';
 
 @Controller('health')
 export class HealthController {
+  constructor(private _workerHealthService: WorkerHealthService) {}
+
   @Get('/status')
   async getHealthStatus(@Res() res: Response) {
+    const stoppedWorkers = this._workerHealthService.getStoppedWorkers();
+    if (stoppedWorkers.length) {
+      return res.status(503).json({ status: 'error', stoppedWorkers });
+    }
+
     let connection: Connection | undefined;
     try {
       const address = process.env.TEMPORAL_ADDRESS || 'localhost:7233';

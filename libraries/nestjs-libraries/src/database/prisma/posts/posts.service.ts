@@ -90,6 +90,10 @@ export class PostsService {
     return this._postRepository.searchForMissingThreeHoursPosts();
   }
 
+  getOverduePosts(after: Date, before: Date, cursor?: string, take?: number) {
+    return this._postRepository.getOverduePosts(after, before, cursor, take);
+  }
+
   updatePost(id: string, postId: string, releaseURL: string) {
     return this._postRepository.updatePost(id, postId, releaseURL);
   }

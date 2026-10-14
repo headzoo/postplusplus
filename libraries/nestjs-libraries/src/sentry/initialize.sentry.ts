@@ -1,5 +1,4 @@
 import * as Sentry from '@sentry/nestjs';
-import { nodeProfilingIntegration } from '@sentry/profiling-node';
 import { capitalize } from 'lodash';
 
 export const setSentryUserContext = (params: {
@@ -33,6 +32,18 @@ export const initializeSentry = (appName: string, allowLogs = false) => {
     return null;
   }
 
+  // Loads a native addon, so only pay for it when Sentry is enabled.
+  let profilingIntegrations: ReturnType<
+    typeof import('@sentry/profiling-node').nodeProfilingIntegration
+  >[] = [];
+  try {
+    const { nodeProfilingIntegration } =
+      require('@sentry/profiling-node') as typeof import('@sentry/profiling-node');
+    profilingIntegrations = [nodeProfilingIntegration()];
+  } catch (err) {
+    console.log(err);
+  }
+
   try {
     Sentry.init({
       initialScope: {
@@ -50,8 +61,7 @@ export const initializeSentry = (appName: string, allowLogs = false) => {
       dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
       spotlight: process.env.SENTRY_SPOTLIGHT === '1',
       integrations: [
-        // Add our Profiling integration
-        nodeProfilingIntegration(),
+        ...profilingIntegrations,
         Sentry.consoleLoggingIntegration({
           levels: ['log', 'info', 'warn', 'error', 'debug', 'assert', 'trace'],
         }),

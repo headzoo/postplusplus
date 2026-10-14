@@ -71,6 +71,14 @@ jest.mock(
   '@gitroom/orchestrator/workflows/post-workflows/post.workflow.v1.0.6',
   () => ({ postWorkflowV106: 'postWorkflowV106' })
 );
+jest.mock(
+  '@gitroom/nestjs-libraries/database/prisma/autopost/autopost.service',
+  () => ({ AutopostService: class AutopostService {} })
+);
+jest.mock(
+  '@gitroom/nestjs-libraries/database/prisma/posts/overdue.post.monitor',
+  () => ({ OverduePostMonitor: class OverduePostMonitor {} })
+);
 
 import { pipelineSlotWorkflowV1 } from './pipeline.slot.workflow.v1';
 import { pipelineSchedulerWorkflowV1 } from './pipeline.scheduler.workflow.v1';
@@ -906,7 +914,8 @@ describe('Pipeline Temporal workflow boundaries', () => {
       scheduleService as any,
       scheduleService as any,
       scheduleService as any,
-      scheduleService as any
+      scheduleService as any,
+      { migrateAutopostWorkflows: jest.fn() } as any
     );
     const previousRunCron = process.env.RUN_CRON;
     process.env.RUN_CRON = '1';
@@ -958,7 +967,8 @@ describe('Pipeline Temporal workflow boundaries', () => {
       scheduleService as any,
       scheduleService as any,
       scheduleService as any,
-      scheduleService as any
+      scheduleService as any,
+      { migrateAutopostWorkflows: jest.fn() } as any
     );
     const previousRunCron = process.env.RUN_CRON;
     process.env.RUN_CRON = '1';

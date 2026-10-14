@@ -78,7 +78,7 @@ describe('Pipeline autopost boundaries', () => {
     expect(errors.some((error) => error.property === 'onSlot')).toBe(false);
   });
 
-  it('starts V2 workflows for Pipeline feed creation', async () => {
+  it('starts V3 workflows for Pipeline feed creation', async () => {
     const { service, repository, start } = createService();
 
     await expect(
@@ -92,7 +92,7 @@ describe('Pipeline autopost boundaries', () => {
       body
     );
     expect(start).toHaveBeenCalledWith(
-      'autoPostWorkflowV2',
+      'autoPostWorkflowV3',
       expect.objectContaining({
         workflowId: 'autopost-feed',
         taskQueue: 'main',
@@ -116,7 +116,7 @@ describe('Pipeline autopost boundaries', () => {
     ).resolves.toMatchObject({ id: 'feed' });
 
     expect(start).toHaveBeenCalledWith(
-      'autoPostWorkflowV2',
+      'autoPostWorkflowV3',
       expect.objectContaining({ workflowId: 'autopost-feed' })
     );
     expect(temporal.terminateWorkflow).not.toHaveBeenCalled();

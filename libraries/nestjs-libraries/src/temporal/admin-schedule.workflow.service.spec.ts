@@ -33,7 +33,7 @@ describe('AdminScheduleWorkflowService', () => {
     );
 
     const status = await service.getMissingPostRecoveryStatus();
-    expect(status.workflowId).toBe('missing-post-workflow');
+    expect(status.workflowId).toBe('missing-post-workflow-v2');
     expect(status.exists).toBe(true);
     expect(status.status).toBe('RUNNING');
     expect(status.cadence.interval).toBe(1);

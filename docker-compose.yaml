@@ -166,7 +166,7 @@ services:
           'CMD',
           'node',
           '-e',
-          "fetch('http://localhost:5000').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+          "Promise.all(['http://localhost:5000','http://localhost:3000','http://localhost:3002/health/status'].map((u)=>fetch(u,{signal:AbortSignal.timeout(4000)}).then((r)=>{if(!r.ok)throw new Error(u)}))).then(()=>process.exit(0)).catch(()=>process.exit(1))",
         ]
       interval: 10s
       timeout: 5s

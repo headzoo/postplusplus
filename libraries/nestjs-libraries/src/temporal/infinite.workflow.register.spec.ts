@@ -1,3 +1,12 @@
+jest.mock(
+  '@gitroom/nestjs-libraries/database/prisma/autopost/autopost.service',
+  () => ({ AutopostService: class AutopostService {} })
+);
+jest.mock(
+  '@gitroom/nestjs-libraries/database/prisma/posts/overdue.post.monitor',
+  () => ({ OverduePostMonitor: class OverduePostMonitor {} })
+);
+
 import { InfiniteWorkflowRegister } from './infinite.workflow.register';
 
 describe('InfiniteWorkflowRegister', () => {
@@ -19,6 +28,9 @@ describe('InfiniteWorkflowRegister', () => {
     },
     cultivateMaterializationScheduleService = {
       install: jest.fn().mockResolvedValue(undefined),
+    },
+    autopostService = {
+      migrateAutopostWorkflows: jest.fn().mockResolvedValue(undefined),
     }
   ) =>
     new InfiniteWorkflowRegister(
@@ -28,7 +40,8 @@ describe('InfiniteWorkflowRegister', () => {
       relationshipGradeScheduleService as any,
       followerBotScoreScheduleService as any,
       hotMaterializationScheduleService as any,
-      cultivateMaterializationScheduleService as any
+      cultivateMaterializationScheduleService as any,
+      autopostService as any
     );
 
   const steadyStateWorkflow = () => ({
@@ -185,6 +198,55 @@ describe('InfiniteWorkflowRegister', () => {
     );
     expect(workflow.getHandle().signal).toHaveBeenCalledWith(
       'conversionEvaluation'
+    );
+  });
+
+  it('replaces the running missing post workflow with V2', async () => {
+    const legacy = {
+      describe: jest.fn().mockResolvedValue({ status: { name: 'RUNNING' } }),
+      terminate: jest.fn().mockResolvedValue(undefined),
+    };
+    const workflow = steadyStateWorkflow();
+    const steadyHandle = workflow.getHandle();
+    workflow.getHandle.mockImplementation((id: string) =>
+      id === 'missing-post-workflow' ? legacy : steadyHandle
+    );
+    const register = createRegister(workflow);
+    process.env.RUN_CRON = '1';
+
+    await register.onModuleInit();
+
+    expect(legacy.terminate).toHaveBeenCalledWith(
+      'Migrating missing post recovery to V2'
+    );
+    expect(workflow.start).toHaveBeenCalledWith('missingPostWorkflowV2', {
+      workflowId: 'missing-post-workflow-v2',
+      taskQueue: 'main',
+    });
+  });
+
+  it('migrates autopost workflows without blocking the other workflows', async () => {
+    const workflow = steadyStateWorkflow();
+    const autopostService = {
+      migrateAutopostWorkflows: jest
+        .fn()
+        .mockRejectedValue(new Error('database unavailable')),
+    };
+    const register = createRegister(
+      workflow,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      autopostService
+    );
+    process.env.RUN_CRON = '1';
+
+    await expect(register.onModuleInit()).resolves.toBeUndefined();
+    expect(autopostService.migrateAutopostWorkflows).toHaveBeenCalled();
+    expect(workflow.start).toHaveBeenCalledWith(
+      'pipelineSchedulerWorkflowV4',
+      expect.anything()
     );
   });
 

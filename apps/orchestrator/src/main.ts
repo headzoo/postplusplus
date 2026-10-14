@@ -1,3 +1,5 @@
+import { startProcessWatchdog } from '@gitroom/nestjs-libraries/services/process.watchdog';
+const watchdog = startProcessWatchdog('orchestrator');
 import { initializeSentry } from '@gitroom/nestjs-libraries/sentry/initialize.sentry';
 initializeSentry('orchestrator', true);
 import 'source-map-support/register';
@@ -15,6 +17,7 @@ async function bootstrap() {
   app.enableShutdownHooks();
   const port = process.env.ORCHESTRATOR_PORT || 3002;
   await app.listen(port);
+  watchdog.ready();
   console.log(`Orchestrator health check listening on port ${port}`);
 }
 

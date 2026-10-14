@@ -22,6 +22,10 @@ import { TypedSearchAttributes } from '@temporalio/common';
 import { organizationId } from '@gitroom/nestjs-libraries/temporal/temporal.search.attribute';
 import { PipelineManager } from '@gitroom/nestjs-libraries/database/prisma/pipelines/pipeline.manager';
 import { NotificationService } from '@gitroom/nestjs-libraries/database/prisma/notifications/notification.service';
+import {
+  AUTOPOST_WORKFLOW_TYPE,
+  LEGACY_AUTOPOST_WORKFLOW_TYPES,
+} from '@gitroom/nestjs-libraries/temporal/admin-schedule.workflow';
 const parser = new Parser();
 
 interface WorkflowChannelsState {
@@ -111,19 +115,7 @@ export class AutopostService {
   async processCron(active: boolean, orgId: string, id: string) {
     if (active) {
       try {
-        return await this._temporalService.client
-          .getRawClient()
-          ?.workflow.start('autoPostWorkflowV2', {
-            workflowId: `autopost-${id}`,
-            taskQueue: 'main',
-            args: [{ id, immediately: true }],
-            typedSearchAttributes: new TypedSearchAttributes([
-              {
-                key: organizationId,
-                value: orgId,
-              },
-            ]),
-          });
+        return await this.startAutopostWorkflow(orgId, id, true);
       } catch (error) {
         if (
           (error as { name?: string })?.name ===
@@ -140,6 +132,66 @@ export class AutopostService {
     } catch (err) {
       return false;
     }
+  }
+
+  async migrateAutopostWorkflows() {
+    const workflow = this._temporalService.client.getRawClient()?.workflow;
+    if (!workflow) {
+      throw new Error('Temporal workflow client unavailable');
+    }
+    const types = LEGACY_AUTOPOST_WORKFLOW_TYPES.map(
+      (type) => `WorkflowType='${type}'`
+    ).join(' OR ');
+    const workflowIds: string[] = [];
+    for await (const execution of workflow.list({
+      query: `(${types}) AND ExecutionStatus='Running'`,
+    })) {
+      if (execution.workflowId.startsWith('autopost-')) {
+        workflowIds.push(execution.workflowId);
+      }
+    }
+
+    for (const workflowId of workflowIds) {
+      try {
+        await workflow
+          .getHandle(workflowId)
+          .terminate(`Migrating autopost to ${AUTOPOST_WORKFLOW_TYPE}`);
+        const id = workflowId.slice('autopost-'.length);
+        const autopost = await this._autopostsRepository.getAutopostForWorkflow(
+          id
+        );
+        if (!autopost?.active) {
+          continue;
+        }
+        // The previous run already checked this feed, so wait for the next hour.
+        await this.startAutopostWorkflow(autopost.organizationId, id, false);
+      } catch (error) {
+        this._logger.error(
+          `Failed to migrate autopost workflow ${workflowId} to ${AUTOPOST_WORKFLOW_TYPE}`,
+          error
+        );
+      }
+    }
+  }
+
+  private startAutopostWorkflow(
+    orgId: string,
+    id: string,
+    immediately: boolean
+  ) {
+    return this._temporalService.client
+      .getRawClient()
+      ?.workflow.start(AUTOPOST_WORKFLOW_TYPE, {
+        workflowId: `autopost-${id}`,
+        taskQueue: 'main',
+        args: [{ id, immediately }],
+        typedSearchAttributes: new TypedSearchAttributes([
+          {
+            key: organizationId,
+            value: orgId,
+          },
+        ]),
+      });
   }
 
   async deleteAutopost(orgId: string, id: string) {
